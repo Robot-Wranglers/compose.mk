@@ -1,0 +1,32 @@
+// configuration for pynchon (a docs-generation tool )
+{
+  "plugins": ["vhs","mermaid","github","mkdocs",],
+  "mermaid":{
+    output_mode: "png",
+    mermaid_args: [
+      "--configFile", "docs/.mermaid.conf",
+      //"--backgroundColor","efefef"
+      ],
+  },
+  "markdown": {
+    "apply_hooks": [],
+    "goals": [],
+    "include_patterns": [],
+    "exclude_patterns": [],
+    "root": null,
+    "linter_docker_image": "peterdavehello/markdownlint",
+    "viewer_docker_image": "charmcli/glow",
+    "linter_args": [
+      "--disable MD013",
+      "--disable MD045",
+      "--disable MD033",
+      "--disable MD041",
+      "--disable MD042",
+      "--fix"
+    ]
+  },
+  "github": { "org_name": "elo-enterprises"},
+  "jinja": {
+    "template_includes": ['docs']
+  },
+}
