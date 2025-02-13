@@ -51,22 +51,39 @@ These elements, plus access to other tools like [gum](https://github.com/charmbr
 
 ### Zero Config TUIs
 
+
 Because the TUI capabilities are focused around *building* TUIs instead of providing them ready to use, `compose.mk` doesn't provide much baked-in stuff that feels like a console application. 
 
-But there are a few exceptions:
+But there are a few exceptions.  Try running `./compose.mk tux.demo` for a quick example showing pane-geometry and [TTE output](https://github.com/ChrisBuilds/terminaltexteffects).
 
-* Run `./compose.mk tux.demo` for a quick example showing pane-geometry and [TTE output](https://github.com/ChrisBuilds/terminaltexteffects).
-* See the documentation for [loadf]({{mkdocs.site_relative_url}}/loadf) for something more practical.  
+For more practical stuff, you might be interested in the `loadf` command (full docs [here]({{mkdocs.site_relative_url}}/loadf)).  This bypasses project integration completely and will still let you do basic stuff with containers defined inside compose files.  See the examples below:
+
+```bash 
+# Opens 3 panes with container-shells
+$ ./compose.mk loadf tests/docker-compose.yml tux.mux.svc/debian,alpine,debian
+
+# Equivalently, using lower-level generic targets
+$ ./compose.mk loadf tests/docker-compose.yml tux.mux/debian/shell,alpine/shell,debian/shell
+```
+
+We can get some insight into how the stuff above works by passing `tux.mux` the `io.bash` target any number of times, which then opens 1 or more panes of interactive bash shells.
+
+```bash
+# Opens 2 panes of bash-shells, running in the TUI container itself
+$ ./compose.mk loadf tests/docker-compose.yml tux.mux/io.bash,io.bash
+```
+
+In this case `io.bash` runs *inside the TUI container*, but both the hosts working directory and the docker-socket are mounted as volumes.
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
 ### Low Config TUIs
 
-If you already have a project Makefile with some existing automation, you can `include compose.mk` at the top and still use the TUI with no other changes by using [`tux.mux`](#).  The `tux.mux` target simply accepts any number of `make` targets, and then opens 1 TUI pane for each target.  
+If you already have a project Makefile with some existing automation, you can `include compose.mk` at the top and still use the TUI with no other changes by using [`tux.mux`]({{mkdocs.site_relative_url}}/api/#tuxmuxarg).  The `tux.mux` target simply accepts any number of `make` targets, and then opens 1 TUI pane for each target.  
 
 Let's walk through some examples, supposing you already have targets for `clean`, `build`, `test`.  You can open a 3-pane TUI by just calling `make tux.mux/clean,build,test`.  This runs all of the named targets in parallel, and the whole TUI will exit after the individual tasks are completed.
 
-Of course, it probably doesn't make sense to run `clean`/`build`/`test` in parallel.  To get more flexibility here, it's often useful to use [`flux.*`, aka the workflow library](#).  
+Of course, it probably doesn't make sense to run `clean`/`build`/`test` in parallel.  To get more flexibility here, it's often useful to use [`flux.*`, aka the workflow library]({{mkdocs.site_relative_url}}/api/#api-flux).  
 
 * We can run sequentially run `clean` and `build` by using `flux.wrap`, i.e. `flux.wrap/clean,build`
 * We can run `test` in a loop forever by using `flux.loopf/test`

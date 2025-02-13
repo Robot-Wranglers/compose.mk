@@ -60,9 +60,9 @@ self.test:
 
 #### Docker Compose Integration
 
-Working with docker compose is optional of course, if you're just interested in [stand-alone mode](#) or the [standard library](#).  And if you *are* using it then simple access to tools in containers from your docker-compose files should *just work*, using [the bridge]({{mkdocs.site_relative_url}}/bridge).  
+Working with docker compose is optional if you're just interested in [stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview/) or the [standard library]({{mkdocs.site_relative_url}}/standard-lib).  And if you *are* using docker-compose, then simple access to tools in containers from your docker-compose files should *just work*, using [the bridge]({{mkdocs.site_relative_url}}/bridge).  
 
-However.. more complicated use-cases probably require a volume-mount for your project directory to read/write files, and container dispatch means your tool containers need `make` and `bash`.
+However.. more complicated use-cases probably require a volume-mount for your project directory to read/write files, and, container dispatch means your tool containers need `make` and `bash`.
 
 Here's a typical example compose file:
 

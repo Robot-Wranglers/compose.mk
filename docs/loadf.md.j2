@@ -24,10 +24,10 @@ This means that `loadf` doesn't really need to involve the TUI at all.  The exam
 
 {{macros.img_link("tui-4.gif", mkdocs)}}
 
-Note that despite all the output **this is pipe-safe**, in case the commands involved might return JSON for downstream parsing, etc.  As another example, you can use the [<svc_name>/pipe]({{mkdocs.site_relative_url}}/bridge/#svc_nameshellpipe) with a command like this:
+Note that despite all the output **this is pipe-safe**, in case the commands involved might return JSON for downstream parsing, etc.  As another example, you can use the [<svc_name>/pipe]({{mkdocs.site_relative_url}}/bridge/#svc_nameshellpipe) to push data *into* a container with a command like this:
 
 ```bash
-echo ls | ./compose.mk loadf tests/docker-compose.yml debian/shell/pipe
+echo hostname | ./compose.mk loadf tests/docker-compose.yml debian/shell/pipe
 ```
 
 Ultimately though, using the TUI for quick and convenient inspection is probably the main use case.  Here's a few more examples along those lines:

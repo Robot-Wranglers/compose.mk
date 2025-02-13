@@ -1655,11 +1655,9 @@ mk.supervisor.enter/%:
 	@# the supervisor's pid; See instead 'mk.supervisor.pid'
 	@# 
 	$(eval export MAKE_SUPER:=${*}) \
-	$(call log, ${GLYPH_MK} ${@} ${sep} ${red}started pid $${MAKE_SUPER}${no_ansi})
+	$(call log.trace, ${GLYPH_MK} ${@} ${sep} ${red}started pid $${MAKE_SUPER}${no_ansi})
 	# $(call log.trace, ${GLYPH_MK} ${@} ${sep} ${red}handler @ `${make} mk.supervisor.pid`)
-ls:
-	$(call mk.yield2, ls $${MAKE_CLI#*ls})
-mk.yield2= ${1}; echo $$? > .tmp.mk.super.$${MAKE_SUPER}; ${mk.interrupt}
+
 define mk.yield2
 	header="${GLYPH_MK} mk.yield ${sep}${dim}" \
 	&& $(call log, $${header} Yielding to:${dim_cyan} $(call strip, ${1})) \
@@ -1674,10 +1672,10 @@ mk.supervisor.exit/%:
 	@# the exit-status of the main pipeline.
 	@#
 	header="${GLYPH_MK} mk.supervisor.exit ${sep}" \
-	&& $(call log, $${header} ${red} status=${*} ${sep} ${bold}pid=$${MAKE_SUPER}) \
+	&& $(call log.trace, $${header} ${red} status=${*} ${sep} ${bold}pid=$${MAKE_SUPER}) \
 	&& ${make} ${CMK_AT_EXIT_TARGETS} \
 	&& if [ -f .tmp.mk.super.${MAKE_SUPER} ]; then \
-		( $(call log, WARNING: execution was yielded from ${MAKE_SUPER}) \
+		( $(call log.trace, WARNING: execution was yielded from ${MAKE_SUPER}) \
 			; exit `cat .tmp.mk.super.${MAKE_SUPER}`) \
 	else exit ${*}; \
 	fi

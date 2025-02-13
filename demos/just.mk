@@ -6,7 +6,8 @@
 #
 #   This demo is structured so as to be self-contained, so at the start we have to
 #   ensure that we can call a containerized version of `just`, and that we actually 
-#   have a justfile available.
+#   have a justfile available.  You can skip it if you want to make assumptions about
+#   the execution environment!
 
 .DEFAULT_GOAL := demo.just
 
@@ -55,8 +56,7 @@ just.run:
 	just another-recipe
 	just
 	
-# An example of a just/make bridge, effectively 
-# "importing" the justfile entrypoints to `make`
+# Example of a just/make bridge, effectively importing `just` targets to `make`
 just.bridge/%:; ${make} ▰/just.container/just.run.target/${*}
 just.run.target/%:; just ${*}
 just.recipe: just.bridge/recipe-name
