@@ -1,15 +1,9 @@
 # demos/no-include.mk: 
-#   A demo that *doesnt* include compose.mk.  
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
-#
-#   USAGE: make -f demos/no-include.mk
+#   A very basic demo that *doesnt* include compose.mk.  
+#   This is mostly used for testing parsing and reflection utilities
+.DEFAULT_GOAL := all 
 
-# NB: this boilerplate helps to quit the default output- 
-# and you'll need this whenever you want to emit JSON.
-MAKEFLAGS=-sS --warn-undefined-variables
-.DEFAULT_GOAL := no-op
-
-no-op:
+all: clean build test
 
 clean:
 	@# Just a fake clean target. 
@@ -19,9 +13,5 @@ clean:
 build:; echo building 
 
 # Just a fake `test` target.
-test:; echo testinging 
-
-# demo.let:
-# 	./compose.mk \
-# 		mk.include/demos/no-include.mk \
-# 		mk.let/foo:flux.ok
+test:
+	echo testing

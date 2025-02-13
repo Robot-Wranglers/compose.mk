@@ -1,0 +1,88 @@
+{% import 'macros.j2' as macros -%}
+
+## Demo: Platform Lifecycle
+
+This demo describes one way to express platform lifecycle automation using `compose.mk`.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Basic Platforming 
+
+Consider this hypothetical snippet:
+
+``` Makefile
+{{open('demos/platform.mk','r').read().strip()}}
+```
+
+It's powerful, concise, expressive, and already orchestrating tasks across two containers defined in some external compose-file.  The syntax is configurable, and it's even starting to look object-oriented.  
+
+Typically app-setup and infra-setup might further split into stages, but you get the idea.  And the infrastructure/app split always comes up, but it might look different.. for example your setup might replace `terraform` with `eksctl`, and `ansible` with `helm`.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Extension with LME
+
+Let's consider an extension of this.  Suppose output from `platform1.setup` needs to be used separately by the next bootstrap processes.  For example, sending the platform output to different backends for `logging`, `metrics`, and `events`, respectively.  
+
+For this kind of thing it's most natural to think in terms of process algebra, and you can express it like this:
+
+```Makefile
+{{open('demos/platform-lme.mk','r').read().strip()}}
+```
+
+Above, the builtin [flux.dmux target]({{mkdocs.site_relative_url}}/api#fluxdmux) is used to send platform-setup's output into the three backend handlers.  This is just syntactic sugar for a 1-to-many pipe (aka a demultiplexer, or "dmux").  Each handler pulls out the piece of the input that it cares about, simulating further setup using that info.  The `bootstrap` entrypoint kicks everything off.  
+
+This is actually a lot of control and data-flow that's been expressed.  Ignoring ordering, graphing it would look something like this:
+
+{{macros.img_link("example-platform-1.png", mkdocs, "90%")}}
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Whew.  We know what happens next is probably *more* platforms, more tools/containers, and more data flows.  
+
+Not to belabor the point but let's watch how it blows up with just one more platform:
+
+{{macros.img_link("example-platform-2.png", mkdocs, "90%")}}
+
+The stripped-down and combined automation that achieves this workflow is included below. It feels pretty organized and maintainable and excluding the container-definitions, this weighs in at only ~20 lines.
+
+```Makefile 
+include compose.mk
+$(eval $(call compose.import, ▰, TRUE, my-containers.yml))
+
+all: bootstrap 
+bootstrap:
+    make platform1.setup | make flux.dmux/logging,metrics,events
+platform1.setup: ▰/terraform/self.infra.setup ▰/ansible/self.app.setup
+logging: ▰/elk/self.logging
+metrics: ▰/prometheus/self.metrics
+events: ▰/datadog/self.events
+self.infra.setup:
+    echo '{"event":"doing things in terraform container", "log":"infra setup done", "metric":123}'
+self.app.setup:
+    echo '{"event":"doing things in ansible container", "log":"app setup done", "metric":123}'
+self.logging:
+    cat /dev/stdin | jq .log
+self.metrics:
+    cat /dev/stdin | jq .metric
+self.events:
+    cat /dev/stdin | jq .event
+```
+
+So that illustrates [container dispatch](#) combined with the [flux.dmux target]({{mkdocs.site_relative_url}}/api#fluxdmux).  There are many other `flux.*` targets ([see the API docs]({{mkdocs.site_relative_url}}/api#api-flux)).. see also the [Workflow Demo]({{mkdocs.site_relative_url}}/demos/ansible/).  
+
+### Discussion 
+
+This tight expression of complex flow will already be familiar to lots of people: whether they are bash wizards, functional programming nerds, or the Airflow/MLFlow/ArgoWF users.  *But this example pipes data between 5 containers, with no dependencies, and in remarkably direct way that feels pretty seamless!*  It neatly separates the automation itself from the context that it runs in, all with no platform lock-in.  Plus.. compared to the alternatives, doesn't it feel more like working with a programming language and less like jamming bash into yaml? 🤔
+
+As mentioned previously, the workflow description weighs in at only ~20 lines.  That's almost exactly the same number of lines in the [mermaid source-code for the diagram](docs/example-platform-1.mmd), which is interesting, because usually implementations are usually *orders of magnitude larger* than the diagrams that describe them!  Zeroing in on a minimum viable description length?
+
+It's a neat party trick that `compose.mk` has some features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.  Really, `flux.*` is more similar in spirit to things like [declarative pipelines in Jenkins](https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline).
+
+{#
+This example mostly runs as written, but properly escaping the JSON properly is awkward, etc. (Actually builtin's for working with [`jb`]({{mkdocs.site_relative_url}}/api#jb) or [`stream.json.object.append`]({{mkdocs.site_relative_url}}/api#api-stream) can help with this, but it tends to obfuscate the example.)  If you want to see something that actually runs, check out the [simple dispatch demo]({{mkdocs.site_relative_url}}/compose.mk#container-dispatch) (which runs as part of [integration tests]({{github.repo_url}}/tree/master/tests/Makefile.itest.mk)).
+#}
+
+For a full blown project, check out [k3d-faas.git](https://github.com/elo-enterprises/k3d-faas), which also breaks down automation into platforms, infrastructure, and app phases.
+
+<hr style="width:100%;border-bottom:3px solid black;">

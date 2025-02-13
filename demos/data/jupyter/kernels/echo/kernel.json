@@ -1,0 +1,3 @@
+{"argv":["python","/usr/share/jupyter/kernels/echo/echokernel.py", "-f", "{connection_file}"],
+ "display_name":"Echo"
+}

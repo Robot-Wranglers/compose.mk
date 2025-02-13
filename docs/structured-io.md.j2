@@ -1,0 +1,65 @@
+{% import 'macros.j2' as macros -%}
+
+### Structured IO
+
+One problem with `make` is that the lack of structured output tends to be a limiting factor.  A big part of the explanation for this is just that a Makefile might be using any random tools with any kind of behaviour, but that's sort of inevitable for automation.  The other part is just a missing approach to idioms and tools, and `compose.mk` can help with that.
+
+The `compose.mk::stream` module, aka the [**`stream.*` target namespace**]({{mkdocs.site_relative_url}}/api#api-stream) adds basic support for working with streams, including newline/comma/space delimited streams, common use cases with JSON, etc.  Most of the utilities here are in the form of make-targets that are intended to be used with pipes (i.e. they reads from stdin).  
+
+**This is not what you'd call "typed", but it reduces error-prone parsing and moves a little bit closer to structured data.**  
+
+[The classical GMSL](https://mxe.cc/gmsl.html) adds support for things like sets and string-lists, and the `compose.mk::stream` module does some of that too.  But the biggest benefit comes from exposing tools like [`jq`](#) and [`jb`](#) without explicitly depending on them.  How does that work?  Basically `compose.mk` will use local tools if they are available, and fall back to using dockerized versions of them.
+
+Before we get into code examples, let's introduce basic principles with the command line.  
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+#### Structured IO: Basics
+
+The `jb`[^3], `jq`[^4], and `yq`[^5] tools are so much revered, they get top-level entrypoints.  
+
+```bash 
+# output JSON using `jb` =>
+$ echo key=val | ./compose.mk jb
+{"key":"val"}
+
+# parse JSON using `jq`
+$ echo key=val | ./compose.mk jb | ./compose.mk jq -r .key
+val
+```
+
+Top-level entrypoints are documented in more detail as part of [tool mode]({{mkdocs.site_relative_url}}/tool-overview/#proxy-wrappers).  Inside a project Makefile, we can always use direct calls to `compose.mk` as seen above, or recursive calls to `make`.  But if arguments to these tools get complicated, quoting will be dodgy.  Luckily there are equivalent forms that are more idiomatic, and these also spawn fewer processes:
+
+```Makefile
+{{open('demos/structured-io.mk','r').read().strip()}}
+```
+
+For the most part `compose.mk` tries to stay out of the way of `jq` and `jb` and let them do what they do, but remember, we need this thin abstraction layer to transparently choose between a local tool and a dockerized tool.
+
+You get the idea.  *Now `make emit | make consume` is doing basic IO with JSON,* and we haven't added any new dependencies.
+
+From here you'll probably want to provide user-feedback and status messages without wrecking pipe-safety; see also the section on [logging facilities](#logging-facilities).  Since you've got structured output anyway, this is also a good segue into the [workflow example](#workflow-example-etl).
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+#### Structured IO: Stream Types & Pipes
+
+The `compose.mk::stream` module, aka the [`stream.*` target namespace]({{mkdocs.site_relative_url}}/api/#api-stream) is full of targets that can help to handle common tasks with streams.  Inside a project Makefile, we can always use direct calls to `compose.mk`, or recursive calls to `make`, but most targets are *also available as macros*.  Using macros looks tidy and is easier to type, but the main benefit is that it saves extra processes.
+
+As a really simple example, targets that have to deal with streams will begin with `cat /dev/stdin` to capture input and start a pipeline, but this can be rewritten as simply `${stream.stdin}` for readability.  
+
+This isn't exhaustive, but you can see the section below for a few more samples.
+
+```Makefile
+{{open('demos/stdlib-stream-io.mk','r').read().strip()}}
+```
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+[^1]: See https://www.jenkins.io/doc/book/pipeline/syntax/
+[^2]: Make-targets can be used as task-prerequisites as well as command line entrypoints
+[^3]: https://github.com/h4l/json.bash
+[^4]: https://github.com/jqlang/jq
+[^5]: https://github.com/mikefarah/yq

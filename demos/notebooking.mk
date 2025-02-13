@@ -11,92 +11,59 @@
 #
 #   USAGE: make -f demos/app.mk
 
-
 include compose.mk
+
 .DEFAULT_GOAL := demo.entry
-export BUILD_TARGET?=none
+export BUILD_TARGET?=lab.provision
 
-demo.entry: demo.provision demo.dispatch 
-
-# Look it's an embedded compose file.  This defines services `alice` & `bob`.
+# WARNING: name is really important for use with `up --detach` and `exec`
+# if it's going to work inside the TUI.
+# https://docs.docker.com/compose/how-tos/project-name/
+# jupyter==1.1.1
 define proof.services
+name: jupyter-lab 
 services:
   lab: &base
+    hostname: lab
     stdin_open: true
     tty: true
+    privileged: true
     entrypoint: bash
-    #depends_on: ['lean4']
-    #entrypoint: >
-    #  jupyter lab --ip=0.0.0.0
-    #    --port=9999 --no-browser
-    #    --ServerApp.token= --ServerApp.password=
-    #    --allow-root
     build:
       context: .
       dockerfile_inline: |
         FROM debian/buildd:bookworm
         RUN apt-get update 
-        COPY . /app
-        RUN cd /app && make -f ${MAKEFILE} ${BUILD_TARGET}
+        RUN apt-get install -y git make curl sudo python3.11-venv python3-pip
+        RUN pip3 install jupyter --break-system-packages
+        RUN curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf > /usr/local/bin/elan-init.sh
+        RUN bash /usr/local/bin/elan-init.sh -y 
+        ENV PATH="$PATH:/root/.elan/bin"
+        RUN lean --help
+        RUN lake new project
+        RUN cd project && printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' >> lakefile.toml
+        RUN cd project && lake update && lake build
+        RUN pip install lean-dojo --break-system-packages
+        RUN apt-get install -y wget
+        COPY ./demos/data/jupyter/kernels/ /usr/share/jupyter/kernels/
+        COPY ./demos/data/jupyter/lab/ /usr/local/share/jupyter/lab/
     ports: ['9999:9999']
-  lean4:
-    hostname: lean4
-    <<: *base
-    working_dir: /workspace
+    working_dir: /lab
     volumes:
-      - ${PWD}:/workspace
-  alloy:
-    build: https://github.com/elo-enterprises/docker-alloy-cli.git
-    hostname: alloy
+      - ${PWD}:/lab
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      #- ${PWD}/demos/data/jupyter/:/usr/local/share/jupyter/
 endef 
-
-# Describe a lakefile for lean.  
-# We need this later so we can declare requirements.
-define lean.lakefile 
-[[require]]
-name = "mathlib"
-scope = "leanprover-community"
-endef
 
 # Autogenerate target scaffolding for each service.
 $(eval $(call compose.import.def,  ▰,  TRUE, proof.services))
 
-demo.provision:
-	BUILD_TARGET=lab.provision ${make} lab/build 
-	#BUILD_TARGET=lean4.provision ${make} lean4/build 
-	#BUILD_TARGET=alloy.provision ${make} alloy/build 
+demo.entry: lab/build lab/up.detach tux.open/lab/exec/jupyter.up,lab/shell
 
-lab.provision:
-	apt-get install -y python3-pip
-	pip3 install jupyter --break-system-packages
-
-lean4.provision:
-	apt-get install -y git curl sudo
-	curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf > /usr/local/bin/elan-init.sh
-	bash /usr/local/bin/elan-init.sh -y 
-	/root/.elan/bin/lean --help
-	/root/.elan/bin/lake new default
-	printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' >> default/lakefile.toml
-	cd default &&  /root/.elan/bin/lake update && /root/.elan/bin/lake build
-
-#${make} mk.def.read/lean.lakefile > default/lakefile.toml
-
-alloy.provision: 
-	echo hello world 
-# apt-get install -y gcc g++ openjdk-17-jdk-headless git tree
-#COPY . /opt/alloy-cli
-# RUN cd /opt/alloy-cli && bash ./gradlew distTar && tar -xvf ./build/distributions/alloy-cli.tar
-# RUN echo '#!/bin/bash' > /bin/alloy-run && echo 'exec /opt/alloy-cli/alloy-cli/bin/alloy-cli "$@"' >> /bin/alloy-run
-# RUN chmod o+x /bin/alloy-run
-# ENTRYPOINT ["/bin/alloy-run"]
-demo.dispatch: ▰/lab/jupyter.up
 jupyter.up:
+	$(call tux.log, Starting lab server)
 	jupyter lab \
-	--ip=0.0.0.0 --port=9999 --no-browser \
+	--allow-root --no-browser \
+	--ip=0.0.0.0 --port=9999 \
 	--ServerApp.token= --ServerApp.password= \
-	--allow-root
-
-	python -c 'import webbrowser; webbrowser.open("http://localhost:9999/lab")'
-#▰/alice/internal_task ▰/bob/internal_task
-
-internal_task:; echo "Running inside `hostname`"; echo "Special tools available: `which figlet || which ack`"
+	--ServerApp.root_dir=/lab/demos/data/jupyter/

@@ -6,5 +6,64 @@ When using `compose.mk` directly, help not only *works,* it goes beyond simply l
 
 {{macros.img_link("tui-7.gif", mkdocs, "90%")}}
 
-## Adding Help to Project Makefiles
 
+As seen in the animation, there are several ways to invoke the help for `compose.mk`.  See the examples below:
+
+```bash
+# list all targets 
+$ ./compose.mk help
+
+# help for a single target 
+$ ./compose.mk help docker.run
+
+# help for a module namespace with many targets
+$ ./compose.mk help docker
+```
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+## Help For Project Makefiles
+
+To enable help for your project Makefile, it is helpful to use `include compose.mk` somewhere near the top.  By itself, this enables target listing with `make help`, including both the inherited targets from `compose.mk` as well as the new targets that are project specific.
+
+However for technical reasons[^1] related to default argument parsing by `make`,  invocations like `make help docker` **cannot work with project makefiles.**  A work-around is to directly provide arguments like so:
+
+```bash
+$ make help search=docker.run
+```
+
+Note that for help to render properly, your targets need to use the following python-docstring inspired style for comments, and then help can be pulled automatically from source.
+
+```Makefile
+
+include compose.mk 
+
+my-target:
+	@# Comment line one
+	@# **Markdown is supported.**
+	echo your implementation here
+
+my-parametric-target/%:
+	@# Comment line one
+	@# **Markdown is supported.**
+	echo your implementation here
+```
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+## Implementation Details
+
+The implementation for help uses `mk.help.*` family of targets, and if you want to customize help or error messages they might be useful.  
+
+See the API for:
+
+{% set targets=bash('./compose.mk mk.namespace.filter/mk.help') %}
+{% set targets=targets.split('\n') %}
+{%for target in targets %} {% set target=target.strip().replace('%','<arg>') %}{%if target%}
+* [`{{target}}`]({{mkdocs.site_relative_url}}/api#{{target.replace('<','').replace('>','').replace('/','').replace('.','')}}){%endif%}{%endfor%}
+
+Heavy lifting for parsing Makefile metadata comes from a dockerized version of the [pynchon tool](https://github.com/elo-enterprises/pynchon), which can parse help as well as target-prerequisites / DAGs.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+[^1]: See the docs for [Supervisors & Signals]]({{mkdocs.site_relative_url}}/signals/)

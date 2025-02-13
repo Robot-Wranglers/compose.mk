@@ -4,7 +4,9 @@
 
 The TUI capabilities of `compose.mk` are best thought of as an **interface-builder rather than a specific interface.**  As usual and despite appearances, support for the TUI requires *no dependencies except for `make` and `docker`*.  It aims for low-config and sane defaults, so for high level usage it requires no configuration at all.  Under the hood, the TUI uses a dockerized version of [tmux](https://github.com/tmux/tmux) for core drawing and geometry.
 
-There's a few ways to describe what the TUI actually *does*.  One way to look at it is, it's just a way of **mapping `make` targets into tmux panes**.   And since [`compose.import`]({{mkdocs.site_relative_url}}/compose.mk) allows you to *map docker-compose services onto `make` targets*, yet another way to think of the TUI is that it allows you to **map containers onto tmux panes**.  And if you're already using `compose.mk` to [build custom automation APIs]({{mkdocs.site_relative_url}}/demos/ansible/), you can map those onto tmux panes too.
+There's a few ways to describe what the TUI actually *does*.  
+
+One way to look at it is, the TUI is just a way of **mapping `make` targets into tmux panes**.   But since [`compose.import`]({{mkdocs.site_relative_url}}/compose.mk) allows you to *map docker-compose services onto `make` targets*, yet another way to think of the TUI is that it allows you to **map containers onto tmux panes**.  And if you're already using `compose.mk` to [build custom automation APIs]({{mkdocs.site_relative_url}}/demos/ansible/), you can map those onto tmux panes too.
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -16,28 +18,29 @@ For the impatient, here's a small gallery that show-cases the type of stuff you 
 
 <table align=center width=95%>
     <tr>
-        <td>{{macros.img_link("tui-1.gif", mkdocs, "200px")}}</td>
+        <td>{{macros.img_link("loadf-1.gif", mkdocs, "200px")}}</td>
         <td>{{macros.img_link("tui-4.gif", mkdocs, "200px")}}</td>
-        <td>{{macros.img_link("tui-6.gif", mkdocs, "200px")}}</td>
+        <td>{{macros.img_link("tui-tte.gif", mkdocs, "200px")}}</td>
     </tr>
     <tr>
         <td>{{macros.img_link("tui-2.gif", mkdocs, "200px")}}</td>
-        <td>{{macros.img_link("tui-3.gif", mkdocs, "200px")}}</td>
+        <td>{{macros.img_link("loadf-2.gif", mkdocs, "200px")}}</td>
         <td>{{macros.img_link("tui-5.gif", mkdocs, "200px")}}</td>
     </tr>
 </table>
 
-Some of these screenshots are part of [k8s-tools](#), a sibling project that uses `compose.mk` as a framework, then extends it to the specific domain of kubernetes automation.  
+(Note: Some of these screenshots are part of [k8s-tools](#), a sibling project that uses `compose.mk` as a framework, then extends it to the specific domain of kubernetes automation.)
 
+* For a quick test to get a look at the TUI yourself, try running `./compose.mk tux.demo`.
 * For a from-scratch walk through, see [the TUI Demo]({{mkdocs.site_relative_url}}).  
 * For low-level API reference, see the [`tux.*` targets]({{mkdocs.site_relative_url}}/api/#api-tux).  
 * For TUI-related stand-alone tools, see [the loadf docs]({{mkdocs.site_relative_url}}/loadf) and the [tool wrappers docs]({{mkdocs.site_relative_url}}/tool-overview/#other-wrappers).
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-### Sane Defaults
+### Batteries Included
 
-Besides `tmux`, the basic pre-configured components of the TUI are things like [tmuxp](https://github.com/tmux-python/tmuxp) for dynamic session management, and overridable defaults for [tmux themes](https://github.com/jimeh/tmux-themepack/), [tmux plugins](https://github.com/tmux-plugins/tpm), [keybindings](#tui-keybindings), etc.  
+Besides a dockerized `tmux`, the basic pre-configured components of the TUI are things like [tmuxp](https://github.com/tmux-python/tmuxp) for dynamic session management, and overridable defaults for [tmux themes](https://github.com/jimeh/tmux-themepack/), [tmux plugins](https://github.com/tmux-plugins/tpm), [keybindings](#tui-keybindings), etc.  
 
 These components are configurable, but not something that you necessarily have to think about.  Some notable effects of the "sane defaults" policy include:
 
@@ -49,73 +52,48 @@ These elements, plus access to other tools like [gum](https://github.com/charmbr
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-### Zero Config TUIs
+### Layout Basics
 
-
-Because the TUI capabilities are focused around *building* TUIs instead of providing them ready to use, `compose.mk` doesn't provide much baked-in stuff that feels like a console application. 
-
-But there are a few exceptions.  Try running `./compose.mk tux.demo` for a quick example showing pane-geometry and [TTE output](https://github.com/ChrisBuilds/terminaltexteffects).
-
-For more practical stuff, you might be interested in the `loadf` command (full docs [here]({{mkdocs.site_relative_url}}/loadf)).  This bypasses project integration completely and will still let you do basic stuff with containers defined inside compose files.  See the examples below:
+We'll start by showing **how to map targets onto a specific pane orientation**, using the [`tux.open`]({{mkdocs.site_relative_url}}/api/#tuxopenarg) target-family.  For mapped targets, we'll use `flux.ok`, which has no arguments and simply succeeds without doing anything.
 
 ```bash 
-# Opens 3 panes with container-shells
-$ ./compose.mk loadf tests/docker-compose.yml tux.mux.svc/debian,alpine,debian
+# Specify a horizontal layout and pass in 3 targets
+$ ./compose.mk tux.open.horizontal/flux.ok,flux.ok,flux.ok
 
-# Equivalently, using lower-level generic targets
-$ ./compose.mk loadf tests/docker-compose.yml tux.mux/debian/shell,alpine/shell,debian/shell
+# Other equivalent forms
+$ layout=horizontal ./compose.mk tux.open/flux.ok,flux.ok,flux.ok
+$ layout=h ./compose.mk tux.open/flux.ok,flux.ok,flux.ok
 ```
 
-We can get some insight into how the stuff above works by passing `tux.mux` the `io.bash` target any number of times, which then opens 1 or more panes of interactive bash shells.
+Running this command shows some log messages detailing the startup process and the first time it runs you'll see the TUI bootstrapping itself (i.e. building the necessary support containers for running `tmux`).  (Afterwards it will be cached, so startup is much faster.)
 
-```bash
-# Opens 2 panes of bash-shells, running in the TUI container itself
-$ ./compose.mk loadf tests/docker-compose.yml tux.mux/io.bash,io.bash
-```
+At the end of setup, you'll see an interface like this, and it ran the `flux.ok` target for you, once in each pane.
 
-In this case `io.bash` runs *inside the TUI container*, but both the hosts working directory and the docker-socket are mounted as volumes.
-
-<hr style="width:100%;border-bottom:3px solid black;">
-
-### Low Config TUIs
-
-If you already have a project Makefile with some existing automation, you can `include compose.mk` at the top and still use the TUI with no other changes by using [`tux.mux`]({{mkdocs.site_relative_url}}/api/#tuxmuxarg).  The `tux.mux` target simply accepts any number of `make` targets, and then opens 1 TUI pane for each target.  
-
-Let's walk through some examples, supposing you already have targets for `clean`, `build`, `test`.  You can open a 3-pane TUI by just calling `make tux.mux/clean,build,test`.  This runs all of the named targets in parallel, and the whole TUI will exit after the individual tasks are completed.
-
-Of course, it probably doesn't make sense to run `clean`/`build`/`test` in parallel.  To get more flexibility here, it's often useful to use [`flux.*`, aka the workflow library]({{mkdocs.site_relative_url}}/api/#api-flux).  
-
-* We can run sequentially run `clean` and `build` by using `flux.wrap`, i.e. `flux.wrap/clean,build`
-* We can run `test` in a loop forever by using `flux.loopf/test`
-
-Putting it together, we can make a completely different TUI with this command line: `make tux.mux/flux.wrap/clean,build,flux.loopf/test
-
-{#
-splitvt 
-#}
-
-And if you're interested in building your own TUIs, see the [Dashboarding demo]({{mkdocs.site_relative_url}}/demos/dashboarding.mk).
-
-<hr style="width:100%;border-bottom:3px solid black;">
-
-### Extensions & Scripting
-
-In the limit, `compose.mk` can help you to script *custom console applications* that potentially involve many containers, and by using [mk.self]({{mkdocs.site_relative_url}}/demos/packaging) you can even "compile" them to stand-alone executables.  This works best for building things like dashboards, but it's even possible to build portable, project-specific IDEs.
-
-As a minimal example of extending the TUI, consider the following Makefile:
-
-```Makefile
-{{open('demos/tui-extension.mk','r').read().strip()}}
-```
-
-Running this opens a split-screen console with both panes showing an interactive bash terminal.  
-
-{{macros.img_link("tui-extension.png", mkdocs, "350px")}}
-
-This example helps to give an idea of the general structure of TUI extensions, but it isn't very useful.  The eagle-eyed reader will have noticed that the shells we opened are *running inside the TUI container*.  The project folder is already volume-mounted though, as is the hosts docker-socket.
+{{macros.img_link("tux.open-h.png", mkdocs, "400px")}}
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-#
+For controlling the default orientation, `tux.open.vertical` of course works in a similar manner as you can see below.
+
+```bash 
+# Specifies a vertical layout, and pass in 2 targets
+$ ./compose.mk tux.open.vertical/flux.ok,flux.ok
+
+# Other equivalent forms 
+$ layout=vertical ./compose.mk tux.open/flux.ok,flux.ok
+$ layout=v ./compose.mk tux.open/flux.ok,flux.ok
+```
+{{macros.img_link("tux.open-v.png", mkdocs, "400px")}}
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+The main alternative to "horizontal" and "vertical" is called "spiral", and it looks like this:
+
+{{macros.img_link("tux.open-s.png", mkdocs, "400px")}}
+
+These 3 layouts are enough for most use-cases, but `compose.mk` actually supports whatever `tmux` does and also whatever [dwindle](https://github.com/sunaku/home/blob/master/bin/tmux-layout-dwindle) supports.
+
+Of course, `flux.ok` is not very interesting, but it is the *simplest* target, and almost everything else we'll look at is some variation of the principles above.
+
 <hr style="width:100%;border-bottom:3px solid black;">
 

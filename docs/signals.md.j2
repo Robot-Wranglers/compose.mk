@@ -34,8 +34,6 @@ $ echo '{"foo":"bar"}' | ./compose.mk jq .foo
 $ echo foo=bar | ./compose.mk jb
 ```
 
-In the case of [`mk.let` and `mk.include`]({{mkdocs.site_relative_url}}/standard-lib/#dynamic-includes-and-targets]), we simulate *runtime*
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 ### Implementation
@@ -48,15 +46,19 @@ Signals and supervisors are implemented using [a shebang hack](https://en.wikipe
 
 Also note that while passing control over to a completely different process like this seems to *actually work* for both Linux and MacOS, this is still bad form.  In particular, complex argument passing might be misquoted, or exit codes may not be reliable.
 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### For Developers
+
 All targets related to signals/supervisors can be found under the `mk.interrupt` and `mk.super` namespaces, respectively.  
 
 {% set targets=bash('./compose.mk mk.namespace.filter/mk.super') %}
 {% set targets=targets + bash('./compose.mk mk.namespace.filter/mk.interrupt')%}
 {% set targets=targets.split('\n') %}
 {%for target in targets %} {% set target=target.strip().replace('%','<arg>') %}{%if target%}
-* [`{{target}}`](docs/api#{{target.replace('<','').replace('>','').replace('/','')}}){%endif%}{%endfor%}
+* [`{{target}}`]({{mkdocs.site_relative_url}}/api#{{target.replace('<','').replace('>','').replace('/','').replace('.','')}}){%endif%}{%endfor%}
 
-Targets above are for low-level internal use, and even hacking directly on `compose.mk` source probably won't require editing them.  To implement a new [proxy-wrapper]({{mkdocs.site_relative_url}}/tool-overview/#proxy-wrappers), use `mk.yield`.  Here's how to give `compose.mk` as new proxy-wrapper for the `ls` command:
+Targets above are for low-level internal use, and even hacking directly on `compose.mk` source probably won't require editing them.  To implement a new [proxy-wrapper]({{mkdocs.site_relative_url}}/tool-overview/#proxy-wrappers), use `mk.yield`.  Here's how you'd give `compose.mk` a new proxy-wrapper for the `ls` command:
 
 ```Makefile 
 # compose.mk src 
@@ -64,5 +66,3 @@ ls:
 	ls $${MAKE_CLI#*ls}
 	${mk.interrupt}
 ```
-
-Low-level usage of these targets isn't usually required.  From inside `compose.mk`, you can Inside `compose.mk`, When the supervisor is installed,  See also the usage of A related idiom in the `compose.mk` source code 

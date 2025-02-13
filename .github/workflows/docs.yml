@@ -1,0 +1,38 @@
+# See also: https://docs.github.com/en/actions
+name: Project Docs
+on:
+  workflow_call: {}
+  push:
+    branches: ["master", "docs"]
+    paths-ignore:
+    - '**.md'
+    - '**.md.j2'
+    - '**.mmd'
+    - '**.png'
+    - '**.svg'
+    - '**.gif'
+
+  # pull_request:
+  #   branches: [ "master" ]
+permissions:
+  contents: read
+jobs:
+  test:
+    name: Build Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Initialize
+        run: make clean init
+      - name: Docs
+        # GitHub Actions runs without a TTY device. This is a workaround to get one,
+        # based on https://github.com/actions/runner/issues/241#issuecomment-842566950.
+        # This is required for some of the integration tests that are using gum
+        shell: 'script -q -e -c "bash --noprofile --norc -eo pipefail {0}"'
+        run: make docs
+      # - name: TUI Tests
+      #   # GitHub Actions runs without a TTY device. This is a workaround to get one,
+      #   # based on https://github.com/actions/runner/issues/241#issuecomment-842566950.
+      #   # This is required for some of the integration tests that are using gum
+      #   shell: 'script -q -e -c "bash --noprofile --norc -eo pipefail {0}"'
+      #   run: make tui-test

@@ -43,7 +43,7 @@ nav:
     # - 'Container Dispatch Syntax': dispatch-syntax.md
     # - 'Import Macro Arguments': macro-arguments.md
     - 'Multiple Compose Files': multiple-compose-files.md
-  - Raw Docker Support: 'vanilla-docker.md'
+  - Raw Docker Support: 'raw-docker.md'
   - Standard Library: 
     - 'Library Overview': standard-lib.md
     - 'Full API': api.md
@@ -52,7 +52,10 @@ nav:
     - 'Loading Compose Files': loadf.md
   - TUI Support:
     - 'TUI Overview & Gallery': embedded-tui.md
-    - 'Configuration & Customization':  tui-customization-config.md
+    - 'Zero-config TUIs': zero-config-tuis.md
+    - 'Low-config TUIs': low-config-tuis.md
+    - 'Advanced TUIs': advanced-tuis.md
+    #- 'Configuration & Customization':  tui-customization-config.md
   - Misc Features:
       - 'CLI Help': cli-help.md
       - 'Supervisors & Signals': signals.md
@@ -68,7 +71,7 @@ nav:
   - Misc:
     - 'Design Philosophy': but-why.md 
     - 'Configuration / Env Vars': config.md
-    - limitations.md
+    # - limitations.md
     - contributing.md
     - 'Project Source': 'https://github.com/robot-wranglers/compose.mk/'
 plugins:
@@ -84,6 +87,7 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
       pygments_lang_class: true
+  - attr_list
 docs_dir: docs
 site_dir: site
   

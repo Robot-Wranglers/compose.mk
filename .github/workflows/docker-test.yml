@@ -1,0 +1,42 @@
+# See also: https://docs.github.com/en/actions
+name: Project Tests
+on:
+  workflow_call: {}
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+    paths-ignore:
+      - '**.md'
+      - '**.md.j2'
+      - '**.mmd'
+      - '**.png'
+      - '**.svg'
+      - '**.gif'
+permissions:
+  contents: read
+jobs:
+  test:
+    name: Build / Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Initialize
+        run: make clean init
+      - name: Integration Tests
+        # GitHub Actions runs without a TTY device. This is a workaround to get one,
+        # based on https://github.com/actions/runner/issues/241#issuecomment-842566950.
+        # This is required for some of the integration tests that are using gum
+        shell: 'script -q -e -c "bash --noprofile --norc -eo pipefail {0}"'
+        run: make integration-test
+      # - name: TUI Tests
+      #   # GitHub Actions runs without a TTY device. This is a workaround to get one,
+      #   # based on https://github.com/actions/runner/issues/241#issuecomment-842566950.
+      #   # This is required for some of the integration tests that are using gum
+      #   shell: 'script -q -e -c "bash --noprofile --norc -eo pipefail {0}"'
+      #   run: make tui-test
+      - name: Smoke Tests
+        run: make smoke-test
+      - name: E2E Tests
+        shell: 'script -q -e -c "bash --noprofile --norc -eo pipefail {0}"'
+        run: make e2e-test

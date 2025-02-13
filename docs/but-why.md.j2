@@ -18,7 +18,7 @@
 
 So, much of the content here is thoughts on the landscape of automation challenges in general.  But anticipating objections, much of the content is preoccupied with certain evangelism and advocacy.  
 
-You can take or leave any of the major components, but the most controversial design choices for `compose.mk` will be around the usage of `make` itself, or perhaps `docker compose`, and/or DIND (docker in docker).  Much ink (and maybe some blood) has been spilled over both advocacy and protest for those components.  You can probably start a fight today on the orange site, or over coffee in the break room, and you'll get the usual references.[^1][^2][^3][^4]  But much of the criticism *and* the advocacy arises from misunderstandings or myopic treatment of the tools or the use-cases involved.
+You can take or leave any of the major components, but the most controversial design choices for `compose.mk` will be around the usage of `make` itself, or perhaps `docker compose`, and/or DIND (docker in docker).  Much ink (and maybe some blood) has been spilled over both advocacy and protest for those components.  You can probably start a fight today on the orange site, or over coffee in the break room, and you'll get the usual references.[^1]  But much of the criticism *and* the advocacy arises from misunderstandings or myopic treatment of the tools or the use-cases involved.
 
 **Working theory: philosophy rarely changes hearts and minds, but tooling and examples might?**
 
@@ -45,6 +45,8 @@ And speaking of "real languages", `compose.mk` can actually help you [write make
 * As a tool/library, `compose.mk` is largely *written in `compose.mk`* rather than what you'd call Makefile.  For example, the [TUI generator](#) exercising the [workflows module](#)).  (It's not possible to get coverage-data from the test suite, but dogfooding like this should be a confidence builder.)
 * The API explicitly aims at *frozen* status, and after `compose.mk` is general enough *extend*, then the project is finished.  Bugfixes if necessary but no "forever" development, and no upstream to track.
 
+<hr style="width:100%;border-bottom:3px solid black;">
+
 ## A Problem Statement
 
 So, automation.  How should we even do it?  
@@ -53,8 +55,8 @@ People tend to have strong opions about this topic, but here are some observatio
 
 * **Orchestration *between* or *across* tool containers is usually awkward.** This is a challenge that needs some structure imposed.  You can get that structure in lots of ways, but it's always frustrating to see your work locked into esoteric JenkinsFile / GitHubAction blobs where things get complicated to describe, run, or read.  *Project automation ideally needs to run smoothly both inside and outside of CI/CD.*
 * **If running commands with different containers is easy, then there is less need to try and get everything into *one* tool container.**  The omnibus approach is usually time-consuming, and can be pretty hard if very different base images are involved.
-* **Tool containers are much more useful when you can easily dispatch commands to them,** especially without a long, fragile CLI invocation.  A compose file specifying volumes and such helps a lot, but *you don't want `docker run ...` littered all over your scripts for builds and orchestration*. Avoiding friction here seems like a small thing, but it matters a lot. 
-* **Tool containers don't necessarily change that often, but there are potentially a lot of them,** and if you need a separate git repository to describe / build / ship each of them to a docker registry before you can use them elsewhere, it's a pain. Prototyping and debugging are awkward, but bootstrapping new projects is especially awkward because starting anything is blocked on having new git repos, new docker-registry repos, and new CI/CD for the same.
+* **Tool containers are much more useful when you can easily dispatch commands to them,** especially without a long, fragile CLI invocation.  A compose file specifying volumes and such helps a lot, but no one wants `docker run` or `docker compose run` littered *all over* your scripts for builds and orchestration.  Avoiding friction here seems like a small thing, but it matters a lot. 
+* **Tool containers don't necessarily change that often, but there are potentially a lot of them,** and if you need a separate git repository to describe / build / ship each of them to a registry before you can use them elsewhere, it's painful. Prototyping and debugging are awkward, but bootstrapping new projects is especially awkward because starting anything is blocked on having new git repos, new docker-registry repos, and new CI/CD for the same.
 * **Plain shell scripts won't take you far.** Everyone knows that readability and maintainability isn't great, but that's just the start.  To name a few related issues.. features involving option/argument parsing, multiple entrypoints, code-reuse, partial-execution for partial-updates, dry-runs, parallelism, and other things you're going to need *just aren't simple to get.*  
 * **CM tools like Ansible can fix some things, but bring their own problems**.  A few examples of those problems are: Significant setup, significant dependencies, ongoing upstream changes, and the fact that many people cannot read or write it.
 * **The general need for "glue" code and glue languages is large and getting larger all the time, but still woefully underserved.**  This isn't just about devops either, because things like notebooking and data-pipelines stand to benefit.
@@ -65,7 +67,7 @@ People tend to have strong opions about this topic, but here are some observatio
 
 Much more controversially: **Make is the happy medium here**, despite the haters, the purists, and the skeptics who argue that *make is not a task-runner*, and despite the often-misunderstood [recursive-make-harmful](https://accu.org/journals/overload/14/71/miller_2004/) paper.  
 
-That's because `make` is just too good to ignore, and there are several major benefits: 
+That's because `make` is *just too good to ignore*, and there are several major benefits: 
 
 1. It is old but it is everywhere, it's expressive but has relatively few core concepts, and it's fast.  
 1. It's the lingua franca for engineers, devops, and data-science, probably because easy things stay easy and advanced things are still possible.  
@@ -74,10 +76,21 @@ That's because `make` is just too good to ignore, and there are several major be
 
 If you need something *outside* of docker that you want stability & ubiquity from, it's hard to find a better choice.  As a bonus, most likely tab-completion for make-targets already works out of the box with your OS and shell, and to a certain extent, `make` can even support plan/apply workflows (via `--dry-run`) and parallel execution (via `--jobs`).  At the most basic level, `make` does DAGs, and [DAGs are everywhere](#DAGs-Rule-Everything-Around-Me).
 
-The biggest problem for many use-cases is just that *Makefiles have nothing like native support for running tasks in containers*, **but this is exactly what *`compose.mk`* fixes.**  Makefiles are already pretty good at describing task execution, but describing the containers themselves is far outside of that domain.  Meanwhile, docker-compose is exactly the opposite, and so [Make/Compose is a perfect combination]({{mkdocs.site_relative_url}}/bridge).
+The biggest problem for many modern use-cases is just that *Makefiles have nothing like native support for running tasks in containers*, **but this is exactly what *`compose.mk`* fixes.**  Makefiles are already pretty good at describing task execution, but describing the containers themselves is far outside of that domain.  Meanwhile, docker-compose is exactly the opposite, and so [Make/Compose is a perfect combination]({{mkdocs.site_relative_url}}/bridge).
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+## The Obligatory Compare/Contrast
+
+Yes.. there are things such as [remake](https://remake.readthedocs.io/en/latest/), [taskfile](https://taskfile.dev/), and [just](https://github.com/casey/just) to give a few examples.  All task-runners can [run the other ones](#) so it's not like it's really a competition, especially if the goals and feature-sets are very different.  For a sufficiently large project you might even want to use a few runners, each for what they are best at.  But this is the part where one is supposed to say the competition sucks, so here it is :) 
+
+With big projects, just using `just` means asking 100 people to install something, and often means asking people to learn 10 new things as the *easy way* to avoid learning 1 new thing.[^4]  Again, feature sets differ of course, and it's not an apples to apples comparison, but.. in terms of back-end implementation `just` source weighs in at ~100 files, with ~17k lines of code, so in comparison to `compose.mk` that's roughly 100x and 10x, respectively.  Makes perfect sense right?, because `just` has to rebuild `make`, whereas `compose.mk` just uses it.  The most frequent reasons cited for `just` over `make` are probably polyglots, task listing, online help, "private" targets, etc.  All of which are provided by `compose.mk` to some extent, plus native-ish support for docker, TUIs, etc.  Without a doubt the more advanced features of `compose.mk` have more bugs and/or limitations compared to `just`, but `compose.mk` does more, and at the bottom it's as stable as `make` is.
+
+In terms of minimalism and dependencies, `just` just requires `just`, and is available from package managers, whereas `compose.mk` does require `make` and most use-cases will want `docker`.  However if you want to use tools like `jq` from `just`, then you need those too, whereas `compose.mk` [wraps things like jq implicitly]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) and provides easy access to everything else as long as it's available (or constructable) with docker.
+
+Love it or hate it, **the main differentiator for `compose.mk` is that it's designed first and foremost *to be extended***.  It moonlights as a tool, but in many ways is closer to a scripting language.
 
 {#
-Yes.. there are things such as `remake`, `taskfile`, and `just` to give a few examples.  But for big projects, just using `just` still means asking 100 people to install something, and very often also means asking people to learn 10 new things as the *easy way* to avoid learning 1 new thing[^1].  Feature sets differ, but in terms of back-end implementation `just` source weighs in at ~100 files, with ~17k lines of code, so in comparison to `compose.mk` that's roughly 100x and 10x, respectively.  Of course, compose.mk`Makes perfect sense because `just` has to rebuild `make`, whereas `compose.mk` just uses it.
 #}
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -207,5 +220,4 @@ To the extent you really *need* advanced Makefile features like eval-call macros
 [^1]: [Recursive make Considered Harmful][https://aegis.sourceforge.net/auug97.pdf]
 [^2]: [Non-recursive Make Considered Harmful](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/03/hadrian.pdf)
 [^3]: [Unreasonable effectiveness of Makefiles](https://matt-rickard.com/the-unreasonable-effectiveness-of-makefiles)
-[^4]:
-[^1]: https://github.com/casey/just?tab=readme-ov-file#what-are-the-idiosyncrasies-of-make-that-just-avoids
+[^4]: https://github.com/casey/just?tab=readme-ov-file#what-are-the-idiosyncrasies-of-make-that-just-avoids

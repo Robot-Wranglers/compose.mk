@@ -4,7 +4,7 @@
 
 ### Basic Installation
 
-First, copy the files from this repo into your project:
+Just copy the `compose.mk` and make it executable:
 
 ```bash
 $ cd myproject 
@@ -72,7 +72,7 @@ Here's a typical example compose file:
 
 This example above is typical, but not necessarily minimal, so let's highlight a few things about it.  
 
-* **Notice how `dockerfile_inline` can be used to quickly extend a base-container without adding an extra Dockerfile to your repository.**  Tool-containers rarely change once established, and having a separate file and separate git/docker repos for everything can get tedious.  And again, there's a chance your tool-containers already include `make`, and you don't need to add packages at all.
+* **Notice how `dockerfile_inline` can be used to quickly extend a base-container without adding an extra Dockerfile to your repository.**  Tool-containers rarely change once established, and having a separate file and separate git/docker repos for everything can get tedious.  And again, there's a chance your tool-containers already include `make`, and you don't need to add packages at all.  (If you're looking for a reasonable base-container that includes `make` and will help you avoid initial package updates with `apt` or `apk`.. you can also look at [gcc containers](https://hub.docker.com/_/gcc/) or e.g. `debian/buildd:bookworm`.)
 
 * **Note also the usage of yaml inheritance with anchors,** i.e. `&base` and `<<: *base`.  This is a good trick to keep compose files DRY and as simple as possible.  Config keys for `entrypoint` and `hostname` are usually optional but provided for clarity, and this can help to clean up logging.  
 

@@ -52,107 +52,13 @@ Here's an overview for how the `compose.mk` standard library is organized into m
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-### Structured IO
-
-One problem with `make` is that the lack of structured output tends to be a limiting factor.  A big part of the explanation for this is just that a Makefile might be using any random tools with any kind of behaviour, but that's sort of inevitable for automation.  The other part is just a missing approach to idioms and tools, and `compose.mk` can help with that.
-
-The `compose.mk::stream` module, aka the [**`stream.*` target namespace**]({{mkdocs.site_relative_url}}/api#api-stream) adds basic support for working with streams, including newline/comma/space delimited streams, common use cases with JSON, etc.  Most of the utilities here are in the form of make-targets that are intended to be used with pipes (i.e. they reads from stdin).  
-
-**This is not what you'd call "typed", but it reduces error-prone parsing and moves a little bit closer to structured data.**  
-
-[The classical GMSL](https://mxe.cc/gmsl.html) adds support for things like sets and string-lists, and the `compose.mk::stream` module does some of that too.  But the biggest benefit comes from exposing tools like [`jq`](#) and [`jb`](#) without explicitly depending on them.  How does that work?  Basically `compose.mk` will use local tools if they are available, and fall back to using dockerized versions of them.
-
-Before we get into code examples, let's introduce basic principles with the command line.  
+{% include "structured-io.md.j2" %}
 
 <hr style="width:95%;border-bottom:1px dashed black;">
-
-#### Structured IO: Basics
-
-The `jb`[^3] and `jq`[^4] tools are so much revered, they get top-level entrypoints.
-
-```bash 
-# output JSON using `jb` =>
-$ echo key=val | ./compose.mk jb
-{"key":"val"}
-
-# parse JSON using `jq`
-$ echo key=val | ./compose.mk jb | ./compose.mk jq -r .key
-val
-```
-
-Inside a project Makefile, we can always use direct calls to `compose.mk` as seen above, or recursive calls to `make`.  But if arguments to these tools get complicated, quoting will be dodgy.  Luckily there are equivalent forms that are more idiomatic, and these also spawn fewer processes:
-
-```Makefile
-{{open('demos/structured-io.mk','r').read().strip()}}
-```
-
-For the most part `compose.mk` tries to stay out of the way of `jq` and `jb` and let them do what they do, but remember, we need this thin abstraction layer to transparently choose between a local tool and a dockerized tool.
-
-There are other equivalent forms, for example `cat /dev/stdin` can be rewritten as `${stream.stdin}` for readability, but you get the idea.  **Now `make emit | make consume` is doing basic IO with JSON,** and we haven't added any new dependencies.
-
-From here you'll probably want to provide user-feedback and status messages without wrecking pipe-safety; see also the section on [logging facilities](#logging-facilities).  Since you've got structured output anyway, this is also a good segue into the [workflow example](#workflow-example-etl).
-
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-{#
-#### Structured IO: Stream Types
-
-#}
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-### Logging Facilities
-
-One goal for `compose.mk` is to enable program output that is clean, curated, and human-friendly on stderr, and machine-friendly on stdout.  There are a few features available in support of this.  In general `compose.mk` prefers make-targets over make-functions and macros, because targets are more reusable.[^2]  Logging is a special case though, and might use all 3.
-
-#### Log Functions 
-
-First lets look at the **`log.*` functions** that are suitable for use from your project Makefile.  The following example demonstrates basic logging, logging with formatting, and trace-logging.  
-
-```Makefile
-{{open('demos/logging.mk','r').read().strip()}}
-```
-
-A few other things that are worth mentioning:
-
-* **Logging always goes to stderr so that targets remain pipe-safe**, including the `log.json` output.
-* **Log-messages have a prefix which is based on the call-depth**, which can help visually parse complex traces.
-* See the `compose.mk` source for other information about formatting colors and glyphs.  
-
-Tools for working with JSON are also discussed in more detail in the section on [Structured IO](#structured-io-basics).
-
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-#### File and Stream Previews
-
-Whether you're working on build processes, data-pipelines, or infrastructure deployments, it's convenient to have the ability to "preview" things like files, streams, or intermediate representations.  [Docs for compose.mk's built-in tool wrappers]({{mkdocs.site_relative_url}}/tool-overview/#other-wrappers) cover this topic also, but let's look at some more programmatic usage.
-
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-```Makefile
-{{open('demos/logging.mk','r').read().strip()}}
-```
-
-#### Visual Dividers
-
-**Visually separating stages with some kind of output divider** is something that is nice to have to for otherwise messy output.  Here's an example of several different ways of using `io.print.div` to get labeled or timestamped dividers that are shown between clean/build/test stages.  
-
-```Makefile
-{{open('demos/section-dividers.mk','r').read().strip()}}
-```
-
-In the `build` task above, you can see one way to call `io.print.div` explicitly, which uses `${make}` as shorthand for "*the right way to call `make` recursively*".  As an equivalent, you can always use an invocation like `./compose.mk io.print.divider` instead, and this works from anywhere.  Inspecting usage from the command line:
-
-{{macros.img_link("demo-io.gif", mkdocs, "90%")}}
-
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-Even though [`io.print.div`]({{mkdocs.site_relative_url}}/api/#ioprintdiv) detects terminal width, it isn't fancy otherwise.  A related utility is `io.gum.style`, which can print dividers with [charmbracelet/gum](https://github.com/charmbracelet/gum).  *If you have a local copy of `gum` then it is used, otherwise, we fall back to docker.*
-
-{{macros.img_link("demo-gum.gif", mkdocs, "90%")}}
-
-For other tools like showing syntax-highlighted files or iput streams, check out [these docs for stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview). See also the [full documentation for all `io.*` targets]({{mkdocs.site_relative_url}}/api/#api-io)
-
+{% include "logging.md.j2" %}
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -220,7 +126,7 @@ For examples of other idioms, see [flux.loop and friends]({{mkdocs.site_relative
 
 ### Reflection Support
 
-[Reflective programming](https://en.wikipedia.org/wiki/Reflective_programming) is "the ability of a process to examine, introspect, and modify its own structure and behavior.
+[Reflective programming](https://en.wikipedia.org/wiki/Reflective_programming) is the ability of a process to examine, introspect, and modify its own structure and behavior.
 
 As a simple example of why this is practical, features like [CLI help](#) and [automatically generated API docs](#) require that `compose.mk` has at least *some* ability to parse its own contents.  And if we need that kind of ability, why not allow for parsing of other Makefiles?  Most of the meta-tooling that's available for stuff like this is somewhere in the [`mk.*` target namespace](#).
 
@@ -268,7 +174,7 @@ $ ./compose.mk mk.parse/demos/no-include.mk
 
 #### Dynamic Includes and Targets
 
-To a certain extent, `compose.mk` can do experimental *runtime* modification of `make` itself (or at least simulate it).  Under the hood, this works by code-generation, creating a new Makefile just in time and then [turning execution over to it](#).  
+To a certain extent, `compose.mk` can do experimental *runtime* modification of `make` itself (or at least simulate it).  Under the hood, this works by code-generation to create a new Makefile just in time, and then [turning execution over to it]({{mkdocs.site_relative_url}}/signals/).  
 
 For example, typically `make` cannot define targets dynamically, but here's an example that creates a new target on the fly, assigning it to an existing target that simply returns success.  
 
@@ -300,13 +206,10 @@ DEFAULT_GOAL=foo
 
 #### Reading Defines
 
-Lorem ispuym Lorem ispuym Lorem ispuym Lorem ispuym Lorem ispuym Lorem ispuym Lorem ispuym Lorem ispuym Lorem ispuym Lorem ispuym
+Reading `define ... endef` blocks from makefiles is important for several different `compose.mk` features that rely on embedded data.  And crucially, the contents of those blocks **must not be mangled**, escaped, interpolated, etc. 
+
+`mk.def.read`
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 <hr style="width:100%;border-bottom:3px solid black;">
-
-[^1]: See https://www.jenkins.io/doc/book/pipeline/syntax/
-[^2]: Make-targets can be used as task-prerequisites as well as command line entrypoints
-[^3]: https://github.com/h4l/json.bash
-[^4]: https://github.com/jqlang/jq

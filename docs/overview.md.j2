@@ -1,8 +1,8 @@
 {% import 'macros.j2' as macros -%}
 
-**Meet `compose.mk`, a tool / library for makefile-based automation, scripting, and lightweight orchestration.**  Native support for docker, docker-compose, workflow primitives, TUI elements, and more.
+**Meet `compose.mk`, tool / library /framework for makefile-based automation, scripting, and lightweight orchestration.**  Native support for docker, docker-compose, workflow primitives, TUI elements, and more.
 
-{{macros.img_link("tui-3.gif", mkdocs, "90%")}}
+{{macros.img_link("loadf-2.gif", mkdocs, "90%")}}
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -14,7 +14,7 @@ There are lots of ways to use it, particularly stuff in the automation/orchestra
 
 * **For programmatic usage,** you can think of `compose.mk` as an attempt to provide a "[standard library]({{mkdocs.site_relative_url}}/standard-lib)" that extends vanilla `make`.  Besides advanced stuff like container support and workflows, it offers basic stuff like clean, colored logging.  
 
-* **As a framework,** you can [combine `compose.mk` with docker-compose file(s)]({{mkdocs.site_relative_url}}/bridge) or [inlined container descriptions]({{mkdocs.site_relative_url}}/vanilla-docker), and very quickly expose powerful, domain-specific automation APIs in your project Makefile to orchestrate tasks that might involve multiple containers.  Dispatching make-targets *inside* these containers turns out to be an especially powerful technique, and is supported for most containers.
+* **As a framework,** you can [combine `compose.mk` with docker-compose file(s)]({{mkdocs.site_relative_url}}/bridge) or [inlined container descriptions]({{mkdocs.site_relative_url}}/raw-docker), and very quickly expose powerful, domain-specific automation APIs in your project Makefile to orchestrate tasks that might involve multiple containers.  Dispatching make-targets *inside* these containers turns out to be an especially powerful technique, and is supported for most containers.
 
 * **As a stand-alone tool,** `compose.mk` requires no project-level integration, and still does [lots of practical stuff]({{mkdocs.site_relative_url}}/tool-overview) with *no dependencies beyond `make` and `docker`*.  Because `make` targets always do double-duty as CLI entrypoints and as reusable task units, the "internal API" is automatically published as a CLI interface.
 
@@ -35,10 +35,10 @@ The interactive TUI stuff above makes for attention-grabbing demos and has the a
 
 * **Radically minimal,** in terms of dependencies and conceptual overhead. Out of the box, `make` is expressive but has relatively few core concepts, it's ubiquitous, and it's fast. Building on this, `compose.mk` adds just enough extra concepts to get *a lot* of extra power and flexibility.
 * **Seamless and simple idioms for working with containers in a way that's platform agnostic.** Code that automates tasks in project management should not be locked inside Jenkinsfiles or Github Actions.  Using `compose.mk` tends to [help projects to decouple and run elsewhere]({{mkdocs.site_relative_url}}/container-dispatch), but afterwards running from CI/CD still works.
-* **Generic and easy to extend foundation.**  A major focus for `compose.mk` is what might be summarized as *mapping, dispatch, and interoperability*.  For example you can [map docker containers to `make` targets]({{mkdocs.site_relative_url}}/bridge), or targets to containers, or [map containers/targets into `tmux` panes]({{mkdocs.site_relative_url}}/embedded-tui).  This makes it easy to quickly put together domain-specific toolkits whether that domain happens to be wrangling development tools, documentation tools, or infracode tools.
+* **Generic and easy to extend foundation.**  A major focus for `compose.mk` is what might be summarized as *mapping, dispatch, and interoperability*.  For example you can [map docker containers to `make` targets]({{mkdocs.site_relative_url}}/bridge), or targets to containers, or [map containers/targets into `tmux` panes]({{mkdocs.site_relative_url}}/embedded-tui).  This makes it easy to quickly put together domain-specific toolkits, regardless of whether that domain happens to be wrangling development tools, documentation tools, or infracode tools.
 * **Clean & carefully curated output** that is [logged to appropriate streams]({{mkdocs.site_relative_url}}/standard-lib/#logging-facilities), aiming to be readable and human-friendly on stderr, while still [remaining machine-friendly for downstream processing]({{mkdocs.site_relative_url}}/standard-lib/#structured-input-output) on stdout.
 * **Basic workflow support is also available.**  Tasks and DAGs are built-ins for `make` naturally, and `compose.mk` adds support for other primitives, [like parallel tasks and task retries]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).
-* **Hacker friendly.** The single-file approach used with `compose.mk` makes it easy to embed alongside existing projects.  The project itself uses [the unlicense](https://unlicense.org/), and the goal is for the base API to eventually become completely frozen.  Rip out the parts you don't need, contribute upstream if you can, but if you don't want to track upstream or if your customizations become too specific to your project, no need to look back.
+* **Hacker friendly.** The single-file approach used with `compose.mk` makes it easy to embed alongside existing projects.  The project itself uses [the unlicense](https://unlicense.org/), and the goal is for the base API to eventually become completely frozen.  Rip out the parts you don't need, contribute upstream if you can, but if you don't want to track upstream or if your customizations become too specific to your project, no need to ever look back.
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -46,12 +46,11 @@ The interactive TUI stuff above makes for attention-grabbing demos and has the a
 
 This is all pretty abstract though, and it's time to choose your own adventure:
 
-* **If *you are interested already and prefer to learn by example***.. [just.]({{mkdocs.site_relative_url}}/bridge) [dive.]({{mkdocs.site_relative_url}}/embedded-tui) [into.]({{mkdocs.site_relative_url}}/demos/platform) [some.]({{mkdocs.site_relative_url}}/tool-overview)
+🚀 -- **If *you are interested already and prefer to learn by example***.. [just.]({{mkdocs.site_relative_url}}/bridge) [dive.]({{mkdocs.site_relative_url}}/embedded-tui) [into.]({{mkdocs.site_relative_url}}/demos/platform) [some.]({{mkdocs.site_relative_url}}/tool-overview)
 
-* **If you are *understandably skeptical about getting involved with the biggest, baddest, and most highly-powered mutant Makefile the world has ever seen***, you might want to [read more advocacy about motivations and design philosophy]({{mkdocs.site_relative_url}}/but-why).
+🤨  -- **If you are *understandably skeptical about getting involved with the biggest, baddest, and most highly-powered mutant Makefile the world has ever seen***, you might want to [read more advocacy about motivations and design philosophy]({{mkdocs.site_relative_url}}/but-why).
 
-* **If you are withholding judgement on just how insane this project is until you see concrete larger-scale use-cases..** skip to some of the demos or consider checking out these sibling projects which use and extend `compose.mk` to manage kubernetes cluster lifecycles: [k8s-tools](https://github.com/elo-enterprises/k3d-faas) and [k3d-faas](https://github.com/elo-enterprises/k3d-faas).
-
+🔎 -- **If you are withholding judgement on just how insane this project is until you see concrete larger-scale use-cases..** skip to some of the demos or consider checking out these sibling projects which use and extend `compose.mk` to manage kubernetes cluster lifecycles: [k8s-tools](https://github.com/elo-enterprises/k3d-faas) and [k3d-faas](https://github.com/elo-enterprises/k3d-faas).
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -86,7 +85,7 @@ will be more programmatic.   If you're thinking of more programmatic usage, Supp
 
 Beyond addressing the issues above, these tools add new capabilities to `make` itself, including some support for [quickly building custom TUIs]({{mkdocs.site_relative_url}}/compose.mk#embedded-tui) from dockerized components.
 
-{{macros.img_link("tui-6.gif", mkdocs, "90%")}}
+{{macros.img_link("tui-tte.gif", mkdocs, "90%")}}
 
 
 

@@ -1,0 +1,44 @@
+{% import 'macros.j2' as macros -%}
+## Mad Science
+
+### Inlined Compose Files
+
+```Makefile
+{{open('demos/inlined-composefile.mk','r').read().strip()}}
+```
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+{% include "demos/inlined-docker-files.md.j2"%}
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+### Extending Inlined Docker Files 
+
+Inlined containers can actually be extended with other inlines, but notice again the `compose.mk:` prefix which is used as a "repository".
+
+```Makefile
+{{open('demos/extend-inlined-dockerfile.mk','r').read().strip()}}
+```
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+### Passing Inlined Data-Structures
+
+Building on the [Custom Automation APIs](#) demo, let's embed an ansible playbook, pass *that* into an embeddded container.
+
+```Makefile
+{{open('demos/ansible-playbook.mk','r').read().strip()}}
+```
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+{#
+## How it Works 
+
+Most of this stuff hinges on multi-line defines, plus the [ability of `compose.mk` to handle reflection](#), which is possible because it has some ability to parse its own contents.  See the API for [*`mk.*`*]({{mkdocs.site_relative_url}}/api#api-mk) and [*`docker.*`*]({{mkdocs.site_relative_url}}/api#api-docker) for more details.  
+
+Note also that the [*`mk.def.*`* targets]({{mkdocs.site_relative_url}}/api#api-mk) leave the data inside the defs completely unmolested, which means that there's no requirement for escaping the contents, and things like `$` are always left alone.  This also means the **content is fairly static**, and not typically amenable to pre-execution templating.  It *is* possible to work around this, but that's an even more crazy idea than the rest of this is, so it is left as an exercise to the reader. =P
+
+<hr style="width:100%;border-bottom:3px solid black;">
+#}
