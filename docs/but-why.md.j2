@@ -1,0 +1,171 @@
+{% set img_base =  img_base | default('../img') %}
+{% import 'macros.j2' as macros -%}
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<center>
+# Motivation & Design Philosophy
+</center>
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+{{macros.img_link("y-tho.png", mkdocs, "65%")}}
+<hr style="width:100%;border-bottom:3px solid black;">
+
+## Is this even for real?
+
+Some people might be skeptical about getting involved with *the biggest, baddest, and most highly-powered mutant Makefile the world has ever seen*, so let's be clear about a few things.  
+
+The source code for `compose.mk` weighs in at 3500+ lines of pure Makefile, and some features use on-the-fly code-generation. There are other eyebrow raising implementation details, such as use (abuse?) of POSIX signals.  One might even say that the whole feature set is a very long list of terrible hacks that can only be redeemed by a *'but look what you can do with this!'* moment.  Pushing the boundaries of a simple toolchain is part of the goal.
+
+At the same time, this isn't some esolang flex like a [fractran compiler](https://github.com/siraben/hasktran) or [regex-chess](https://nicholas.carlini.com/writing/2025/regex-chess.html).  Honestly, `compose.mk` started as an experiment in basic docker-support for `make` and became an experiment in dependency minimalism in general, *but it just never hit a wall*, and it seems like it ended up in an interesting place.  You would think that minimalism cannot be compatible with *aggressively reusing available tools*, but in the limit, scripting with `compose.mk` **feels like a genuinely new way to write glue code that pulls in foreign tools as first class objects**, and it introduces various primitives and idioms that make `make` feel like a "real language".
+
+And speaking of "real languages", `compose.mk` can actually help you [write make-targets in foreign languages]({{mkdocs.site_relative_url}}/demos/polyglots/) too, but that's just another example of the kind of thing might make people nervous!  Opinions will differ about whether that kind of sorcery is really a good idea.  Maybe if you see something that offends your sensibilities let's call it a prototyping workflow? ;)
+
+**So cue the obligatory disclaimer:** With great power comes great responsibility, and like most things you'll have to exercise some judgement.  It has to be said that some of the demos are kind of crazy, and most likely no one will thank you for [going wild]({{mkdocs.site_relative_url}}/demos/polyglots/) with introducing [mad science techniques]({{mkdocs.site_relative_url}}/demos/mad-science/) into real projects.  But sometimes you gotta weigh a hack against the utility it provides, and evaluate things in terms of *simplicity, stability, and portability* rather than pure aesthetics.  Just don't be antisocial by embedding a gnarly and frequently-changing 300-line Dockerfile into your team's Makefile, and you'll be fine.  
+
+*So, with that stern warning out of the way..* **yes, `compose.mk` is for real.**  It solves real problems, real fast.  Here's a few things that might help to convince the anxious:
+
+* The `compose.mk` line count is scary.. but code-to-comment ratios are ~ 1:1.
+* Makefile as a language is scary too.. but `compose.mk` deliberately avoids advanced features whenever possible.  Working *with* `compose.mk` is very different from working *on* it, and should be friendly for the novice as well as the wizard.
+* The docs, demos, and test-suites are pretty extensive.
+* As a project, `compose.mk` is mature enough to be self-hosting, and handles generation of its own docs and running the test-suite.  *(And the test-suite itself also confirms that docker-in-docker usage of tooling won't make CI/CD lose its mind.)*
+* As a tool/library, `compose.mk` is largely *written in `compose.mk`*, for example, the [TUI generator](#) exercising the [workflows module](#)).  (It's not possible to get coverage-data from the test suite, but dogfooding like this should be a confidence builder)
+* The API aims at *frozen* status, and after `compose.mk` is general enough extend, then the project is finished.  Bugfixes if necessary but no "forever" development, and no upstream to track.
+
+Most of the documentation deals with *how*, but if you want to know more about *why*, then the rest of this page is for you.  It's more essay than FAQ, but it might address what you're interested in.  Much of the rest of this content is thoughts on general challenges in automation.  But, anticipating objections, much of it is also preoccupied with general `make` advocacy.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+## A Problem Statement
+
+So, automation.  How should we even do it?  
+
+People tend to have strong opions about this topic, but here are some observations that probably aren't too controversial: 
+
+* **Orchestration *between* or *across* tool containers is usually awkward.** This is a challenge that needs some structure imposed.  You can get that structure in lots of ways, but it's always frustrating to see your work locked into esoteric JenkinsFile / GitHubAction blobs where things get complicated to describe, run, or read.  *Project automation ideally needs to run smoothly both inside and outside of CI/CD.*
+* **If running commands with different containers is easy, then there is less need to try and get everything into *one* tool container.**  The omnibus approach is usually time-consuming, and can be pretty hard if very different base images are involved.
+* **Tool containers are much more useful when you can easily dispatch commands to them,** especially without a long, fragile CLI invocation.  A compose file specifying volumes and such helps a lot, but *you don't want `docker run ...` littered all over your scripts for builds and orchestration*. Avoiding friction here seems like a small thing, but it matters a lot. 
+* **Plain shell scripts won't take you far.** Everyone knows that readability and maintainability isn't great, but that's just the start.  To name a few related issues.. features involving option/argument parsing, multiple entrypoints, code-reuse, partial-execution for partial-updates, dry-runs, parallelism, and other things you're going to need *just aren't simple to get.*  
+* **CM tools like Ansible can fix some of this, but bring their own problems**.  A few examples of those problems are: Significant setup, significant dependencies, ongoing upstream changes, and the fact that many people cannot read or write it.
+* **The need for "glue" code and glue languages is large and getting larger all the time, but still woefully underserved.**  This isn't just about devops either, because things like notebooking and data-pipelines stand to benefit.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+## The Happy Medium
+
+Much more controversially: **Make is the happy medium here**, despite the haters, the purists, and the skeptics who argue that *make is not a task-runner*, and despite the often-misunderstood [recursive-make-harmful](https://accu.org/journals/overload/14/71/miller_2004/) paper.  
+
+That's because `make` is just too good to ignore, and there are several major benefits: 
+
+1. It is old but it is everywhere, it's expressive but has relatively few core concepts, and it's fast.  
+1. It's the lingua franca for engineers, devops, and data-science, probably because easy things stay easy and advanced things are still possible.  
+1. It's the lingua franca for javascript, python, or golang enthusiasts who need to be able to somehow work together.  
+1. Most importantly: `make` is probably the *least* likely thing in your toolkit to ever be affected by externalities like pypi or npm breakage, package updates, or changing operating systems completely;  `make` won't care if you run it from your laptop, or github-actions, or Airflow.
+
+If you need something *outside* of docker that you want stability & ubiquity from, it's hard to find a better choice.  As a bonus, most likely tab-completion for make-targets already works out of the box with your OS and shell, and to a certain extent, `make` can even support plan/apply workflows (via `--dry-run`) and parallel execution (via `--jobs`).  At the most basic level, `make` does DAGs, and [DAGs are everywhere](#DAGs-Rule-Everything-Around-Me).
+
+The biggest problem for many use-cases is just that *Makefiles have nothing like native support for running tasks in containers*, **but this is exactly what *`compose.mk`* fixes.**  Makefiles are already pretty good at describing task execution, but describing the containers themselves is far outside of that domain.  Meanwhile, docker-compose is exactly the opposite, and so [Make/Compose is a perfect combination]({{mkdocs.site_relative_url}}/bridge).
+
+Yes, there are things such as `remake`, `taskfile`, and `just`.  But for big projects, just using `just` still means asking 100 people to install something.  Feature sets differ, but in terms of back-end implementation `just` source weighs in at ~100 files, with ~17k lines of code, so in comparison to `compose.mk` that's roughly 100x and 10x, respectively.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+{#
+<hr style="width:95%;border-bottom:1px dashed black;">
+#}
+
+## The Top of the Stack
+
+Tools like `ansible`, `cloudformation`, `docker`, `docker-compose`, `eksctl` are just a few examples where it's normal to have extremely long & complex command-line invocations, awkward to type and hard to remember, and possibly depend on environment variables and other config-context for correct behaviour.  You can't get around this with bash aliases, because developers won't have those in sync, and problems with plain bash scripts have already been discussed.  Sourcing `.env` files or loading bash functions as part of developer-shells all tends to create issues, because people lose track of the state in one tabbed terminal vs another, or the state is unavailable to IDEs, etc.  Complicating the matter further, some of these tools actually need access to the same config data, and some operations require multiple tools, or data-flow *between* tools.
+
+Having a well defined "top" of your stack that sets some context, and provides aliased entrypoints for cumbersome-but-common stuff becomes really important.  Just as important, that context needs to be project based, and shouldn't leak out into your shell in general, or your system in general.  **Makefiles are the obvious choice here,** because they enable everything and require nothing, allowing for a pretty seamless mixture of config, overrides, entrypoint aliases, context management, task orchestration, and new automation layers that connect and recombine existing ones.
+
+{#Suppose you want to make no assumptions about python/node/maven availability for a build context. is easily done by **versioning those platforms explicitly in your compose file**, then calling them with [target dispatch](#container-dispatch).  This gives a frictionless local-dev experience at the same time that it frees you up from worrying about whether automation and images are in sync for local-dev / Jenkins / Github.#}
+
+{#<hr style="width:100%;border-bottom:3px solid black;">#}
+<hr style="width:100%;border-bottom:3px solid black;">
+
+## No Golden Version for Frameworks
+
+If you're using large frameworks like Terraform/Ansible at all, then there's a good chance you'll eventually need multiple versions of that framework at least temporarily.  You can even see this at the level of tools like `awscli`, with the much anticipated split for v1/v2.   Basically your options at a time like this are to:
+
+1. Start building a "do everything" golden container or VM, put both versions in the same place.
+1. Start messing around with tools like `virtualenv`, `tox`, or `terragrunt` for sandboxing different versions.
+1. Start replacing lots of `foo-tool` invocations with awkward-but-versioned `docker run foo/foo-tool:VERSION ...` commands.
+1. Rely completely on CI/CD like Jenkins/Github or workflow-engines like Atlantis or Argo for mapping your tasks onto versioned containers.
+
+Choices 1 & 2 are labor intensive and fragile, choice 3 is ugly, fragile, and particularly hard to maintain.  Choice 4 is *maybe* fine once it's actually working, but it's also basically punting on *all local development forever*, so it can be pretty painful to change or debug.  In the worst-case, Choice 4 also has the downsides that you're accepting platform lock-in as well as betting everything on a single point of failure.
+
+**Alternatively, you could start managing tool-containers with compose, then launch any target in any container with compose.mk's approach to [target dispatch]({{mkdocs.site_relative_url}}/container-dispatch).**  You can still call `make` from Jenkins, Argo, or Github.  While you added smooth workflows for local development, you also just fixed lots of bad coupling because now you can switch your whole CI/CD backend from any of these choices to the others and it's not a big deal.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+## DAGs Rule Everything Around Me
+
+You probably already know that [directed acyclic graphs](https://en.wikipedia.org/wiki/Directed_acyclic_graph) aren't just for Airflow, and these come up practically any time you're thinking about dependency trees, scheduling, and lots of other stuff.  DAGs are pretty much what `make` *does*, and it's good at it.  
+
+For lots of automation work, and *especially* lifecycle automation, DAGs of tasks/prerequisites are the most natural way model things.  **Engines for resolving "desired state" like Terraform/Ansible are great at what they do, but they are not really built for describing DAGs.**  If you're spending lots of time messing around with hooks and plugins, it might be a sign that you're struggling to turn your desired-state-management tools into DAG processors.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+## Glue Code, Notebooking, and Data Science 
+
+Opinions will differ about whether it is *good or pleasant*, but glue code is increasing everywhere.  Different projects publishing or hosting notebooks/pipelines are sometimes tidy and sometimes admonish you to complete 12 steps of copy-paste to get started.  But most people have probably seen wildly disorganized notebooks *shoved into production directly* as pipelines or pipeline-components at one time or another.  You can try to stop that with culture and code reviews but it's worth asking: what can be done with tooling so that the "good" way is the same as the "easy" way?
+
+Related topics in this neighborhood actually include the reproducibility problem in science, the idea of [executable papers in CS](https://ccmc.gsfc.nasa.gov/executable-papers/) and the fact that *no one cares about your project repo*.  *(Let's be real: No one wants to look at your project because it's a mess of docs/examples/tests/support data, and they have to understand how it's all organized before they can even try to use it.  Usually, even after a project is understood, it's not like you can *use* it directly, it must be adapted or edited or installed or configured, and now we're down the rabbit hole of dependencies.*)
+
+So, part of what we're really talking about is **the ability to turn a project into a tool**, and that won't be easy without some structure imposed.  But it would be great if that structure doesn't always strictly require [some kind of proprietary format](https://registry.terraform.io/providers/databricks/databricks/latest/docs/data-sources/pipelines) that guarantees you can never prototype flow locally.  And it would also be nice if it didn't [make editing code harder](https://github.com/imbue-ai/jupyter_ascending).  Notebook-driven development has obvious benefits[and problems](https://yobibyte.github.io/notebooks.html)
+
+{#Real world projects are messy though, and `compose.mk` is focused on remaining agnostic about your languages, tools, and domain.#}
+
+To point the microscope at data-engineering instead of data-science.. most people have probably also seen the phenomenon of contractors struggling with enterprise java frameworks or cloud-based services for 3 months, just to deliver a CSV -> JSON conversion tool.
+
+Of course, none of this is to suggest that [mini ETL demos](#) mean you can throw away products like Airflow, Databricks, or AWS Glue & Step Functions.  (What's more realistic is that maybe your `compose.mk`-backed DAG is just a node in a bigger Airflow-DAG, or that Airflow/ECS/Fargate/Databricks calls your tasks piece-wise. )
+
+None of this is meant to suggest that [self-extracting archives](#) will cure the reproducibility crisis either, or that [Makefile-embedded container definitions](#) are even a good idea.  What is a good idea though is making structured prototyping simpler, and trying to make sure that it's actually a positive step towards shipping.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+## Just Use Tasks in Containers 
+
+Consider a typical workflow for devops:
+
+1. You want new software available on your Kubernetes.
+1. You go read the installation instructions, which tell you to  `helm repo add ..` then `helm install ..` or to `kubectl` something.
+1. Great, you already use ArgoCD, but there's something's up with the chart.  Maybe helm inputs need a load-balancer endpoint from terraform output and it's not available ahead of time, or maybe there's a helm version mismatch.
+1. You dutifully translate `helm` install instructions into another preferred ecosystem's tool wrappers.  (Maybe it's a [terraform helm provider](https://registry.terraform.io/providers/hashicorp/helm/latest/docs) or an [ansible helm module](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/helm_module.html) or a [jenkins container-step](https://www.jenkins.io/doc/pipeline/steps/kubernetes/#-container-run-build-steps-in-a-container)).
+1. That's not a ton of work by itself, but soon you find you're deep into fiddling with the abstraction.
+1. Looks like you need another version of your core tooling *(yay, Terraform upgrade)*
+1. Or maybe another version of the plugin *(yay, sifting Jenkins ecosystem abandonware, yay, fighting with custom-tool manifests for Argo)*
+1. Or maybe you have to pull in lots of config you **don't** need to access some config that you **do** need *(yay, our Ansible needs a submodule full of irrelevant plugins/tasks/inventory just to get started)*
+1. You realize your mission was to *deploy something, not change the way deployments work*.  Oops, any upgrades or changes at the "top" or the "outside" of your tool chain might fix one thing and break something else.  Now changes are hard, or scary, or both.
+
+Dumb things like this can introduce big delays, and if this goes on for long enough to block other work, things start to get ugly.
+
+* Pressure is mounting to *"simplify things"*, i.e. just calling who-knows-what-version of system `helm` directly, usually from a tangle of disorganized shell scripts.
+* Pressure is mounting to *split up things that belong together*, ie. allow *just this one special snowflake this one time*, and go ahead and multiply your platforms or repositories or fork the chart.  No one likes it, but isolation, separation and breaking with all existing standards looks like the easiest way to work around the blocker. (Hope this won't happen again next week!)
+* Pressure is mounting to *randomly switch* your Terraform to Ansible, or Ansible to Terraform, or Atlantis to ArgoWF, hoping you're lucky enough that swapping one complex ecosystem for another just makes the whole problem disappear.
+
+Frustratingly, none of this actually has anything to do with `helm`, or the problem we were trying to solve with it.  None of the options above are appealing functionally or aesthetically.  Longer term, compromising on this stuff too often erodes standards and can wreck reproducibility, maintainability, or sane organization, especially for small teams.  After you get something working, you realize you're now relying on a remote execution environment that might itself depend on multiple layers of event-triggering happening correctly, and.. if it ever breaks then no one can actually *run anything locally*.
+
+**Simply using tool containers as directly as possible is often a better way,** and it won't rule out your GitOps in general or your specific platform of choice.  
+
+Unlike the "*helm bolted on to terraform/ansible/jenkins*" approach, using `compose.mk` makes it easy to get closer to your tools, and directly use *multiple versions* of the actual tools you care about, and without affecting existing work.  If a tool breaks, you can debug that issue directly, without re-running ansible you don't care about, without digging in terraform core dumps, without trying to connect to weird remote runtimes via ssh or kubectl, and without looking up that one weird environment variable to enable plugin traces.  If you need a tool, then *you just use it*.
+
+For platforms like Argo / Atlantis / Airflow, there's always a way to bring-your-own-container, and you *could* go through the effort N times to add support for N custom tool versions.  But if you're at that level of customization anyway, why not just support another layer of docker and do it once?  Most platforms and installations will support DIND out of the box, and almost all of the rest will allow bind-mounting, remote docker-host, or a side-car.
+
+{#
+<hr style="width:100%;border-bottom:3px solid black;">
+
+## Pragma for Developers
+
+Lots of people have been traumatized by Makefiles in the past, but using `make` can be painless, and writing it can be done responsibly.  As much as possible, avoid advanced features and treat it like a tabby superset of plain old shell script.  That's enough to immediately fix the option-parsing, entrypoints, and partial execution problems mentioned before, plus adding DAG flows & orchestration, and you still end up with something most people can read, write, and run.
+
+To the extent you really *need* advanced Makefile features like eval-call macros, well..  you probably don't, but what if you do?  First, come to terms with the fact that *this is practically guaranteed to be hideously difficult to read/write/reason about*, because that is the nature of macros anywhere.  In rare cases though, it's the only option and it's worth it; implementations of make-macros can be powerful, and eventually reach a place where they are maintenance-free.  The first trick to this is, macros are best understood by how they are used, and not by how they are implemented.  *If use-cases and usage are clear*, then implementation won't matter much as long it's stable and portable.  The other trick is that there is no trick: keep it small, separate things into external libraries, and test your public interfaces extensively.  Just like any other software =) This repository is hopefully a good example of that.
+
+For both `make` and `docker compose`, much ink (and maybe some blood) has been spilled on both advocacy and protest. [Reference](https://matt-rickard.com/the-unreasonable-effectiveness-of-makefiles), [Reference](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/03/hadrian.pdf), [Reference](https://aegis.sourceforge.net/auug97.pdf), and many, many more over many years, with lots of ~raging~ interesting discussion on the orange site and elsewhere.  Much of the criticism *and* the advocacy arises from misunderstandings or myopic treatment of the tools or the use-cases involved.  Working theory: philosophy rarely changes hearts and minds, but tooling and examples might?  
+
+<hr style="width:100%;border-bottom:3px solid black;">
+#}
+<hr style="width:100%;border-bottom:3px solid black;">

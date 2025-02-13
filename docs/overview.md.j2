@@ -1,0 +1,178 @@
+{% import 'macros.j2' as macros -%}
+
+**Meet `compose.mk`, a tool / library for makefile-based automation, scripting, and lightweight orchestration.**  Native support for docker, docker-compose, workflow primitives, TUI elements, and more.
+
+{{macros.img_link("tui-3.gif", mkdocs, "90%")}}
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+## Intro
+
+<strong>`compose.mk` extends `make` to add native support for docker, workflows, TUI elements, and more.</strong>
+
+There are lots of ways to use it, particularly stuff in the automation/orchestration space like CI/CD.  Ultimately though whether `compose.mk` is a tool, a library, or a framework depends on how you decide to use it.  
+
+* **For programmatic usage,** you can think of `compose.mk` as an attempt to provide a "[standard library]({{mkdocs.site_relative_url}}/standard-lib)" that extends vanilla `make`.  Besides advanced stuff like container support and workflows, it offers basic stuff like clean, colored logging.  
+
+* **As a framework,** you can [combine `compose.mk` with docker-compose file(s)]({{mkdocs.site_relative_url}}/bridge) or [inlined container descriptions]({{mkdocs.site_relative_url}}/vanilla-docker), and very quickly expose powerful, domain-specific automation APIs in your project Makefile to orchestrate tasks that might involve multiple containers.  Dispatching make-targets *inside* these containers turns out to be an especially powerful technique, and is supported for most containers.
+
+* **As a stand-alone tool,** `compose.mk` requires no project-level integration, and still does [lots of practical stuff]({{mkdocs.site_relative_url}}/tool-overview) with *no dependencies beyond `make` and `docker`*.  Because `make` targets always do double-duty as CLI entrypoints and as reusable task units, the "internal API" is automatically published as a CLI interface.
+
+There's a lot of hate for `make` (especially for "creative" usage of it!), but you'll quickly find that these are not the Makefile's of your ancestors.  **Working with `compose.mk` makes `make` hit different.**  The demo above show-cases an example of combining docker support with TUI elements, opening interactive shells for each service defined in a docker-compose file. *(Under the hood, `tmux` is used as a geometry manager, but since it is also dockerized, it won't become a host dependency.)*
+
+As another improvement over classical `make`, note that help not only *works,* it goes beyond simply listing available targets, and actually parses and displays documentation per target and per target-namespace. *(Under the hood, a dockerized version of [charmbracelete/glow](https://github.com/charmbracelet/glow) renders markdown.)*.
+
+{#{macros.img_link("tui-5.gif", mkdocs, "90%")}#}
+{{macros.img_link("tui-7.gif", mkdocs, "90%")}}
+
+The interactive TUI stuff above makes for attention-grabbing demos and has the advantage of showing several features at once, but dashboarding and inspection/debugging/prototyping workflows aren't necessarily the main feature of `compose.mk`.  <u><strong>Average use-cases will probably look more like automation and less like applications.</u></strong>
+
+{#Here's a quick rundown of some other major features and design goals:#}
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Features & Design Goals
+
+* **Radically minimal,** in terms of dependencies and conceptual overhead. Out of the box, `make` is expressive but has relatively few core concepts, it's ubiquitous, and it's fast. Building on this, `compose.mk` adds just enough extra concepts to get *a lot* of extra power and flexibility.
+* **Seamless and simple idioms for working with containers in a way that's platform agnostic.** Code that automates tasks in project management should not be locked inside Jenkinsfiles or Github Actions.  Using `compose.mk` tends to [help projects to decouple and run elsewhere]({{mkdocs.site_relative_url}}/container-dispatch), but afterwards running from CI/CD still works.
+* **Generic and easy to extend foundation.**  A major focus for `compose.mk` is what might be summarized as *mapping, dispatch, and interoperability*.  For example you can [map docker containers to `make` targets]({{mkdocs.site_relative_url}}/bridge), or targets to containers, or [map containers/targets into `tmux` panes]({{mkdocs.site_relative_url}}/embedded-tui).  This makes it easy to quickly put together domain-specific toolkits whether that domain happens to be wrangling development tools, documentation tools, or infracode tools.
+* **Clean & carefully curated output** that is [logged to appropriate streams]({{mkdocs.site_relative_url}}/standard-lib/#logging-facilities), aiming to be readable and human-friendly on stderr, while still [remaining machine-friendly for downstream processing]({{mkdocs.site_relative_url}}/standard-lib/#structured-input-output) on stdout.
+* **Basic workflow support is also available.**  Tasks and DAGs are built-ins for `make` naturally, and `compose.mk` adds support for other primitives, [like parallel tasks and task retries]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).
+* **Hacker friendly.** The single-file approach used with `compose.mk` makes it easy to embed alongside existing projects.  The project itself uses [the unlicense](https://unlicense.org/), and the goal is for the base API to eventually become completely frozen.  Rip out the parts you don't need, contribute upstream if you can, but if you don't want to track upstream or if your customizations become too specific to your project, no need to look back.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Choose Your Path
+
+This is all pretty abstract though, and it's time to choose your own adventure:
+
+* **If *you are interested already and prefer to learn by example***.. [just.]({{mkdocs.site_relative_url}}/bridge) [dive.]({{mkdocs.site_relative_url}}/embedded-tui) [into.]({{mkdocs.site_relative_url}}/demos/platform) [some.]({{mkdocs.site_relative_url}}/tool-overview)
+
+* **If you are *understandably skeptical about getting involved with the biggest, baddest, and most highly-powered mutant Makefile the world has ever seen***, you might want to [read more advocacy about motivations and design philosophy]({{mkdocs.site_relative_url}}/but-why).
+
+* **If you are withholding judgement on just how insane this project is until you see concrete larger-scale use-cases..** skip to some of the demos or consider checking out these sibling projects which use and extend `compose.mk` to manage kubernetes cluster lifecycles: [k8s-tools](https://github.com/elo-enterprises/k3d-faas) and [k3d-faas](https://github.com/elo-enterprises/k3d-faas).
+
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+
+{#
+* **Language agnostic too,**
+* **Composition and Reusability.** 
+
+## Overview
+
+{#
+1. ****, pulling code out of Jenkins or GithubActions configs and making it useful again for developers.  
+1. **Using `compose.mk` makes it really easy to reuse existing tools.** Tools belong in containers to ensure pinned versions, but this does usually have the downside that it becomes difficult to invoke the tools and manage the IO.  Reducing friction for this is liberating, as seen in the demos above, where using `tmux` for TUI geometry management just works, and using `glow` for rendering markdown just works.  No need to rebuild what works by adding a pypi dependency and lots of custom code, or for that matter adding a python stack.  
+
+Although it's not practical to measure code-coverage, [the test-suite]({{github.repo_url}}/tree/master/tests/) for `compose.mk` is pretty extensive.  For a larger, more focused proof-of-concept that builds on `compose.mk` as a framework, you can check out the sibling project [k8s-tools](#).
+
+#}
+{#{macros.img_link("tui-7.gif", mkdocs, "90%")}#}
+
+
+{#
+will be more programmatic.   If you're thinking of more programmatic usage, Support for [container dispatch]({{mkdocs.site_relative_url}}/compose.mk#container-dispatch) feels like a tiny, unobtrusive DSL on top of tech you already know, and you can run it anywhere you are.
+
+* **Library-mode** extends `make` in a variety of ways, including support for [working with containers]({{mkdocs.site_relative_url}}/container-overview).  See also the documentation for the [Make/Compose Bridge]({{mkdocs.site_relative_url}}/bridge)), or for more generic reusable targets, check out the full [API]({{mkdocs.site_relative_url}}/api).
+
+* **Stand-alone mode also available,** i.e. a tool that requires no external Makefile / compose file. See the [stand-alone overview](#) for more details.
+
+* **Container-dependencies are minimal too,** so that almost any base can work with [container-dispatch]({{mkdocs.site_relative_url}}/container-dispatch).
+* **Built-in TUI framework** that's small but powerful.  (See the [Embedded TUI docs]({{mkdocs.site_relative_url}}/embedded-tui) and the [tux.* API]({{mkdocs.site_relative_url}}/api#api-tux))
+* **A minimal, elegant, and dependency-free approach to describing workflow pipelines** (See the [flux.* API]({{mkdocs.site_relative_url}}/api#api-flux))
+
+
+Beyond addressing the issues above, these tools add new capabilities to `make` itself, including some support for [quickly building custom TUIs]({{mkdocs.site_relative_url}}/compose.mk#embedded-tui) from dockerized components.
+
+{{macros.img_link("tui-6.gif", mkdocs, "90%")}}
+
+
+
+-------------------
+
+[Hacking is generally encouraged](#contributing), and users can feel free to rip out any parts of `compose.mk` they don't want or need.  
+
+## But Why?
+
+There's many reasons why you might want these capabilities if you're working with tool-containers, builds, deploys, and complex task orchestration.  But why `make`?  People tend to have strong opions about this topic, and it's kind of a long story.
+
+The short version is this:
+
+1. Makefiles run practically everywhere and most people can read/write them.  
+1. They're also really good at describing DAGs, and lots of automation, but *especially life-cycle automation*, is a natural fit for this paradigm.  
+
+The only trouble is that **a)** *make has nothing like native support for tasks in containers*, and **b)** *describing the containers themselves is even further outside of its domain*.  Meanwhile, docker-compose is exactly the opposite.  
+
+Make & Compose are already a strong combination for this reason, and by adding some syntactic sugar using *compose.mk*, you can orchestrate make-targets across several containers without cluttering your host.  More than that.. you can also bootstrap surprisingly sophisticated and flexible automation-APIs with surprisingly little effort.  
+
+One reason this works so well is because with `make`, *the programmatic API basically <ins>is</ins> the CLI interface,* or to put it another way, once you have finished one of these you automatically have the other.
+
+If you're interested in the gory details of a longer-format answer, see [the Design Philosophy docs](docs/but-why.md).
+
+### Automation with Compose.mk 
+
+**[compose.mk](/compose.mk)** is simultaneously a stand-alone CLI tool and an automation library for working with `make` + containers.  It defines targets and macros that can extend Make's core functionality in a variety of ways actually, but the main feature is ensuring that it's simple to work with docker-compose files and services, and docker in general.
+
+### Minimum Viable Automation Framework
+
+`compose.mk` started as an experiment to answer the question: *what does a minimum viable automation framework look like?*  Before trying to define what "automation" means, let's consider the landscape.  Depending on your average use-case, here is some adjacent tech that comes to mind:
+
+* Bash scripting (or small scripts in some other language)
+* DSLs focused on CI/CD (Jenkinsfiles, github-action yaml, or similar)
+* DSLs for automation / configuration management tooling (Ansible or similar)
+* Full-on workflow engines (ArgoWF, Airflow, or similar)
+
+Part of what "automation" accomplishes is what you might call **project lifecycle management**.  Another aspect is **task description** and **task execution ordering**.  These things are fundamental, so your related project surface area tends to be critical and/or high-traffic.  Many project stakeholders need to be able understand these things and make changes, yet the people involved may have different skills and different levels of expertise in the relevant tools (i.e. frontend vs backend developers; devs vs ops, data engineers vs data scientists).
+
+At this point, some people are already thinking of how they have seen `make` used for this sort of thing, and it's 50/50 whether this idea fills them with joy or with horror.  If you want to dive into the gory details of a longer-format answer for why `make` actually *is* a good idea, see [the full Design Philosophy docs]({{mkdocs.site_relative_url}}/but-why.md).  For a short-format answer though, `make` is just too good to ignore, and there are several major benefits: 
+
+1. Make is expressive but has relatively few core concepts, and it's fast.  
+1.  Make is platform-agnostic and available almost everywehere.  Runs comfortably locally or from CI/CD, inside or outside of most containers.
+1. Make is role-agnostic, as the lingua franca for engineers, devops, and data-science, probably because easy things stay easy and advanced things are still possible.  
+1. Make is language-agnostic, as the lingua franca for javascript, python, or golang enthusiasts who need to be able to somehow work together.
+1. Make is probably the *least* likely thing in your toolkit to be affected by externalities like pypi or npm breakage, package updates, or changing operating systems completely.
+1. Make works natively with simple DAGs, and DAGs are everywhere.
+
+If you need something that you want stability & ubiquity from, it's hard to find a better choice.  Using `make` is an effective way to publish an API for interacting with your project, especially when those use-cases potentially involve many tools.  Make-targets encourage splitting up tasks, and once tasks are defined they are available from the CLI directly, or to other tasks, which tends to be more structured and composable than raw shell-scripts.  It also tends to decouple you from your CI/CD platform.  To a certain extent, `make` even has native support for terraform-style plan/apply workflows (via `--dry-run`) and parallel execution (via `--jobs`).  And as a bonus, most likely tab-completion for make-targets already works out of the box with your OS and shell.
+
+Plain old `make` is about 90% of the answer for what a "minimum-viable automation framework" needs.  But it's missing 2 things:
+
+1. **Makefiles have nothing like a standard library**.
+1. **Makefiles have nothing like native support for running tasks in containers**.
+
+These problems are **exactly what *`compose.mk`* fixes.**  For more details, read on in [standard-library docs](#standard-library-for-makefiles), or skip ahead to [docs for container support](#native-support-for-containers).
+
+
+-------------
+
+A tool / library / automation framework for working with containers.  Also the biggest, baddest, and most highly-powered mutant Makefile you're ever likely to see, although this aspect is generally safe to ignore unless you're interested ;)
+
+  * **Library-mode** extends `make` in a variety of ways, including support for working with containers (Docs: [[1]](#), [[2]](#), [[3]](#))
+  * **Stand-alone mode also available,** i.e. a tool that requires no external Makefile / compose file. (Docs: [[1]](#))
+  * **Zero host-dependencies,** as long as you have docker + make.  Even the [TUI backend](#embedded-tui) is dockerized.
+  * **Container-dependencies are minimal too,** so that almost any base can work with [container-dispatch](#container-dispatch).
+  * **Built-in TUI framework** that's small but powerful.  (See the [Embedded TUI docs](#embedded-tui) and the [tux.* API](/api#api-tux))
+  * **A minimal, elegant, and dependency-free approach to describing workflow pipelines** (See the [flux.* API](/api#api-flux))
+#}
+
+{#
+-------------
+
+
+You can also think of this project as a reference implementation for a pattern that [bridges compose services and Makefile targets]({{mkdocs.site_relative_url}}/compose.mk#makecompose-bridge), creating a "minimum viable automation framework" for things like [orchestrating tasks across tool containers]({{mkdocs.site_relative_url}}/compose.mk/#container-dispatch).  It's expressive and flexible, yet also focused on minimizing both conceptual overhead and software dependencies.  It's incredibly useful for lots of things, and whether it is a tool, a library, or a framework depends on how you decide to use it.  
+
+This reference focuses on a few use-cases in particular:
+
+1. Cluster lifecycle / development / debugging workflows in general.
+1. Decoupling project automation from the choice of CI/CD backend.
+1. Project-local kubernetes clusters & corresponding lifecycle automation using `kind` or `k3d`.
+1. Proper separation of automation tasks from specifications for runtime / container context.
+1. Less shell code in general, but where we need it: it <u>shouldn't</u> be embedded in YAML, Jenkinsfiles, etc.
+1. Per-project tool-versioning, providing defaults but allowing overrides, and ensuring versions match everywhere.
+1. Generally modernizing & extending `make` for containers, colors, & concurrency
+
+  Less time spent negotiating with bolted-on plugin-frameworks, hook systems, and build-bots, more time for the problems you care about.  And yes, *the build-bots themselves will be happy to run your automation,* and the output is easy to parse.  See the [this repo's github actions](https://github.com/elo-enterprises/k8s-tools/actions?query=branch%3Amaster), which bootstrap and exercise a cluster as part of the [end to end tests]({{mkdocs.site_relative_url}}/demos#demo-cluster-automation).
+#}
+

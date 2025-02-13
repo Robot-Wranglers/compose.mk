@@ -1,0 +1,61 @@
+{# 
+Jinja macros used in building docs (not make macros :) 
+#}
+
+{% set img_base =  img_base | default('img') %}
+
+{% macro collapsed_details(name, level='h4') -%}
+<{{level}}>{{name}}</{{level}}>
+{%- endmacro -%}
+{% macro get_env_var(name) -%}
+{% set val=bash("cat docs/env-vars.md|grep ^"+name+"= | head -1 | cut -s -d'=' -f2 || true").strip()%}{{val}}{%- endmacro -%}
+
+{% macro badge_from_var(var, label) %}{% set val=get_env_var(var) %}{{badge_from_val(val,label)}}{%- endmacro -%}
+
+{%macro badge_from_val(val, label)%}<a href="env-vars.md"><img alt="{{label}}:{{val}}" src="https://img.shields.io/badge/{{url_quote((label and (label + ':')) + val)}}-blue"></a>{%- endmacro -%}
+
+{% macro img_link(fname, mkdocs, width="90%") -%}
+<p align="center"><a href="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"><img width="{{width}}" src="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"></a></p>
+{%- endmacro -%}
+
+{% macro search_link(fname, term, github={}) -%}
+
+{% set search_base = "https://github.com/search?q=repo%3A" + (github.org_name or "default") + "%2F" + (github.repo_name or "default").replace('.git','') + "+path%3A" + fname + "+content%3A"+url_quote(term)+"&type=code"%}
+{{search_base}}
+{%- endmacro -%}
+
+{% macro parse_module_help(fname, namespace) -%}
+{% set lines=bash('pynchon makefile parse --module-docs ' + fname + '| jq \'.'+namespace+'\'', load_json=True) %}{% if not lines %}{%set lines=[]%}{%endif%}
+{#% if lines|length > 2%}{% set lines=lines[1:-1] %}{% endif %#}
+{% for line in lines %}
+{{line}}
+{% endfor %}
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+{%- endmacro -%}
+
+{% macro parse_help(fname, namespace, include_private=False) -%}
+{% set include_private = '--include-private' if include_private else '' %}
+{% set help_extra = help_extra|default('')%}
+{% set help_extra = ' '+help_extra if help_extra else ''%}
+*This documentation is pulled automatically from [source](/{{fname}}).{{help_extra}}*
+{% set targets=bash('pynchon makefile parse ' + include_private + ' ' + fname + '| jq \'with_entries(select(.key | startswith("'+namespace+'")))\'', load_json=True) %}
+{% for tname in targets %} {%set tdata=targets[tname]%}
+##### **`{{tname.replace('%','<arg>')}}`**
+
+{%if tdata['alias']|default(false)%}{%set primary=(tdata.primary|default('?')).replace('%','<arg>') %} {% set primary_slug=primary.replace('<','').replace('>','').replace('/','').replace('-', '').replace('.','')%}
+* *Alias for [`{{primary}}`](#{{primary_slug}})*
+{% else %}
+```bash 
+{{ "\n".join(tdata.docs).strip()}}
+```
+{%endif%}
+{% endfor %}
+
+<hr style="width:100%;border-bottom: 3px solid black;background: #efefef;">
+
+{%- endmacro -%}
+
+{% macro hr2(width="80%") -%}
+<hr style="{{width}};border-bottom: 5px dashed black;background: #efefef;">
+{%- endmacro -%}

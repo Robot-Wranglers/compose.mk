@@ -10,7 +10,7 @@ theme:
     # - navigation.tracking
     - navigation.top
     # - toc.integrate
-  logo: img/icon-transparent.png
+  logo: img/icon.png
   name: readthedocs
   custom_dir: docs/theme
   hljs_style: night-owl
@@ -57,7 +57,7 @@ nav:
       - 'CLI Help': cli-help.md
       - 'Supervisors & Signals': signals.md
   - Demos:
-    - 'Demos Overview': demos/overview.md
+    # - 'Demos Overview': demos/overview.md
     - 'Custom Automation APIs': demos/ansible.md
     - 'Workflow Basics & Pipelining': demos/workflows.md
     # - 'Dashboarding and TUIs': demos/dashboarding.md
@@ -70,7 +70,7 @@ nav:
     - 'Configuration / Env Vars': config.md
     - limitations.md
     - contributing.md
-    - 'Project Source': 'https://github.com/elo-enterprises/compose.mk/'
+    - 'Project Source': 'https://github.com/robot-wranglers/compose.mk/'
 plugins:
   - search
   - autolinks 

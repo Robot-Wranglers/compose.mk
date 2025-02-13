@@ -1,0 +1,144 @@
+{% import 'macros.j2' as macros -%}
+
+## Container Dispatch
+
+Having [imported services with `compose.import`]({{mkdocs.site_relative_url}}/bridge), let's look at an idiom that allows us to dispatch tasks (i.e. make-targets) into those tool containers.  Later, we'll get into more about how/when container dispatch is useful, and a [typical setup with `docker-compose.yml` that supports it](#compose-file-boilerplate).  But for now, let's start with what the idiom looks like and how it's used.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Dispatch Idiom: Intro
+
+The dispatch idiom is simply a way of binding an existing task to an existing container.  To illustrate the idea, consider the following project Makefile:
+
+```Makefile
+{{open('demos/container-dispatch.mk','r').read().strip()}}
+```
+
+The example above demonstrates using [an automatically generated target]({{mkdocs.site_relative_url}}/bridge/#dynamic-api) that has some special syntax: `▰/<svc_name>/<target_to_dispatch>`.  
+
+In other words.. `demo: ▰/debian/self.demo` is syntactic sugar that says that running `make demo` on the host runs `make self.demo` on the debian container.
+
+Maybe it's not obvious yet, so it's worth noticing that this is already **much** cleaner and more composable than the alternative in pure bash, where you get lots of disconnected automation scripts that are littered with lots of `docker run ...` statements.  In fact, this is pretty similar to [`agent { docker { .. } }` in Jenkins Pipelines](https://www.jenkins.io/doc/book/pipeline/docker/), but it's significantly more portable, and arguably more readable.
+
+Calling the top-level `demo` target looks something like this:
+
+{{macros.img_link("demo-dispatch.gif", mkdocs)}}
+
+What just happend?  If we unpack the syntactic sugar even more, you could say that the following are roughly equivalent:
+
+```bash
+# pithy invocation with compose.mk
+$ make demo
+
+# the verbose alternative invocation
+$ docker compose -f docker-compose.yml \
+    run --entrypoint bash debian -c "make self.demo"
+```
+
+Let's add another target to our project Makefile, demonstrating dispatching one target to multiple containers:
+
+```Makefile
+{{open('demos/double-dispatch.mk','r').read().strip()}}
+```
+
+Again, the *`self`* prefix and the `▰/` namespace is just a convention, more on that in the following sections.  The above looks pretty tidy though, and hopefully this helps to illustrate how the target / container / callback association works.  Running `demo.double.dispatch` looks like this:
+
+{{macros.img_link("demo.double.dispatch.gif", mkdocs)}}
+
+Meanwhile, the equivalent-but-expanded version below is getting cluttered, plus it breaks when files move or get refactored.  
+
+```bash
+# pithy invocation with compose.mk
+$ make demo.double.dispatch 
+
+# verbose, fragile alternative
+$ docker compose -f docker-compose.yml \
+    run --entrypoint bash debian -c "make self.demo" \
+  && docker compose -f docker-compose.yml \
+    run --entrypoint bash alpine -c "make self.demo"
+```
+
+That's it, really.  **This simple pattern for dispatching targets in containers is one of the main features of `compose.mk` as a library, and it's surprisingly powerful.**   
+
+From here, if you just want to get started, you might want to skip to more detailed docs on the [arguments for the `compose.import` macro]({{mkdocs.site_relative_url}}/bridge/#import-macro-arguments) , or [the dispatch syntax/semantics](#dispatch-syntaxsemantics), or [the docker-compose.yml boilerplate that supports dispatch](#compose-file-boilerplate).  
+
+On the other hand, if you're willing to indulge some philosophy or if you're wondering why you should care, check out the commentary in the next section.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Dispatch Idiom: Commentary
+
+Having introduced what the dispatch idiom looks like and what it does, let's talk briefly about what it means.  This is probably a jailbreak moment for your automation!  Think about it: **Most of the ways that we use to *decouple* tasks from their execution environment actually cause our tasks to be *tightly coupled* to some platform instead**.  That's a frustrating trade-off and a huge barrier to entry if you're just trying to write/run code.  And it's not just CI/CD platforms like Jenkins and Github-- it also happens with platforms like Airflow, ArgoWF, and notebooks.  These platforms are all great at what they do, but we shouldn't need them every time we just want to decouple tasks from runtimes or express DAGs.  And if you want to use a platform later down the line, then your platform will be as happy to run `make` as your laptop is.
+
+**Besides decoupling, arranging tasks this way tends to promote reusability and composition.**  As a rule, the more your automation is isolated into weird silos like notebooks and Jenkinsfiles, the more unruly that automation becomes.  Is your automation growing wild copy-pasta, and turning into an ugly monolithic heap that only runs to top-to-bottom and has lots of side-effects?  Much nicer to have discrete tasks in the form of make-targets that you can still run individually, yet quickly compose into DAGs of tasks, or DAGs of DAGs.  And when you're more free from platforms and actually iterating on code in a read/write/run cycle more often, changes are easier and testing happens more continuously.
+
+Even without the more exotic features of `compose.mk`, it's worth mentioning that vanilla `make` has many under-appreciated capabilities over bash.  For example, did you know it supports ansible-style dry-runs [via --reconn](https://www.gnu.org/software/make/manual/html_node/Instead-of-Execution.html) and also parallel execution [with `make --jobs`](https://www.gnu.org/software/make/manual/make.html#Parallel-Execution)? 
+
+
+{#
+* [Multiple compose files are supported](), and a virtually unlimited number of tool containers.
+But where `compose.mk` really starts to shines isin is combining `compose.mk` with some docker-compose file the real magic happens when you combine `make`, `compose.mk`, `docker`,[workflow support]
+* 
+#}
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Compose File Boilerplate
+
+**Using the dispatch idiom as described might require changes to your docker-compose.yml file.** In practice the containers you use might just work, but if they are slim or you are starting from scratch, perhaps not.  
+
+Here's a typical example of a compatible compose file, leaning more towards pedantic than minimal:
+
+```yaml
+{{open('tests/docker-compose.yml','r').read()}}
+```
+
+See also the [installation docs]({{mkdocs.site_relative_url}}/integration) for more discussion.  The debian/alpine compose file above and the interfaces described so far are all exercised inside [this repo's test suite]({{github.repo_url}}/tree/master/tests/).
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Dispatch Syntax/Semantics
+
+Let's look at the container-dispatch example in more detail.  This isn't a programming language you've never seen before, it's just a (legal) Makefile that uses unicode symbols in some of the targets.  
+
+```Makefile
+# project Makefile (make sure you have real tabs, not spaces)
+
+include compose.mk
+$(eval $(call compose.import, ▰, TRUE, docker-compose.yml))
+
+# A target that runs stuff inside the `debian` container, runs from host using `make demo`
+demo: ▰/debian/self.demo
+
+# Dispatching 1 target to 2 containers looks like this
+demo.both: ▰/debian/self.demo ▰/alpine/self.demo
+
+# Displays platform info to show where target is running.
+self.demo:
+	source /etc/os-release && printf "$${PRETTY_NAME}\n"
+	uname -n -v
+```
+
+The suggested defaults here will annoy some people, but the syntax is configurable, and this hopefully won't collide with existing file paths or targets.  Using the *`self`* prefix is just a convention that you can change, but having some way to guard the target from accidental execution on the host is a good idea.  
+
+This decorator-inspired syntax is also creating a convention similar to the idea of private methods: *`self`* hopefully implies internal/private, and it's not easy to type the weird characters at the command line.  So users likely won't think to call anything except `make demo`.  For people reading the code, the visual hints make it easy to understand what's at the top-level.  Tightening it up can help to make it clear that this is sort of a logical block:
+
+```Makefile
+
+# project Makefile (make sure you have real tabs, not spaces)
+include compose.mk
+$(eval $(call compose.import, ▰, TRUE, docker-compose.yml))
+
+# Two top-level "public" targets, dispatching 1 "private" target into groups of 1 or more containers
+demo: ▰/debian/self.demo
+demo.both: ▰/debian/self.demo ▰/alpine/self.demo
+self.demo:
+	source /etc/os-release && printf "$${PRETTY_NAME}\n"
+	uname -n -v
+```
+
+But what about the semantics?  In this example, the user-facing `demo` target depends on `▰/debian/demo`, which isn't really a target as much as a declaration.  The declaration means the *private* target `self.demo`, will be executed inside the `debian` container that the compose file defines.  *Crucially, the `self.demo` target can use tools the host doesn't have, stuff that's only available in the tool container.*  
+
+Look, no `docker run ..` clutter littered everywhere!  It's still kind of a weird CI/CD DSL, but the conventions are simple, it's agnostic about your CI backend, it is relatively frictionless, and there is a clean separation between automation / container specifications.
+
+Under the hood, dispatch is implemented by building on the [default targets that are provided by the bridge](({{mkdocs.site_relative_url}}/bridge).

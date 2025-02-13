@@ -1,0 +1,10 @@
+
+## Contributing
+
+Since this project generally aims at providing extensible boilerplate for use with other projects, we use [the unlicense](https://choosealicense.com/licenses/unlicense/) and hope that accomodates any kind of spin-offs and variations that might be of interest to people.
+
+You're free to copy this code into your repository and start ripping out pieces and adding new ones.  Forking aggressively and not looking back doesn't make sense for many kinds of upstreams, but in this case there is no package manager for `make`, and no one wants a submodule for a few files.  Besides, in some cases removing parts of the API you know you don't need may improve performance (for example with target tab completion).
+
+If you can keep the maiming to a minimum though and make something cool that also feels sufficiently generic, please do consider contributing back to upstream!
+
+As mentioned elsewhere, `compose.mk` is still changing slowly but the goal is to freeze [the API](/api#api-composemk) in place fairly soon.  That said.. any interesting feature requests will definitely be considered.  If you're up for it, the best way to spec out a feature-request is always to add a new failing testing with interface you're proposing.

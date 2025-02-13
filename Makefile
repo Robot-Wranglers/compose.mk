@@ -25,7 +25,7 @@ include compose.mk
 ## BEGIN: Top-level
 ##
 
-all: init clean build test docs
+all: init clean test docs
 init: mk.stat docker.stat
 clean: flux.stage.clean
 	@# Only used during development; normal usage involves build-on-demand.
@@ -33,17 +33,11 @@ clean: flux.stage.clean
 	rm -f tests/compose.mk
 	find .| grep .tmp | xargs rm 2>/dev/null|| true
 	
-build: 
-	@# Only used during development; normal usage involves build-on-demand.
-	@# This uses explicit ordering that is required because compose 
-	@# key for 'depends_on' affects the ordering for 'docker compose up', 
-	@# but doesn't affect ordering for 'docker compose build'.
-
 test: integration-test smoke-test tui-test demo-test 
+demo-test: demos.test
 
-demo-test:
-	
-
+demos.test:
+	ls demos/*mk | xargs -I% -n1 sh -x -c "make -f %||exit 255"
 
 mkdocs: mkdocs.build mkdocs.serve
 mkdocs.build build.mkdocs:; mkdocs build

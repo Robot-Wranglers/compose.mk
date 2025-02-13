@@ -1,0 +1,11 @@
+## Raw Docker Support
+
+Usually, it's a good idea to separate task-definitions from the containers they run, and [using the docker compose support](/compose.mk/bridge) is the reccomended way to arrange things.  
+
+However, `compose.mk` sometimes needs more direct and low-level access to docker primitives for internal use, and this functionality is exposed for external use as well.  In some situations.. "practical" beats "pretty", and it's useful to make things more self-contained, especially if you know the image / container description are likely to be static.  
+
+* **For use-cases related to rapidly prototyping systems and pipelines,** check out the [mad science demos]({{mkdocs.site_relative_url}}/demos/mad-science).  These examples show how to work with inlined Dockerfiles and ways to implement tasks in arbitrary programming languages.
+
+* **For use-cases related to cleaning and refactoring bash-script or Makefiles that are already using the docker CLI,** check out the [`docker.*` namespace of the API]({{mkdocs.site_relative_url}}/api/#api-docker).
+
+

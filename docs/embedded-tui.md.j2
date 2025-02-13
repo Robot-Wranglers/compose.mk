@@ -1,0 +1,104 @@
+{% import 'macros.j2' as macros -%}
+
+## TUI Overview
+
+The TUI capabilities of `compose.mk` are best thought of as an **interface-builder rather than a specific interface.**  As usual and despite appearances, support for the TUI requires *no dependencies except for `make` and `docker`*.  It aims for low-config and sane defaults, so for high level usage it requires no configuration at all.  Under the hood, the TUI uses a dockerized version of [tmux](https://github.com/tmux/tmux) for core drawing and geometry.
+
+There's a few ways to describe what the TUI actually *does*.  One way to look at it is, it's just a way of **mapping `make` targets into tmux panes**.   And since [`compose.import`]({{mkdocs.site_relative_url}}/compose.mk) allows you to *map docker-compose services onto `make` targets*, yet another way to think of the TUI is that it allows you to **map containers onto tmux panes**.  And if you're already using `compose.mk` to [build custom automation APIs]({{mkdocs.site_relative_url}}/demos/ansible/), you can map those onto tmux panes too.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### TUI Gallery
+
+For the impatient, here's a small gallery that show-cases the type of stuff you can do with the TUI capabilities that `compose.mk` offers.  
+
+*( You can click of any of the demos to make it bigger. )*
+
+<table align=center width=95%>
+    <tr>
+        <td>{{macros.img_link("tui-1.gif", mkdocs, "200px")}}</td>
+        <td>{{macros.img_link("tui-4.gif", mkdocs, "200px")}}</td>
+        <td>{{macros.img_link("tui-6.gif", mkdocs, "200px")}}</td>
+    </tr>
+    <tr>
+        <td>{{macros.img_link("tui-2.gif", mkdocs, "200px")}}</td>
+        <td>{{macros.img_link("tui-3.gif", mkdocs, "200px")}}</td>
+        <td>{{macros.img_link("tui-5.gif", mkdocs, "200px")}}</td>
+    </tr>
+</table>
+
+Some of these screenshots are part of [k8s-tools](#), a sibling project that uses `compose.mk` as a framework, then extends it to the specific domain of kubernetes automation.  
+
+* For a from-scratch walk through, see [the TUI Demo]({{mkdocs.site_relative_url}}).  
+* For low-level API reference, see the [`tux.*` targets]({{mkdocs.site_relative_url}}/api/#api-tux).  
+* For TUI-related stand-alone tools, see [the loadf docs]({{mkdocs.site_relative_url}}/loadf) and the [tool wrappers docs]({{mkdocs.site_relative_url}}/tool-overview/#other-wrappers).
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Sane Defaults
+
+Besides `tmux`, the basic pre-configured components of the TUI are things like [tmuxp](https://github.com/tmux-python/tmuxp) for dynamic session management, and overridable defaults for [tmux themes](https://github.com/jimeh/tmux-themepack/), [tmux plugins](https://github.com/tmux-plugins/tpm), [keybindings](#tui-keybindings), etc.  
+
+These components are configurable, but not something that you necessarily have to think about.  Some notable effects of the "sane defaults" policy include:
+
+* Leave the TUI by hitting the escape key
+* Click to open a new pane
+* Advanced layouts like spiral & fibbonacci, using [dwindle](https://github.com/sunaku/home/blob/master/bin/tmux-layout-dwindle)
+
+These elements, plus access to other tools like [gum](https://github.com/charmbracelet/gum) and [chafa](https://hpjansson.org/chafa/), are all setup in the embedded `compose.mk:tux` container, which is built and used only on demand.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Zero Config TUIs
+
+Because the TUI capabilities are focused around *building* TUIs instead of providing them ready to use, `compose.mk` doesn't provide much baked-in stuff that feels like a console application. 
+
+But there are a few exceptions:
+
+* Run `./compose.mk tux.demo` for a quick example showing pane-geometry and [TTE output](https://github.com/ChrisBuilds/terminaltexteffects).
+* See the documentation for [loadf]({{mkdocs.site_relative_url}}/loadf) for something more practical.  
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Low Config TUIs
+
+If you already have a project Makefile with some existing automation, you can `include compose.mk` at the top and still use the TUI with no other changes by using [`tux.mux`](#).  The `tux.mux` target simply accepts any number of `make` targets, and then opens 1 TUI pane for each target.  
+
+Let's walk through some examples, supposing you already have targets for `clean`, `build`, `test`.  You can open a 3-pane TUI by just calling `make tux.mux/clean,build,test`.  This runs all of the named targets in parallel, and the whole TUI will exit after the individual tasks are completed.
+
+Of course, it probably doesn't make sense to run `clean`/`build`/`test` in parallel.  To get more flexibility here, it's often useful to use [`flux.*`, aka the workflow library](#).  
+
+* We can run sequentially run `clean` and `build` by using `flux.wrap`, i.e. `flux.wrap/clean,build`
+* We can run `test` in a loop forever by using `flux.loopf/test`
+
+Putting it together, we can make a completely different TUI with this command line: `make tux.mux/flux.wrap/clean,build,flux.loopf/test
+
+{#
+splitvt 
+#}
+
+And if you're interested in building your own TUIs, see the [Dashboarding demo]({{mkdocs.site_relative_url}}/demos/dashboarding.mk).
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Extensions & Scripting
+
+In the limit, `compose.mk` can help you to script *custom console applications* that potentially involve many containers, and by using [mk.self]({{mkdocs.site_relative_url}}/demos/packaging) you can even "compile" them to stand-alone executables.  This works best for building things like dashboards, but it's even possible to build portable, project-specific IDEs.
+
+As a minimal example of extending the TUI, consider the following Makefile:
+
+```Makefile
+{{open('demos/tui-extension.mk','r').read().strip()}}
+```
+
+Running this opens a split-screen console with both panes showing an interactive bash terminal.  
+
+{{macros.img_link("tui-extension.png", mkdocs, "350px")}}
+
+This example helps to give an idea of the general structure of TUI extensions, but it isn't very useful.  The eagle-eyed reader will have noticed that the shells we opened are *running inside the TUI container*.  The project folder is already volume-mounted though, as is the hosts docker-socket.
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+#
+<hr style="width:100%;border-bottom:3px solid black;">
+

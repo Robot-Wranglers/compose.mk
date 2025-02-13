@@ -1,0 +1,36 @@
+##
+# demos/docker-compose.platform.yml: 
+#  Fake tool-containers that are used with the platform demo (see platform.mk)
+##
+services:
+  debian: &base
+    hostname: debian
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM debian
+        RUN apt-get update && apt-get install -y make procps jq
+    entrypoint: bash
+    working_dir: /workspace
+    volumes:
+      - ${PWD}:/workspace
+  
+  terraform: 
+    <<: *base
+    hostname: terraform
+  
+  ansible: 
+    <<: *base
+    hostname: ansible
+  
+  elk:
+    <<: *base
+    hostname: ansible
+  
+  prometheus:
+    <<: *base
+    hostname: prometheus
+  
+  datadog:
+    <<: *base
+    hostname: datadog

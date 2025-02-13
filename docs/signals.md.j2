@@ -1,0 +1,68 @@
+{% import 'macros.j2' as macros -%}
+
+## Signals and Supervisors
+
+**Working with signals (or understanding them) is not required for most use-cases of `compose.mk`,** especially if you're using it as a library.   But [for some tool mode invocations]({{mkdocs.site_relative_url}}//tool-overview/#tool-wrappers), supervisors and signals might be involved implicitly.  Signals also enable certain experimental features, and in principle the supervisor can be extended with new entry/exit hooks.
+
+Power users will be interested to understand the caveats and limitations around this, and anyone looking to work deeply on `compose.mk` itself may need to grok the implementation.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Background & Motivation
+
+Without [forking make](https://remake.readthedocs.io/en/latest/), there's no simple method to get hooks into the default way that it handles interrupts and signals.  But why would you want to anyway?  Most of the time this occurs to people [it's about cleanup](https://www.gnu.org/software/make/manual/html_node/Interrupts.html), but `compose.mk` doesn't exactly look like traditional use-cases.  
+
+For `compose.mk` specifically, signals come up when we need to stop `make` from processing the command line input, and pass control over to a new process.  But why?  Well, short-circuiting the default CLI option parsing for `make` *really useful*.  Especially since `compose.mk` allows us to "wrap" lots of containerized tools, we want to be able to proxy arguments over to those tools without `make` being greedy about parsing everything.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Use-Cases 
+
+The [`loadf` command](#loading-compose-files) is a typical example: the 2nd argument, a filename, must **not** be parsed as a Makefile target because no such target exists.
+
+```bash
+# Opens all shells for each service in the given file inside the TUI
+./compose.mk loadf tests/docker-compose.yml
+```
+ 
+**Sometimes we want individual targets to essentially be able to consume the rest of the command line.**  In this case, the filename is best understood as an argument to the first target, and not a target itself.  
+
+The [wrappers for `jq` and `jb`]({{mkdocs.site_relative_url}}/tool-overview/#proxy-wrappers) are another example that requires reading the whole command-line.
+
+```bash 
+$ echo '{"foo":"bar"}' | ./compose.mk jq .foo
+$ echo foo=bar | ./compose.mk jb
+```
+
+In the case of [`mk.let` and `mk.include`]({{mkdocs.site_relative_url}}/standard-lib/#dynamic-includes-and-targets]), we simulate *runtime*
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Implementation
+
+Since the last section describes the goal, you might be wondering how this kind of semi-magical behavior can be achieved.   And since the answer to that question is frankly kind of ridiculous, this should probably be considered experimental :)  *With that sternly worded warning out of the way..*
+
+Signals and supervisors are implemented using [a shebang hack](https://en.wikipedia.org/wiki/Shebang_(Unix)) and a [polyglot](https://en.wikipedia.org/wiki/Polyglot_(computing)), whereby `compose.mk` is simultaneously a Makefile, a Makefile library, *and* a bash script.  The bash script invokes `make`, but wraps it to catch any signals that are thrown.  After throwing a supported signal causes `make` to exit, bash catches, and then passes the code for the caught signal back to *another* invocation of `make` for an exit handler.
+
+**As a consequence of this, signals can only be handled when `compose.mk` is invoked directly,** i.e. with `./compose.mk ...`.  So note that **project Makefile's that are using `include compose.mk` cannot currently inherit this ability.**  
+
+Also note that while passing control over to a completely different process like this seems to *actually work* for both Linux and MacOS, this is still bad form.  In particular, complex argument passing might be misquoted, or exit codes may not be reliable.
+
+All targets related to signals/supervisors can be found under the `mk.interrupt` and `mk.super` namespaces, respectively.  
+
+{% set targets=bash('./compose.mk mk.namespace.filter/mk.super') %}
+{% set targets=targets + bash('./compose.mk mk.namespace.filter/mk.interrupt')%}
+{% set targets=targets.split('\n') %}
+{%for target in targets %} {% set target=target.strip().replace('%','<arg>') %}{%if target%}
+* [`{{target}}`](docs/api#{{target.replace('<','').replace('>','').replace('/','')}}){%endif%}{%endfor%}
+
+Targets above are for low-level internal use, and even hacking directly on `compose.mk` source probably won't require editing them.  To implement a new [proxy-wrapper]({{mkdocs.site_relative_url}}/tool-overview/#proxy-wrappers), use `mk.yield`.  Here's how to give `compose.mk` as new proxy-wrapper for the `ls` command:
+
+```Makefile 
+# compose.mk src 
+ls:
+	ls $${MAKE_CLI#*ls}
+	${mk.interrupt}
+```
+
+Low-level usage of these targets isn't usually required.  From inside `compose.mk`, you can Inside `compose.mk`, When the supervisor is installed,  See also the usage of A related idiom in the `compose.mk` source code 

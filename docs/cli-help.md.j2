@@ -1,0 +1,10 @@
+{% import 'macros.j2' as macros -%}
+
+## CLI Help
+
+When using `compose.mk` directly, help not only *works,* it goes beyond simply listing available targets, and actually parses and displays documentation per target, and per target-namespace. *(Under the hood, a dockerized version of [charmbracelete/glow](https://github.com/charmbracelet/glow) renders markdown.)*.
+
+{{macros.img_link("tui-7.gif", mkdocs, "90%")}}
+
+## Adding Help to Project Makefiles
+
