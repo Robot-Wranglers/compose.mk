@@ -27,7 +27,7 @@ theme:
   #   admonition:
   #     note: material/arrow-expand-down
 extra_css: ["extra.css"]
-site_url: https://elo-enterprises.github.io/compose.mk/
+site_url: https://robot-wranglers.github.io/compose.mk/
 site_description: >-
   A tool / library for makefile-based automation, scripting, and lightweight orchestration.  Native support for docker, docker-compose, workflow primitives, TUI elements, and more.
 remote_branch: docs
