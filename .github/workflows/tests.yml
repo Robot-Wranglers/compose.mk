@@ -3,9 +3,10 @@ name: Project Tests
 on:
   workflow_call: {}
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
+    workflow_dispatch:
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
     paths-ignore:
       - '**.md'
       - '**.md.j2'

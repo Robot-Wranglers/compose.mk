@@ -4,8 +4,8 @@ name: Project Docs
 on:
   workflow_call: {}
   push:
-    # branches: ["main"]
-    branches: [$default-branch]
+    branches: ["main"]
+    # branches: [$default-branch]
     workflow_dispatch:
 permissions:
   contents: read
