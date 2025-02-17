@@ -49,7 +49,7 @@ services:
       dockerfile_inline: |
         FROM python:3.9.21-bookworm
         RUN pip3 install --break-system-packages pynchon==2024.7.20.14.38 mkdocs==1.5.3 mkdocs-autolinks-plugin==0.7.1 mkdocs-autorefs==1.0.1 mkdocs-material==9.5.3 mkdocs-material-extensions==1.3.1 mkdocstrings==0.25.2
-        RUN apt-get update && apt-get install -y tree
+        RUN apt-get update && apt-get install -y tree jq
     entrypoint: bash
     working_dir: /workspace
     volumes:
