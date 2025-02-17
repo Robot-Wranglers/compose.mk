@@ -5,7 +5,6 @@ on:
   workflow_call: {}
   push:
     branches: ["main"]
-    # branches: [$default-branch]
     workflow_dispatch:
 permissions:
   contents: read
@@ -30,6 +29,7 @@ jobs:
         with:
           source: ./_site
           destination: ./_site
+          path: _site/
   deploy-docs:
     environment:
       name: github-pages
