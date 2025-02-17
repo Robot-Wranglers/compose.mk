@@ -15,7 +15,7 @@ include compose.mk
 define Dockerfile.Ansible.base
 FROM debian:bookworm
 RUN apt-get update
-RUN apt-get install -y jq ansible make 
+RUN apt-get install -y jq ansible make bash
 RUN apt-get install -y python3-pip
 RUN pip3 install docker --break-system-packages
 endef
