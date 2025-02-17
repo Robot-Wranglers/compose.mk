@@ -15,21 +15,21 @@ permissions:
 # concurrency:
 #   group: "pages"
 #   cancel-in-progress: false
-jobs: {}
-  # build-docs:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - name: Build static files
-  #       id: build
-  #       run: make clean init docs.build
-  #     - name: Upload static files as artifact
-  #       id: deployment
-  #       uses: actions/upload-pages-artifact@v3 
-  #       with:
-  #         # source: ./_site
-  #         # destination: ./_site
-  #         path: _site/
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build static files
+        id: build
+        run: make clean init docs.build
+      - name: Upload static files as artifact
+        id: deployment
+        uses: actions/upload-pages-artifact@v3 
+        with:
+          # source: ./_site
+          # destination: ./_site
+          path: _site/
   # deploy-docs:
   #   environment:
   #     name: github-pages
