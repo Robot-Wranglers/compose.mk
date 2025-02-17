@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/structured-io/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Structured io - compose.mk</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Structured io";
+        var mkdocs_page_input_path = "structured-io.md";
+        var mkdocs_page_url = "/compose.mk/structured-io/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="..">
+          <img src="../img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../integration/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../bridge/">Import Services from Compose</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../container-dispatch/">Container Dispatch</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../standard-lib/">Library Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Full API</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../tool-overview/">Tool Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../embedded-tui/">TUI Overview & Gallery</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-help/">CLI Help</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../signals/">Supervisors & Signals</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/ansible/">Custom Automation APIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/workflows/">Workflow Basics & Pipelining</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/packaging/">Self-extracting Executables</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../but-why/">Design Philosophy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Structured io</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h3 id="structured-io">Structured IO</h3>
+<p>One problem with <code>make</code> is that the lack of structured output tends to be a limiting factor.  A big part of the explanation for this is just that a Makefile might be using any random tools with any kind of behaviour, but that's sort of inevitable for automation.  The other part is just a missing approach to idioms and tools, and <code>compose.mk</code> can help with that.</p>
+<p>The <code>compose.mk::stream</code> module, aka the <a href="/compose.mk/api#api-stream"><strong><code>stream.*</code> target namespace</strong></a> adds basic support for working with streams, including newline/comma/space delimited streams, common use cases with JSON, etc.  Most of the utilities here are in the form of make-targets that are intended to be used with pipes (i.e. they reads from stdin).  </p>
+<p><strong>This is not what you'd call "typed", but it reduces error-prone parsing and moves a little bit closer to structured data.</strong>  </p>
+<p><a href="https://mxe.cc/gmsl.html">The classical GMSL</a> adds support for things like sets and string-lists, and the <code>compose.mk::stream</code> module does some of that too.  But the biggest benefit comes from exposing tools like <a href="#"><code>jq</code></a> and <a href="#"><code>jb</code></a> without explicitly depending on them.  How does that work?  Basically <code>compose.mk</code> will use local tools if they are available, and fall back to using dockerized versions of them.</p>
+<p>Before we get into code examples, let's introduce basic principles with the command line.  </p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="structured-io-basics">Structured IO: Basics</h4>
+<p>The <code>jb</code><sup id="fnref:3"><a class="footnote-ref" href="#fn:3">3</a></sup>, <code>jq</code><sup id="fnref:4"><a class="footnote-ref" href="#fn:4">4</a></sup>, and <code>yq</code><sup id="fnref:5"><a class="footnote-ref" href="#fn:5">5</a></sup> tools are so much revered, they get top-level entrypoints.  </p>
+<pre><code class="language-bash"># output JSON using `jb` =&gt;
+$ echo key=val | ./compose.mk jb
+{&quot;key&quot;:&quot;val&quot;}
+
+# parse JSON using `jq`
+$ echo key=val | ./compose.mk jb | ./compose.mk jq -r .key
+val
+</code></pre>
+<p>Top-level entrypoints are documented in more detail as part of <a href="/compose.mk/tool-overview/#proxy-wrappers">tool mode</a>.  Inside a project Makefile, we can always use direct calls to <code>compose.mk</code> as seen above, or recursive calls to <code>make</code>.  But if arguments to these tools get complicated, quoting will be dodgy.  Luckily there are equivalent forms that are more idiomatic, and these also spawn fewer processes:</p>
+<pre><code class="language-Makefile"># demos/structured-io.mk: 
+#   Show output/input using JSON.
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/structured-io.mk
+
+include compose.mk
+
+.DEFAULT_GOAL := demo.json_io
+
+demo.json_io:
+    ${make} emit | ${make} consume
+
+# Emit/consume JSON with `compose.mk` macros.  
+# Uses native tools if they are available, falling back to docker.
+emit: 
+    ${jb} key=val
+
+consume:
+    cat /dev/stdin | ${jq} .key
+</code></pre>
+<p>For the most part <code>compose.mk</code> tries to stay out of the way of <code>jq</code> and <code>jb</code> and let them do what they do, but remember, we need this thin abstraction layer to transparently choose between a local tool and a dockerized tool.</p>
+<p>You get the idea.  <em>Now <code>make emit | make consume</code> is doing basic IO with JSON,</em> and we haven't added any new dependencies.</p>
+<p>From here you'll probably want to provide user-feedback and status messages without wrecking pipe-safety; see also the section on <a href="#logging-facilities">logging facilities</a>.  Since you've got structured output anyway, this is also a good segue into the <a href="#workflow-example-etl">workflow example</a>.</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="structured-io-stream-types-pipes">Structured IO: Stream Types &amp; Pipes</h4>
+<p>The <code>compose.mk::stream</code> module, aka the <a href="/compose.mk/api/#api-stream"><code>stream.*</code> target namespace</a> is full of targets that can help to handle common tasks with streams.  Inside a project Makefile, we can always use direct calls to <code>compose.mk</code>, or recursive calls to <code>make</code>, but most targets are <em>also available as macros</em>.  Using macros looks tidy and is easier to type, but the main benefit is that it saves extra processes.</p>
+<p>As a really simple example, targets that have to deal with streams will begin with <code>cat /dev/stdin</code> to capture input and start a pipeline, but this can be rewritten as simply <code>${stream.stdin}</code> for readability.  </p>
+<p>This isn't exhaustive, but you can see the section below for a few more samples.</p>
+<pre><code class="language-Makefile"># demos/stdlib-stream-io.mk: 
+#   Demonstrating a few macros for stream io.
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/stdlib-stream-io.mk
+
+.DEFAULT_GOAL := demo.streams 
+
+include compose.mk 
+
+demo.streams:
+    # preview results mid-pipe on stderr, leaving stdout uninterrupted
+    ls | ${stream.peek} &gt; .tmp.ls.out
+
+    # preview markdown with glow 
+    cat README.md | ${stream.markdown}
+    cat README.md | ${stream.glow}
+
+    # preview an img with chafa 
+    cat docs/img/icon.png | ${stream.img}
+    cat docs/img/icon.png | ${stream.chafa}
+
+    # convert spaces to new-lines (cleaner than using xargs)
+    echo foo bar | ${stream.space.to.nl}
+
+    # convert new-lines to commas (cleaner than sed)
+    printf 'foo\nbar' | ${stream.nl.to.comma}
+
+    # chaining streams works the way you'd expect 
+    cat README.md | ${stream.glow} | ${stream.indent}
+</code></pre>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:1">
+<p>See https://www.jenkins.io/doc/book/pipeline/syntax/&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+<li id="fn:2">
+<p>Make-targets can be used as task-prerequisites as well as command line entrypoints&#160;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 2 in the text">&#8617;</a></p>
+</li>
+<li id="fn:3">
+<p>https://github.com/h4l/json.bash&#160;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 3 in the text">&#8617;</a></p>
+</li>
+<li id="fn:4">
+<p>https://github.com/jqlang/jq&#160;<a class="footnote-backref" href="#fnref:4" title="Jump back to footnote 4 in the text">&#8617;</a></p>
+</li>
+<li id="fn:5">
+<p>https://github.com/mikefarah/yq&#160;<a class="footnote-backref" href="#fnref:5" title="Jump back to footnote 5 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

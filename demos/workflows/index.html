@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/demos/workflows/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Workflow Basics & Pipelining - compose.mk</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="../../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Workflow Basics \u0026 Pipelining";
+        var mkdocs_page_input_path = "demos/workflows.md";
+        var mkdocs_page_url = "/compose.mk/demos/workflows/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../..">
+          <img src="../../img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../integration/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../bridge/">Import Services from Compose</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../container-dispatch/">Container Dispatch</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../standard-lib/">Library Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/">Full API</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../tool-overview/">Tool Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../embedded-tui/">TUI Overview & Gallery</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../cli-help/">CLI Help</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../signals/">Supervisors & Signals</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../ansible/">Custom Automation APIs</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Workflow Basics & Pipelining</a>
+    <ul class="current">
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../packaging/">Self-extracting Executables</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../but-why/">Design Philosophy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Demos</li>
+      <li class="breadcrumb-item active">Workflow Basics & Pipelining</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h4 id="pipelining-workflow-basics">Pipelining &amp; Workflow Basics</h4>
+<p>So we've seen that the <a href="/compose.mk/api#api-flux"><strong><code>flux.*</code> target namespace</strong></a> provides basic tooling for workflows, and <a href="/compose.mk/standard-lib/#workflow-support">looked at an example with try-except-finally</a>.  </p>
+<p>Let's build on that idea and introduce <code>flux.pipeline</code> with some scripting to describe a miniature ETL.  For this exercise we'll also use <a href="/compose.mk/standard-lib/#structured-input-output">Structured IO</a> and <a href="/compose.mk/standard-lib/#logging-facilities">Logging</a> so that what we build is friendly reading for both people and machines.</p>
+<p>Consider the following Makefile for describing a miniature ETL:</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<pre><code class="language-Makefile"># demos/etl-json.mk: 
+#   Described a JSON-backed ETL pipeline with `compose.mk`
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/etl-json.mk
+
+# Squash the default noisy output, include compose.mk primitives
+MAKEFLAGS=-sS --warn-undefined-variables
+.DEFAULT_GOAL := etl.safe
+include compose.mk
+
+# Declare an ETL pipeline, using `flux.pipeline` to bind tasks together.
+# Roughly equivalent to =&gt; `make extract | make transform | make load`
+etl: flux.pipeline/extract,transform,load
+
+# Declare a &quot;safe&quot; version of the pipeline that handles failure/cleanup
+etl.safe: flux.try.except.finally/etl,etl.failed,etl.cleanup
+
+# Simulate individual tasks for extract/transform/load.  
+# For convenience we ignore input and emit new JSON using the `jb` tool.
+extract: 
+    ${jb} stage=extracted
+transform: 
+    ${jb} stage=transformed
+load:
+    ${jb} stage=loaded
+
+# Simulate ETL handlers for failure and cleanup
+etl.failed:
+    $(call log, ETL failed!)
+etl.cleanup:
+    $(call log, Cleaning up ETL!)
+</code></pre>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p>So basically this works the way you'd expect, and we can execute the ETL end-to-end with <code>make etl</code>, or with error-handling using <code>make etl.safe</code>.  And as a bonus, developers retain the ability to execute individual pipeline components or cleanup piecewise, or individually.  </p>
+<p>One benefit of <code>flux.pipeline</code> is getting previews of the results at different stages.  Running this example so far looks something like this:</p>
+<pre><code class="language-bash">
+# Running the demo
+$ make -f demos/etl-json.mk etl.safe
+
+⇄ flux.try.except.finally // etl,etl.failed,etl.cleanup 
+
+ Φ flux.pipeline // extract,transform,load // extract stage 
+ Φ flux.pipeline // extract,transform,load // result preview
+ {&quot;stage&quot;:&quot;extracted&quot;}
+
+ Φ flux.pipeline // extract,transform,load // transform stage 
+ Φ flux.pipeline // extract,transform,load // result preview
+ {&quot;stage&quot;:&quot;transformed&quot;}
+
+ Φ flux.pipeline // extract,transform,load // load stage 
+ {&quot;stage&quot;:&quot;loaded&quot;}
+Cleaning up ETL!
+</code></pre>
+<p><em>( Despite appearances, this is actually pipe-safe: the final output of <code>{"stage":"loaded"}</code> is the only thing on stdout, and stderr is ANSI formatted :)</em></p>
+<p>For more information, see the api docs for <a href="/compose.mk/api/#fluxpipeline"><code>flux.pipeline</code></a>, Also related, the <a href="/compose.mk/demos/platform">Platform Lifecycle Demo</a> shows flow control with <a href="/compose.mk/demos/platform"><code>flux.dmux</code></a>.</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="extending-the-pipeline">Extending the Pipeline</h4>
+<p>So yeah, any example passing around fake JSON looks tight and tidy, but.. it's really easy to extend this.  Let's sketch small changes that can actually turn this into an image pipeline, using docker idioms from <code>compose.mk</code> to leverage external tools.  As usual, <code>compose.mk</code> can setup a lot of functionality without much code, so it takes longer to explain than it does to build!</p>
+<pre><code class="language-Makefile"># demos/etl-img.mk:
+#   Describes an image pipeline with `compose.mk`.
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/etl-img.mk 
+
+# Squash the default noisy output, include compose.mk primitives
+MAKEFLAGS=-sS --warn-undefined-variables
+.DEFAULT_GOAL := etl
+include compose.mk
+
+# Setup a default docker image and tag for imagemagick tool container
+imagemagick_tag=dpokidov/imagemagick:latest
+
+# Now the extract-task will kick off the pipeline by just injecting any image.
+extract:
+    cat docs/img/icon.png
+
+# Helper that creates an &quot;API&quot; over the tool container with a parametric target.
+# This is basically a partial-function, allowing us to drill down to what entrypoint
+# docker will use.
+imagemagick/%:
+    entrypoint=${*} ./compose.mk docker.run.image/${imagemagick_tag}
+
+# Use the generic API to make an alias for something concrete:
+# This fixes both the image *and* the entrypoint, but still defers
+# to callers for deciding the exact command to pass.
+convert: imagemagick/convert
+
+# Back to the ETL, now our transform-task is ready to stream stdin
+# into the dockerized `convert` tool.  We need to pass it some kind of 
+# instruction in the `cmd` variable, so we just use imagemagick's own 
+# syntax for &quot;convert the png on stdin to a jpeg on stdout&quot;.
+transform: 
+    cat /dev/stdin | cmd=&quot;png:- jpg:-&quot; ${make} convert
+
+# For the &quot;load&quot; part of the ETL, we could do something else with imagemagick, 
+# but let's make it interesting and preview the jpeg in the terminal. 
+# This is actually a one-liner and requires no fancy dependencies!  
+# Under the hood, `stream.img.preview` target uses a dockerized `chafa`.
+load: stream.img.preview
+
+# One last thing: since this pipeline is using images, 
+# we need to stop `flux.pipeline` from showing us the 
+# intermediate stages, or else we'll just get binary data.  
+# Using `flux.pipeline.quiet` defaults to no previews.
+etl: flux.pipeline.quiet/extract,transform,load
+</code></pre>
+<p>For more information, see the api docs for <a href="/compose.mk/api/#dockerrunimagearg"><code>docker.run.image</code></a> and the docs for <a href="/compose.mk/vanilla-docker">raw docker support</a>.</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p>It's a neat party trick that <code>compose.mk</code> has some features that look like Luigi or Airflow if you squint, but of course it's not <em>really</em> made for ETLs.  Really, <code>flux.*</code> is more similar in spirit to things like <a href="https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline">declarative pipelines in Jenkins</a>.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../ansible/" class="btn btn-neutral float-left" title="Custom Automation APIs"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../platform/" class="btn btn-neutral float-right" title="Platform Lifecycle Example">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../ansible/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../platform/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

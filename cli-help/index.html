@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/cli-help/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>CLI Help - compose.mk</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "CLI Help";
+        var mkdocs_page_input_path = "cli-help.md";
+        var mkdocs_page_url = "/compose.mk/cli-help/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="..">
+          <img src="../img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../integration/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../bridge/">Import Services from Compose</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../container-dispatch/">Container Dispatch</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../standard-lib/">Library Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Full API</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../tool-overview/">Tool Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../embedded-tui/">TUI Overview & Gallery</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">CLI Help</a>
+    <ul class="current">
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../signals/">Supervisors & Signals</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/ansible/">Custom Automation APIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/workflows/">Workflow Basics & Pipelining</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/packaging/">Self-extracting Executables</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../but-why/">Design Philosophy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Misc Features</li>
+      <li class="breadcrumb-item active">CLI Help</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h2 id="cli-help">CLI Help</h2>
+<p>When using <code>compose.mk</code> directly, help not only <em>works,</em> it goes beyond simply listing available targets, and actually parses and displays documentation per target, and per target-namespace. <em>(Under the hood, a dockerized version of <a href="https://github.com/charmbracelet/glow">charmbracelete/glow</a> renders markdown.)</em>.</p>
+<p align="center"><a href="/compose.mk/img/tui-7.gif"><img width="90%" src="/compose.mk/img/tui-7.gif"></a></p>
+
+<p>As seen in the animation, there are several ways to invoke the help for <code>compose.mk</code>.  See the examples below:</p>
+<pre><code class="language-bash"># list all targets 
+$ ./compose.mk help
+
+# help for a single target 
+$ ./compose.mk help docker.run
+
+# help for a module namespace with many targets
+$ ./compose.mk help docker
+</code></pre>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h2 id="help-for-project-makefiles">Help For Project Makefiles</h2>
+<p>To enable help for your project Makefile, it is helpful to use <code>include compose.mk</code> somewhere near the top.  By itself, this enables target listing with <code>make help</code>, including both the inherited targets from <code>compose.mk</code> as well as the new targets that are project specific.</p>
+<p>However for technical reasons<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup> related to default argument parsing by <code>make</code>,  invocations like <code>make help docker</code> <strong>cannot work with project makefiles.</strong>  A work-around is to directly provide arguments like so:</p>
+<pre><code class="language-bash">$ make help search=docker.run
+</code></pre>
+<p>Note that for help to render properly, your targets need to use the following python-docstring inspired style for comments, and then help can be pulled automatically from source.</p>
+<pre><code class="language-Makefile">
+include compose.mk 
+
+my-target:
+    @# Comment line one
+    @# **Markdown is supported.**
+    echo your implementation here
+
+my-parametric-target/%:
+    @# Comment line one
+    @# **Markdown is supported.**
+    echo your implementation here
+</code></pre>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h2 id="implementation-details">Implementation Details</h2>
+<p>The implementation for help uses <code>mk.help.*</code> family of targets, and if you want to customize help or error messages they might be useful.  </p>
+<p>See the API for:</p>
+<ul>
+<li><a href="/compose.mk/api#mkhelp"><code>mk.help</code></a> </li>
+<li><a href="/compose.mk/api#mkhelpblockarg"><code>mk.help.block/&lt;arg&gt;</code></a> </li>
+<li><a href="/compose.mk/api#mkhelpmodulearg"><code>mk.help.module/&lt;arg&gt;</code></a> </li>
+<li><a href="/compose.mk/api#mkhelpsearcharg"><code>mk.help.search/&lt;arg&gt;</code></a> </li>
+<li><a href="/compose.mk/api#mkhelptargetarg"><code>mk.help.target/&lt;arg&gt;</code></a> </li>
+</ul>
+<p>Heavy lifting for parsing Makefile metadata comes from a dockerized version of the <a href="https://github.com/elo-enterprises/pynchon">pynchon tool</a>, which can parse help as well as target-prerequisites / DAGs.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:1">
+<p>See the docs for [Supervisors &amp; Signals]](/compose.mk/signals/)&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../advanced-tuis/" class="btn btn-neutral float-left" title="Advanced TUIs"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../signals/" class="btn btn-neutral float-right" title="Supervisors & Signals">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../advanced-tuis/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../signals/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

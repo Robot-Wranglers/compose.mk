@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="description" content="A tool / library for makefile-based automation, scripting, and lightweight orchestration.  Native support for docker, docker-compose, workflow primitives, TUI elements, and more." /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/" />
+      <link rel="shortcut icon" href="img/favicon.ico" />
+    <title>compose.mk</title>
+    <link rel="stylesheet" href="css/theme.css" />
+    <link rel="stylesheet" href="css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Home";
+        var mkdocs_page_input_path = "index.md";
+        var mkdocs_page_url = "/compose.mk/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".">
+          <img src="img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="./search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="integration/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="bridge/">Import Services from Compose</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="container-dispatch/">Container Dispatch</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="standard-lib/">Library Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="api/">Full API</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="tool-overview/">Tool Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="embedded-tui/">TUI Overview & Gallery</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="cli-help/">CLI Help</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="signals/">Supervisors & Signals</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="demos/ansible/">Custom Automation APIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="demos/workflows/">Workflow Basics & Pipelining</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="demos/platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="demos/polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="demos/mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="demos/packaging/">Self-extracting Executables</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="but-why/">Design Philosophy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href=".">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Home</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <p><strong>Meet <code>compose.mk</code>, tool / library /framework for makefile-based automation, scripting, and lightweight orchestration.</strong>  Native support for docker, docker-compose, workflow primitives, TUI elements, and more.</p>
+<p align="center"><a href="/compose.mk/img/loadf-2.gif"><img width="90%" src="/compose.mk/img/loadf-2.gif"></a></p>
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h2 id="intro">Intro</h2>
+<p><strong><code>compose.mk</code> extends <code>make</code> to add native support for docker, workflows, TUI elements, and more.</strong></p>
+<p>There are lots of ways to use it, particularly stuff in the automation/orchestration space like CI/CD.  Ultimately though whether <code>compose.mk</code> is a tool, a library, or a framework depends on how you decide to use it.  </p>
+<ul>
+<li>
+<p><strong>For programmatic usage,</strong> you can think of <code>compose.mk</code> as an attempt to provide a "<a href="/compose.mk/standard-lib">standard library</a>" that extends vanilla <code>make</code>.  Besides advanced stuff like container support and workflows, it offers basic stuff like clean, colored logging.  </p>
+</li>
+<li>
+<p><strong>As a framework,</strong> you can <a href="/compose.mk/bridge">combine <code>compose.mk</code> with docker-compose file(s)</a> or <a href="/compose.mk/raw-docker">inlined container descriptions</a>, and very quickly expose powerful, domain-specific automation APIs in your project Makefile to orchestrate tasks that might involve multiple containers.  Dispatching make-targets <em>inside</em> these containers turns out to be an especially powerful technique, and is supported for most containers.</p>
+</li>
+<li>
+<p><strong>As a stand-alone tool,</strong> <code>compose.mk</code> requires no project-level integration, and still does <a href="/compose.mk/tool-overview">lots of practical stuff</a> with <em>no dependencies beyond <code>make</code> and <code>docker</code></em>.  Because <code>make</code> targets always do double-duty as CLI entrypoints and as reusable task units, the "internal API" is automatically published as a CLI interface.</p>
+</li>
+</ul>
+<p>There's a lot of hate for <code>make</code> (especially for "creative" usage of it!), but you'll quickly find that these are not the Makefile's of your ancestors.  <strong>Working with <code>compose.mk</code> makes <code>make</code> hit different.</strong>  The demo above show-cases an example of combining docker support with TUI elements, opening interactive shells for each service defined in a docker-compose file. <em>(Under the hood, <code>tmux</code> is used as a geometry manager, but since it is also dockerized, it won't become a host dependency.)</em></p>
+<p>As another improvement over classical <code>make</code>, note that help not only <em>works,</em> it goes beyond simply listing available targets, and actually parses and displays documentation per target and per target-namespace. <em>(Under the hood, a dockerized version of <a href="https://github.com/charmbracelet/glow">charmbracelete/glow</a> renders markdown.)</em>.</p>
+<p align="center"><a href="/compose.mk/img/tui-7.gif"><img width="90%" src="/compose.mk/img/tui-7.gif"></a></p>
+
+<p>The interactive TUI stuff above makes for attention-grabbing demos and has the advantage of showing several features at once, but dashboarding and inspection/debugging/prototyping workflows aren't necessarily the main feature of <code>compose.mk</code>.  <u><strong>Average use-cases will probably look more like automation and less like applications.</u></strong></p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="features-design-goals">Features &amp; Design Goals</h3>
+<ul>
+<li><strong>Radically minimal,</strong> in terms of dependencies and conceptual overhead. Out of the box, <code>make</code> is expressive but has relatively few core concepts, it's ubiquitous, and it's fast. Building on this, <code>compose.mk</code> adds just enough extra concepts to get <em>a lot</em> of extra power and flexibility.</li>
+<li><strong>Seamless and simple idioms for working with containers in a way that's platform agnostic.</strong> Code that automates tasks in project management should not be locked inside Jenkinsfiles or Github Actions.  Using <code>compose.mk</code> tends to <a href="/compose.mk/container-dispatch">help projects to decouple and run elsewhere</a>, but afterwards running from CI/CD still works.</li>
+<li><strong>Generic and easy to extend foundation.</strong>  A major focus for <code>compose.mk</code> is what might be summarized as <em>mapping, dispatch, and interoperability</em>.  For example you can <a href="/compose.mk/bridge">map docker containers to <code>make</code> targets</a>, or targets to containers, or <a href="/compose.mk/embedded-tui">map containers/targets into <code>tmux</code> panes</a>.  This makes it easy to quickly put together domain-specific toolkits, regardless of whether that domain happens to be wrangling development tools, documentation tools, or infracode tools.</li>
+<li><strong>Clean &amp; carefully curated output</strong> that is <a href="/compose.mk/standard-lib/#logging-facilities">logged to appropriate streams</a>, aiming to be readable and human-friendly on stderr, while still <a href="/compose.mk/standard-lib/#structured-input-output">remaining machine-friendly for downstream processing</a> on stdout.</li>
+<li><strong>Basic workflow support is also available.</strong>  Tasks and DAGs are built-ins for <code>make</code> naturally, and <code>compose.mk</code> adds support for other primitives, <a href="/compose.mk/standard-lib/#workflow-support">like parallel tasks and task retries</a>.</li>
+<li><strong>Hacker friendly.</strong> The single-file approach used with <code>compose.mk</code> makes it easy to embed alongside existing projects.  The project itself uses <a href="https://unlicense.org/">the unlicense</a>, and the goal is for the base API to eventually become completely frozen.  Rip out the parts you don't need, contribute upstream if you can, but if you don't want to track upstream or if your customizations become too specific to your project, no need to ever look back.</li>
+</ul>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="choose-your-path">Choose Your Path</h3>
+<p>This is all pretty abstract though, and it's time to choose your own adventure:</p>
+<p>🚀 -- <strong>If <em>you are interested already and prefer to learn by example</em></strong>.. <a href="/compose.mk/bridge">just.</a> <a href="/compose.mk/embedded-tui">dive.</a> <a href="/compose.mk/demos/platform">into.</a> <a href="/compose.mk/tool-overview">some.</a></p>
+<p>🤨  -- <strong>If you are <em>understandably skeptical about getting involved with the biggest, baddest, and most highly-powered mutant Makefile the world has ever seen</em></strong>, you might want to <a href="/compose.mk/but-why">read more advocacy about motivations and design philosophy</a>.</p>
+<p>🔎 -- <strong>If you are withholding judgement on just how insane this project is until you see concrete larger-scale use-cases..</strong> skip to some of the demos or consider checking out these sibling projects which use and extend <code>compose.mk</code> to manage kubernetes cluster lifecycles: <a href="https://github.com/elo-enterprises/k3d-faas">k8s-tools</a> and <a href="https://github.com/elo-enterprises/k3d-faas">k3d-faas</a>.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+    
+  </span>
+</div>
+    <script src="js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = ".";</script>
+    <script src="js/theme_extra.js"></script>
+    <script src="js/theme.js"></script>
+      <script src="search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
+
+<!--
+MkDocs version : 1.5.3
+Build Date UTC : 2025-02-17 18:37:56.335994+00:00
+-->

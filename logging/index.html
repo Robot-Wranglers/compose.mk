@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/logging/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Logging - compose.mk</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Logging";
+        var mkdocs_page_input_path = "logging.md";
+        var mkdocs_page_url = "/compose.mk/logging/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="..">
+          <img src="../img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../integration/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../bridge/">Import Services from Compose</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../container-dispatch/">Container Dispatch</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../standard-lib/">Library Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Full API</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../tool-overview/">Tool Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../embedded-tui/">TUI Overview & Gallery</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-help/">CLI Help</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../signals/">Supervisors & Signals</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/ansible/">Custom Automation APIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/workflows/">Workflow Basics & Pipelining</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/packaging/">Self-extracting Executables</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../but-why/">Design Philosophy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Logging</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h3 id="logging-facilities">Logging Facilities</h3>
+<p>One goal for <code>compose.mk</code> is to enable program output that is clean, curated, and human-friendly on stderr, and machine-friendly on stdout.  There are a few features available in support of this.  In general <code>compose.mk</code> prefers make-targets over make-functions and macros, because targets are more reusable.[^2]  Logging is a special case though, and might use all 3.</p>
+<h4 id="log-functions">Log Functions</h4>
+<p>First lets look at the <strong><code>log.*</code> functions</strong> that are suitable for use from your project Makefile.  The following example demonstrates basic logging, logging with formatting, and trace-logging.  </p>
+<pre><code class="language-Makefile"># demos/logging.mk: 
+#   Shows some of the logging capabilities with make-functions.
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/logging.mk
+
+# Squash the default noisy output, then override 
+# the default goal and include compose.mk primitives
+MAKEFLAGS=-sS --warn-undefined-variables
+.DEFAULT_GOAL := all
+include compose.mk
+
+# Runs all the examples 
+all: logging_example.basic logging_example.formatting logging_example.json
+
+# Basic example, just write a message to log.
+logging_example.basic:
+    $(call log, unquoted message that should go to log)
+
+# Formatting example, using some of the available ANSI color constants.
+logging_example.formatting:
+    $(call log, ${red}unquoted message ${sep} ${no_ansi}that should ${dim} go to ${bold} log)
+
+# Trace-logging&quot; example,&quot; this only shows if `trace` or `TRACE` is set to 1 in the environment
+logging_example.trace:
+    $(call log.trace, unquoted message that should go to log)
+
+# JSON-logging: decodes input with `jb`, then pretty-prints corresponding JSON to stderr.
+# This is indented by default, but expanded by default.  Use `log.json.min` for minified version.
+logging_example.json:
+    $(call log.json.min, stage=Building )
+    $(call log.json, stage=Building more=info anything=you_want)
+</code></pre>
+<p>A few other things that are worth mentioning:</p>
+<ul>
+<li><strong>Logging always goes to stderr so that targets remain pipe-safe</strong>, including the <code>log.json</code> output.</li>
+<li><strong>Log-messages have a prefix which is based on the call-depth</strong>, which can help visually parse complex traces.</li>
+<li>See the <code>compose.mk</code> source for other information about formatting colors and glyphs.  </li>
+</ul>
+<p>Tools for working with JSON are also discussed in more detail in the section on <a href="#structured-io-basics">Structured IO</a>.</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="file-and-stream-previews">File and Stream Previews</h4>
+<p>Whether you're working on build processes, data-pipelines, or infrastructure deployments, it's convenient to have the ability to "preview" things like files, streams, or intermediate representations.  <a href="/compose.mk/tool-overview/#other-wrappers">Docs for compose.mk's built-in tool wrappers</a> cover this topic also, but let's look at some more programmatic usage.</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<pre><code class="language-Makefile"># demos/logging.mk: 
+#   Shows some of the logging capabilities with make-functions.
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/logging.mk
+
+# Squash the default noisy output, then override 
+# the default goal and include compose.mk primitives
+MAKEFLAGS=-sS --warn-undefined-variables
+.DEFAULT_GOAL := all
+include compose.mk
+
+# Runs all the examples 
+all: logging_example.basic logging_example.formatting logging_example.json
+
+# Basic example, just write a message to log.
+logging_example.basic:
+    $(call log, unquoted message that should go to log)
+
+# Formatting example, using some of the available ANSI color constants.
+logging_example.formatting:
+    $(call log, ${red}unquoted message ${sep} ${no_ansi}that should ${dim} go to ${bold} log)
+
+# Trace-logging&quot; example,&quot; this only shows if `trace` or `TRACE` is set to 1 in the environment
+logging_example.trace:
+    $(call log.trace, unquoted message that should go to log)
+
+# JSON-logging: decodes input with `jb`, then pretty-prints corresponding JSON to stderr.
+# This is indented by default, but expanded by default.  Use `log.json.min` for minified version.
+logging_example.json:
+    $(call log.json.min, stage=Building )
+    $(call log.json, stage=Building more=info anything=you_want)
+</code></pre>
+<h4 id="visual-dividers">Visual Dividers</h4>
+<p><strong>Visually separating stages with some kind of output divider</strong> is something that is nice to have to for otherwise messy output.  Here's an example of several different ways of using <code>io.print.div</code> to get labeled or timestamped dividers that are shown between clean/build/test stages.  </p>
+<pre><code class="language-Makefile"># demos/logging.mk: 
+#   Shows some of the logging capabilities with make-functions.
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/section-dividers.mk clean build test
+
+# use `io.print.div` implicitly as a prereq =&gt; Timestamped divider
+clean: io.print.div
+    echo Cleaning stuff
+
+# call `io.print.div` explicitly =&gt; Full control over divider label
+build: 
+    label=&quot;Build Stage&quot; ${make} io.print.div
+    echo Building stuff
+
+# use `io.print.div` as a macro =&gt; Automatically set label as the current target's name
+test:
+    ${io.print.div}
+    echo Testing stuff
+</code></pre>
+<p>In the <code>build</code> task above, you can see one way to call <code>io.print.div</code> explicitly, which uses <code>${make}</code> as shorthand for "<em>the right way to call <code>make</code> recursively</em>".  As an equivalent, you can always use an invocation like <code>./compose.mk io.print.divider</code> instead, and this works from anywhere.  Inspecting usage from the command line:</p>
+<p align="center"><a href="/compose.mk/img/demo-io.gif"><img width="90%" src="/compose.mk/img/demo-io.gif"></a></p>
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p>Even though <a href="/compose.mk/api/#ioprintdiv"><code>io.print.div</code></a> detects terminal width, it isn't fancy otherwise.  A related utility is <code>io.gum.style</code>, which can print dividers with <a href="https://github.com/charmbracelet/gum">charmbracelet/gum</a>.  <em>If you have a local copy of <code>gum</code> then it is used, otherwise, we fall back to docker.</em></p>
+<p align="center"><a href="/compose.mk/img/demo-gum.gif"><img width="90%" src="/compose.mk/img/demo-gum.gif"></a></p>
+
+<p>For other tools like showing syntax-highlighted files or iput streams, check out <a href="/compose.mk/tool-overview">these docs for stand-alone mode</a>. See also the <a href="/compose.mk/api/#api-io">full documentation for all <code>io.*</code> targets</a></p>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

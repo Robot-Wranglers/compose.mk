@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/demos/ansible/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Custom Automation APIs - compose.mk</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="../../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Custom Automation APIs";
+        var mkdocs_page_input_path = "demos/ansible.md";
+        var mkdocs_page_url = "/compose.mk/demos/ansible/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../..">
+          <img src="../../img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../integration/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../bridge/">Import Services from Compose</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../container-dispatch/">Container Dispatch</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../standard-lib/">Library Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/">Full API</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../tool-overview/">Tool Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../embedded-tui/">TUI Overview & Gallery</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../cli-help/">CLI Help</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../signals/">Supervisors & Signals</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Custom Automation APIs</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#hijacking-ansible">Hijacking Ansible</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#map-ansible-modules-to-targets">Map Ansible Modules to Targets</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#discussion">Discussion</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../workflows/">Workflow Basics & Pipelining</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../packaging/">Self-extracting Executables</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../but-why/">Design Philosophy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Demos</li>
+      <li class="breadcrumb-item active">Custom Automation APIs</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h2 id="custom-automation-apis">Custom Automation APIs</h2>
+<p>This demo describes one way to very quickly expose custom automation APIs using <code>compose.mk</code>.  <em>What does that even mean?</em></p>
+<p>When it comes to automation, combining different tools that might be in different containers together is part of the job, but at the end of the day you always want a <em>coherent vocabulary of verbs that operate on your domain.</em>  </p>
+<p>Those verbs might just be the classic build/clean/test, but even then you're often orchestrating across different containers. But your vocabulary might look more like build/deploy.  And if things get complicated enough your vocabulary might become develop more object oriented instructions like <code>queue.stop</code> and <code>cluster.create</code>.  So that's an automation API in broad strokes, and <code>compose.mk</code> has the tools to build it.</p>
+<p>Really, <code>compose.mk</code> is a foundation to build on, and it doesn't make assumptions about your domain.  Combining <code>compose.mk</code> with your own toolkit and <em>building</em> a new vocabulary is where it really starts to shine.  For a deep dive into a much larger example of this where <code>compose.mk</code> is used orchestrating kubernetes tools, see the <a href="#">sibling project for k8s-tools</a>.</p>
+<p><strong>For our purposes here, we'll look at a concrete use-case that's much smaller, so let's talk about hacking Ansible.</strong></p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="hijacking-ansible">Hijacking Ansible</h3>
+<p><strong>The problem:</strong> Ansible is neat for lots of stuff, but it comes with a lot of baggage.  Depending on how you're using it.. you'll need a playbook, maybe a config file and an inventory file, not to mention a python stack, and you'll need the ansible version itself pinned.  It's a whole stack and it has to be layed out in a certain way; command line invocations are long, tedious, and easy to get wrong.  Simple stuff can be a lot of drama, especially if you're trying to make sure it's reproducible. And things gets worse if you need to run it from different contexts, or if you're trying to keep this work small and self-contained.  </p>
+<p>As an exercise.. let's look at what <code>compose.mk</code> can bring to adress some of that.  </p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h3 id="map-ansible-modules-to-targets">Map Ansible Modules to Targets</h3>
+<p><a href="#">Ansible's adhoc mode</a> gives some direct access to ansible-modules and lets you skip a playbook.  For our first trick, we'll try to expose access to those modules.  Here are the basic goals:</p>
+<ol>
+<li>No ansible-dependency on our host, of course we'll use docker</li>
+<li>Full access to ansible-modules via the command line </li>
+<li>Full access to ansible-modules in <code>make</code> world, for use as composable prerequisite targets, etc</li>
+<li>Ensure that output is <em>always</em> JSON, in case we want to use it downstream</li>
+</ol>
+<p>Typically, you would want to begin by sketching out an ansible container inside a docker-compose file, then use <code>compose.import</code> to <a href="/compose.mk/bridge">autogenerate related targets</a>.  Just to keep things simple though and to demonstrate <a href="/compose.mk/vanilla-docker">raw docker support in compose.mk</a> at the same time, we'll embed the ansible container directly.</p>
+<p>Without further delay, here's some well-commented code that achieves the goals.</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<pre><code class="language-Makefile"># demos/ansible-adhoc.mk: 
+#   Mad-science demo. See the docs for discussion
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/ansible.mk
+
+.DEFAULT_GOAL := demo.adhoc 
+# NB: this boilerplate helps to quit the default output- 
+# and you'll need this whenever you want to emit JSON.
+MAKEFLAGS=-sS --warn-undefined-variables
+include compose.mk
+
+# Look, it's a container that has ansible &amp; ansible has support for docker.
+# Could do this with a docker-compose file instead, for simplicity it's embedded.
+define Dockerfile.Ansible.base
+FROM debian:bookworm
+RUN apt-get update
+RUN apt-get install -y jq ansible make 
+RUN apt-get install -y python3-pip
+RUN pip3 install docker --break-system-packages
+endef
+
+# Let's build a bridge to expose adhoc ansible[1].
+# This declares a top-level target `ansible.adhoc` that takes one parameter,
+# which is the name of the ansible module to call.  We mention the prereq
+# target `docker.from.def/Ansible.base`, which ensures that the container 
+# described above is ready.  This target runs on the host, so we don't actually 
+# have access to ansible here, and so this target dispatches to the private target 
+# defined at `self.ansible.adhoc/&lt;module_name&gt;`.
+#
+# [1] https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html
+ansible.adhoc/%: docker.from.def/Ansible.base
+    img=compose.mk:Ansible.base \
+    ${make} docker.run/self.ansible.adhoc/${*} 
+
+# This target runs inside the ansible base container defined above,
+# and calls ansible in a way that ensures JSON output.  Optionally, 
+# you can pass additional ansible in an environment variable.
+# Once ansible returns output, we unpack the interesting part of 
+# the JSON data in the last step before we return it.  
+self.ansible.adhoc/%:
+    ANSIBLE_LOAD_CALLBACK_PLUGINS=true ANSIBLE_STDOUT_CALLBACK=json \
+    ansible all -m${*} -i localhost, -c local $${ansible_args:-} \
+    | ${jq} .plays[0].tasks[0].hosts.localhost
+
+# Based on the work above, we've already got a fairly 
+# complete map from ansible-modules to make-targets.  
+# For example `make ansible.adhoc/ping` already works 
+# like you'd expect to call the ping-module [2].  
+#
+# [2] https://docs.ansible.com/ansible/2.8/modules/ping_module.html
+
+# But some modules take arguments.  Let's setup a way to pass those in.
+# Ansible accepts JSON or `key=val` style data for this using `--args`. 
+# The `ansible.adhoc` target is somewhat prepared for this so we just 
+# need a way to set stuff in the `ansible_args` environment variable, 
+# and we need that var passed through to docker.
+ansible.adhoc.pipe/%:
+    export ansible_args=&quot;--args `cat /dev/stdin`&quot; \
+    &amp;&amp; env=ansible_args ${make} ansible.adhoc/${*}
+
+# Another way to call the parametric target, accepting argument from env-variable
+ansible.adhoc.pipe:
+    ${make} ansible.adhoc.pipe/$${module}
+
+# Putting it all together, here's a simple new target for the verb 'list_images'.
+# This returns the currently available docker images by using Ansible's 
+# `docker_host_info` module[3] and calling it with the `images=yes` flag.
+#
+# [3] https://docs.ansible.com/ansible/2.8/modules/docker_host_info_module.html
+list_images:
+    echo images=yes | ${make} ansible.adhoc.pipe/docker_host_info | ${jq} .images
+
+# Main entrypoint, this exercises a few possibilities for our new custom automation API.
+demo.adhoc: ansible.adhoc/ping list_images
+</code></pre>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p>Not exactly <em>beautiful</em> to read, but the implementation is small and this is neat.  </p>
+<p>As mentioned above, <code>make ansible.adhoc/ping</code> works as expected to call the <a href="#">ping module</a>, and to call the <a href="#">docker_host_info</a> module with arguments, we can write <code>echo images=yes | make ansible.adhoc.args/docker_host_info</code>.  The argument-passing is awkward for <em>people</em>, but it supports JSON, so this is already fairly usable from/for other automation. For common use-cases, you just make a more friendly alias, as is done with <code>list_images</code> above. </p>
+<p>As an aside, the eagle-eyed reader will have noticed that <code>docker_host_info</code> actually returns data, i.e. it is using the <strong>host docker socket</strong>, because under the hood, <code>docker.run</code> shares it automatically.*  So effectively the ansible container can orchestrate tasks on the host, even though the host doesn't have ansible.  By default <a href="#"><code>docker.run</code></a> also shares the working directory.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="discussion">Discussion</h3>
+<p>So anyway, the examples so far are contrived, and the technique itself is more important than the involvement of ansible.  But actually the result so far is pretty powerful.  Ansible has lots of random utilities, but previously the friction involved to actually use them might have felt daunting.  But our new targets now make it easy to pull in a discrete chunk of ansible very quickly without having to ansible all the things.  </p>
+<p>As a more practical example, one can imagine raiding the <a href="#">kubernetes.core.k8s module</a> for useful stuff:</p>
+<pre><code class="language-Makefile">cluster.purge:
+    echo namespace=testing kind=Deployment delete_all=true | make ansible.adhoc.args/kubernetes.core.k8s
+</code></pre>
+<p>This is what we were really aiming at originally: a verby high-level and domain-specific API, with tasks accessible individually or in groups from CLI, or available to programmatically chain together as DAGs.</p>
+<p><strong>Where this really gets interesting is larger projects.</strong>  Suppose for example that your <code>cluster.create</code> operation is using a terraform container, and you work at a place that mostly writes golang code.  Whereas using <code>ansible</code> previously wasn't a good <em>cultural fit</em>, once you strip away the detail and expose an interface as we've seen here, it doesn't feel like as much of a commitment to a whole ecosystem.  That makes it easier to combine tools.  </p>
+<p>Although <code>Makefile</code> isn't anyone's favorite programming language, let's notice how the <code>cluster.purge</code> target above is very effective at reducing friction for new contributions.  Ignoring the <em>implementation</em> and focusing on the custom automation API that we're exposing.. we're talking about one line in one file now and it's reasonably accessible to devops, engineers, and data-science. If you're looking at just the <code>cluster.purge</code> operation, then you might say the list of topics that are safe to ignore now includes at least <em>yaml, python, pip, docker</em>, and arguably includes ansible and kubernetes!</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../../signals/" class="btn btn-neutral float-left" title="Supervisors & Signals"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../workflows/" class="btn btn-neutral float-right" title="Workflow Basics & Pipelining">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../../signals/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../workflows/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

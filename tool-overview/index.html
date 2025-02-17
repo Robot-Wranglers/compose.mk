@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/tool-overview/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Tool Overview - compose.mk</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Tool Overview";
+        var mkdocs_page_input_path = "tool-overview.md";
+        var mkdocs_page_url = "/compose.mk/tool-overview/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="..">
+          <img src="../img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../integration/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../bridge/">Import Services from Compose</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../container-dispatch/">Container Dispatch</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../standard-lib/">Library Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Full API</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Tool Overview</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#stand-alone-mode">Stand Alone Mode</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#tool-wrappers">Tool Wrappers</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#proxy-wrappers">Proxy Wrappers</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#other-wrappers">Other Wrappers</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#kung-fu-with-flux">Kung-Fu with Flux</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../embedded-tui/">TUI Overview & Gallery</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-help/">CLI Help</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../signals/">Supervisors & Signals</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/ansible/">Custom Automation APIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/workflows/">Workflow Basics & Pipelining</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/packaging/">Self-extracting Executables</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../but-why/">Design Philosophy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Stand Alone Mode</li>
+      <li class="breadcrumb-item active">Tool Overview</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h2 id="tool-overview">Tool Overview</h2>
+<p>One of the major benefits of uising <code>make</code> over plain bash scripting is that lots of the details for CLI entrypoints are handled automatically.  In fact, <strong>make-targets always do double-duty as CLI entrypoints and as reusable tasks.</strong>  Tasks can be used on their own or mentioned as prerequisites and composed into DAGs, but no matter how you arrange things <strong>the "internal API" is automatically published as a CLI interface.</strong>  </p>
+<p>Because of this basic duality, even the documentation for "programmatic" usage of <code>compose.mk</code> as a library tends to introduce or demonstrate concepts by using tool-mode first.  This means that even if you're not interested in <code>compose.mk</code> as a library.. the <a href="#">library docs</a> and the <a href="#">full API </a> both have many examples that are relevant for stand-alone mode.  Just search for <code>./compose.mk</code> to find them.</p>
+<p>If you're wondering how and why stand-alone mode can work in the first place: as long as <code>compose.mk</code> is an executable file, <code>./compose.mk ...</code> is equivalent to <code>make -f compose.mk ...</code>.</p>
+<h3 id="stand-alone-mode">Stand Alone Mode</h3>
+<p>Much of what <code>compose.mk</code> does is focused on helping you to <a href="/compose.mk/bridge">generate automation scaffolding</a>, but <a href="/compose.mk/integration">that approach requires a pre-existing project and some integration / installation</a>. </p>
+<p><strong>In Stand-alone Mode,</strong> you can still use many of those features but skip the usual project integration.  In other words, no project Makefiles, and no external tool-container descriptions inside docker compose files.</p>
+<p>This is less powerful and less flexible, but still results in a neat little swiss army knife that has some unique capabilities.  Most use-cases for stand-alone mode will fall into one of these categories:</p>
+<ol>
+<li><strong>Using wrapped versions of common tools,</strong> so that they can be used more quickly and more safely from more environments without adding more dependencies.  For example, <code>./compose.mk jq</code> defaults to using local executable if one is available, and falls back to a dockerized version of the tool otherwise.</li>
+<li><strong>Loading compose files just-in-time.</strong> This is a special case and <a href="/compose.mk/loadf">it has separate documentation &amp; demos</a>, but basically the invocation <code>./compose loadf docker-compose.yml &lt;optional_downstream_targets&gt;</code> is similar to using a dedicated Makefile that <a href="/compose.mk/bridge">calls <code>compose.import</code></a>.  Downstream targets can reference any of the autogenerated targets, and if no downstream targets are given, the default behaviouir is to open interactive shells for each tool container in a TUI.</li>
+<li><strong>Cleaning up gnarly bash.</strong>  In certain cases using <code>compose.mk</code> idioms can be easier to read and write.  For example, if your scripts are littered with <code>docker run ..</code> invocations, you might look at some of the <a href="/compose.mk/raw-docker">raw docker support</a> for alternatives.</li>
+</ol>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="tool-wrappers">Tool Wrappers</h3>
+<p>Some tools are so useful that we'd really like to assume they are available everywhere.  How can that happen though if we're not sure whether they are installed?  To address this, <code>compose.mk</code> publishes several tool-wrappers that default to using a local executable if one is available, and falls back to a dockerized version of the tool otherwise.  (In case you end up using dockerized tools, they are pulled just in time but cached afterwards.)</p>
+<p>A few examples of tools that <code>compose.mk</code> wraps in one way or another include: </p>
+<ul>
+<li><a href="https://github.com/jqlang/jq">jq</a>, for querying JSON</li>
+<li><a href="https://github.com/h4l/json.bash">jb</a>, for constructing JSON</li>
+<li><a href="https://github.com/mikefarah/yq">yq</a>, for querying yaml and other stuff</li>
+<li><a href="https://github.com/charmbracelet/glow">charmbracelet/glow</a>, for rendering markdown on console</li>
+<li><a href="https://github.com/charmbracelet/gum">charmbracelet/gum</a>, for a variety of pretty text-formatting tricks</li>
+<li><a href="https://pygments.org/">pygments</a>, for syntax highlighting data or code </li>
+<li><a href="https://github.com/hpjansson/chafa">chafa</a>, for rendering images on console</li>
+<li><a href="https://github.com/tmux/tmux">tmux</a> and friends, for console geometry management</li>
+</ul>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="proxy-wrappers">Proxy Wrappers</h4>
+<p>The first 3 tools <code>jq</code>, <code>jb</code>, and <code>yq</code> are the most generally useful.  They all have extensive documentation elsewhere to cover what they do and how to use them, and mostly <code>compose.mk</code> tries to stay out the way. Remember, the main point is to use the tool if possible, and transparently falls back to docker if the tool is missing.  Calling them with <code>compose.mk</code> looks like this:</p>
+<pre><code class="language-bash"># Generate JSON with jb
+$ ./compose.mk jb key=val
+{&quot;key&quot;:&quot;val&quot;}
+
+# Generate JSON with jb (alternate)
+$ echo key=val | ./compose.mk jb
+{&quot;key&quot;:&quot;val&quot;}
+
+# Parse JSON with jq
+$ ./compose.mk jb key=val | ./compose.mk jq .key
+&quot;val&quot;
+
+# Passing arguments to jq works, so lets go raw and unquote it
+./compose.mk jb key=val | ./compose.mk jq -r .key
+val
+
+# Now try yaml input, with yq
+$ echo &quot;key: val&quot; | ./compose.mk yq .key
+</code></pre>
+<p>So far so good.  What even is a "<em>proxy wrapper</em>" anyway? Well, the eagle-eyed reader will have noticed that it's kind of crazy that this actually works, because behind the scenes running <code>./compose.mk ...</code> is roughly the same as <code>make -f compose.mk ...</code>, and so you'd expect that the tail part of the command line is <em>arguments to make</em>.  And yet.. there is no make-target called <code>.key</code>.</p>
+<p>Under the hood, invocations for proxy-wrappers begin with an actual make-target, but before <code>make</code> parses beyond that, execution is short-circuited, and the rest of the command-line is consumed and passed on to the tool.  Frankly, this part only works <a href="/compose.mk/signals">because of certain insane magic</a> which is hard to recommend, but it's pretty useful as you see above and actually seems portable so far! ;)</p>
+<p>Proxy-wrappers are very useful for simple stuff, but the wrapped tools <code>jq</code>, <code>yq</code>, and <code>jb</code> all have big surface area with a lot of edge-cases for optional arguments, loading files, with or without pipes.  <strong>If your use-case involves lots of flags or nested quotes or something, <em>maybe don't assume that the wrapped invocation is 1:1 with the original tool</em>.</strong>  There's only so much that can be done here for the standalone-mode for <code>compose.mk</code>, but note that <a href="/compose.mk/standard-lib/#structured-io-basics">library-style usage is more flexible</a>.  </p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="other-wrappers">Other Wrappers</h4>
+<p>Setting aside the big 3 tools that use <a href="#proxy-wrappers">proxy-wrappers</a>, other wrappers are more simple because <code>compose.mk</code> gets tactical and won't even try to expose a 1:1 interface.  Sometimes we accept arguments, but mostly we just pass data on pipes.  </p>
+<p>Here's a few examples:</p>
+<pre><code class="language-bash"># Use `stream.chafa` to preview an image on the console with chafa
+$ cat img.png | ./compose.mk stream.chafa
+
+# Use `stream.chafa` to preview an image on the console with chafa (alternate)
+$ cat img.png | ./compose.mk stream.img.preview
+
+# Use `stream.glow` to preview markdown
+$ cat README.md | ./compose.mk stream.glow
+
+# Use `stream.glow` to preview markdown (alternate)
+$ cat README.md | ./compose.mk stream.markdown.preview
+
+# Use `stream.pygmentize` to syntax-highlight code with pygments (guess lexer)
+$ cat Makefile | ./compose.mk stream.pygmentize
+
+# Use `stream.pygmentize` to syntax-highlight code with pygments (explicit lexer)
+$ cat Makefile | ./compose.mk stream.pygmentize lexer=Makefile
+
+# Use `stream.json.pygmentize` to preview JSON (minified)
+$ ./compose.mk jb key=val | ./compose.mk stream.json.pygmentize
+
+# Use `stream.json.pygmentize` to preview JSON (expanded)
+$ ./compose.mk jb key=val | ./compose.mk jq . | ./compose.mk stream.json.pygmentize
+
+# Use `stream.peek` to preview data somewhere in the middle of a pipe and pass it on
+$ ./compose.mk jb key=val | ./compose.mk stream.peek | ./compose.mk jq .
+
+</code></pre>
+<p>In the case of <code>tmux</code>, see the separate <a href="/compose.mk/embedded-tui">documentation for the embedded TUI</a>.</p>
+<p>Most of these targets are also available as makefile-macros.  See also the documentation for <a href="/compose.mk/standard-lib/#structured-io-stream-types-pipes">streams and pipes</a>.  For a demo involving <code>chafa</code>, see <a href="/compose.mk/standard-lib/#workflow-example-etl">this workflow example</a>.</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h3 id="kung-fu-with-flux">Kung-Fu with Flux</h3>
+<pre><code class="language-bash"># Use `stream.nl.to.space` to convert newlines to spaces 
+$ ls /tmp | ./compose.mk stream.nl.to.space
+</code></pre>
+<hr style="width:95%;border-bottom:1px dashed black;">
+<hr style="width:100%;border-bottom:3px solid black;">
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../api/" class="btn btn-neutral float-left" title="Full API"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../loadf/" class="btn btn-neutral float-right" title="Loading Compose Files">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../api/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../loadf/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

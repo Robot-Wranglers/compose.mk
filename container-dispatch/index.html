@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/container-dispatch/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Container Dispatch - compose.mk</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Container Dispatch";
+        var mkdocs_page_input_path = "container-dispatch.md";
+        var mkdocs_page_url = "/compose.mk/container-dispatch/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="..">
+          <img src="../img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../integration/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../bridge/">Import Services from Compose</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Container Dispatch</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#dispatch-idiom-intro">Dispatch Idiom: Intro</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#dispatch-idiom-commentary">Dispatch Idiom: Commentary</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#compose-file-boilerplate">Compose File Boilerplate</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#dispatch-syntaxsemantics">Dispatch Syntax/Semantics</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../standard-lib/">Library Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Full API</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../tool-overview/">Tool Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../embedded-tui/">TUI Overview & Gallery</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-help/">CLI Help</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../signals/">Supervisors & Signals</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/ansible/">Custom Automation APIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/workflows/">Workflow Basics & Pipelining</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/packaging/">Self-extracting Executables</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../but-why/">Design Philosophy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Docker Compose Support</li>
+      <li class="breadcrumb-item active">Container Dispatch</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h2 id="container-dispatch">Container Dispatch</h2>
+<p>Having <a href="/compose.mk/bridge">imported services with <code>compose.import</code></a>, let's look at an idiom that allows us to dispatch tasks (i.e. make-targets) into those tool containers.  Later, we'll get into more about how/when container dispatch is useful, and a <a href="#compose-file-boilerplate">typical setup with <code>docker-compose.yml</code> that supports it</a>.  But for now, let's start with what the idiom looks like and how it's used.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="dispatch-idiom-intro">Dispatch Idiom: Intro</h3>
+<p>The dispatch idiom is simply a way of binding an existing task to an existing container.  To illustrate the idea, consider the following project Makefile:</p>
+<pre><code class="language-Makefile"># demos/container-dispatch.mk: 
+#   Demonstrates the container dispatch idiom.
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/container-dispatch.mk
+
+# Squash the default noisy output, then override 
+# the default goal and include compose.mk primitives
+MAKEFLAGS=-sS --warn-undefined-variables
+include compose.mk
+
+.DEFAULT_GOAL := demo
+
+$(eval $(call compose.import, ▰, TRUE, tests/docker-compose.yml))
+
+# New target declaration that we can use to run stuff inside 
+# a `debian` container mentioned in the external compose file.  
+# The syntax/namespace conventions below are configured 
+# by the `compose.import` call we used above.
+demo: ▰/debian/self.demo
+
+# Displays platform info to show where target is running.
+# Since this target is intended to be private, we will 
+# prefix &quot;self&quot; to indicate it's intended to be run on 
+# containers and not on the host.
+self.demo:
+    source /etc/os-release &amp;&amp; printf &quot;$${PRETTY_NAME}\n&quot;
+    uname -n -v
+</code></pre>
+<p>The example above demonstrates using <a href="/compose.mk/bridge/#dynamic-api">an automatically generated target</a> that has some special syntax: <code>▰/&lt;svc_name&gt;/&lt;target_to_dispatch&gt;</code>.  </p>
+<p>In other words.. <code>demo: ▰/debian/self.demo</code> is syntactic sugar that says that running <code>make demo</code> on the host runs <code>make self.demo</code> on the debian container.</p>
+<p>Maybe it's not obvious yet, so it's worth noticing that this is already <strong>much</strong> cleaner and more composable than the alternative in pure bash, where you get lots of disconnected automation scripts that are littered with lots of <code>docker run ...</code> statements.  In fact, this is pretty similar to <a href="https://www.jenkins.io/doc/book/pipeline/docker/"><code>agent { docker { .. } }</code> in Jenkins Pipelines</a>, but it's significantly more portable, and arguably more readable.</p>
+<p>Calling the top-level <code>demo</code> target looks something like this:</p>
+<p align="center"><a href="/compose.mk/img/demo-dispatch.gif"><img width="90%" src="/compose.mk/img/demo-dispatch.gif"></a></p>
+
+<p>What just happend?  If we unpack the syntactic sugar even more, you could say that the following are roughly equivalent:</p>
+<pre><code class="language-bash"># pithy invocation with compose.mk
+$ make demo
+
+# the verbose alternative invocation
+$ docker compose -f docker-compose.yml \
+    run --entrypoint bash debian -c &quot;make self.demo&quot;
+</code></pre>
+<p>Let's add another target to our project Makefile, demonstrating dispatching one target to multiple containers:</p>
+<pre><code class="language-Makefile"># demos/double-dispatch.mk: 
+#   Demonstrates the container dispatch idiom.
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/double-dispatch.mk 
+
+# Squash the default noisy output, then override 
+# the default goal and include compose.mk primitives
+MAKEFLAGS=-sS --warn-undefined-variables
+.DEFAULT_GOAL := demo.double.dispatch
+include compose.mk
+
+$(eval $(call compose.import, ▰, TRUE, tests/docker-compose.yml))
+
+# User-facing top-level target, with two dependencies
+demo.double.dispatch: ▰/debian/self.demo ▰/alpine/self.demo
+
+# Displays platform info to show where target is running.
+# Since this target is intended to be private, we will 
+# prefix &quot;self&quot; to indicate it should not run on host.
+self.demo:
+    source /etc/os-release &amp;&amp; printf &quot;$${PRETTY_NAME}\n&quot;
+    uname -n -v
+</code></pre>
+<p>Again, the <em><code>self</code></em> prefix and the <code>▰/</code> namespace is just a convention, more on that in the following sections.  The above looks pretty tidy though, and hopefully this helps to illustrate how the target / container / callback association works.  Running <code>demo.double.dispatch</code> looks like this:</p>
+<p align="center"><a href="/compose.mk/img/demo.double.dispatch.gif"><img width="90%" src="/compose.mk/img/demo.double.dispatch.gif"></a></p>
+
+<p>Meanwhile, the equivalent-but-expanded version below is getting cluttered, plus it breaks when files move or get refactored.  </p>
+<pre><code class="language-bash"># pithy invocation with compose.mk
+$ make demo.double.dispatch 
+
+# verbose, fragile alternative
+$ docker compose -f docker-compose.yml \
+    run --entrypoint bash debian -c &quot;make self.demo&quot; \
+  &amp;&amp; docker compose -f docker-compose.yml \
+    run --entrypoint bash alpine -c &quot;make self.demo&quot;
+</code></pre>
+<p>That's it, really.  <strong>This simple pattern for dispatching targets in containers is one of the main features of <code>compose.mk</code> as a library, and it's surprisingly powerful.</strong>   </p>
+<p>From here, if you just want to get started, you might want to skip to more detailed docs on the <a href="/compose.mk/bridge/#import-macro-arguments">arguments for the <code>compose.import</code> macro</a> , or <a href="#dispatch-syntaxsemantics">the dispatch syntax/semantics</a>, or <a href="#compose-file-boilerplate">the docker-compose.yml boilerplate that supports dispatch</a>.  </p>
+<p>On the other hand, if you're willing to indulge some philosophy or if you're wondering why you should care, check out the commentary in the next section.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="dispatch-idiom-commentary">Dispatch Idiom: Commentary</h3>
+<p>Having introduced what the dispatch idiom looks like and what it does, let's talk briefly about what it means.  This is probably a jailbreak moment for your automation!  Think about it: <strong>Most of the ways that we use to <em>decouple</em> tasks from their execution environment actually cause our tasks to be <em>tightly coupled</em> to some platform instead</strong>.  That's a frustrating trade-off and a huge barrier to entry if you're just trying to write/run code.  And it's not just CI/CD platforms like Jenkins and Github-- it also happens with platforms like Airflow, ArgoWF, and notebooks.  These platforms are all great at what they do, but we shouldn't need them every time we just want to decouple tasks from runtimes or express DAGs.  And if you want to use a platform later down the line, then your platform will be as happy to run <code>make</code> as your laptop is.</p>
+<p><strong>Besides decoupling, arranging tasks this way tends to promote reusability and composition.</strong>  As a rule, the more your automation is isolated into weird silos like notebooks and Jenkinsfiles, the more unruly that automation becomes.  Is your automation growing wild copy-pasta, and turning into an ugly monolithic heap that only runs to top-to-bottom and has lots of side-effects?  Much nicer to have discrete tasks in the form of make-targets that you can still run individually, yet quickly compose into DAGs of tasks, or DAGs of DAGs.  And when you're more free from platforms and actually iterating on code in a read/write/run cycle more often, changes are easier and testing happens more continuously.</p>
+<p>Even without the more exotic features of <code>compose.mk</code>, it's worth mentioning that vanilla <code>make</code> has many under-appreciated capabilities over bash.  For example, did you know it supports ansible-style dry-runs <a href="https://www.gnu.org/software/make/manual/html_node/Instead-of-Execution.html">via --reconn</a> and also parallel execution <a href="https://www.gnu.org/software/make/manual/make.html#Parallel-Execution">with <code>make --jobs</code></a>? </p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="compose-file-boilerplate">Compose File Boilerplate</h3>
+<p><strong>Using the dispatch idiom as described might require changes to your docker-compose.yml file.</strong> In practice the containers you use might just work, but if they are slim or you are starting from scratch, perhaps not.  </p>
+<p>Here's a typical example of a compatible compose file, leaning more towards pedantic than minimal:</p>
+<pre><code class="language-yaml">##
+# tests/docker-compose.yml: 
+#  Typical compose file that works with target dispatch.
+#  (For more discussion, see the installation docs)
+##
+services:
+  debian: &amp;base
+    hostname: debian
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM debian:bookworm
+        RUN apt-get update &amp;&amp; apt-get install -y make procps
+    entrypoint: bash
+    working_dir: /workspace
+    volumes:
+      - ${PWD}:/workspace
+      # optional, but required for docker-in-docker
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+
+  ubuntu: 
+    &lt;&lt;: *base
+    hostname: ubuntu
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ubuntu
+        RUN apt-get update &amp;&amp; apt-get install -y make procps
+
+  alpine:
+    &lt;&lt;: *base
+    hostname: alpine
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM alpine:3.21.2
+        RUN apk add --update --no-cache coreutils alpine-sdk bash procps-ng
+</code></pre>
+<p>See also the <a href="/compose.mk/integration">installation docs</a> for more discussion.  The debian/alpine compose file above and the interfaces described so far are all exercised inside <a href="https://github.com/Robot-Wranglers/compose.mk/tree/master/tests/">this repo's test suite</a>.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="dispatch-syntaxsemantics">Dispatch Syntax/Semantics</h3>
+<p>Let's look at the container-dispatch example in more detail.  This isn't a programming language you've never seen before, it's just a (legal) Makefile that uses unicode symbols in some of the targets.  </p>
+<pre><code class="language-Makefile"># project Makefile (make sure you have real tabs, not spaces)
+
+include compose.mk
+$(eval $(call compose.import, ▰, TRUE, docker-compose.yml))
+
+# A target that runs stuff inside the `debian` container, runs from host using `make demo`
+demo: ▰/debian/self.demo
+
+# Dispatching 1 target to 2 containers looks like this
+demo.both: ▰/debian/self.demo ▰/alpine/self.demo
+
+# Displays platform info to show where target is running.
+self.demo:
+    source /etc/os-release &amp;&amp; printf &quot;$${PRETTY_NAME}\n&quot;
+    uname -n -v
+</code></pre>
+<p>The suggested defaults here will annoy some people, but the syntax is configurable, and this hopefully won't collide with existing file paths or targets.  Using the <em><code>self</code></em> prefix is just a convention that you can change, but having some way to guard the target from accidental execution on the host is a good idea.  </p>
+<p>This decorator-inspired syntax is also creating a convention similar to the idea of private methods: <em><code>self</code></em> hopefully implies internal/private, and it's not easy to type the weird characters at the command line.  So users likely won't think to call anything except <code>make demo</code>.  For people reading the code, the visual hints make it easy to understand what's at the top-level.  Tightening it up can help to make it clear that this is sort of a logical block:</p>
+<pre><code class="language-Makefile">
+# project Makefile (make sure you have real tabs, not spaces)
+include compose.mk
+$(eval $(call compose.import, ▰, TRUE, docker-compose.yml))
+
+# Two top-level &quot;public&quot; targets, dispatching 1 &quot;private&quot; target into groups of 1 or more containers
+demo: ▰/debian/self.demo
+demo.both: ▰/debian/self.demo ▰/alpine/self.demo
+self.demo:
+    source /etc/os-release &amp;&amp; printf &quot;$${PRETTY_NAME}\n&quot;
+    uname -n -v
+</code></pre>
+<p>But what about the semantics?  In this example, the user-facing <code>demo</code> target depends on <code>▰/debian/demo</code>, which isn't really a target as much as a declaration.  The declaration means the <em>private</em> target <code>self.demo</code>, will be executed inside the <code>debian</code> container that the compose file defines.  <em>Crucially, the <code>self.demo</code> target can use tools the host doesn't have, stuff that's only available in the tool container.</em>  </p>
+<p>Look, no <code>docker run ..</code> clutter littered everywhere!  It's still kind of a weird CI/CD DSL, but the conventions are simple, it's agnostic about your CI backend, it is relatively frictionless, and there is a clean separation between automation / container specifications.</p>
+<p>Under the hood, dispatch is implemented by building on the [default targets that are provided by the bridge]((/compose.mk/bridge).</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../bridge/" class="btn btn-neutral float-left" title="Import Services from Compose"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../multiple-compose-files/" class="btn btn-neutral float-right" title="Multiple Compose Files">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../bridge/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../multiple-compose-files/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

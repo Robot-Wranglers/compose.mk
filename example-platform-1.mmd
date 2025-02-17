@@ -1,0 +1,19 @@
+---
+title: Data/Control Flow for Platform Bootstrap
+---
+graph LR
+  M[make bootstrap] -->  |require| p1(platform1) -->|require| platform1.app
+  p1 -->|require| platform1.infrastructure
+platform1.app{{platform1.app}} -.->|push data| logging((logging))
+platform1.infrastructure[/platform1.infrastructure/] -.-> logging
+platform1.app -.->events((events))
+platform1.infrastructure -.-> events
+platform1.app -.-> metrics((metrics))
+platform1.infrastructure -.->|push data| metrics
+style M fill:#fffee0,stroke:#333,stroke-width:4px
+style p1 fill:#fffec8
+style platform1.app fill:#fffdaf
+style platform1.infrastructure fill:#fffd8d
+style logging fill:#fdfa72
+style metrics fill:#fdfa72
+style events fill:#fdfa72

@@ -1,0 +1,2578 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/api/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Full API - compose.mk</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Full API";
+        var mkdocs_page_input_path = "api.md";
+        var mkdocs_page_url = "/compose.mk/api/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="..">
+          <img src="../img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../integration/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../bridge/">Import Services from Compose</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../container-dispatch/">Container Dispatch</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../standard-lib/">Library Overview</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Full API</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#composemk-dynamic-targets">compose.mk: (Dynamic Targets)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#composemk-static-targets">compose.mk: (Static Targets)</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#api-tux">API: tux</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxcallbackarg">tux.callback/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxcommander">tux.commander</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxcommanderarg">tux.commander/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxdemo">tux.demo</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxdispatchsh">tux.dispatch.sh</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxdispatcharg">tux.dispatch/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxhelp">tux.help</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxlayouthorizontalarg">tux.layout.horizontal/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxlayoutspiralarg">tux.layout.spiral/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxlayoutverticalarg">tux.layout.vertical/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxmuxcountarg">tux.mux.count/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxmuxdetacharg">tux.mux.detach/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxmuxsvcarg">tux.mux.svc/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxmuxarg">tux.mux/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxopenharg">tux.open.h/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxopenhorizontalarg">tux.open.horizontal/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxopensarg">tux.open.s/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxopenservice_shellsarg">tux.open.service_shells/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxopenspiralarg">tux.open.spiral/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxopenvarg">tux.open.v/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxopenverticalarg">tux.open.vertical/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxopenarg">tux.open/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxpanearg">tux.pane/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxpanic">tux.panic</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxps">tux.ps</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxrequire">tux.require</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxwidgetticker">tux.widget.ticker</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxshell">tux/shell</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#api-io">API: io</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#iobash">io.bash</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#ioenv">io.env</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#ioenvfilterprefixarg">io.env.filter.prefix/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#ioenvpretty">io.env.pretty</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#ioenvprettyarg">io.env.pretty/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#ioenvarg">io.env/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#ioenvp">io.envp</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#ioenvparg">io.envp/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iofilepreviewarg">io.file.preview/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iofilepygmentizearg">io.file.pygmentize/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iogumdiv">io.gum.div</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iogumformatcode">io.gum.format.code</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iogumspin">io.gum.spin</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iogumstyle">io.gum.style</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iogumstylearg">io.gum.style/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iohelp">io.help</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#ioprintdiv">io.print.div</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#ioprintdivarg">io.print.div/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#ioquietstderrsh">io.quiet.stderr.sh</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#ioquietstderrarg">io.quiet.stderr/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iostackpoparg">io.stack.pop/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iostackpusharg">io.stack.push/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iostackarg">io.stack/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iotailarg">io.tail/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iotimewait">io.time.wait</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iotimewaitarg">io.time.wait/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iotimewait1">io.time.wait/1</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iowait">io.wait</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#iowaitarg">io.wait/&lt;arg&gt;</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#api-docker">API: docker</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerbuilddefarg">docker.build.def/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerbuildmaybearg">docker.build.maybe/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerbuildquietarg">docker.build.quiet/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerbuildarg">docker.build/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerclean">docker.clean</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockercommander">docker.commander</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockercontext">docker.context</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockercontextarg">docker.context/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerdefiscachedarg">docker.def.is.cached/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerfromdefarg">docker.from.def/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerfromdefmakeself">docker.from.def/makeself</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerfromfilearg">docker.from.file/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerfromgithubarg">docker.from.github/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerfromrepo">docker.from.repo</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerfromurlarg">docker.from.url/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerhelp">docker.help</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerimages">docker.images</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerimagesall">docker.images.all</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerinit">docker.init</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerinitcompose">docker.init.compose</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockernetworkpanic">docker.network.panic</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerpanic">docker.panic</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerprune">docker.prune</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerps">docker.ps</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerrundef">docker.run.def</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerrundefarg">docker.run.def/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerrunimagearg">docker.run.image/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerrunsh">docker.run.sh</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerrunarg">docker.run/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockersocket">docker.socket</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerstart">docker.start</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerstartarg">docker.start/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerstat">docker.stat</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerstop">docker.stop</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockerstopall">docker.stop.all</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockersystemprune">docker.system.prune</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockertagsbyrepoarg">docker.tags.by.repo/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#dockervolumepanic">docker.volume.panic</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#api-flux">API: flux</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxalwaysarg">flux.always/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxandarg">flux.and/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxapplylatersharg">flux.apply.later.sh/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxapplylaterarg">flux.apply.later/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxapplyarg">flux.apply/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxdelayarg">flux.delay/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxdmux">flux.dmux</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxdmuxarg">flux.dmux/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxdounlessarg">flux.do.unless/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxdowhenarg">flux.do.when/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxeacharg">flux.each/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxfail">flux.fail</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxfinallyarg">flux.finally/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxhelp">flux.help</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxifthenarg">flux.if.then/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxindentsh">flux.indent.sh</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxindentarg">flux.indent/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxjoin">flux.join</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxloopuntilarg">flux.loop.until/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxloopwatcharg">flux.loop.watch/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxlooparg">flux.loop/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxloopfquietquietarg">flux.loopf.quiet.quiet/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxloopfquietarg">flux.loopf.quiet/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxloopfarg">flux.loopf/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxmaparg">flux.map/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxmux">flux.mux</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxmuxarg">flux.mux/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxnegatearg">flux.negate/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxnoop">flux.noop</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxok">flux.ok</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxorarg">flux.or/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxpipelinequietarg">flux.pipeline.quiet/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxpipeline">flux.pipeline/</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxpipelinearg">flux.pipeline/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxretryarg">flux.retry/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxshtee">flux.sh.tee</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxsplit">flux.split</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxsplitarg">flux.split/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxstage">flux.stage</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxstageclean">flux.stage.clean</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxstageclean_1">flux.stage.clean/</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxstagecleanarg">flux.stage.clean/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxstagefilearg">flux.stage.file/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxstagepoparg">flux.stage.pop/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxstagepush">flux.stage.push</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxstagepusharg">flux.stage.push/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxstagestack">flux.stage.stack</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxstagearg">flux.stage/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxtimeoutsh">flux.timeout.sh</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxtimeoutarg">flux.timeout/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxtimerarg">flux.timer/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxtryexceptfinallyarg">flux.try.except.finally/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#fluxwraparg">flux.wrap/&lt;arg&gt;</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#api-mk">API: mk</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#mkdefdispatcharg">mk.def.dispatch/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkdefreadarg">mk.def.read/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkdeftofilearg">mk.def.to.file/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkdockerrun">mk.docker.run</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkdockerrunsh">mk.docker.run.sh</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkdockerrunarg">mk.docker.run/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkgetarg">mk.get/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkgetflux_stage">mk.get/FLUX_STAGE</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkhelp">mk.help</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkhelpblockarg">mk.help.block/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkhelpmodulearg">mk.help.module/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkhelpsearcharg">mk.help.search/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkhelptargetarg">mk.help.target/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkifdefarg">mk.ifdef/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkifndefarg">mk.ifndef/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkincludearg">mk.include/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkinterrupt">mk.interrupt</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkinterruptarg">mk.interrupt/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkinterruptsigint">mk.interrupt/SIGINT</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkletarg">mk.let/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mknamespacefilterarg">mk.namespace.filter/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mknamespacelist">mk.namespace.list</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkparseblockarg">mk.parse.block/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkparsemoduledocsarg">mk.parse.module.docs/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkparsetargetsarg">mk.parse.targets/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkparsearg">mk.parse/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkpkg">mk.pkg</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkpkgarg">mk.pkg/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkself">mk.self</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mksetarg">mk.set/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkstat">mk.stat</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mksupervisorenterarg">mk.supervisor.enter/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mksupervisorexitarg">mk.supervisor.exit/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mksupervisorinterrupt">mk.supervisor.interrupt</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mksupervisorinterruptarg">mk.supervisor.interrupt/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mksupervisorpid">mk.supervisor.pid</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mksupervisortraparg">mk.supervisor.trap/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#mkvars">mk.vars</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#api-stream">API: stream</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#streamchafa">stream.chafa</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamcommatojson">stream.comma.to.json</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamcommatonl">stream.comma.to.nl</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamcommatospace">stream.comma.to.space</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamcsvpygmentize">stream.csv.pygmentize</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamdim">stream.dim</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamdimindent">stream.dim.indent</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamdimindentstderr">stream.dim.indent.stderr</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamecho">stream.echo</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamglow">stream.glow</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamhelp">stream.help</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamimg">stream.img</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamimgpreview">stream.img.preview</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamindent">stream.indent</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamindenttostderr">stream.indent.to.stderr</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streaminipygmentize">stream.ini.pygmentize</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamjb">stream.jb</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamjsonappend">stream.json.append</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamjsonarrayappend">stream.json.array.append</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamjsonobjectappend">stream.json.object.append</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamjsonpygmentize">stream.json.pygmentize</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamlstrip">stream.lstrip</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streammarkdown">stream.markdown</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamnlenum">stream.nl.enum</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamnltojsonarray">stream.nl.to.json.array</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamnltospace">stream.nl.to.space</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streampeek">stream.peek</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streampreview">stream.preview</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streampygmentize">stream.pygmentize</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streampygmentizearg">stream.pygmentize/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamspaceenum">stream.space.enum</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamspacetonl">stream.space.to.nl</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamstrip">stream.strip</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#streamtostderr">stream.to.stderr</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tui-private-api">TUI Private API</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxattach">.tux.attach</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxcommanderlayout">.tux.commander.layout</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxdemolayout">.tux.demo.layout</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxdwindlearg">.tux.dwindle/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxdwindles">.tux.dwindle/s</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxgeoget">.tux.geo.get</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxgeoset">.tux.geo.set</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuximgdisplayarg">.tux.img.display/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxinit">.tux.init</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxinitbind_keys">.tux.init.bind_keys</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxinitbuttons">.tux.init.buttons</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxinitpanes">.tux.init.panes</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxinitstatus_bar">.tux.init.status_bar</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxinittheme">.tux.init.theme</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxlayoutdwindlearg">.tux.layout.dwindle/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxlayouth">.tux.layout.h</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxlayouthorizontal">.tux.layout.horizontal</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxlayoutshuffle">.tux.layout.shuffle</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxlayoutspiral">.tux.layout.spiral</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxlayoutvertical">.tux.layout.vertical</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxlayoutarg">.tux.layout/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxmsg">.tux.msg</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxpanefocusarg">.tux.pane.focus/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxpanesharg">.tux.pane.sh/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxpanetitlearg">.tux.pane.title/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxpanearg_1">.tux.pane/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxpanesarg">.tux.panes/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxpanic_1">.tux.panic</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxquit">.tux.quit</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxtheme">.tux.theme</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxthemesetarg">.tux.theme.set/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxwidgetenv">.tux.widget.env</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxwidgetenvarg">.tux.widget.env/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxwidgetimg">.tux.widget.img</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxwidgetimgvararg">.tux.widget.img.var/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxwidgetlazydocker">.tux.widget.lazydocker</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxwidgetlazydockerarg">.tux.widget.lazydocker/&lt;arg&gt;</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxwidgetlazydocker0">.tux.widget.lazydocker/0</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#tuxwidgetticker_1">.tux.widget.ticker</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../tool-overview/">Tool Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../embedded-tui/">TUI Overview & Gallery</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-help/">CLI Help</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../signals/">Supervisors & Signals</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/ansible/">Custom Automation APIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/workflows/">Workflow Basics & Pipelining</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/packaging/">Self-extracting Executables</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../but-why/">Design Philosophy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Standard Library</li>
+      <li class="breadcrumb-item active">Full API</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="api-cli-documentation">API / CLI Documentation</h1>
+<p>As discussed <a href="#">elsewhere</a>, one major advantage of <code>make</code> is that the programmatic interface <em>is</em> the command-line interface, and vice versa.</p>
+<p>As such, all the documentation here is doing double duty, and technically any of these targets can be used as a <a href="#">prerequisite for other targets</a> or as a command-line entrypoint.  </p>
+<p>Your milage may vary though; for example entrypoints for TUI interfaces are better thought of as "commands" and internals like <a href="#flux-api"><code>flux.*</code></a> or <a href="#mk-api"><code>mk.*</code> targets</a> are normally just used in a scripting context.</p>
+<hr />
+<h3 id="composemk-dynamic-targets">compose.mk: (Dynamic Targets)</h3>
+<p>The autogenerated section of the API (i.e. what's created by <code>compose.import</code>) is documented as part of the <a href="/compose.mk/bridge">Make/Compose Bridge</a>.</p>
+<hr />
+<h3 id="composemk-static-targets">compose.mk: (Static Targets)</h3>
+<p>This is the complete list of namespaces &amp; public targets available from <code>compose.mk</code>, along with their documentation.  Most documentation is pulled automatically from <a href="https://github.com/Robot-Wranglers/compose.mk/tree/master/compose.mk">the latest source</a>.  Some important notes about how these targets work:</p>
+<ul>
+<li><strong>No requirements for <code>k8s-tools.yml</code> or <code>k8s.mk</code>.</strong></li>
+<li><strong>Targets are usable interactively from your shell</strong> as <code>make &lt;target&gt;</code> or <code>./compose.mk &lt;target&gt;</code></li>
+<li><strong>Targets are usable as an API,</strong> either as prereq-targets or as part of the body in your project automation.</li>
+<li><strong>Most targets are pure shell, and have no exotic dependencies.</strong> That means that they generally run fine on host or as dispatched targets inside containers.  <em>(Exceptions: targets in <code>stream.json.*</code> require <code>jq</code> and targets in <code>docker.*</code> require docker.)</em></li>
+<li><strong>Target names are reserved names after declaration.</strong></li>
+</ul>
+<p>Things are organized into a few namespaces, which hopefully avoids collisions with your project targets.</p>
+<table>
+<thead>
+<tr>
+<th>Namespace</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="/compose.mk/api#api-io"><em><code>io.*</code></em> targets:</a></td>
+<td>Misc text-formatters, timers, and other utilities</td>
+</tr>
+<tr>
+<td><a href="/compose.mk/api#api-docker"><em><code>docker.*</code></em> targets:</a></td>
+<td>Simple helpers for working with docker.</td>
+</tr>
+<tr>
+<td><a href="/compose.mk/api#api-flux"><em><code>flux.*</code></em></a></td>
+<td>Miniature workflow library / pipe wizard.</td>
+</tr>
+<tr>
+<td><a href="/compose.mk/api#api-tux"><em><code>tux.*</code></em>  targets:</a></td>
+<td>Embedded TUI support.</td>
+</tr>
+<tr>
+<td><a href="/compose.mk/api#api-mk"><em><code>mk.*</code></em>  targets:</a></td>
+<td>Low-level helpers for working with make.</td>
+</tr>
+<tr>
+<td><a href="/compose.mk/api#api-stream"><em><code>stream.*</code></em> targets:</a></td>
+<td>Support for IO streams, including basic stuff with JSON, newline-delimited, and space-delimited formats.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h4 id="api-tux">API: tux</h4>
+<p>The <em><code>tux.*</code></em> targets allow for creation, configuration and automation of an embedded TUI interface.  This works by sending commands to a (dockerized) version of tmux.  See also the public/private sections of the tux API[1], the general docs for the TUI[2], or the spec for the 'compose.mk:tux' container for more details.</p>
+<hr />
+<p>DOCS:</p>
+<ul>
+<li>
+<p><code>[1]</code>: https://github.com/robot-wranglers/compose.mk/docs/api#api-tux</p>
+</li>
+<li>
+<p><code>[2]</code>: https://github.com/robot-wranglers/compose.mk/#embedded-tui</p>
+</li>
+</ul>
+<p>░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░</p>
+<p>BEGIN: TUI Environment Variables</p>
+<p>TUI_BOOTSTRAP        | *Target-name that's used to bootstrap the TUI.  *                            |</p>
+<p>TUX_BOOTSTRAPPED     | <em>Contexts for which the TUI has already been bootstrapped.</em>                  |</p>
+<p>TUI_SVC_NAME         | <em>The name of the primary TUI svc.</em>                                           |</p>
+<p>TUI_THEME_NAME       | <em>The name of the theme.</em>                                                     |</p>
+<p>TUI_TMUX_SOCKET      | <em>The path to the tmux socket.</em>                                               |</p>
+<p>TUI_THEME_HOOK_PRE   | <em>Target called when init is in progress but the core layout is finished</em>     |</p>
+<p>TUI_THEME_HOOK_POST  | <em>Name of the post-theme hook to call.  This is required for buttons.</em>        |</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p>See the <a href="/compose.mk/compose.mk#embedded-tui">TUI documentation</a> for a high-level overview of what this is and how it works.  For more details, <a href="/compose.mk/compose.mk#embedded-tui">see the main TUI docs</a>, read on into the API, or see the <a href="https://github.com/search?q=repo%3ARobot-Wranglers%2Fcompose.mk+path%3Acompose.mk+content%3Atux&amp;type=code">tux container spec in compose.mk</a></p>
+<p><em>This documentation is pulled automatically from <a href="/compose.mk">source</a>.</em></p>
+<h5 id="tuxcallbackarg"><strong><code>tux.callback/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Runs a layout callback for the given targets, automatically assigning them to panes
+
+ USAGE: 
+   layout=.. ./compose.mk tux.spiral/&lt;t1&gt;,&lt;t2&gt;
+</code></pre>
+<h5 id="tuxcommander"><strong><code>tux.commander</code></strong></h5>
+<pre><code class="language-bash">Starts a tmux layout defaulting to 4 panes, using the &quot;commander&quot; layout callback.
+ See `.tux.commander.layout` for more details.
+
+ USAGE:
+  ./compose.mk tux.commander
+</code></pre>
+<h5 id="tuxcommanderarg"><strong><code>tux.commander/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">A 4-pane session using the commander layout, 
+ proxying the given targets into the main pane.
+ See `.tux.commander.layout` for more details.
+
+ EXAMPLE: (Runs 'io.env' target in the primary pane)
+   ./compose.mk tux.commander/io.env
+</code></pre>
+<h5 id="tuxdemo"><strong><code>tux.demo</code></strong></h5>
+<pre><code class="language-bash">Demonstrates the TUI.  This opens a 4-pane layout and blasts them with tte[1].
+
+ REFS:
+   * `[1]`: https://github.com/ChrisBuilds/terminaltexteffects
+</code></pre>
+<h5 id="tuxdispatchsh"><strong><code>tux.dispatch.sh</code></strong></h5>
+<pre><code class="language-bash">Runs the given &lt;cmd&gt; inside the embedded TUI container.
+
+ USAGE:
+   cmd=... ./compose.mk tux.dispatch.sh
+</code></pre>
+<h5 id="tuxdispatcharg"><strong><code>tux.dispatch/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Runs the given target inside the embedded TUI container.
+
+ USAGE:
+  ./compose.mk tux.dispatch/&lt;target_name&gt;
+</code></pre>
+<h5 id="tuxhelp"><strong><code>tux.help</code></strong></h5>
+<pre><code class="language-bash">Lists only the targets available under the 'tux' namespace.
+</code></pre>
+<h5 id="tuxlayouthorizontalarg"><strong><code>tux.layout.horizontal/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Runs a spiral-layout callback for the given targets, automatically assigning them to panes
+
+ USAGE: 
+   tux.spiral/&lt;callback&gt;
+</code></pre>
+<h5 id="tuxlayoutspiralarg"><strong><code>tux.layout.spiral/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Runs a spiral-layout callback for the given targets, automatically assigning them to panes
+
+ USAGE: 
+   tux.spiral/&lt;callback&gt;
+</code></pre>
+<h5 id="tuxlayoutverticalarg"><strong><code>tux.layout.vertical/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Runs a spiral-layout callback for the given targets, automatically assigning them to panes
+
+ USAGE: 
+   tux.spiral/&lt;callback&gt;
+</code></pre>
+<h5 id="tuxmuxcountarg"><strong><code>tux.mux.count/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#tuxmuxsvcarg"><code>tux.mux.svc/&lt;arg&gt;</code></a></em></li>
+</ul>
+<h5 id="tuxmuxdetacharg"><strong><code>tux.mux.detach/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Like 'tux.mux' except without default attachment.
+
+ This is mostly for internal use.  Detached sessions are used mainly
+ to allow for callbacks that need to alter the session-configuration,
+ prior to the session itself being entered and becoming blocking.
+</code></pre>
+<h5 id="tuxmuxsvcarg"><strong><code>tux.mux.svc/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Starts a split-screen display of N panes inside a tmux (actually 'tmuxp') session.
+
+ If argument is an integer, opens the given number of shells in tmux.
+ Otherwise, executes one shell per pane for each of the comma-delimited container-names.
+
+ USAGE:
+   ./compose.mk tux.mux.svc/&lt;svc1&gt;,&lt;svc2&gt;
+
+ This works without a tmux requirement on the host, by default using the embedded
+ container spec @ 'compose.mk:tux'.  The TUI backend can also be overridden by using
+ the variables for TUI_COMPOSE_FILE &amp; TUI_SVC_NAME.
+</code></pre>
+<h5 id="tuxmuxarg"><strong><code>tux.mux/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Maps execution for each of the comma-delimited targets
+ into separate panes of a tmux (actually 'tmuxp') session.
+
+ USAGE:
+   ./compose.mk tux.mux/&lt;target1&gt;,&lt;target2&gt;
+</code></pre>
+<h5 id="tuxopenharg"><strong><code>tux.open.h/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Opens the given targets in a horizontal orientation.
+</code></pre>
+<h5 id="tuxopenhorizontalarg"><strong><code>tux.open.horizontal/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#tuxopenharg"><code>tux.open.h/&lt;arg&gt;</code></a></em></li>
+</ul>
+<h5 id="tuxopensarg"><strong><code>tux.open.s/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#tuxopenspiralarg"><code>tux.open.spiral/&lt;arg&gt;</code></a></em></li>
+</ul>
+<h5 id="tuxopenservice_shellsarg"><strong><code>tux.open.service_shells/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Treats the comma-separated input arguments as if they are service-names, 
+ then opens shells for each of those services in individual TUI panes.
+
+ This assumes the compose-file has already been imported, either by 
+ use of `compose.import` or by use of `loadf`.  It also assumes the 
+ `&lt;svc&gt;/shell` target actually works, and this might not be true if 
+ the container does not ship with bash!
+
+ USAGE: ( concrete )
+   ./compose.mk tux.open.service_shells/alpine,debian,ubuntu
+</code></pre>
+<h5 id="tuxopenspiralarg"><strong><code>tux.open.spiral/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Opens the given targets in a spiral orientation.
+</code></pre>
+<h5 id="tuxopenvarg"><strong><code>tux.open.v/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Opens the given targets in a vertical orientation.
+</code></pre>
+<h5 id="tuxopenverticalarg"><strong><code>tux.open.vertical/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#tuxopenvarg"><code>tux.open.v/&lt;arg&gt;</code></a></em></li>
+</ul>
+<h5 id="tuxopenarg"><strong><code>tux.open/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Opens the comma-separated targets in tmux panes.
+ This requires at least two targets, and defaults to a spiral layout.
+
+ USAGE:
+   layout=horizontal ./compose.mk tux.open/flux.ok,flux.ok
+</code></pre>
+<h5 id="tuxpanearg"><strong><code>tux.pane/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Remote control for the TUI, from the host, running the given target.
+
+ USAGE:
+   ./compose.mk tux.pane/1/&lt;target_name&gt;
+</code></pre>
+<h5 id="tuxpanic"><strong><code>tux.panic</code></strong></h5>
+<pre><code class="language-bash">USAGE:
+  ./compose.mk tui.panic
+</code></pre>
+<h5 id="tuxps"><strong><code>tux.ps</code></strong></h5>
+<pre><code class="language-bash">Lists ID's for containers related to the TUI.
+
+ USAGE:
+  ./compose.mk tux.ps
+</code></pre>
+<h5 id="tuxrequire"><strong><code>tux.require</code></strong></h5>
+<pre><code class="language-bash">Require the embedded-TUI stack to finish bootstrap.  This is time-consuming, 
+ so it should be called strategically and only when needed.  Note that this might 
+ be required for things like 'gum' and for anything that depends on 'dind_base', 
+ so strictly speaking it's not just for TUIs.  
+
+ This tries to take advantage of caching, but each service 
+ in `TUI_SVC_BUILD_ORDER` needs to be visited, and even that is slow.
+</code></pre>
+<h5 id="tuxwidgetticker"><strong><code>tux.widget.ticker</code></strong></h5>
+<pre><code class="language-bash">A ticker-style display for the given text, suitable for usage with tmux status bars,
+ in case the full text won't fit in the space available. Like most TUI widgets,
+ this loops forever, but unlike most it is pure bash, no ncurses/tmux reqs.
+
+ USAGE:
+   text=mytext ./compose.mk tux.widget.ticker
+</code></pre>
+<h5 id="tuxshell"><strong><code>tux/shell</code></strong></h5>
+<pre><code class="language-bash">Bridge compatability.
+
+ USAGE:
+  ./compose.mk tux/shell
+</code></pre>
+<hr style="width:100%;border-bottom: 3px solid black;background: #efefef;">
+
+<hr />
+<h4 id="api-io">API: io</h4>
+<p>The <code>io.*</code> namespace has misc helpers for working with input/output, including utilities for working with temp files and showing output to users.  User-facing output leverages charmbracelet utilities like gum[1] and glow[2].  Generally we use tools directly if they are available, falling back to utilities in containers.</p>
+<p>See also <code>io.print.*</code> and <code>stream.pygmentize</code> for simpler versions of some of these features.</p>
+<p>DOCS:</p>
+<ul>
+<li>
+<p>[0] https://github.com/robot-wranglers/compose.mk/docs/api#api-io</p>
+</li>
+<li>
+<p>[1] https://github.com/charmbracelet/gum</p>
+</li>
+<li>
+<p>[1] https://github.com/charmbracelet/glow</p>
+</li>
+</ul>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p><em>This documentation is pulled automatically from <a href="/compose.mk">source</a>.</em></p>
+<h5 id="iobash"><strong><code>io.bash</code></strong></h5>
+<pre><code class="language-bash">Starts an interactive shell with all the environment variables set
+ by the parent environment, plus those set by this Makefile context.
+</code></pre>
+<h5 id="ioenv"><strong><code>io.env</code></strong></h5>
+<pre><code class="language-bash">Dumps a relevant subset of environment variables for the current context.
+ No arguments.  Pipe-safe since this is just filtered output from 'env'.
+
+ USAGE:
+   ./compose.mk io.env
+</code></pre>
+<h5 id="ioenvfilterprefixarg"><strong><code>io.env.filter.prefix/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#ioenvarg"><code>io.env/&lt;arg&gt;</code></a></em></li>
+</ul>
+<h5 id="ioenvpretty"><strong><code>io.env.pretty</code></strong></h5>
+<pre><code class="language-bash">Pretty version of io.env, this includes some syntax highlighting.
+ No arguments.  See 'io.envp/&lt;arg&gt;' for a version that supports filtering.
+
+ USAGE:
+  ./compose.mk io.envp
+</code></pre>
+<h5 id="ioenvprettyarg"><strong><code>io.env.pretty/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#ioenvparg"><code>io.envp/&lt;arg&gt;</code></a></em></li>
+</ul>
+<h5 id="ioenvarg"><strong><code>io.env/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Filters environment variables by the given prefix or (comma-delimited) prefixes.
+
+ USAGE:
+   ./compose.mk io.env/&lt;prefix1&gt;,&lt;prefix2&gt;
+</code></pre>
+<h5 id="ioenvp"><strong><code>io.envp</code></strong></h5>
+<pre><code class="language-bash">Pretty version of io.env, this includes some syntax highlighting.
+ No arguments.  See 'io.envp/&lt;arg&gt;' for a version that supports filtering.
+
+ USAGE:
+  ./compose.mk io.envp
+</code></pre>
+<h5 id="ioenvparg"><strong><code>io.envp/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Pretty version of 'io.env/&lt;arg&gt;', this includes syntax highlighting and also filters the output.
+
+ USAGE:
+  ./compose.mk io.envp/&lt;prefix_to_filter_for&gt;
+
+ USAGE: (only vars matching 'TUI*')
+  ./compose.mk io.envp/TUI
+</code></pre>
+<h5 id="iofilepreviewarg"><strong><code>io.file.preview/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Outputs syntax-highlighting + line-numbers for the given filename to stderr.
+
+ USAGE:
+  ./compose.mk io.file.preview/&lt;fname&gt;
+</code></pre>
+<h5 id="iofilepygmentizearg"><strong><code>io.file.pygmentize/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Syntax highlighting for the given file.
+ Lexer will autodetected unless override is provided.
+ Style defaults to 'trac', which works best with dark backgrounds.
+
+ USAGE:
+   ./compose.mk io.file.pygmentize/&lt;fname&gt;
+   lexer=.. ./compose.mk io.file.pygmentize/&lt;fname&gt;
+   lexer=.. style=.. ./compose.mk io.file.pygmentize/&lt;fname&gt;
+
+ REFS:
+ [1]: https://pygments.org/
+ [2]: https://pygments.org/styles/
+</code></pre>
+<h5 id="iogumdiv"><strong><code>io.gum.div</code></strong></h5>
+<pre><code class="language-bash">Like `io.print.div`, but defaults to using `gum` to render it.
+ If `label` is not provided, this defaults to using a timestamp.
+
+ USAGE:
+  ./compose.mk io.gum.div label=&quot;..&quot;
+</code></pre>
+<h5 id="iogumformatcode"><strong><code>io.gum.format.code</code></strong></h5>
+<pre><code class="language-bash">
+</code></pre>
+<h5 id="iogumspin"><strong><code>io.gum.spin</code></strong></h5>
+<pre><code class="language-bash">Runs `gum spin` with the given command/label.
+
+ EXAMPLE:
+   cmd=&quot;sleep 2&quot; label=title ./compose.mk io.gum.spin
+
+ REFS:
+ [1] https://github.com/charmbracelet/gum for more details.
+</code></pre>
+<h5 id="iogumstyle"><strong><code>io.gum.style</code></strong></h5>
+<pre><code class="language-bash">Helper for formatting text and banners using `gum style` and `gum format`.
+ Expects label text under the `label variable, plus supporting optional `width`.
+ Labels automatically go through 'gum format' before 'gum style', so templates are supported.
+
+ REFS:
+ [1] https://github.com/charmbracelet/gum for more details.
+
+ EXAMPLE:
+   label=&quot;...&quot; ./compose.mk io.gum.style 
+   width=30 label='...' ./compose.mk io.gum.style
+</code></pre>
+<h5 id="iogumstylearg"><strong><code>io.gum.style/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Prints a divider on stdout for the given fraction of the full terminal width,
+ with given label.  This automatically detects console width, but
+ it requires 'tput' (usually part of a 'ncurses' package).
+
+ EXAMPLE: (A half-width labeled divider)
+   label=... ./compose.mk io.gum.style/2
+</code></pre>
+<h5 id="iohelp"><strong><code>io.help</code></strong></h5>
+<pre><code class="language-bash">Lists only the targets available under the 'io' namespace.
+</code></pre>
+<h5 id="ioprintdiv"><strong><code>io.print.div</code></strong></h5>
+<pre><code class="language-bash">Prints a divider on stdout, defaulting to the full terminal width, with optional label.  
+ This automatically detects console width, but it requires 'tput' (usually part of a 'ncurses' package).
+
+ USAGE:
+  ./compose.mk io.print.div label=&quot;..&quot; filler=&quot;..&quot; width=&quot;...&quot;
+</code></pre>
+<h5 id="ioprintdivarg"><strong><code>io.print.div/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Prints a divider with a width of `term_width / &lt;arg&gt;`
+
+ USAGE: (half-width labelled divider)
+  label.. ./compose.mk io.print.div/&lt;int&gt;
+</code></pre>
+<h5 id="ioquietstderrsh"><strong><code>io.quiet.stderr.sh</code></strong></h5>
+<pre><code class="language-bash">Runs the given target, surpressing stderr output, except in case of error.
+
+ USAGE:
+  ./compose.mk io.quiet/&lt;target_name&gt;
+</code></pre>
+<h5 id="ioquietstderrarg"><strong><code>io.quiet.stderr/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Runs the given target, surpressing stderr output, except in case of error.
+
+ USAGE:
+  ./compose.mk io.quiet/&lt;target_name&gt;
+</code></pre>
+<h5 id="iostackpoparg"><strong><code>io.stack.pop/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Pops first item off the given stack file
+
+ USAGE:
+  ./compose.mk io.stack/&lt;fname&gt;
+  {.. data ..}
+</code></pre>
+<h5 id="iostackpusharg"><strong><code>io.stack.push/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Returns all the data in the named stack-file 
+
+ USAGE:
+   echo '&lt;json&gt;' | ./compose.mk io.stack.push/&lt;fname&gt;
+</code></pre>
+<h5 id="iostackarg"><strong><code>io.stack/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Returns all the data in the named stack-file 
+
+ USAGE:
+  ./compose.mk io.stack/&lt;fname&gt;
+  [ {.. data ..}, .. ]
+</code></pre>
+<h5 id="iotailarg"><strong><code>io.tail/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Tails the named file, creating it first if necessary.
+ This is always blocking and won't throw an error even if the file doesn't exist.
+
+ USAGE:
+  ./compose.mk io.tail/&lt;fname&gt;
+</code></pre>
+<h5 id="iotimewait"><strong><code>io.time.wait</code></strong></h5>
+<pre><code class="language-bash">Pauses for 1 second.
+</code></pre>
+<h5 id="iotimewaitarg"><strong><code>io.time.wait/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Pauses for the given amount of seconds.
+
+ USAGE:
+   ./compose.mk io.time.wait/&lt;int&gt;
+</code></pre>
+<h5 id="iotimewait1"><strong><code>io.time.wait/1</code></strong></h5>
+<pre><code class="language-bash">
+</code></pre>
+<h5 id="iowait"><strong><code>io.wait</code></strong></h5>
+<pre><code class="language-bash">Pauses for 1 second.
+</code></pre>
+<h5 id="iowaitarg"><strong><code>io.wait/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#iotimewaitarg"><code>io.time.wait/&lt;arg&gt;</code></a></em></li>
+</ul>
+<hr style="width:100%;border-bottom: 3px solid black;background: #efefef;">
+
+<hr />
+<h4 id="api-docker">API: docker</h4>
+<p>The docker.* targets cover a few helpers for working with docker.</p>
+<p>This interface is deliberately minimal, focusing on verbs like 'stop' and 'stat' more than verbs like 'build' and 'run'. That's because containers that are managed by docker compose are preferred, but some ability to work with inlined Dockerfiles for simple use-cases is supported. See stream.pygmentize for an example.</p>
+<p>DOCS:</p>
+<ul>
+<li><code>[1]</code>: https://github.com/robot-wranglers/compose.mk/docs/api#api-docker</li>
+</ul>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p><em>This documentation is pulled automatically from <a href="/compose.mk">source</a>.</em></p>
+<h5 id="dockerbuilddefarg"><strong><code>docker.build.def/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#dockerfromdefarg"><code>docker.from.def/&lt;arg&gt;</code></a></em></li>
+</ul>
+<h5 id="dockerbuildmaybearg"><strong><code>docker.build.maybe/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Builds quietly, iff and only if the named image is not cached.
+
+ USAGE:
+   ./compose.mk docker.build.maybe/&lt;name&gt;
+</code></pre>
+<h5 id="dockerbuildquietarg"><strong><code>docker.build.quiet/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Builds the given dockerfile quietly, tagging it with 'tag.'
+
+ USAGE:
+  tag=&lt;tag_to_use&gt; ./compose.mk docker.build.quiet/&lt;name&gt;
+</code></pre>
+<h5 id="dockerbuildarg"><strong><code>docker.build/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Standard noisy docker build.
+
+ USAGE:
+   tag=&lt;tag_to_use&gt; ./compose.mk docker.build/&lt;name&gt;
+</code></pre>
+<h5 id="dockerclean"><strong><code>docker.clean</code></strong></h5>
+<pre><code class="language-bash">This refers to &quot;local&quot; images.  Cleans all images from 'compose.mk' repository,
+ i.e. affiliated containers that are related to the embedded TUI, and certain things
+ created by the 'docker.*' targets. No arguments.
+</code></pre>
+<h5 id="dockercommander"><strong><code>docker.commander</code></strong></h5>
+<pre><code class="language-bash">TUI layout providing an overview for docker.
+ This has 3 panes by default, where the main pane is lazydocker, plus two utility panes.
+ Automation also ensures that lazydocker always starts with the &quot;statistics&quot; tab open.
+</code></pre>
+<h5 id="dockercontext"><strong><code>docker.context</code></strong></h5>
+<pre><code class="language-bash">Returns all of the available docker context. Pipe-friendly.
+</code></pre>
+<h5 id="dockercontextarg"><strong><code>docker.context/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Returns docker-context details for the given context-name.
+ Pipe-friendly; outputs JSON from 'docker context inspect'
+
+ USAGE: (shortcut for the current context name)
+  ./compose.mk docker.context/current
+
+ USAGE: (using named context)
+  ./compose.mk docker.context/&lt;context_name&gt;
+</code></pre>
+<h5 id="dockerdefiscachedarg"><strong><code>docker.def.is.cached/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Answers whether the named define has a cached docker image
+ This never fails and exits with &quot;yes&quot; if the image has been built at least once,
+ and &quot;no&quot; otherwise, but it also respects whether 'force=1' has been set.
+</code></pre>
+<h5 id="dockerfromdefarg"><strong><code>docker.from.def/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Builds a container, treating the given 'define' block as a Dockerfile.
+ This implicitly prefixes the named define with 'Dockerfile.' to enforce 
+ naming conventions, and make for easier cleanup.  Container tags are 
+ determined by 'tags' var if provided, falling back to the name used 
+ for the define-block.  Tags are implicitly prefixed with 'compose.mk:',
+ for the same reason as the other prefixes.
+
+ This is part of the mad-science[1] test-suite and not really a good idea =P
+
+ USAGE: ( explicit tag )
+   tag=&lt;my_tag&gt; make docker.from.def/&lt;my_def_name&gt;
+
+ USAGE: ( implicit tag, same name as the define-block )
+   make docker.from.def/&lt;my_def_name&gt;
+
+ REFS:
+  [1]: https://github.com/robot-wranglers/compose.mk/blob/master/tests/Makefile.mad-science.mk
+</code></pre>
+<h5 id="dockerfromdefmakeself"><strong><code>docker.from.def/makeself</code></strong></h5>
+<pre><code class="language-bash">
+</code></pre>
+<h5 id="dockerfromfilearg"><strong><code>docker.from.file/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Builds a container from the given Dockerfile.  The 'tag' variable is required.
+
+ USAGE:
+  tag=&lt;tag_name&gt; ./compose.mk docker.from.file/&lt;fname&gt;
+</code></pre>
+<h5 id="dockerfromgithubarg"><strong><code>docker.from.github/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Creates the container from the given info.
+ The given repository-name should end in '.git'
+
+ USAGE:
+  ./compose.mk docker.from.github/&lt;org&gt;/&lt;repo_name&gt;/&lt;hash&gt;
+</code></pre>
+<h5 id="dockerfromrepo"><strong><code>docker.from.repo</code></strong></h5>
+<pre><code class="language-bash">Create a container from the given repository/hash.
+ The repo-url needs to be fully qualified, starting with https:// and ending in .git.
+
+ USAGE:
+  hash=&lt;..&gt; repo_url=&lt;..&gt; ./compose.mk docker.from.repo
+</code></pre>
+<h5 id="dockerfromurlarg"><strong><code>docker.from.url/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Builds a container, treating the given 'url' as a Dockerfile.  The 'tag' variable is required.
+ This is part of the mad-science[1] test-suite and not really a good idea =P
+
+ USAGE:
+   make docker.Dockerfile/&lt;my_def_name&gt;
+   tag=&lt;my_tag&gt; make docker.from.url/&lt;my_def_name&gt;
+
+ REFS:
+  [1]: https://github.com/robot-wranglers/compose.mk/blob/master/tests/Makefile.mad-science.mk
+</code></pre>
+<h5 id="dockerhelp"><strong><code>docker.help</code></strong></h5>
+<pre><code class="language-bash">Lists only the targets available under the 'docker' namespace.
+</code></pre>
+<h5 id="dockerimages"><strong><code>docker.images</code></strong></h5>
+<pre><code class="language-bash">Returns only affiliated images from 'compose.mk' repository, 
+ i.e. containers that are related to the embedded TUI, and/or 
+ things created by compose.mk inside the 'docker.*' targets, etc.
+ These are &quot;local&quot; images.
+
+ Extensions (like 'k8s.mk') may optionally export a value for 
+ 'CMK_EXTRA_REPO', which appends to the default list described above.
+</code></pre>
+<h5 id="dockerimagesall"><strong><code>docker.images.all</code></strong></h5>
+<pre><code class="language-bash">Like plain 'docker images' CLI, but always returns JSON
+ This target is also available as a function.
+</code></pre>
+<h5 id="dockerinit"><strong><code>docker.init</code></strong></h5>
+<pre><code class="language-bash">Checks if docker is available, then displays version/context (no real setup)
+</code></pre>
+<h5 id="dockerinitcompose"><strong><code>docker.init.compose</code></strong></h5>
+<pre><code class="language-bash">Ensures compose is available.  Note that
+ build/run/etc cannot happen without a file,
+ for that, see instead targets like '&lt;compose_file_stem&gt;.build'
+</code></pre>
+<h5 id="dockernetworkpanic"><strong><code>docker.network.panic</code></strong></h5>
+<pre><code class="language-bash">Runs 'docker network prune' for the entire system.
+</code></pre>
+<h5 id="dockerpanic"><strong><code>docker.panic</code></strong></h5>
+<pre><code class="language-bash">Debugging only!  This is good for ensuring a clean environment,
+ but running this from automation will nix your cache of downloaded
+ images, and so you will probably quickly hit rate-limiting at dockerhub.
+ It tears down volumes and networks also, so you don't want to run this in prod.
+</code></pre>
+<h5 id="dockerprune"><strong><code>docker.prune</code></strong></h5>
+<pre><code class="language-bash">Runs 'docker system prune' for the entire system.
+</code></pre>
+<h5 id="dockerps"><strong><code>docker.ps</code></strong></h5>
+<pre><code class="language-bash">Like 'docker ps', but always returns JSON.
+</code></pre>
+<h5 id="dockerrundef"><strong><code>docker.run.def</code></strong></h5>
+<pre><code class="language-bash">Treats the named 'define' as a script, then runs it inside the given container.
+ This automatically detects whether input should be treated as a pipe.
+
+ USAGE:
+  entrypoint=&lt;entry&gt; def=&lt;def_name&gt; img=&lt;image&gt; ./compose.mk docker.run.def
+</code></pre>
+<h5 id="dockerrundefarg"><strong><code>docker.run.def/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Like 'docker.run.def', but unpacks arguments from target invocation.
+
+ USAGE:
+  ./compose.mk docker.run.def/&lt;def_name&gt;/&lt;image&gt;
+</code></pre>
+<h5 id="dockerrunimagearg"><strong><code>docker.run.image/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Runs the given commands in the given image.
+
+ USAGE:
+  entrypoint=&lt;entry&gt; cmd=&lt;args_to_entrypoint&gt; ./compose.mk docker.run.image/&lt;img&gt;
+
+ EXAMPLE:
+  entrypoint=make cmd=flux.ok ./compose.mk docker.run.image/debian/buildd:bookworm
+</code></pre>
+<h5 id="dockerrunsh"><strong><code>docker.run.sh</code></strong></h5>
+<pre><code class="language-bash">Runs the given command inside the named container.
+
+ This automatically detects whether it's used as a pipe &amp; proxies stdin as appropriate.
+ This always shares the working directory as a volume &amp; uses that as a workspace.
+ If 'env' is provided, it should be a comma-delimited list of variable names; 
+ those variables will be dereferenced and passed into docker's &quot;-e&quot; arguments.
+
+ USAGE:
+   img=... entrypoint=... cmd=... env=var1,var2 ./compose.mk docker.run.sh
+</code></pre>
+<h5 id="dockerrunarg"><strong><code>docker.run/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Runs the named target inside the named docker container.
+ This works for any image as given; See instead 'mk.docker.run' for
+ a version that implicitly uses internally generated containers.
+
+ USAGE:
+  img=&lt;img&gt; make docker.run/&lt;target&gt;
+
+ EXAMPLE:
+  img=debian/buildd:bookworm ./compose.mk docker.run/flux.ok
+</code></pre>
+<h5 id="dockersocket"><strong><code>docker.socket</code></strong></h5>
+<pre><code class="language-bash">Returns the docker socket in use for the current docker context.
+ No arguments &amp; pipe-friendly.
+</code></pre>
+<h5 id="dockerstart"><strong><code>docker.start</code></strong></h5>
+<pre><code class="language-bash">Like 'docker.run', but uses the default entrypoint.
+ USAGE: 
+   img=.. ./compose.mk docker.start
+</code></pre>
+<h5 id="dockerstartarg"><strong><code>docker.start/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Starts the named docker image with the default entrypoint
+ USAGE: 
+   ./compose.mk docker.start/&lt;img&gt;
+</code></pre>
+<h5 id="dockerstat"><strong><code>docker.stat</code></strong></h5>
+<pre><code class="language-bash">Show information about docker-status.  No arguments.
+
+ This is pipe-friendly, although it also displays additional
+ information on stderr for humans, specifically an abbreviated
+ table for 'docker ps'.  Machine-friendly JSON is also output
+ with the following schema:
+
+   { &quot;version&quot;: .., &quot;container_count&quot;: ..,
+     &quot;socket&quot;: .., &quot;context_name&quot;: .. }
+</code></pre>
+<h5 id="dockerstop"><strong><code>docker.stop</code></strong></h5>
+<pre><code class="language-bash">Stops one container, using the given timeout and the given id or name.
+
+ USAGE:
+   ./compose.mk docker.stop id=8f350cdf2867
+   ./compose.mk docker.stop name=my-container
+   ./compose.mk docker.stop name=my-container timeout=99
+</code></pre>
+<h5 id="dockerstopall"><strong><code>docker.stop.all</code></strong></h5>
+<pre><code class="language-bash">Non-graceful stop for all running containers.
+
+ USAGE:
+   ./compose.mk docker.stop name=my-container timeout=99
+</code></pre>
+<h5 id="dockersystemprune"><strong><code>docker.system.prune</code></strong></h5>
+<pre><code class="language-bash">Runs 'docker system prune' for the entire system.
+</code></pre>
+<h5 id="dockertagsbyrepoarg"><strong><code>docker.tags.by.repo/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Filters all docker images by the given repository.
+ This helps to separate system images from compose.mk images.
+ This target is also available as a function.
+ See 'docker.images' for more details.
+</code></pre>
+<h5 id="dockervolumepanic"><strong><code>docker.volume.panic</code></strong></h5>
+<pre><code class="language-bash">Runs 'docker volume prune' for the entire system.
+</code></pre>
+<hr style="width:100%;border-bottom: 3px solid black;background: #efefef;">
+
+<hr />
+<h4 id="api-flux">API: flux</h4>
+<p>The flux.* targets describe a miniature workflow library. Combining flux with container dispatch is similar in spirit to things like declarative pipelines in Jenkins, but simpler, more portable, and significantly easier to use. What's a workflow in this context? Shell by itself is fine for what you might call "process algebra", and using operators like <code>&amp;&amp;</code>, <code>||</code>, <code>|</code> in the grand unix tradition goes a long way. And adding <code>make</code> to the mix already provides DAGs.</p>
+<p>What <code>flux.*</code> targets add is flow-control constructs and higher-level join/loop/map instructions over other make targets, taking inspiration from functional programming and threading libraries. Alternatively, one may think of flux as a programming language where all primitives are the objects that make understands, like targets, defines, and variables. Since every target in <code>make</code> is a DAG, you might say that task-DAGs are also primitives. Since <code>compose.import</code> maps containers onto targets, containers are primitives too.  Since <code>tux</code> targets map targets onto TUI panes, UI elements are also effectively primitives.</p>
+<p>In most cases flux targets are used programmatically for scripting, but in stand-alone mode it can sometimes be useful for cleaning up (external) bash scripts, or porting from bash to makefiles, or ad-hoc interactive scripting.</p>
+<p>For parts that are more specific to shell code, see <code>flux.*.sh</code>, and for working with scripts see <code>flux.*.script</code>.</p>
+<hr />
+<p>DOCS:</p>
+<ul>
+<li>
+<p><code>[1]:</code> https://github.com/robot-wranglers/compose.mk/docs/api#api-flux</p>
+</li>
+<li>
+<p><code>[1]:</code> https://github.com/robot-wranglers/compose.mk/docs/api#api-flux</p>
+</li>
+<li>
+<p><code>[1]:</code> https://github.com/robot-wranglers/compose.mk/docs/api#api-flux</p>
+</li>
+</ul>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p>See especially the <a href="/compose.mk/demos#demo-platform-setup">Platform Setup Example</a> for a more complete walk-through of motivation, starting from an example use-case.</p>
+<p><em>This documentation is pulled automatically from <a href="/compose.mk">source</a>.</em></p>
+<h5 id="fluxalwaysarg"><strong><code>flux.always/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#fluxfinallyarg"><code>flux.finally/&lt;arg&gt;</code></a></em></li>
+</ul>
+<h5 id="fluxandarg"><strong><code>flux.and/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#fluxapplyarg"><code>flux.apply/&lt;arg&gt;</code></a></em></li>
+</ul>
+<h5 id="fluxapplylatersharg"><strong><code>flux.apply.later.sh/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Applies the given command at some point in the future.  This is non-blocking.
+ Not pipe-safe, because since targets run in the background, this can garble your display!
+
+ USAGE:
+   cmd=&quot;...&quot; ./compose.mk flux.apply.later.sh/&lt;seconds&gt;
+</code></pre>
+<h5 id="fluxapplylaterarg"><strong><code>flux.apply.later/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Applies the given targets at some point in the future.  This is non-blocking.
+ Not pipe-safe, because since targets run in the background, this can garble your display!
+
+ USAGE:
+   ./compose.mk flux.apply.later/&lt;seconds&gt;/&lt;target&gt;
+</code></pre>
+<h5 id="fluxapplyarg"><strong><code>flux.apply/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Performs an 'and' operation with the named comma-delimited targets.
+ This is equivalent to the default behaviour of `make t1 t2 .. tN`.
+ This is mostly used as a wrapper in case targets are unary.
+
+ See also 'flux.or'.
+</code></pre>
+<h5 id="fluxdelayarg"><strong><code>flux.delay/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#fluxapplylaterarg"><code>flux.apply.later/&lt;arg&gt;</code></a></em></li>
+</ul>
+<h5 id="fluxdmux"><strong><code>flux.dmux</code></strong></h5>
+<pre><code class="language-bash">Demultiplex / fan-out operator that sends stdin to each of the named targets in parallel.
+ (This is like `flux.sh.tee` but works with make-target names instead of shell commands)
+
+ USAGE: (pipes the same input to target1 and target2)
+   echo {} | ./compose.mk flux.dmux targets=&quot;target1,target2&quot;
+</code></pre>
+<h5 id="fluxdmuxarg"><strong><code>flux.dmux/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Same as flux.dmux, but accepts arguments directly (no variable)
+ Stream-usage is required (this blocks waiting on stdin).
+
+ USAGE: ( pipes the same input to yq and jq )
+   echo {} | ./compose.mk flux.dmux/jq,jq
+</code></pre>
+<h5 id="fluxdounlessarg"><strong><code>flux.do.unless/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Runs the 1st target iff the 2nd target fails.
+ This is a version of 'flux.if.then', see those docs for more details.
+
+  USAGE: ( generic )
+    ./compose.mk flux.do.unless/&lt;umbrella&gt;,&lt;dry&gt;
+
+  USAGE: ( concrete ) 
+    ./compose.mk flux.do.unless/flux.ok,flux.fail
+</code></pre>
+<h5 id="fluxdowhenarg"><strong><code>flux.do.when/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Runs the 1st given target iff the 2nd target is successful.
+
+ This is a version of 'flux.if.then', see those docs for more details.
+ This version is nicer when your &quot;then&quot; target has multiple commas.
+
+  USAGE: ( generic )
+    ./compose.mk flux.do.when/&lt;umbrella&gt;,&lt;raining&gt;
+</code></pre>
+<h5 id="fluxeacharg"><strong><code>flux.each/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Maps the newline/space separated input on to the named target.
+ This works via xargs, runs sequentially, and fails fast.
+ The named target must be parametric so it can accept the
+ argument that's passed through!
+
+ USAGE:
+
+  printf 'one\ntwo' | ./compose.mk stream.nl.flux.each/&lt;target&gt;
+</code></pre>
+<h5 id="fluxfail"><strong><code>flux.fail</code></strong></h5>
+<pre><code class="language-bash">Alias for 'exit 1', which is POSIX failure.
+ This is mostly for used for testing other pipelines.
+
+ See also the `flux.ok` target.
+</code></pre>
+<h5 id="fluxfinallyarg"><strong><code>flux.finally/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Always run the given target, even if the rest of the pipeline fails.
+ See also 'flux.try.except.finally'.
+
+ NB: For this to work, the `always` target needs to be declared at the
+ beginning.  See the example below where &quot;&lt;target&gt;&quot; always runs, even
+ though the pipeline fails in the middle.
+
+ USAGE:
+   ./compose.mk flux.always/&lt;target_name&gt; flux.ok flux.fail flux.ok
+</code></pre>
+<h5 id="fluxhelp"><strong><code>flux.help</code></strong></h5>
+<pre><code class="language-bash">Lists only the targets available under the 'flux' namespace.
+</code></pre>
+<h5 id="fluxifthenarg"><strong><code>flux.if.then/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Runs the 2nd given target iff the 1st one is successful.
+
+ Failure (non-zero exit) for the &quot;if&quot; check is not distinguished
+ from a crash, &amp; it won't propagate.  Only the 2nd argument may contain 
+ commas.  For a reversed version of this construct, see 'flux.do.when'
+
+ USAGE: ( generic )
+   ./compose.mk flux.if.then/&lt;name_of_test_target&gt;,&lt;name_of_then_target&gt;
+
+ USAGE: ( concrete )
+   ./compose.mk flux.if.then/flux.fail,flux.ok
+</code></pre>
+<h5 id="fluxindentsh"><strong><code>flux.indent.sh</code></strong></h5>
+<pre><code class="language-bash">Similar to flux.indent, but this works with any shell command.
+
+ USAGE:
+  cmd=&quot;echo foo; echo bar &gt;/dev/stderr&quot; ./compose.mk flux.indent.sh
+</code></pre>
+<h5 id="fluxindentarg"><strong><code>flux.indent/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Given a target, this runs it and indents both the resulting output for both stdout/stderr.
+ See also the 'stream.indent' target.
+
+ USAGE:
+   ./compose.mk flux.indent/&lt;target&gt;
+</code></pre>
+<h5 id="fluxjoin"><strong><code>flux.join</code></strong></h5>
+<pre><code class="language-bash">Runs the given comma-delimited targets in parallel, then waits for all of them to finish.
+ For stdout and stderr, this is a many-to-one mashup of whatever writes first, and nothing
+ about output ordering is guaranteed.  This works by creating a small script, displaying it,
+ and then running it.  It is not very sophisticated!  The script just tracks pids of
+ launched processes, then waits on all pids.
+
+ If the named targets are all well-behaved, this *might* be pipe-safe, but in
+ general it's possible for the subprocess output to be out of order.  If you do
+ want *legible, structured output* that *prints* in ways that are concurrency-safe,
+ here's a hint: emit nothing, or emit minified JSON output with printf and 'jq -c',
+ and there is a good chance you can consume it.  Printf should be atomic on most
+ platforms with JSON of practical size? And crucially, 'jq .' handles object input,
+ empty input, and streamed objects with no wrapper (like '{}&lt;newline&gt;{}').
+
+ EXAMPLE: (runs 2 commands in parallel)
+   targets=&quot;io.time.wait/1,io.time.wait/3&quot; ./compose.mk flux.mux | jq .
+</code></pre>
+<h5 id="fluxloopuntilarg"><strong><code>flux.loop.until/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Loop the given target until it succeeds.
+
+ By default to reduce logging noise, this sends stderr to null, but preserves stdout.
+ This makes debugging hard, so only use this with well tested/understood sub-targets,
+ or set &quot;verbose=1&quot; to allow stderr.  When &quot;quiet=1&quot; is set, even more logging is trimmed.
+
+ USAGE:
+</code></pre>
+<h5 id="fluxloopwatcharg"><strong><code>flux.loop.watch/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Loops the given target forever, using 'watch' instead of the while-loop default
+</code></pre>
+<h5 id="fluxlooparg"><strong><code>flux.loop/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Helper for repeatedly running the named target a given number of times.
+ This requires the 'pv' tool for progress visualization, which is available
+ by default in k8s-tools containers.   By default, stdout for targets is
+ supressed because it messes up the progress bar, but stderr is left alone.
+
+ USAGE:
+   ./compose.mk flux.loop/&lt;times&gt;/&lt;target_name&gt;
+
+ NB: This requires &quot;flat&quot; targets with no '/' !
+</code></pre>
+<h5 id="fluxloopfquietquietarg"><strong><code>flux.loopf.quiet.quiet/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Like flux.loopf, but even more quiet.
+</code></pre>
+<h5 id="fluxloopfquietarg"><strong><code>flux.loopf.quiet/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Loops the given target forever.
+
+ By default to reduce logging noise, this sends stderr to null, but preserves stdout.
+ This makes debugging hard, so only use this with well tested/understood sub-targets,
+ or set &quot;verbose=1&quot; to allow stderr.  When &quot;quiet=1&quot; is set, even more logging is trimmed.
+
+ USAGE:
+   ./compose.mk flux.loopf/
+</code></pre>
+<h5 id="fluxloopfarg"><strong><code>flux.loopf/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Loops the given target forever.
+</code></pre>
+<h5 id="fluxmaparg"><strong><code>flux.map/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Similar to 'flux.apply', but maps input stream sequentially onto the comma-delimited target list.
+
+ USAGE:
+   echo hello-world | ./compose.mk flux.map/stream.echo,stream.echo
+</code></pre>
+<h5 id="fluxmux"><strong><code>flux.mux</code></strong></h5>
+<pre><code class="language-bash">Runs the given comma-delimited targets in parallel, then waits for all of them to finish.
+ For stdout and stderr, this is a many-to-one mashup of whatever writes first, and nothing
+ about output ordering is guaranteed.  This works by creating a small script, displaying it,
+ and then running it.  It is not very sophisticated!  The script just tracks pids of
+ launched processes, then waits on all pids.
+
+ If the named targets are all well-behaved, this *might* be pipe-safe, but in
+ general it's possible for the subprocess output to be out of order.  If you do
+ want *legible, structured output* that *prints* in ways that are concurrency-safe,
+ here's a hint: emit nothing, or emit minified JSON output with printf and 'jq -c',
+ and there is a good chance you can consume it.  Printf should be atomic on most
+ platforms with JSON of practical size? And crucially, 'jq .' handles object input,
+ empty input, and streamed objects with no wrapper (like '{}&lt;newline&gt;{}').
+
+ EXAMPLE: (runs 2 commands in parallel)
+   targets=&quot;io.time.wait/1,io.time.wait/3&quot; ./compose.mk flux.mux | jq .
+</code></pre>
+<h5 id="fluxmuxarg"><strong><code>flux.mux/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Alias for flux.mux, but accepts arguments directly
+</code></pre>
+<h5 id="fluxnegatearg"><strong><code>flux.negate/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Negates the status for the given target.
+
+ USAGE: 
+   `./compose.mk flux.negate/flux.fail`
+</code></pre>
+<h5 id="fluxnoop"><strong><code>flux.noop</code></strong></h5>
+<pre><code class="language-bash">NO-OP mostly used for testing.  
+ Similar to 'flux.ok', but this doesn't include logging.
+
+ USAGE: 
+  ./compose.mk flux.noop
+</code></pre>
+<h5 id="fluxok"><strong><code>flux.ok</code></strong></h5>
+<pre><code class="language-bash">Alias for 'exit 0', which is success.
+ This is mostly for used for testing other pipelines.  
+
+ See also `flux.fail`
+</code></pre>
+<h5 id="fluxorarg"><strong><code>flux.or/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Performs an 'or' operation with the named comma-delimited targets.
+ This is equivalent to 'make target1 || .. || make targetN'.  See also 'flux.and'.
+
+ USAGE: (generic)
+   ./compose.mk flux.or/&lt;t1&gt;,&lt;t2&gt;,..
+
+ USAGE: (example)
+   ./compose.mk flux.or/flux.fail,flux.ok
+</code></pre>
+<h5 id="fluxpipelinequietarg"><strong><code>flux.pipeline.quiet/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">A quiet version of `flux.pipeline`.  
+ Pipeline components are still announced individually, 
+ but the usual result previews for the intermediate stages are skipped.
+</code></pre>
+<h5 id="fluxpipeline"><strong><code>flux.pipeline/</code></strong></h5>
+<pre><code class="language-bash">No-op.  This just bottoms out the recursion on `flux.pipeline`.
+</code></pre>
+<h5 id="fluxpipelinearg"><strong><code>flux.pipeline/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Runs the given comma-delimited targets in a bash-style command pipeline.
+ Besides working with targets and allowing for DAG composition, this has 
+ the advantage of giving visibility to the pipeline's intermediate results.
+
+ There are several caveats though: all targets *must* be pipe safe on stdout, 
+ and downstream targets must consume stdin.  Note also that this does not use
+ pure streams, and tmp files are created as part of an attempt to debuffer and 
+ avoid reordering stderr output.  Error handling is also probably not great!
+
+ USAGE: (example)
+   ./compose.mk flux.pipeline/extract,transform,load
+    =&gt; roughly equivalent to `make extract | make transform | make load`
+</code></pre>
+<h5 id="fluxretryarg"><strong><code>flux.retry/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Retries the given target a certain number of times.
+
+ USAGE: (using default interval of FLUX_POLL_DELTA)
+   ./compose.mk flux.retry/&lt;times&gt;/&lt;target&gt;
+
+ USAGE: (explicit interval in seconds)
+   interval=3 ./compose.mk flux.retry/&lt;times&gt;/&lt;target&gt;
+</code></pre>
+<h5 id="fluxshtee"><strong><code>flux.sh.tee</code></strong></h5>
+<pre><code class="language-bash">Helper for constructing a parallel process pipeline with `tee` and command substitution.
+ Pipe-friendly, this works directly with stdin.  This exists mostly to enable `flux.dmux`
+ but it can be used directly.
+
+ Using this is easier than the alternative pure-shell version for simple commands, but it is
+ also pretty naive, and splits commands on commas; probably better to avoid loading other
+ pipelines as individual commands with this approach.
+
+ USAGE: ( pipes the same input to 'jq' and 'yq' commands )
+   echo {} | ./compose.mk flux.sh.tee cmds=&quot;jq,yq&quot;
+</code></pre>
+<h5 id="fluxsplit"><strong><code>flux.split</code></strong></h5>
+<pre><code class="language-bash">Demultiplex / fan-out operator that sends stdin to each of the named targets in parallel.
+ (This is like `flux.sh.tee` but works with make-target names instead of shell commands)
+
+ USAGE: (pipes the same input to target1 and target2)
+   echo {} | ./compose.mk flux.dmux targets=&quot;target1,target2&quot;
+</code></pre>
+<h5 id="fluxsplitarg"><strong><code>flux.split/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Alias for flux.split, but accepts arguments directly
+</code></pre>
+<h5 id="fluxstage"><strong><code>flux.stage</code></strong></h5>
+<pre><code class="language-bash">Returns the name of the current stage. No Arguments.
+</code></pre>
+<h5 id="fluxstageclean"><strong><code>flux.stage.clean</code></strong></h5>
+<pre><code class="language-bash">Cleans all stage-files from all runs, including ones that don't belong to this pid.
+ No arguments.
+</code></pre>
+<h5 id="fluxstageclean_1"><strong><code>flux.stage.clean/</code></strong></h5>
+<pre><code class="language-bash">Cleans all stage-files from all runs, including ones that don't belong to this pid.
+ No arguments.
+</code></pre>
+<h5 id="fluxstagecleanarg"><strong><code>flux.stage.clean/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Cleans only stage files that belong to the given stage.
+
+ USAGE: 
+   ./compose.mk flux.stage.clean/&lt;pid&gt;
+</code></pre>
+<h5 id="fluxstagefilearg"><strong><code>flux.stage.file/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Returns the name of the current stage file.
+</code></pre>
+<h5 id="fluxstagepoparg"><strong><code>flux.stage.pop/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Pops the stack for the named stage.  
+ Caller should handle empty value, this will not throw an error.
+
+ USAGE:
+   ./compose.mk flux.stage.pop/&lt;stage_name&gt;
+   {&quot;key&quot;:&quot;val&quot;}
+</code></pre>
+<h5 id="fluxstagepush"><strong><code>flux.stage.push</code></strong></h5>
+<pre><code class="language-bash">Push the JSON data on stdin into the stack for the implied stage
+</code></pre>
+<h5 id="fluxstagepusharg"><strong><code>flux.stage.push/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Push the JSON data on stdin into the stack for the named stage.
+
+ USAGE:
+   echo '&lt;json_data&gt;' | ./compose.mk flux.stage.push/&lt;stage_name&gt;
+</code></pre>
+<h5 id="fluxstagestack"><strong><code>flux.stage.stack</code></strong></h5>
+<pre><code class="language-bash">Retrieves all the data on the current stack-file.  No arguments.
+</code></pre>
+<h5 id="fluxstagearg"><strong><code>flux.stage/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Declares entry for the given stage.
+ Stage names are generally target names or similar, no spaces allowed.
+
+ This is generally used to just to print a pretty divider that makes output 
+ easier to parse, but stages also add an idea of persistence to otherwise 
+ stateless workflows, via a file-backed JSON stack object that cooperating 
+ tasks can push to / pop from.
+
+ Stack files contain at least the parent pid for this 'make' process.
+
+ USAGE:
+  ./compose.mk flux.stage/&lt;stage_name&gt;
+</code></pre>
+<h5 id="fluxtimeoutsh"><strong><code>flux.timeout.sh</code></strong></h5>
+<pre><code class="language-bash">Runs the given command for the given amount of seconds, then stops it with TERM.
+ Exit status is ignored
+
+ USAGE: (tails docker logs for up to 10s, then stops)
+   ./compose.mk flux.timeout.sh cmd='docker logs -f xxxx' timeout=10
+</code></pre>
+<h5 id="fluxtimeoutarg"><strong><code>flux.timeout/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Runs the given target for the given number of seconds, then stops it with TERM.
+
+ USAGE:
+   ./compose.mk flux.timeout/&lt;seconds&gt;/&lt;target&gt;
+</code></pre>
+<h5 id="fluxtimerarg"><strong><code>flux.timer/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Emits run time for the given make-target in seconds.
+ Pipe safe if you wanted runtime, but target stdout is sent to stderr.
+
+ USAGE:
+   ./compose.mk flux.timer/&lt;target_to_run&gt;
+</code></pre>
+<h5 id="fluxtryexceptfinallyarg"><strong><code>flux.try.except.finally/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Performs a try/except/finally operation with the named targets.
+ See also 'flux.finally'.
+
+ USAGE: (generic)
+  ./compose.mk flux.try.except.finally/&lt;try_target&gt;,&lt;except_target&gt;,&lt;finally_target&gt;
+
+ USAGE: (concrete)
+  ./compose.mk flux.try.except.finally/flux.fail,flux.ok,flux.ok
+</code></pre>
+<h5 id="fluxwraparg"><strong><code>flux.wrap/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Performs an 'and' operation with the named colon-delimited targets.
+ This is equivalent to the default behaviour of `make t1 t2 .. tN`.
+ This is mostly used as a wrapper in case targets are unary, 
+ and is the same as `flux.and` except for the delimiter
+</code></pre>
+<hr style="width:100%;border-bottom: 3px solid black;background: #efefef;">
+
+<hr />
+<h4 id="api-mk">API: mk</h4>
+<p>The 'mk.*' targets are meta-tooling that include various extensions to <code>make</code> itself.</p>
+<p>A rough guide to stuff you can find here:</p>
+<ul>
+<li>
+<p><code>mk.supervisor.*</code> for signals and supervisors</p>
+</li>
+<li>
+<p><code>mk.def.*</code> for tools related to reading 'define' blocks</p>
+</li>
+<li>
+<p><code>mk.parse.*</code> for makefile parsing (used as part of generating help)</p>
+</li>
+<li>
+<p><code>mk.help.*</code> for help-generation</p>
+</li>
+</ul>
+<p>For more details:</p>
+<ul>
+<li>
+<p>Full API Docs: https://github.com/robot-wranglers/compose.mk/docs/api#api-mk</p>
+</li>
+<li>
+<p>Signals &amp; Supervisors: https://github.com/robot-wranglers/compose.mk/#signals-and-supervisors</p>
+</li>
+<li>
+<p>Mad Science Test-Suite: https://github.com/robot-wranglers/compose.mk/tests/Makefile.mad-science.mk</p>
+</li>
+</ul>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p><em>This documentation is pulled automatically from <a href="/compose.mk">source</a>.</em></p>
+<h5 id="mkdefdispatcharg"><strong><code>mk.def.dispatch/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Reads the given &lt;def_name&gt;, writes to a tmp-file,
+ then runs the given interpretter on the tmp file.
+
+ This requires that the interpretter is actually available..
+ for dockerized access to similar functionality, see `docker.run.def`
+
+ USAGE:
+   ./compose.mk mk.def.dispatch/&lt;interpretter&gt;/&lt;def_name&gt;
+
+ HINT: for testing, use 'make mk.def.dispatch/cat/&lt;def_name&gt;'
+</code></pre>
+<h5 id="mkdefreadarg"><strong><code>mk.def.read/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Reads the named define/endef block from this makefile, emitting it to stdout.
+
+ This works around make's normal behaviour of completely wrecking indention/newlines
+ present inside the block.
+
+ USAGE:
+   ./compose.mk mk.read_def/&lt;name_of_define&gt;
+</code></pre>
+<h5 id="mkdeftofilearg"><strong><code>mk.def.to.file/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Reads the given define/endef block from this makefile context, writing it to the given output file.
+
+ USAGE: 
+   ./compose.mk mk.def.to.file/&lt;def_name&gt;/&lt;fname&gt;
+</code></pre>
+<h5 id="mkdockerrun"><strong><code>mk.docker.run</code></strong></h5>
+<pre><code class="language-bash">Like `docker.run`, but assumes the 'compose.mk:' prefix implicitly. 
+ Requires `img` variable to already to be set.
+ This is used with &quot;local&quot; images, i.e. what `compose.mk` uses 
+ internally, or to handle embedded Dockerfiles.
+</code></pre>
+<h5 id="mkdockerrunsh"><strong><code>mk.docker.run.sh</code></strong></h5>
+<pre><code class="language-bash">Like docker.run.sh, but implicitly assumes the 'compose.mk:' prefix.
+</code></pre>
+<h5 id="mkdockerrunarg"><strong><code>mk.docker.run/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Like `mk.docker.run`, but accepts image as an argument.
+</code></pre>
+<h5 id="mkgetarg"><strong><code>mk.get/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Returns the value of the given make-variable
+</code></pre>
+<h5 id="mkgetflux_stage"><strong><code>mk.get/FLUX_STAGE</code></strong></h5>
+<pre><code class="language-bash">Returns the value of the given make-variable
+</code></pre>
+<h5 id="mkhelp"><strong><code>mk.help</code></strong></h5>
+<pre><code class="language-bash">Lists only the targets available under the 'mk' namespace.
+</code></pre>
+<h5 id="mkhelpblockarg"><strong><code>mk.help.block/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Shows the help-block matching the given pattern.
+
+ Similar to module-docs, but this need not match a target namespace.
+
+ USAGE:
+   ./compose.mk mk.help.block/&lt;pattern&gt;
+</code></pre>
+<h5 id="mkhelpmodulearg"><strong><code>mk.help.module/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Shows help for the named module.
+
+ USAGE:
+   ./compose.mk mk.help.module/&lt;mod_name&gt;
+</code></pre>
+<h5 id="mkhelpsearcharg"><strong><code>mk.help.search/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Shows targets matching the given prefix.
+
+ USAGE:
+   ./compose.mk mk.help.search/&lt;pattern&gt;
+</code></pre>
+<h5 id="mkhelptargetarg"><strong><code>mk.help.target/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Shows help for the named target.
+
+ USAGE:
+   ./compose.mk mk.help.target/&lt;target_name&gt;
+</code></pre>
+<h5 id="mkifdefarg"><strong><code>mk.ifdef/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Answers whether the given variable is defined.
+ This is silent, and only communicates via the exit code.
+</code></pre>
+<h5 id="mkifndefarg"><strong><code>mk.ifndef/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Flips the assertion for 'mk.ifdef'.
+</code></pre>
+<h5 id="mkincludearg"><strong><code>mk.include/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Dynamic includes.
+ This is experimental stuff for reflection support.
+
+ This works by using code-generation and turning over the execution, 
+ so it requires the supervisor/signals hack to short-circuit the 
+ original execution!
+
+ USAGE: ( generic )
+   ./compose.mk mk.include/&lt;makefile&gt;
+
+ USAGE: ( concrete )
+   ./compose.mk mk.include/demos/no-include.mk foo:flux.ok mk.let/bar:foo bar
+</code></pre>
+<h5 id="mkinterrupt"><strong><code>mk.interrupt</code></strong></h5>
+<pre><code class="language-bash">The default interrupt.  This is shorthand for mk.interrupt/SIGINT
+</code></pre>
+<h5 id="mkinterruptarg"><strong><code>mk.interrupt/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#mksupervisorinterruptarg"><code>mk.supervisor.interrupt/&lt;arg&gt;</code></a></em></li>
+</ul>
+<h5 id="mkinterruptsigint"><strong><code>mk.interrupt/SIGINT</code></strong></h5>
+<pre><code class="language-bash">
+</code></pre>
+<h5 id="mkletarg"><strong><code>mk.let/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Dynamic target assignment.
+ This is experimental stuff for reflection support.
+
+ This is basically a hack to work around the dreaded error 
+ that &quot;recipes may not define targets&quot;.  It should probably 
+ be regarded as black magic that's best avoided!  
+
+ This works by using code-generation and turning over the execution, 
+ so it requires the supervisor/signals hack to short-circuit the 
+ original execution!
+
+ USAGE: ( generic )
+   ./compose.mk mk.let/&lt;newtarget&gt;:&lt;oldtarget&gt;
+
+ USAGE: ( concrete )
+   ./compose.mk mk.let/foo:flux.ok mk.let/bar:foo bar
+</code></pre>
+<h5 id="mknamespacefilterarg"><strong><code>mk.namespace.filter/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Lists all targets in the given namespace. Simple, pipe-friendly output.  
+ WARNING:  Callers must anticipate parametric targets with percent-signs, i.e. &quot;foo.bar/%&quot;
+
+ USAGE:
+   ./compose.mk mk.namespace.filter/&lt;namespace&gt;
+</code></pre>
+<h5 id="mknamespacelist"><strong><code>mk.namespace.list</code></strong></h5>
+<pre><code class="language-bash">Returns only the top-level target namespaces
+ Pipe-friendly; stdout is newline-delimited target prefixes.
+</code></pre>
+<h5 id="mkparseblockarg"><strong><code>mk.parse.block/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Pulls out documentation blocks that match the given pattern.
+
+ USAGE:
+  pattern=.. ./compose.mk mk.parse.block/&lt;makefile&gt;
+
+ EXAMPLE:
+   pattern='*Keybindings*' make mk.parse.block/compose.mk
+</code></pre>
+<h5 id="mkparsemoduledocsarg"><strong><code>mk.parse.module.docs/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Parses the given Makefile, returning module-level documentation.
+
+ USAGE:
+  pattern=.. ./compose.mk mk.parse.module.docs/&lt;makefile&gt;
+</code></pre>
+<h5 id="mkparsetargetsarg"><strong><code>mk.parse.targets/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Parses the given Makefile, returning target-names only. Simple, pipe-friendly output. 
+ WARNING: Callers must anticipate parametric targets with percent-signs, i.e. &quot;foo.bar/%&quot;
+
+ USAGE: 
+   ./compose.mk mk.parse.targets/&lt;file&gt;
+</code></pre>
+<h5 id="mkparsearg"><strong><code>mk.parse/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Parses the given Makefile, returning JSON output that describes the targets, docs, etc.
+ This uses a dockerized version of the pynchon[1] tool.
+
+ REFS:
+   * `[1]`: https://github.com/elo-enterprises/pynchon/
+</code></pre>
+<h5 id="mkpkg"><strong><code>mk.pkg</code></strong></h5>
+<pre><code class="language-bash">Like `mk.self`, but includes `compose.mk` source also.
+</code></pre>
+<h5 id="mkpkgarg"><strong><code>mk.pkg/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Packages the given make target as a single-file executable.
+
+ This works by using to `makeself` to bundle/freezes/release 
+ a self-extracting archive where we include the current Makefile, 
+ and try to automatically include any related dependencies.
+
+ To add other explicit deps to the archive, set `archive` 
+ as a space-separated list of files or directories.
+
+ USAGE:
+  archive=&quot;file1 file2 dir1&quot; make -f ... mk.pkg/&lt;target_name&gt;
+</code></pre>
+<h5 id="mkself"><strong><code>mk.self</code></strong></h5>
+<pre><code class="language-bash">An interface to a dockerized version of the `makeself` tool.[1]
+
+ You can use this to create self-extracting executables.  
+ Required arguments are only accepted as environment variables.
+
+ Set `archive` as a space-separated list of files or directories. 
+ Set `script` as the script that will run inside the archive.
+ Set `bin` as the name of the executable you want to create. 
+
+ Optionally set `label`.  This is displayed at runtime, 
+ after rehydrating the archive but before the script runs.
+
+ USAGE:
+  archive=&lt;dirname&gt; label=&lt;label&gt; bin=&lt;bin_name&gt; script=&quot;pwd; ls&quot; ./compose.mk mk.self
+
+ [1]: https://makeself.io/
+</code></pre>
+<h5 id="mksetarg"><strong><code>mk.set/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Setter for make variables, available as a target. 
+ This is experimental stuff for reflection support.
+ USAGE:
+   ./compose.mk mk.set/&lt;key&gt;/&lt;val&gt;
+</code></pre>
+<h5 id="mkstat"><strong><code>mk.stat</code></strong></h5>
+<pre><code class="language-bash">Shows version-information for make itself.
+
+ USAGE:
+    ./compose.mk mk.stat
+</code></pre>
+<h5 id="mksupervisorenterarg"><strong><code>mk.supervisor.enter/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Unconditionally executed by the supervisor program, prior to main pipeline. 
+ Argument is always supervisor's PPID.  Not to be confused with 
+ the supervisor's pid; See instead 'mk.supervisor.pid'
+</code></pre>
+<h5 id="mksupervisorexitarg"><strong><code>mk.supervisor.exit/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Unconditionally executed by the supervisor program after main pipeline, 
+ regardless of whether that  pipeline was successful. Argument is always 
+ the exit-status of the main pipeline.
+</code></pre>
+<h5 id="mksupervisorinterrupt"><strong><code>mk.supervisor.interrupt</code></strong></h5>
+<pre><code class="language-bash">The default interrupt.  This is shorthand for mk.interrupt/SIGINT
+</code></pre>
+<h5 id="mksupervisorinterruptarg"><strong><code>mk.supervisor.interrupt/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Sends the given signal to this process-tree's supervisor, then kills this process with SIGKILL.
+
+ This is mostly used to short-circuit make's default command-line processing, 
+ so that targets can be greedy about consuming the *whole* CLI, rather than 
+ having make try to interpret everything as additional targets.
+
+ This can be used without a supervisor process wrapping 'make', 
+ but in that case the exit status is *always* failure, and there 
+ is *always* an error that the user has to know they should ignore.
+
+ To correct for exit status/error output, you'll have to have a supervisor. 
+ See the polyglot-wrapper at the top of this file for an example, and see 
+ the 'mk.supervisor.*' namespace for handlers invoked by that supervisor.
+</code></pre>
+<h5 id="mksupervisorpid"><strong><code>mk.supervisor.pid</code></strong></h5>
+<pre><code class="language-bash">Returns the pid for the supervisor process which is responsible for trapping signals.
+ See 'mk.interrupt' docs for more details.
+</code></pre>
+<h5 id="mksupervisortraparg"><strong><code>mk.supervisor.trap/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Executed by the supervisor program when the given signal is trapped.
+</code></pre>
+<h5 id="mkvars"><strong><code>mk.vars</code></strong></h5>
+<pre><code class="language-bash">Lists all the variables known to Make.
+ This is effectively local or inherited env-vars, plus make-vars and make-defines
+</code></pre>
+<hr style="width:100%;border-bottom: 3px solid black;background: #efefef;">
+
+<hr />
+<h4 id="api-stream">API: stream</h4>
+<p>The <code>stream.*</code> targets support IO streams, including basic stuff with JSON, newline-delimited, and space-delimited formats.</p>
+<p><strong>General purpose tools:</strong></p>
+<ul>
+<li>
+<p>For conversion, see <code>stream.nl.to.comma</code>, <code>stream.comma.to.nl</code>, etc.</p>
+</li>
+<li>
+<p>For generation json, see <code>stream.jb</code>[2] and <code>stream.json.append.*</code>.</p>
+</li>
+<li>
+<p>For formatting and printing, see <code>stream.dim.*</code>, etc.</p>
+</li>
+</ul>
+<hr />
+<p><strong>Macro Equivalents:</strong></p>
+<p>Most targets here are also available as macros, which can be used programmatically as an optimization since it saves a process.</p>
+<pre><code class="language-bash">
+# For example, from a makefile, these are equivalent commands:
+
+echo &quot;one,two,three&quot; | ${stream.comma.to.nl}
+
+echo &quot;one,two,three&quot; | make stream.comma.to.nl
+
+</code></pre>
+<hr />
+<p>DOCS:</p>
+<ul>
+<li>
+<p><code>[1]:</code> https://github.com/robot-wranglers/compose.mk/docs/api#api-stream</p>
+</li>
+<li>
+<p><code>[2]:</code> https://github.com/h4l/json.bash</p>
+</li>
+<li>
+<p><code>[1]:</code> https://github.com/robot-wranglers/compose.mk/docs/api#api-stream</p>
+</li>
+</ul>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p><em>This documentation is pulled automatically from <a href="/compose.mk">source</a>.</em></p>
+<h5 id="streamchafa"><strong><code>stream.chafa</code></strong></h5>
+<pre><code class="language-bash">Given an image file on stdin, this shows a preview on the console. 
+ Under the hood, this works using a dockerized version of `chafa`.
+
+ USAGE: ( generic )
+   cat &lt;path_to_image&gt; | ./compose.mk stream.img.preview
+</code></pre>
+<h5 id="streamcommatojson"><strong><code>stream.comma.to.json</code></strong></h5>
+<pre><code class="language-bash">Converts comma-delimited input into minimized JSON array
+
+ EXAMPLE:
+   $ echo 1,2,3 | ./compose.mk stream.comma.to.json
+   [&quot;1&quot;,&quot;2&quot;,&quot;3&quot;]
+</code></pre>
+<h5 id="streamcommatonl"><strong><code>stream.comma.to.nl</code></strong></h5>
+<pre><code class="language-bash">Converts comma-delimited input stream to newline-delimited output
+
+ EXAMPLE: 
+   &gt; echo 'foo,bar' | ./compose.mk stream.comma.to.nl
+   foo
+   bar
+</code></pre>
+<h5 id="streamcommatospace"><strong><code>stream.comma.to.space</code></strong></h5>
+<pre><code class="language-bash">Converts comma-delimited input stream to space-delimited output
+</code></pre>
+<h5 id="streamcsvpygmentize"><strong><code>stream.csv.pygmentize</code></strong></h5>
+<pre><code class="language-bash">Highlights the input stream as if it were a CSV.  Pygments actually
+ doesn't have a CSV lexer, so we have to fake it with an awk script.  
+
+ USAGE: ( concrete )
+   echo one,two | ./compose.mk stream.csv.pygmentize
+</code></pre>
+<h5 id="streamdim"><strong><code>stream.dim</code></strong></h5>
+<pre><code class="language-bash">Pipe-friendly helper for dimming the input text.  
+
+ USAGE:
+   $ echo &quot;logging info&quot; | ./compose.mk stream.dim
+</code></pre>
+<h5 id="streamdimindent"><strong><code>stream.dim.indent</code></strong></h5>
+<pre><code class="language-bash">Like 'io.print.indent' except it also dims the text.
+</code></pre>
+<h5 id="streamdimindentstderr"><strong><code>stream.dim.indent.stderr</code></strong></h5>
+<pre><code class="language-bash">Dims the input stream, indents it, and sends it to stderr.
+</code></pre>
+<h5 id="streamecho"><strong><code>stream.echo</code></strong></h5>
+<pre><code class="language-bash">Just echoes the input stream.  Mostly used for testing.
+
+ EXAMPLE:
+   $ echo hello-world | ./compose.mk stream.echo
+</code></pre>
+<h5 id="streamglow"><strong><code>stream.glow</code></strong></h5>
+<pre><code class="language-bash">Renders markdown from stdin to stdout.
+ See also: `charm.glow`
+</code></pre>
+<h5 id="streamhelp"><strong><code>stream.help</code></strong></h5>
+<pre><code class="language-bash">Lists only the targets available under the 'stream' namespace.
+</code></pre>
+<h5 id="streamimg"><strong><code>stream.img</code></strong></h5>
+<pre><code class="language-bash">Given an image file on stdin, this shows a preview on the console. 
+ Under the hood, this works using a dockerized version of `chafa`.
+
+ USAGE: ( generic )
+   cat &lt;path_to_image&gt; | ./compose.mk stream.img.preview
+</code></pre>
+<h5 id="streamimgpreview"><strong><code>stream.img.preview</code></strong></h5>
+<pre><code class="language-bash">Given an image file on stdin, this shows a preview on the console. 
+ Under the hood, this works using a dockerized version of `chafa`.
+
+ USAGE: ( generic )
+   cat &lt;path_to_image&gt; | ./compose.mk stream.img.preview
+</code></pre>
+<h5 id="streamindent"><strong><code>stream.indent</code></strong></h5>
+<pre><code class="language-bash">Indents input stream
+</code></pre>
+<h5 id="streamindenttostderr"><strong><code>stream.indent.to.stderr</code></strong></h5>
+<pre><code class="language-bash">Shortcut for ' | stream.indent | stream.to.stderr'
+</code></pre>
+<h5 id="streaminipygmentize"><strong><code>stream.ini.pygmentize</code></strong></h5>
+<pre><code class="language-bash">Highlights input stream using the 'ini' lexer.
+</code></pre>
+<h5 id="streamjb"><strong><code>stream.jb</code></strong></h5>
+<pre><code class="language-bash">Interface to jb[1].  You can use this to build JSON on the fly.
+
+ EXAMPLE:
+   $ echo foo=bar | ./compose.mk stream.jb
+   {&quot;foo&quot;:&quot;bar&quot;}
+</code></pre>
+<h5 id="streamjsonappend"><strong><code>stream.json.append</code></strong></h5>
+<pre><code class="language-bash">Appends the given key/val to the input object.
+ This is usually used to build JSON objects from scratch.
+
+ EXAMPLE:
+     echo {} | key=foo val=bar ./compose.mk stream.json.object.append
+   {&quot;foo&quot;:&quot;bar&quot;}
+</code></pre>
+<h5 id="streamjsonarrayappend"><strong><code>stream.json.array.append</code></strong></h5>
+<pre><code class="language-bash">Appends &lt;val&gt; to input array
+
+ EXAMPLE:
+   echo &quot;[]&quot; | val=1 ./compose.mk stream.json.array.append | val=2 make stream.json.array.append
+   [1,2]
+</code></pre>
+<h5 id="streamjsonobjectappend"><strong><code>stream.json.object.append</code></strong></h5>
+<pre><code class="language-bash">Appends the given key/val to the input object.
+ This is usually used to build JSON objects from scratch.
+
+ EXAMPLE:
+     echo {} | key=foo val=bar ./compose.mk stream.json.object.append
+   {&quot;foo&quot;:&quot;bar&quot;}
+</code></pre>
+<h5 id="streamjsonpygmentize"><strong><code>stream.json.pygmentize</code></strong></h5>
+<pre><code class="language-bash">Syntax highlighting for the JSON on stdin.
+</code></pre>
+<h5 id="streamlstrip"><strong><code>stream.lstrip</code></strong></h5>
+<pre><code class="language-bash">Left-strips the input stream.
+</code></pre>
+<h5 id="streammarkdown"><strong><code>stream.markdown</code></strong></h5>
+<pre><code class="language-bash">Renders markdown from stdin to stdout.
+ See also: `charm.glow`
+</code></pre>
+<h5 id="streamnlenum"><strong><code>stream.nl.enum</code></strong></h5>
+<pre><code class="language-bash">Enumerates the newline-delimited input stream, zipping index with values
+
+ EXAMPLE:
+   &gt; printf &quot;one\ntwo&quot; | ./compose.mk stream.nl.enum
+        0   one
+        1   two
+</code></pre>
+<h5 id="streamnltojsonarray"><strong><code>stream.nl.to.json.array</code></strong></h5>
+<pre><code class="language-bash">Converts newline-delimited input stream into a JSON array
+</code></pre>
+<h5 id="streamnltospace"><strong><code>stream.nl.to.space</code></strong></h5>
+<pre><code class="language-bash">Converts newline-delimited input stream to space-delimited output
+
+ EXAMPLE: 
+   $ echo '\nfoo\nbar' | ./compose.mk stream.nl.to.space
+   &gt; foo bar
+</code></pre>
+<h5 id="streampeek"><strong><code>stream.peek</code></strong></h5>
+<pre><code class="language-bash">Prints the entire input stream as indented/dimmed text on stderr,
+ Then passes-through the entire stream to stdout.  Note that this uses
+ a tmpfile because proc-substition seems to disorder output.
+
+ EXAMPLE:
+   echo hello-world | ./compose.mk stream.peek | cat
+</code></pre>
+<h5 id="streampreview"><strong><code>stream.preview</code></strong></h5>
+<pre><code class="language-bash">Sends input stream to stderr.
+ Unlike 'stream.peek', this does not pass on the input stream.
+</code></pre>
+<h5 id="streampygmentize"><strong><code>stream.pygmentize</code></strong></h5>
+<pre><code class="language-bash">Syntax highlighting for the input stream.
+ Lexer will be autodetected unless override is provided.
+ Style defaults to 'trac', which works best with dark backgrounds.
+
+ EXAMPLE: (using JSON lexer)
+   echo {} | lexer=json ./compose.mk stream.pygmentize
+
+ REFS:
+ [1]: https://pygments.org/
+ [2]: https://pygments.org/styles/
+</code></pre>
+<h5 id="streampygmentizearg"><strong><code>stream.pygmentize/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#iofilepreviewarg"><code>io.file.preview/&lt;arg&gt;</code></a></em></li>
+</ul>
+<h5 id="streamspaceenum"><strong><code>stream.space.enum</code></strong></h5>
+<pre><code class="language-bash">Enumerates the space-delimited input list, zipping indexes with values in newline delimited output.
+
+ EXAMPLE:
+   printf one two | ./compose.mk stream.space.enum
+        0   one
+        1   two
+</code></pre>
+<h5 id="streamspacetonl"><strong><code>stream.space.to.nl</code></strong></h5>
+<pre><code class="language-bash">Converts a space-separated stream to a newline-separated one
+</code></pre>
+<h5 id="streamstrip"><strong><code>stream.strip</code></strong></h5>
+<pre><code class="language-bash">Pipe-friendly helper for stripping whitespace.
+</code></pre>
+<h5 id="streamtostderr"><strong><code>stream.to.stderr</code></strong></h5>
+<pre><code class="language-bash">Sends input stream to stderr.
+ Unlike 'stream.peek', this does not pass on the input stream.
+</code></pre>
+<hr style="width:100%;border-bottom: 3px solid black;background: #efefef;">
+
+<hr />
+<h5 id="tui-private-api">TUI Private API</h5>
+<p>The <a href="/compose.mk/api#api-tux">public API for <code>tux.*</code> targets</a> describes several lower-level operations that can safely be performed inside or outside of the TUI (i.e. on the docker host).</p>
+<p>There's also a "private" API, which targets are under the namespace <code>.tux.*</code>, and which is characterized by actually issuing commands to tmux directly.  The private API is intended to be used from <em>inside</em> the <code>tux</code> container or containers that extend it.  This ensures that your host doesn't actually require a tmux stack, and also ensures that usage of the TUI is always relatively stateless.  (It's not extensively tested yet, but in theory it should be generally safe to run multiple copies of the TUI, and embed TUIs in TUIs, etc.)</p>
+<p>See the <a href="/compose.mk/api#tui-private-api">API docs</a></p>
+<p><em>This documentation is pulled automatically from <a href="/compose.mk">source</a>.</em></p>
+<h5 id="tuxattach"><strong><code>.tux.attach</code></strong></h5>
+<pre><code class="language-bash">
+</code></pre>
+<h5 id="tuxcommanderlayout"><strong><code>.tux.commander.layout</code></strong></h5>
+<pre><code class="language-bash">Configures a custom geometry on up to 4 panes.
+ This has a large central window and a sidebar.
+</code></pre>
+<h5 id="tuxdemolayout"><strong><code>.tux.demo.layout</code></strong></h5>
+<pre><code class="language-bash">
+</code></pre>
+<h5 id="tuxdwindlearg"><strong><code>.tux.dwindle/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#tuxlayoutarg"><code>.tux.layout/&lt;arg&gt;</code></a></em></li>
+</ul>
+<h5 id="tuxdwindles"><strong><code>.tux.dwindle/s</code></strong></h5>
+<pre><code class="language-bash">
+</code></pre>
+<h5 id="tuxgeoget"><strong><code>.tux.geo.get</code></strong></h5>
+<pre><code class="language-bash">Gets the current geometry for tmux.  No arguments.
+ Output format is suitable for use with '.tux.geo.set' so that you can save manual changes.
+
+ USAGE:
+  ./compose.mk .tux.geo.get
+</code></pre>
+<h5 id="tuxgeoset"><strong><code>.tux.geo.set</code></strong></h5>
+<pre><code class="language-bash">Sets tmux geometry from 'geometry' environment variable.
+
+ USAGE:
+   geometry=... ./compose.mk .tux.geo.set
+</code></pre>
+<h5 id="tuximgdisplayarg"><strong><code>.tux.img.display/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Displays the named file using chafa, and centering it in the available terminal width.
+
+ USAGE:
+  ./compose.mk .tux.img.display/&lt;fname&gt;
+</code></pre>
+<h5 id="tuxinit"><strong><code>.tux.init</code></strong></h5>
+<pre><code class="language-bash">Initialization for the TUI (a tmuxinator-managed tmux instance).
+ This needs to be called from inside the TUI container, with tmux already running.
+
+ Typically this is used internally during TUI bootstrap, but you can call this to
+ rexecute the main setup for things like default key-bindings and look &amp; feel.
+</code></pre>
+<h5 id="tuxinitbind_keys"><strong><code>.tux.init.bind_keys</code></strong></h5>
+<pre><code class="language-bash">Private helper for .tux.init.
+ This binds default keys for pane resizing, etc.
+ See also: xmonad defaults[1] 
+
+ [1]: https://gist.github.com/c33k/1ecde9be24959f1c738d
+</code></pre>
+<h5 id="tuxinitbuttons"><strong><code>.tux.init.buttons</code></strong></h5>
+<pre><code class="language-bash">Generates tmux-script that configures the buttons for &quot;New Pane&quot; and &quot;Exit&quot;.
+ This isn't called directly, but is generally used as the post-theme setup hook.
+ See also 'TUI_THEME_HOOK_POST'
+</code></pre>
+<h5 id="tuxinitpanes"><strong><code>.tux.init.panes</code></strong></h5>
+<pre><code class="language-bash">Private helper for .tux.init.  (This fixes a bug in tmuxp with pane titles)
+</code></pre>
+<h5 id="tuxinitstatus_bar"><strong><code>.tux.init.status_bar</code></strong></h5>
+<pre><code class="language-bash">Stuff that has to be set before importing the theme
+</code></pre>
+<h5 id="tuxinittheme"><strong><code>.tux.init.theme</code></strong></h5>
+<pre><code class="language-bash">This configures a green theme for the statusbar.
+ The tmux themepack green theme is actually yellow!
+
+ REFS:
+   * `[1]`: Colors at https://www.ditig.com/publications/256-colors-cheat-sheet
+   * `[2]`: Gallery at https://github.com/jimeh/tmux-themepack
+</code></pre>
+<h5 id="tuxlayoutdwindlearg"><strong><code>.tux.layout.dwindle/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#tuxlayoutarg"><code>.tux.layout/&lt;arg&gt;</code></a></em></li>
+</ul>
+<h5 id="tuxlayouth"><strong><code>.tux.layout.h</code></strong></h5>
+<pre><code class="language-bash">Alias for the horizontal layout.
+</code></pre>
+<h5 id="tuxlayouthorizontal"><strong><code>.tux.layout.horizontal</code></strong></h5>
+<pre><code class="language-bash">Alias for the horizontal layout.
+</code></pre>
+<h5 id="tuxlayoutshuffle"><strong><code>.tux.layout.shuffle</code></strong></h5>
+<pre><code class="language-bash">
+</code></pre>
+<h5 id="tuxlayoutspiral"><strong><code>.tux.layout.spiral</code></strong></h5>
+<pre><code class="language-bash">Alias for the dwindle spiral layout.
+ See '.tux.dwindle' docs for more info
+</code></pre>
+<h5 id="tuxlayoutvertical"><strong><code>.tux.layout.vertical</code></strong></h5>
+<pre><code class="language-bash">Alias for the vertical layout.
+ See '.tux.dwindle' docs for more info
+</code></pre>
+<h5 id="tuxlayoutarg"><strong><code>.tux.layout/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Sets geometry to the given layout, using tmux-layout-dwindle.
+ This is installed by default in k8s-tools.yml / k8s:tui container.
+
+ See [1] for general docs and discussion of options.
+
+ USAGE:
+   ./compose.mk .tux.layout/&lt;layout_code&gt;
+
+ REFS:
+   * `[1]`: https://raw.githubusercontent.com/sunaku/home/master/bin/tmux-layout-dwindle
+</code></pre>
+<h5 id="tuxmsg"><strong><code>.tux.msg</code></strong></h5>
+<pre><code class="language-bash">Flashes a message on the tmux UI.
+</code></pre>
+<h5 id="tuxpanefocusarg"><strong><code>.tux.pane.focus/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Focuses the given pane.  This always assumes we're using the first tmux window.
+
+ USAGE: (focuses pane #1)
+  ./compose.mk .tux.pane.focus/1
+</code></pre>
+<h5 id="tuxpanesharg"><strong><code>.tux.pane.sh/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Runs command on the given tmux pane with the given ID.
+ (Like '.tux.pane' but works with a generic shell command instead of a target-name.)
+
+ USAGE:
+   cmd=&quot;echo hello tmux pane&quot; ./compose.mk .tux.pane.sh/&lt;pane_id&gt;
+</code></pre>
+<h5 id="tuxpanetitlearg"><strong><code>.tux.pane.title/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Sets the title for the given pane.
+
+ USAGE:
+   title=hello-world ./compose.mk .tux.pane.title/&lt;pane_id&gt;
+</code></pre>
+<h5 id="tuxpanearg_1"><strong><code>.tux.pane/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Dispatches the given make-target to the tmux pane with the given id.
+
+ USAGE:
+   ./compose.mk .tux.pane/&lt;pane_id&gt;/&lt;target_name&gt;
+</code></pre>
+<h5 id="tuxpanesarg"><strong><code>.tux.panes/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">This generates the tmuxp panes data structure (a JSON array) from comma-separated target list.
+ (Used internally when bootstrapping the TUI, regardless of what the TUI is running.)
+</code></pre>
+<h5 id="tuxpanic_1"><strong><code>.tux.panic</code></strong></h5>
+<pre><code class="language-bash">Closes the entire session, from inside the session.  No arguments.
+ This is used by the 'Exit' button in the main status-bar.
+ See also 'tux.panic', which can be used from the docker host, and which stops *all* sessions.
+</code></pre>
+<h5 id="tuxquit"><strong><code>.tux.quit</code></strong></h5>
+<pre><code class="language-bash">Closes the entire session, from inside the session.  No arguments.
+ This is used by the 'Exit' button in the main status-bar.
+ See also 'tux.panic', which can be used from the docker host, and which stops *all* sessions.
+</code></pre>
+<h5 id="tuxtheme"><strong><code>.tux.theme</code></strong></h5>
+<pre><code class="language-bash">Setup for the TUI's tmux theme.
+
+ This does nothing directly, and just honors the environment's settings
+ for TUI_THEME_NAME, TUI_THEME_HOOK_PRE, &amp; TUI_THEME_HOOK_POST
+</code></pre>
+<h5 id="tuxthemesetarg"><strong><code>.tux.theme.set/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Sets the named theme for current tmux session.
+
+ Requires themepack [1] (installed by default with compose.mk:tux container)
+
+ USAGE:
+   ./compose.mk .tux.theme.set/powerline/double/cyan
+
+ [1]: https://github.com/jimeh/tmux-themepack.git
+ [2]: https://github.com/tmux/tmux/wiki/Advanced-Use
+</code></pre>
+<h5 id="tuxwidgetenv"><strong><code>.tux.widget.env</code></strong></h5>
+<pre><code class="language-bash">Pretty version of io.env, this includes some syntax highlighting.
+ No arguments.  See 'io.envp/&lt;arg&gt;' for a version that supports filtering.
+
+ USAGE:
+  ./compose.mk io.envp
+</code></pre>
+<h5 id="tuxwidgetenvarg"><strong><code>.tux.widget.env/&lt;arg&gt;</code></strong></h5>
+<ul>
+<li><em>Alias for <a href="#ioenvparg"><code>io.envp/&lt;arg&gt;</code></a></em></li>
+</ul>
+<h5 id="tuxwidgetimg"><strong><code>.tux.widget.img</code></strong></h5>
+<pre><code class="language-bash">Displays the given image URL or file-path forever, as a TUI widget.
+ This functionality requires a loop, otherwise chafa won't notice or adapt
+ to any screen or pane resizing.  In case of a URL, it is downloaded
+ only once at startup.
+
+ USAGE:
+   url=... make .tux.widget.img
+   path=... make .tux.widget.img
+
+ Besides supporting proper URLs, this works with file-paths.
+ The path of course needs to exist and should actually point at an image.
+</code></pre>
+<h5 id="tuxwidgetimgvararg"><strong><code>.tux.widget.img.var/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Unpacks an image URL from the given make/shell variable name, then displays it as TUI widget.
+
+ The variable of course needs to exist and should actually point at an image.
+ Besides supporting proper URLs, this works with file-paths.  See '.tux.widget.img'
+
+ USAGE:
+  ./compose.mk .tux.widget.img.var/&lt;var_name&gt;
+</code></pre>
+<h5 id="tuxwidgetlazydocker"><strong><code>.tux.widget.lazydocker</code></strong></h5>
+<pre><code class="language-bash">Starts lazydocker in the TUI, then switches to the &quot;statistics&quot; tab.
+</code></pre>
+<h5 id="tuxwidgetlazydockerarg"><strong><code>.tux.widget.lazydocker/&lt;arg&gt;</code></strong></h5>
+<pre><code class="language-bash">Starts lazydocker in the TUI, then switches to the &quot;statistics&quot; tab.
+</code></pre>
+<h5 id="tuxwidgetlazydocker0"><strong><code>.tux.widget.lazydocker/0</code></strong></h5>
+<pre><code class="language-bash">Starts lazydocker in the TUI, then switches to the &quot;statistics&quot; tab.
+</code></pre>
+<h5 id="tuxwidgetticker_1"><strong><code>.tux.widget.ticker</code></strong></h5>
+<pre><code class="language-bash">A ticker-style display for the given text, suitable for usage with tmux status bars,
+ in case the full text won't fit in the space available. Like most TUI widgets,
+ this loops forever, but unlike most it is pure bash, no ncurses/tmux reqs.
+
+ USAGE:
+   text=mytext ./compose.mk tux.widget.ticker
+</code></pre>
+<hr style="width:100%;border-bottom: 3px solid black;background: #efefef;">
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../standard-lib/" class="btn btn-neutral float-left" title="Library Overview"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../tool-overview/" class="btn btn-neutral float-right" title="Tool Overview">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../standard-lib/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../tool-overview/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

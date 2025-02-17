@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/standard-lib/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Library Overview - compose.mk</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Library Overview";
+        var mkdocs_page_input_path = "standard-lib.md";
+        var mkdocs_page_url = "/compose.mk/standard-lib/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="..">
+          <img src="../img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../integration/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../bridge/">Import Services from Compose</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../container-dispatch/">Container Dispatch</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Library Overview</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#module-layout">Module Layout</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#structured-io">Structured IO</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#structured-io-basics">Structured IO: Basics</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#structured-io-stream-types-pipes">Structured IO: Stream Types &amp; Pipes</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#logging-facilities">Logging Facilities</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#log-functions">Log Functions</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#file-and-stream-previews">File and Stream Previews</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#visual-dividers">Visual Dividers</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#workflow-support">Workflow Support</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#workflow-basics">Workflow Basics</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#pipelining-workflow-basics">Pipelining &amp; Workflow Basics</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#extending-the-pipeline">Extending the Pipeline</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#reflection-support">Reflection Support</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#makefile-metadata">Makefile Metadata</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#dynamic-includes-and-targets">Dynamic Includes and Targets</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#reading-defines">Reading Defines</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Full API</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../tool-overview/">Tool Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../embedded-tui/">TUI Overview & Gallery</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-help/">CLI Help</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../signals/">Supervisors & Signals</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/ansible/">Custom Automation APIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/workflows/">Workflow Basics & Pipelining</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/packaging/">Self-extracting Executables</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../but-why/">Design Philosophy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Standard Library</li>
+      <li class="breadcrumb-item active">Library Overview</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h2 id="library-overview">Library Overview</h2>
+<p>Because <code>make</code> has never really had a standard library, there's lots of pretty basic stuff that is conspicuously missing.  This includes things like <a href="#logging-facilities">logging and colored output</a>, but also the kind of <a href="/compose.mk/cli-help">online help</a> that can help you list and inspect automation that's been defined.</p>
+<p>In library-mode, <code>compose.mk</code> is used as an <code>include</code> from your project Makefile (see the <a href="/compose.mk/integration">installation docs</a> for more details).  After including <code>compose.mk</code>, you'll have access to a few different kinds of <em>make-targets, functions, and macros</em>.  Most of what <code>compose.mk</code> offers is in the form of reusable <em>static targets</em>, which you can directly use from the command line, or use as part of normal tasks or task-prerequisites inside your Makefile.  </p>
+<p>In general <code>compose.mk</code> tends to avoid <a href="https://www.gnu.org/software/make/manual/html_node/Functions.html">make-functions</a> because they are less reusable and composable.  But in some cases like <a href="#logging-facilities">logging</a>, functions might make sense.</p>
+<p>In addition to static targets, <code>compose.mk</code> can create dynamic targets with the <em><code>compose.import</code></em> macro.  This can be <a href="/compose.mk/multiple-compose-files">used with <em>multiple</em> compose files </a>, and <a href="/compose.mk/macro-arguments">supports target namespacing</a>.</p>
+<p>Documentation for <a href="/compose.mk/api">the full target API</a> is generated from source, and is the same as what is available from the <a href="/compose.mk/cli-help">CLI help</a>.  </p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="module-layout">Module Layout</h3>
+<p>Here's an overview for how the <code>compose.mk</code> standard library is organized into modules: you can dive into the module or target-level documentation anywhere that looks interesting.  If you prefer a more guided tour, check out the rest of this page for a few of the random highlights.</p>
+<ul>
+<li>
+<p><a href="/compose.mk/api#api-flux"><strong><code>flux.*</code> targets:</strong></a> A tiny but powerful workflow/pipelining API, roughly comparable to something like declarative pipelines in Jenkins<sup id="fnref2:1"><a class="footnote-ref" href="#fn:1">1</a></sup>, providing concurrency, retry operators, etc.  You can also think of it as "target algebra" for <code>make</code>, similar to how bash provides process algebra.</p>
+</li>
+<li>
+<p><a href="/compose.mk/api/#api-tux"><strong><code>tux.*</code> targets:</strong></a> A control-surface for a tmux-backed console geometry manager. See the <a href="/compose.mk/embedded-tui">embedded TUI docs</a> for a higher level overview and demos.</p>
+</li>
+<li>
+<p><a href="/compose.mk/api#api-stream"><strong><code>stream.*</code>:</strong></a> Support for working with streams, including newline/comma/space delimited streams, common use cases with JSON, etc.  Everything here is used with pipes, and reads from stdin.  It's not what you'd call "typed", but it reduces error-prone parsing and moves a little bit closer to structured data.</p>
+</li>
+<li>
+<p><a href="/compose.mk/api#api-io"><strong><code>io.*</code>:</strong></a> Misc. utilities for printing, formatting, timers, etc.</p>
+</li>
+<li>
+<p><a href="/compose.mk/api#api-docker"><strong><code>docker.*</code>:</strong></a> An interface for working with docker.</p>
+</li>
+<li>
+<p><a href="/compose.mk/api#api-docker"><strong><code>mk.*</code>:</strong></a> Meta-tooling for 'make' itself. This enables help functions, signals and supervisors, some utilities for reflection, etc.</p>
+</li>
+<li>
+<p><a href="/compose.mk/api#api-docker"><strong><code>compose.*</code>:</strong></a> An interface for working with compose. </p>
+</li>
+</ul>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="structured-io">Structured IO</h3>
+<p>One problem with <code>make</code> is that the lack of structured output tends to be a limiting factor.  A big part of the explanation for this is just that a Makefile might be using any random tools with any kind of behaviour, but that's sort of inevitable for automation.  The other part is just a missing approach to idioms and tools, and <code>compose.mk</code> can help with that.</p>
+<p>The <code>compose.mk::stream</code> module, aka the <a href="/compose.mk/api#api-stream"><strong><code>stream.*</code> target namespace</strong></a> adds basic support for working with streams, including newline/comma/space delimited streams, common use cases with JSON, etc.  Most of the utilities here are in the form of make-targets that are intended to be used with pipes (i.e. they reads from stdin).  </p>
+<p><strong>This is not what you'd call "typed", but it reduces error-prone parsing and moves a little bit closer to structured data.</strong>  </p>
+<p><a href="https://mxe.cc/gmsl.html">The classical GMSL</a> adds support for things like sets and string-lists, and the <code>compose.mk::stream</code> module does some of that too.  But the biggest benefit comes from exposing tools like <a href="#"><code>jq</code></a> and <a href="#"><code>jb</code></a> without explicitly depending on them.  How does that work?  Basically <code>compose.mk</code> will use local tools if they are available, and fall back to using dockerized versions of them.</p>
+<p>Before we get into code examples, let's introduce basic principles with the command line.  </p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="structured-io-basics">Structured IO: Basics</h4>
+<p>The <code>jb</code><sup id="fnref:3"><a class="footnote-ref" href="#fn:3">3</a></sup>, <code>jq</code><sup id="fnref:4"><a class="footnote-ref" href="#fn:4">4</a></sup>, and <code>yq</code><sup id="fnref:5"><a class="footnote-ref" href="#fn:5">5</a></sup> tools are so much revered, they get top-level entrypoints.  </p>
+<pre><code class="language-bash"># output JSON using `jb` =&gt;
+$ echo key=val | ./compose.mk jb
+{&quot;key&quot;:&quot;val&quot;}
+
+# parse JSON using `jq`
+$ echo key=val | ./compose.mk jb | ./compose.mk jq -r .key
+val
+</code></pre>
+<p>Top-level entrypoints are documented in more detail as part of <a href="/compose.mk/tool-overview/#proxy-wrappers">tool mode</a>.  Inside a project Makefile, we can always use direct calls to <code>compose.mk</code> as seen above, or recursive calls to <code>make</code>.  But if arguments to these tools get complicated, quoting will be dodgy.  Luckily there are equivalent forms that are more idiomatic, and these also spawn fewer processes:</p>
+<pre><code class="language-Makefile"># demos/structured-io.mk: 
+#   Show output/input using JSON.
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/structured-io.mk
+
+include compose.mk
+
+.DEFAULT_GOAL := demo.json_io
+
+demo.json_io:
+    ${make} emit | ${make} consume
+
+# Emit/consume JSON with `compose.mk` macros.  
+# Uses native tools if they are available, falling back to docker.
+emit: 
+    ${jb} key=val
+
+consume:
+    cat /dev/stdin | ${jq} .key
+</code></pre>
+<p>For the most part <code>compose.mk</code> tries to stay out of the way of <code>jq</code> and <code>jb</code> and let them do what they do, but remember, we need this thin abstraction layer to transparently choose between a local tool and a dockerized tool.</p>
+<p>You get the idea.  <em>Now <code>make emit | make consume</code> is doing basic IO with JSON,</em> and we haven't added any new dependencies.</p>
+<p>From here you'll probably want to provide user-feedback and status messages without wrecking pipe-safety; see also the section on <a href="#logging-facilities">logging facilities</a>.  Since you've got structured output anyway, this is also a good segue into the <a href="#workflow-example-etl">workflow example</a>.</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="structured-io-stream-types-pipes">Structured IO: Stream Types &amp; Pipes</h4>
+<p>The <code>compose.mk::stream</code> module, aka the <a href="/compose.mk/api/#api-stream"><code>stream.*</code> target namespace</a> is full of targets that can help to handle common tasks with streams.  Inside a project Makefile, we can always use direct calls to <code>compose.mk</code>, or recursive calls to <code>make</code>, but most targets are <em>also available as macros</em>.  Using macros looks tidy and is easier to type, but the main benefit is that it saves extra processes.</p>
+<p>As a really simple example, targets that have to deal with streams will begin with <code>cat /dev/stdin</code> to capture input and start a pipeline, but this can be rewritten as simply <code>${stream.stdin}</code> for readability.  </p>
+<p>This isn't exhaustive, but you can see the section below for a few more samples.</p>
+<pre><code class="language-Makefile"># demos/stdlib-stream-io.mk: 
+#   Demonstrating a few macros for stream io.
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/stdlib-stream-io.mk
+
+.DEFAULT_GOAL := demo.streams 
+
+include compose.mk 
+
+demo.streams:
+    # preview results mid-pipe on stderr, leaving stdout uninterrupted
+    ls | ${stream.peek} &gt; .tmp.ls.out
+
+    # preview markdown with glow 
+    cat README.md | ${stream.markdown}
+    cat README.md | ${stream.glow}
+
+    # preview an img with chafa 
+    cat docs/img/icon.png | ${stream.img}
+    cat docs/img/icon.png | ${stream.chafa}
+
+    # convert spaces to new-lines (cleaner than using xargs)
+    echo foo bar | ${stream.space.to.nl}
+
+    # convert new-lines to commas (cleaner than sed)
+    printf 'foo\nbar' | ${stream.nl.to.comma}
+
+    # chaining streams works the way you'd expect 
+    cat README.md | ${stream.glow} | ${stream.indent}
+</code></pre>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="logging-facilities">Logging Facilities</h3>
+<p>One goal for <code>compose.mk</code> is to enable program output that is clean, curated, and human-friendly on stderr, and machine-friendly on stdout.  There are a few features available in support of this.  In general <code>compose.mk</code> prefers make-targets over make-functions and macros, because targets are more reusable.<sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup>  Logging is a special case though, and might use all 3.</p>
+<h4 id="log-functions">Log Functions</h4>
+<p>First lets look at the <strong><code>log.*</code> functions</strong> that are suitable for use from your project Makefile.  The following example demonstrates basic logging, logging with formatting, and trace-logging.  </p>
+<pre><code class="language-Makefile"># demos/logging.mk: 
+#   Shows some of the logging capabilities with make-functions.
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/logging.mk
+
+# Squash the default noisy output, then override 
+# the default goal and include compose.mk primitives
+MAKEFLAGS=-sS --warn-undefined-variables
+.DEFAULT_GOAL := all
+include compose.mk
+
+# Runs all the examples 
+all: logging_example.basic logging_example.formatting logging_example.json
+
+# Basic example, just write a message to log.
+logging_example.basic:
+    $(call log, unquoted message that should go to log)
+
+# Formatting example, using some of the available ANSI color constants.
+logging_example.formatting:
+    $(call log, ${red}unquoted message ${sep} ${no_ansi}that should ${dim} go to ${bold} log)
+
+# Trace-logging&quot; example,&quot; this only shows if `trace` or `TRACE` is set to 1 in the environment
+logging_example.trace:
+    $(call log.trace, unquoted message that should go to log)
+
+# JSON-logging: decodes input with `jb`, then pretty-prints corresponding JSON to stderr.
+# This is indented by default, but expanded by default.  Use `log.json.min` for minified version.
+logging_example.json:
+    $(call log.json.min, stage=Building )
+    $(call log.json, stage=Building more=info anything=you_want)
+</code></pre>
+<p>A few other things that are worth mentioning:</p>
+<ul>
+<li><strong>Logging always goes to stderr so that targets remain pipe-safe</strong>, including the <code>log.json</code> output.</li>
+<li><strong>Log-messages have a prefix which is based on the call-depth</strong>, which can help visually parse complex traces.</li>
+<li>See the <code>compose.mk</code> source for other information about formatting colors and glyphs.  </li>
+</ul>
+<p>Tools for working with JSON are also discussed in more detail in the section on <a href="#structured-io-basics">Structured IO</a>.</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="file-and-stream-previews">File and Stream Previews</h4>
+<p>Whether you're working on build processes, data-pipelines, or infrastructure deployments, it's convenient to have the ability to "preview" things like files, streams, or intermediate representations.  <a href="/compose.mk/tool-overview/#other-wrappers">Docs for compose.mk's built-in tool wrappers</a> cover this topic also, but let's look at some more programmatic usage.</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<pre><code class="language-Makefile"># demos/logging.mk: 
+#   Shows some of the logging capabilities with make-functions.
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/logging.mk
+
+# Squash the default noisy output, then override 
+# the default goal and include compose.mk primitives
+MAKEFLAGS=-sS --warn-undefined-variables
+.DEFAULT_GOAL := all
+include compose.mk
+
+# Runs all the examples 
+all: logging_example.basic logging_example.formatting logging_example.json
+
+# Basic example, just write a message to log.
+logging_example.basic:
+    $(call log, unquoted message that should go to log)
+
+# Formatting example, using some of the available ANSI color constants.
+logging_example.formatting:
+    $(call log, ${red}unquoted message ${sep} ${no_ansi}that should ${dim} go to ${bold} log)
+
+# Trace-logging&quot; example,&quot; this only shows if `trace` or `TRACE` is set to 1 in the environment
+logging_example.trace:
+    $(call log.trace, unquoted message that should go to log)
+
+# JSON-logging: decodes input with `jb`, then pretty-prints corresponding JSON to stderr.
+# This is indented by default, but expanded by default.  Use `log.json.min` for minified version.
+logging_example.json:
+    $(call log.json.min, stage=Building )
+    $(call log.json, stage=Building more=info anything=you_want)
+</code></pre>
+<h4 id="visual-dividers">Visual Dividers</h4>
+<p><strong>Visually separating stages with some kind of output divider</strong> is something that is nice to have to for otherwise messy output.  Here's an example of several different ways of using <code>io.print.div</code> to get labeled or timestamped dividers that are shown between clean/build/test stages.  </p>
+<pre><code class="language-Makefile"># demos/logging.mk: 
+#   Shows some of the logging capabilities with make-functions.
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/section-dividers.mk clean build test
+
+# use `io.print.div` implicitly as a prereq =&gt; Timestamped divider
+clean: io.print.div
+    echo Cleaning stuff
+
+# call `io.print.div` explicitly =&gt; Full control over divider label
+build: 
+    label=&quot;Build Stage&quot; ${make} io.print.div
+    echo Building stuff
+
+# use `io.print.div` as a macro =&gt; Automatically set label as the current target's name
+test:
+    ${io.print.div}
+    echo Testing stuff
+</code></pre>
+<p>In the <code>build</code> task above, you can see one way to call <code>io.print.div</code> explicitly, which uses <code>${make}</code> as shorthand for "<em>the right way to call <code>make</code> recursively</em>".  As an equivalent, you can always use an invocation like <code>./compose.mk io.print.divider</code> instead, and this works from anywhere.  Inspecting usage from the command line:</p>
+<p align="center"><a href="/compose.mk/img/demo-io.gif"><img width="90%" src="/compose.mk/img/demo-io.gif"></a></p>
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p>Even though <a href="/compose.mk/api/#ioprintdiv"><code>io.print.div</code></a> detects terminal width, it isn't fancy otherwise.  A related utility is <code>io.gum.style</code>, which can print dividers with <a href="https://github.com/charmbracelet/gum">charmbracelet/gum</a>.  <em>If you have a local copy of <code>gum</code> then it is used, otherwise, we fall back to docker.</em></p>
+<p align="center"><a href="/compose.mk/img/demo-gum.gif"><img width="90%" src="/compose.mk/img/demo-gum.gif"></a></p>
+
+<p>For other tools like showing syntax-highlighted files or iput streams, check out <a href="/compose.mk/tool-overview">these docs for stand-alone mode</a>. See also the <a href="/compose.mk/api/#api-io">full documentation for all <code>io.*</code> targets</a></p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="workflow-support">Workflow Support</h3>
+<p>The flux module, aka the <a href="/compose.mk/api#api-flux"><strong><code>flux.*</code> target namespace</strong></a>, provides a tiny but powerful workflow/pipelining API, roughly comparable to something like declarative pipelines in Jenkins<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>, providing concurrency, retry operators, etc.  You can also think of it as "target algebra" for <code>make</code>, similar to how bash provides process algebra.</p>
+<p>What <code>flux.*</code> targets add is flow-control constructs and higher-level join / loop / map instructions over <em>other make targets</em>, taking inspiration from functional programming and threading libraries. Alternatively, one may think of flux as a programming language where all primitives are the objects that make understands (e.g. targets, defines, and variables). Since every target in make is a DAG, you might say that task-DAGs are also primitives. Since <code>compose.import</code> <a href="#">maps containers onto targets</a>, <em>containers are primitives too</em>. Since tux targets map targets onto TUI panes, <em>UI elements are also effectively primitives</em>.  </p>
+<p>Internally, the flux module was started as part of the support for the <a href="/compose.mk/embedded-tui">the embedded TUI</a>, but it's also useful in general.  To a certain extent you can refactor existing bash using these primitives in <a href="/compose.mk/tool-overview">stand alone mode</a>, and the next section starts by introducing concepts on the command line.  But <code>flux</code> works best with project integration where you're scripting on top of it in your own Makefiles; see <a href="#workflow-example-etl">this example</a></p>
+<h4 id="workflow-basics">Workflow Basics</h4>
+<p>Before we get into code examples, let's introduce basic principles with the command line.</p>
+<pre><code class="language-bash"># Introducing the `flux.ok` target:
+$ ./compose.mk flux.ok
+Φ flux.ok // succceeding as requested!
+
+# Introducing the `flux.fail` target:
+$ ./compose.mk flux.fail
+Φ flux.fail // failing as requested!
+make: *** [compose.mk:..: flux.fail] Error 1
+
+# Since using compose.mk is the same as using `make`, 
+# creating simple task DAGs works the way you expect.
+# below, the 2nd target never runs, and the command fails.
+$ ./compose.mk flux.fail flux.ok
+① Φ flux.fail //  failing as requested!
+make: *** [compose.mk:1677: flux.fail] Error 1
+</code></pre>
+<p>Above, <code>flux.ok</code> and <code>flux.fail</code> are just make-targets that exit with success and failure.  These are roughly equivalent to <code>true</code> and <code>false</code> in bash, so obviously there are no arguments.  You can think of <code>flux.ok</code> and <code>flux.fail</code> as placeholder targets for ones that you'll provide yourself.</p>
+<p>For a more advanced example, let's use <code>flux.ok</code> with the autogenerated-targets for <a href="/compose.mk/container-dispatch">container dispatch</a>, and <a href="/compose.mk">use loadf to avoid a project Makefile</a>.  The following command loads the "debian" container from <code>tests/docker-compose.yml</code>, then runs the <code>flux.ok</code> target inside that tool container.</p>
+<pre><code class="language-bash">$ ./compose.mk loadf tests/docker-compose.yml debian/dispatch/flux.ok
+</code></pre>
+<p>Like the dynamic <code>&lt;service_name&gt;/dispatch</code> target in the last example, <strong>most targets in the <code>flux</code> module accept other targets as arguments</strong>.  Let's introduce <code>flux.try.except.finally</code> as a simple idiom for flow-control.  This target accepts 3 comma-separated arguments for a <code>&lt;try_target&gt;</code>, <code>&lt;fail_handler&gt;</code>, and a <code>&lt;always_handler&gt;</code>.  Since we have <code>flux.ok</code> and <code>flux.fail</code> in hand, we'll fill in the blanks with that.</p>
+<pre><code class="language-bash"># Demonstrate `flux.try.except`, passing in 3 comma-separated target-names as arguments.
+$ ./compose.mk flux.try.except.finally/flux.fail,flux.ok,flux.ok
+⇄ flux.try.except.finally // flux.fail,flux.ok,flux.ok 
+Φ flux.fail //  failing as requested!
+make[1]: *** [compose.mk:..: flux.fail] Error 1
+Φ flux.ok //  succceeding as requested!
+Φ flux.ok //  succceeding as requested!
+
+# The semantics are what you'd expect from try/except/finally construct, 
+# so the exit status is zero for success
+$ echo $?
+0
+</code></pre>
+<p>For examples of other idioms, see <a href="/compose.mk/api/#fluxlooparg">flux.loop and friends</a>, <a href="/compose.mk/api/#fluxretryarg">flux.retry</a>, <a href="/compose.mk/api/#fluxtimeoutarg"><code>flux.timeout</code></a>, <a href="/compose.mk/api/#fluxmux"><code>flux.mux</code></a>, etc. </p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="pipelining-workflow-basics">Pipelining &amp; Workflow Basics</h4>
+<p>So we've seen that the <a href="/compose.mk/api#api-flux"><strong><code>flux.*</code> target namespace</strong></a> provides basic tooling for workflows, and <a href="/compose.mk/standard-lib/#workflow-support">looked at an example with try-except-finally</a>.  </p>
+<p>Let's build on that idea and introduce <code>flux.pipeline</code> with some scripting to describe a miniature ETL.  For this exercise we'll also use <a href="/compose.mk/standard-lib/#structured-input-output">Structured IO</a> and <a href="/compose.mk/standard-lib/#logging-facilities">Logging</a> so that what we build is friendly reading for both people and machines.</p>
+<p>Consider the following Makefile for describing a miniature ETL:</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<pre><code class="language-Makefile"># demos/etl-json.mk: 
+#   Described a JSON-backed ETL pipeline with `compose.mk`
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/etl-json.mk
+
+# Squash the default noisy output, include compose.mk primitives
+MAKEFLAGS=-sS --warn-undefined-variables
+.DEFAULT_GOAL := etl.safe
+include compose.mk
+
+# Declare an ETL pipeline, using `flux.pipeline` to bind tasks together.
+# Roughly equivalent to =&gt; `make extract | make transform | make load`
+etl: flux.pipeline/extract,transform,load
+
+# Declare a &quot;safe&quot; version of the pipeline that handles failure/cleanup
+etl.safe: flux.try.except.finally/etl,etl.failed,etl.cleanup
+
+# Simulate individual tasks for extract/transform/load.  
+# For convenience we ignore input and emit new JSON using the `jb` tool.
+extract: 
+    ${jb} stage=extracted
+transform: 
+    ${jb} stage=transformed
+load:
+    ${jb} stage=loaded
+
+# Simulate ETL handlers for failure and cleanup
+etl.failed:
+    $(call log, ETL failed!)
+etl.cleanup:
+    $(call log, Cleaning up ETL!)
+</code></pre>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p>So basically this works the way you'd expect, and we can execute the ETL end-to-end with <code>make etl</code>, or with error-handling using <code>make etl.safe</code>.  And as a bonus, developers retain the ability to execute individual pipeline components or cleanup piecewise, or individually.  </p>
+<p>One benefit of <code>flux.pipeline</code> is getting previews of the results at different stages.  Running this example so far looks something like this:</p>
+<pre><code class="language-bash">
+# Running the demo
+$ make -f demos/etl-json.mk etl.safe
+
+⇄ flux.try.except.finally // etl,etl.failed,etl.cleanup 
+
+ Φ flux.pipeline // extract,transform,load // extract stage 
+ Φ flux.pipeline // extract,transform,load // result preview
+ {&quot;stage&quot;:&quot;extracted&quot;}
+
+ Φ flux.pipeline // extract,transform,load // transform stage 
+ Φ flux.pipeline // extract,transform,load // result preview
+ {&quot;stage&quot;:&quot;transformed&quot;}
+
+ Φ flux.pipeline // extract,transform,load // load stage 
+ {&quot;stage&quot;:&quot;loaded&quot;}
+Cleaning up ETL!
+</code></pre>
+<p><em>( Despite appearances, this is actually pipe-safe: the final output of <code>{"stage":"loaded"}</code> is the only thing on stdout, and stderr is ANSI formatted :)</em></p>
+<p>For more information, see the api docs for <a href="/compose.mk/api/#fluxpipeline"><code>flux.pipeline</code></a>, Also related, the <a href="/compose.mk/demos/platform">Platform Lifecycle Demo</a> shows flow control with <a href="/compose.mk/demos/platform"><code>flux.dmux</code></a>.</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="extending-the-pipeline">Extending the Pipeline</h4>
+<p>So yeah, any example passing around fake JSON looks tight and tidy, but.. it's really easy to extend this.  Let's sketch small changes that can actually turn this into an image pipeline, using docker idioms from <code>compose.mk</code> to leverage external tools.  As usual, <code>compose.mk</code> can setup a lot of functionality without much code, so it takes longer to explain than it does to build!</p>
+<pre><code class="language-Makefile"># demos/etl-img.mk:
+#   Describes an image pipeline with `compose.mk`.
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   USAGE: make -f demos/etl-img.mk 
+
+# Squash the default noisy output, include compose.mk primitives
+MAKEFLAGS=-sS --warn-undefined-variables
+.DEFAULT_GOAL := etl
+include compose.mk
+
+# Setup a default docker image and tag for imagemagick tool container
+imagemagick_tag=dpokidov/imagemagick:latest
+
+# Now the extract-task will kick off the pipeline by just injecting any image.
+extract:
+    cat docs/img/icon.png
+
+# Helper that creates an &quot;API&quot; over the tool container with a parametric target.
+# This is basically a partial-function, allowing us to drill down to what entrypoint
+# docker will use.
+imagemagick/%:
+    entrypoint=${*} ./compose.mk docker.run.image/${imagemagick_tag}
+
+# Use the generic API to make an alias for something concrete:
+# This fixes both the image *and* the entrypoint, but still defers
+# to callers for deciding the exact command to pass.
+convert: imagemagick/convert
+
+# Back to the ETL, now our transform-task is ready to stream stdin
+# into the dockerized `convert` tool.  We need to pass it some kind of 
+# instruction in the `cmd` variable, so we just use imagemagick's own 
+# syntax for &quot;convert the png on stdin to a jpeg on stdout&quot;.
+transform: 
+    cat /dev/stdin | cmd=&quot;png:- jpg:-&quot; ${make} convert
+
+# For the &quot;load&quot; part of the ETL, we could do something else with imagemagick, 
+# but let's make it interesting and preview the jpeg in the terminal. 
+# This is actually a one-liner and requires no fancy dependencies!  
+# Under the hood, `stream.img.preview` target uses a dockerized `chafa`.
+load: stream.img.preview
+
+# One last thing: since this pipeline is using images, 
+# we need to stop `flux.pipeline` from showing us the 
+# intermediate stages, or else we'll just get binary data.  
+# Using `flux.pipeline.quiet` defaults to no previews.
+etl: flux.pipeline.quiet/extract,transform,load
+</code></pre>
+<p>For more information, see the api docs for <a href="/compose.mk/api/#dockerrunimagearg"><code>docker.run.image</code></a> and the docs for <a href="/compose.mk/vanilla-docker">raw docker support</a>.</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p>It's a neat party trick that <code>compose.mk</code> has some features that look like Luigi or Airflow if you squint, but of course it's not <em>really</em> made for ETLs.  Really, <code>flux.*</code> is more similar in spirit to things like <a href="https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline">declarative pipelines in Jenkins</a>.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="reflection-support">Reflection Support</h3>
+<p><a href="https://en.wikipedia.org/wiki/Reflective_programming">Reflective programming</a> is the ability of a process to examine, introspect, and modify its own structure and behavior.</p>
+<p>As a simple example of why this is practical, features like <a href="#">CLI help</a> and <a href="#">automatically generated API docs</a> require that <code>compose.mk</code> has at least <em>some</em> ability to parse its own contents.  And if we need that kind of ability, why not allow for parsing of other Makefiles?  Most of the meta-tooling that's available for stuff like this is somewhere in the <a href="#"><code>mk.*</code> target namespace</a>.</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="makefile-metadata">Makefile Metadata</h4>
+<p>For metadata parsing, you can use the <code>mk.parse/&lt;fname&gt;</code> target, and get back targets, target chains, target docs, etc.  </p>
+<p>For testing, there is a super lightweight <code>demos/no-includes.mk</code> Makefile included in the repository for situations like this. Like the name suggests, it doesn't actually include or use <code>compose.mk</code> in any way.</p>
+<pre><code class="language-bash">$ ./compose.mk mk.parse/demos/no-include.mk
+{
+  &quot;clean&quot;: {
+    &quot;file&quot;: &quot;demos/no-include.mk&quot;,
+    &quot;lineno&quot;: 13,
+    &quot;chain&quot;: [],
+    &quot;type&quot;: &quot;file&quot;,
+    &quot;docs&quot;: [&quot;&quot;],
+    &quot;prereqs&quot;: []
+  },
+  &quot;build&quot;: {
+    &quot;file&quot;: &quot;demos/no-include.mk&quot;,
+    &quot;lineno&quot;: 14,
+    &quot;chain&quot;: [],
+    &quot;type&quot;: &quot;file&quot;,
+    &quot;docs&quot;: [&quot;&quot;],
+    &quot;prereqs&quot;: []
+  },
+  &quot;test&quot;: {
+    &quot;file&quot;: &quot;demos/no-include.mk&quot;,
+    &quot;lineno&quot;: 15,
+    &quot;chain&quot;: [],
+    &quot;type&quot;: &quot;file&quot;,
+    &quot;docs&quot;: [&quot;&quot;],
+    &quot;prereqs&quot;: []
+  },
+}
+</code></pre>
+<p><em>Under the hood, the heavy lifting for Makefile-parsing uses a dockerized version of the  <a href="#"><code>pynchon</code> tool</a>.</em></p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="dynamic-includes-and-targets">Dynamic Includes and Targets</h4>
+<p>To a certain extent, <code>compose.mk</code> can do experimental <em>runtime</em> modification of <code>make</code> itself (or at least simulate it).  Under the hood, this works by code-generation to create a new Makefile just in time, and then <a href="/compose.mk/signals/">turning execution over to it</a>.  </p>
+<p>For example, typically <code>make</code> cannot define targets dynamically, but here's an example that creates a new target on the fly, assigning it to an existing target that simply returns success.  </p>
+<p>After the target is defined, it can be used on the same command line.</p>
+<pre><code class="language-bash">./compose.mk mk.let/foo:flux.ok foo
+</code></pre>
+<p>As another example, how about fearlessly mixing <code>compose.mk</code> functionality with an existing Makefile that <em>does not actually <code>include compose.mk</code></em>?</p>
+<pre><code class="language-bash">$ ./compose.mk \
+  mk.include/demos/no-include.mk \
+  mk.let/foo:clean \
+  foo
+</code></pre>
+<p>Pulling apart this command, let's note that the final target <code>foo</code> <em>does not exist</em> in either <code>compose.mk</code> or in the simple <code>demos/no-include.mk</code> Makefile.  And the <code>clean</code> target does not exist in <code>compose.mk</code>.  The command above basically creates and runs this non-existant Makefile just in time:</p>
+<pre><code class="language-Makefile">include compose.mk
+include demos/no-include.mk
+foo: clean 
+DEFAULT_GOAL=foo
+</code></pre>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="reading-defines">Reading Defines</h4>
+<p>Reading <code>define ... endef</code> blocks from makefiles is important for several different <code>compose.mk</code> features that rely on embedded data.  And crucially, the contents of those blocks <strong>must not be mangled</strong>, escaped, interpolated, etc. </p>
+<p><code>mk.def.read</code></p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:1">
+<p>See https://www.jenkins.io/doc/book/pipeline/syntax/&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+<li id="fn:2">
+<p>Make-targets can be used as task-prerequisites as well as command line entrypoints&#160;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 2 in the text">&#8617;</a></p>
+</li>
+<li id="fn:3">
+<p>https://github.com/h4l/json.bash&#160;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 3 in the text">&#8617;</a></p>
+</li>
+<li id="fn:4">
+<p>https://github.com/jqlang/jq&#160;<a class="footnote-backref" href="#fnref:4" title="Jump back to footnote 4 in the text">&#8617;</a></p>
+</li>
+<li id="fn:5">
+<p>https://github.com/mikefarah/yq&#160;<a class="footnote-backref" href="#fnref:5" title="Jump back to footnote 5 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../raw-docker/" class="btn btn-neutral float-left" title="Raw Docker Support"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../api/" class="btn btn-neutral float-right" title="Full API">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../raw-docker/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../api/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

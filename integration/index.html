@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/integration/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Installation - compose.mk</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Installation";
+        var mkdocs_page_input_path = "integration.md";
+        var mkdocs_page_url = "/compose.mk/integration/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="..">
+          <img src="../img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Installation</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#basic-installation">Basic Installation</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#project-integration">Project Integration</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#makefile-integration">Makefile Integration</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#docker-compose-integration">Docker Compose Integration</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#compatibility-notes">Compatibility Notes</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#for-developers">For Developers</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#forks-versioning">Forks &amp; Versioning</a>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../bridge/">Import Services from Compose</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../container-dispatch/">Container Dispatch</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../standard-lib/">Library Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Full API</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../tool-overview/">Tool Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../embedded-tui/">TUI Overview & Gallery</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-help/">CLI Help</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../signals/">Supervisors & Signals</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/ansible/">Custom Automation APIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/workflows/">Workflow Basics & Pipelining</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/packaging/">Self-extracting Executables</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../but-why/">Design Philosophy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Overview</li>
+      <li class="breadcrumb-item active">Installation</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h2 id="installation">Installation</h2>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="basic-installation">Basic Installation</h3>
+<p>Just copy the <code>compose.mk</code> and make it executable:</p>
+<pre><code class="language-bash">$ cd myproject 
+
+# Download the compose.mk automation lib
+$ curl -sL \
+  https://raw.githubusercontent.com/Robot-Wranglers/compose.mk/master/compose.mk \
+    &gt; compose.mk
+
+$ chmod ugo+x compose.mk
+
+# now equivalent to `make -f compose.mk ..`
+$ ./compose.mk ... 
+</code></pre>
+<p>That's all the setup you'll need just for <a href="/compose.mk/tool-overview">stand-alone mode</a> tool usage, but read on for tighter integration with your project.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="project-integration">Project Integration</h3>
+<p>If you're looking to integrate with existing automation or you brought your own tool containers, you'll probably be interested in setting up the <a href="/compose.mk/bridge">Make/Compose Bridge</a> or preparing for <a href="/compose.mk/container-dispatch">Container Dispatch</a>.  See that full documentation for more discussion.</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="makefile-integration">Makefile Integration</h4>
+<p>A quick example of what your project Makefile should look like:</p>
+<pre><code class="language-Makefile"># myproject/Makefile (Make sure you have real tabs, not spaces!)
+
+# Set sane defaults for quiet and fail-fast execution
+SHELL := bash
+.SHELLFLAGS := -euo pipefail -c
+MAKEFLAGS=-sS --warn-undefined-variables
+
+# Include compose.mk for access to target API and macros.
+include compose.mk
+
+# If you brought tool containers, you'll want to import them.
+# Call the bridge-building macro to get targets for each service.
+$(eval $(call compose.import, ▰, TRUE, docker-compose.yml))
+
+# At this point, dynamic targets are defined for the services
+# defined in the external compose config and are ready to use.
+# Now you can dispatch any task to any tool container.
+test: ▰/my_compose_service_name/self.test
+self.test:
+  echo hello world from container `uname -n -v`
+</code></pre>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h4 id="docker-compose-integration">Docker Compose Integration</h4>
+<p>Working with docker compose is optional if you're just interested in <a href="/compose.mk/tool-overview/">stand-alone mode</a> or the <a href="/compose.mk/standard-lib">standard library</a>.  And if you <em>are</em> using docker-compose, then simple access to tools in containers from your docker-compose files should <em>just work</em>, using <a href="/compose.mk/bridge">the bridge</a>.  </p>
+<p>However.. more complicated use-cases probably require a volume-mount for your project directory to read/write files, and, container dispatch means your tool containers need <code>make</code> and <code>bash</code>.</p>
+<p>Here's a typical example compose file:</p>
+<pre><code class="language-yaml">##
+# tests/docker-compose.yml: 
+#  Typical compose file that works with target dispatch.
+#  (For more discussion, see the installation docs)
+##
+services:
+  debian: &amp;base
+    hostname: debian
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM debian:bookworm
+        RUN apt-get update &amp;&amp; apt-get install -y make procps
+    entrypoint: bash
+    working_dir: /workspace
+    volumes:
+      - ${PWD}:/workspace
+      # optional, but required for docker-in-docker
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+
+  ubuntu: 
+    &lt;&lt;: *base
+    hostname: ubuntu
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ubuntu
+        RUN apt-get update &amp;&amp; apt-get install -y make procps
+
+  alpine:
+    &lt;&lt;: *base
+    hostname: alpine
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM alpine:3.21.2
+        RUN apk add --update --no-cache coreutils alpine-sdk bash procps-ng
+</code></pre>
+<p>This example above is typical, but not necessarily minimal, so let's highlight a few things about it.  </p>
+<ul>
+<li>
+<p><strong>Notice how <code>dockerfile_inline</code> can be used to quickly extend a base-container without adding an extra Dockerfile to your repository.</strong>  Tool-containers rarely change once established, and having a separate file and separate git/docker repos for everything can get tedious.  And again, there's a chance your tool-containers already include <code>make</code>, and you don't need to add packages at all.  (If you're looking for a reasonable base-container that includes <code>make</code> and will help you avoid initial package updates with <code>apt</code> or <code>apk</code>.. you can also look at <a href="https://hub.docker.com/_/gcc/">gcc containers</a> or e.g. <code>debian/buildd:bookworm</code>.)</p>
+</li>
+<li>
+<p><strong>Note also the usage of yaml inheritance with anchors,</strong> i.e. <code>&amp;base</code> and <code>&lt;&lt;: *base</code>.  This is a good trick to keep compose files DRY and as simple as possible.  Config keys for <code>entrypoint</code> and <code>hostname</code> are usually optional but provided for clarity, and this can help to clean up logging.  </p>
+</li>
+<li>
+<p>Again, <strong>config keys for <code>working_dir</code> and <code>volumes</code> are crucial for project file IO,</strong> including reading your project <code>Makefile</code> if you're using container dispatch.</p>
+</li>
+<li>
+<p>It's optional, but <em>there are cases where you'll want <code>docker</code> to be available inside tool-containers</em> and you also might want to share the hosts docker-socket.<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>  The boilerplate above goes half way, defaulting to using a volume mount but stopping short of actually installing docker.  </p>
+</li>
+</ul>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="compatibility-notes">Compatibility Notes</h3>
+<p>Platforms used in development include modern docker (say <code>25+</code>), make (<code>3.8+</code>), and bash <code>(~5</code>) on both Linux and MacOS. Testing in github-actions only uses Linux, and won't try every possible combination of versions.  </p>
+<p>In general though, <em>the goal is to support most things you'll encounter in the wild</em>, including OSX, out of the box.  But you may see some of the usual problems with certain arguments to non-posix OSX default <code>sed</code> / <code>ps</code> / <code>xargs</code>, etc.  Please report issues!</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="for-developers">For Developers</h3>
+<p>For development on <code>compose.mk</code> itself, here's how you can clone the project, build related containers, and run the test suites.</p>
+<pre><code class="language-bash"># for ssh
+$ git clone git@github.com:Robot-Wranglers/compose.mk.git
+
+# or for http
+$ git clone https://github.com/Robot-Wranglers/compose.mk
+
+# build the tool containers &amp; check them
+$ make clean build test
+</code></pre>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="forks-versioning">Forks &amp; Versioning</h3>
+<p>Given the advice above to simply embed <code>compose.mk</code> directly into your project repositories, some people might be reading this and thinking <strong>what if compose.mk changes upstream?</strong>  </p>
+<p>If you're really worried about this, you can always setup <code>compose.mk.git</code> (or your fork of it) as a git submodule inside your project folder, but there's probably no need.  For more discussion, see the section on <a href="/compose.mk/contributing">Contributing</a>.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:1">
+<p>For example, remote controlling the TUI relies on docker-sockets.  Also <a href="/compose.mk/tool-overview/#tool-wrappers">tool wrappers</a> fall back to docker, so using them with [container dispatch](/compose.mk/container-dispatch] means docker-in-docker.  Contrary to popular opinion this isn't actually weird anymore: docker-in-docker works out of the box these days with most CI/CD platforms and most desktop installations.&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../overview/" class="btn btn-neutral float-left" title="Intro"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../bridge/" class="btn btn-neutral float-right" title="Import Services from Compose">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../overview/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../bridge/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

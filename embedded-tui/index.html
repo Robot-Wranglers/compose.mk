@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/embedded-tui/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>TUI Overview & Gallery - compose.mk</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "TUI Overview \u0026 Gallery";
+        var mkdocs_page_input_path = "embedded-tui.md";
+        var mkdocs_page_url = "/compose.mk/embedded-tui/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="..">
+          <img src="../img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../integration/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../bridge/">Import Services from Compose</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../container-dispatch/">Container Dispatch</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../standard-lib/">Library Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Full API</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../tool-overview/">Tool Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">TUI Overview & Gallery</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#tui-gallery">TUI Gallery</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#batteries-included">Batteries Included</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#layout-basics">Layout Basics</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-help/">CLI Help</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../signals/">Supervisors & Signals</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/ansible/">Custom Automation APIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/workflows/">Workflow Basics & Pipelining</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/packaging/">Self-extracting Executables</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../but-why/">Design Philosophy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">TUI Support</li>
+      <li class="breadcrumb-item active">TUI Overview & Gallery</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h2 id="tui-overview">TUI Overview</h2>
+<p>The TUI capabilities of <code>compose.mk</code> are best thought of as an <strong>interface-builder rather than a specific interface.</strong>  As usual and despite appearances, support for the TUI requires <em>no dependencies except for <code>make</code> and <code>docker</code></em>.  It aims for low-config and sane defaults, so for high level usage it requires no configuration at all.  Under the hood, the TUI uses a dockerized version of <a href="https://github.com/tmux/tmux">tmux</a> for core drawing and geometry.</p>
+<p>There's a few ways to describe what the TUI actually <em>does</em>.  </p>
+<p>One way to look at it is, the TUI is just a way of <strong>mapping <code>make</code> targets into tmux panes</strong>.   But since <a href="/compose.mk/compose.mk"><code>compose.import</code></a> allows you to <em>map docker-compose services onto <code>make</code> targets</em>, yet another way to think of the TUI is that it allows you to <strong>map containers onto tmux panes</strong>.  And if you're already using <code>compose.mk</code> to <a href="/compose.mk/demos/ansible/">build custom automation APIs</a>, you can map those onto tmux panes too.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="tui-gallery">TUI Gallery</h3>
+<p>For the impatient, here's a small gallery that show-cases the type of stuff you can do with the TUI capabilities that <code>compose.mk</code> offers.  </p>
+<p><em>( You can click of any of the demos to make it bigger. )</em></p>
+<table align=center width=95%>
+    <tr>
+        <td><p align="center"><a href="/compose.mk/img/loadf-1.gif"><img width="200px" src="/compose.mk/img/loadf-1.gif"></a></p></td>
+        <td><p align="center"><a href="/compose.mk/img/tui-4.gif"><img width="200px" src="/compose.mk/img/tui-4.gif"></a></p></td>
+        <td><p align="center"><a href="/compose.mk/img/tui-tte.gif"><img width="200px" src="/compose.mk/img/tui-tte.gif"></a></p></td>
+    </tr>
+    <tr>
+        <td><p align="center"><a href="/compose.mk/img/tui-2.gif"><img width="200px" src="/compose.mk/img/tui-2.gif"></a></p></td>
+        <td><p align="center"><a href="/compose.mk/img/loadf-2.gif"><img width="200px" src="/compose.mk/img/loadf-2.gif"></a></p></td>
+        <td><p align="center"><a href="/compose.mk/img/tui-5.gif"><img width="200px" src="/compose.mk/img/tui-5.gif"></a></p></td>
+    </tr>
+</table>
+
+<p>(Note: Some of these screenshots are part of <a href="#">k8s-tools</a>, a sibling project that uses <code>compose.mk</code> as a framework, then extends it to the specific domain of kubernetes automation.)</p>
+<ul>
+<li>For a quick test to get a look at the TUI yourself, try running <code>./compose.mk tux.demo</code>.</li>
+<li>For a from-scratch walk through, see <a href="/compose.mk">the TUI Demo</a>.  </li>
+<li>For low-level API reference, see the <a href="/compose.mk/api/#api-tux"><code>tux.*</code> targets</a>.  </li>
+<li>For TUI-related stand-alone tools, see <a href="/compose.mk/loadf">the loadf docs</a> and the <a href="/compose.mk/tool-overview/#other-wrappers">tool wrappers docs</a>.</li>
+</ul>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="batteries-included">Batteries Included</h3>
+<p>Besides a dockerized <code>tmux</code>, the basic pre-configured components of the TUI are things like <a href="https://github.com/tmux-python/tmuxp">tmuxp</a> for dynamic session management, and overridable defaults for <a href="https://github.com/jimeh/tmux-themepack/">tmux themes</a>, <a href="https://github.com/tmux-plugins/tpm">tmux plugins</a>, <a href="#tui-keybindings">keybindings</a>, etc.  </p>
+<p>These components are configurable, but not something that you necessarily have to think about.  Some notable effects of the "sane defaults" policy include:</p>
+<ul>
+<li>Leave the TUI by hitting the escape key</li>
+<li>Click to open a new pane</li>
+<li>Advanced layouts like spiral &amp; fibbonacci, using <a href="https://github.com/sunaku/home/blob/master/bin/tmux-layout-dwindle">dwindle</a></li>
+</ul>
+<p>These elements, plus access to other tools like <a href="https://github.com/charmbracelet/gum">gum</a> and <a href="https://hpjansson.org/chafa/">chafa</a>, are all setup in the embedded <code>compose.mk:tux</code> container, which is built and used only on demand.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="layout-basics">Layout Basics</h3>
+<p>We'll start by showing <strong>how to map targets onto a specific pane orientation</strong>, using the <a href="/compose.mk/api/#tuxopenarg"><code>tux.open</code></a> target-family.  For mapped targets, we'll use <code>flux.ok</code>, which has no arguments and simply succeeds without doing anything.</p>
+<pre><code class="language-bash"># Specify a horizontal layout and pass in 3 targets
+$ ./compose.mk tux.open.horizontal/flux.ok,flux.ok,flux.ok
+
+# Other equivalent forms
+$ layout=horizontal ./compose.mk tux.open/flux.ok,flux.ok,flux.ok
+$ layout=h ./compose.mk tux.open/flux.ok,flux.ok,flux.ok
+</code></pre>
+<p>Running this command shows some log messages detailing the startup process and the first time it runs you'll see the TUI bootstrapping itself (i.e. building the necessary support containers for running <code>tmux</code>).  (Afterwards it will be cached, so startup is much faster.)</p>
+<p>At the end of setup, you'll see an interface like this, and it ran the <code>flux.ok</code> target for you, once in each pane.</p>
+<p align="center"><a href="/compose.mk/img/tux.open-h.png"><img width="400px" src="/compose.mk/img/tux.open-h.png"></a></p>
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p>For controlling the default orientation, <code>tux.open.vertical</code> of course works in a similar manner as you can see below.</p>
+<pre><code class="language-bash"># Specifies a vertical layout, and pass in 2 targets
+$ ./compose.mk tux.open.vertical/flux.ok,flux.ok
+
+# Other equivalent forms 
+$ layout=vertical ./compose.mk tux.open/flux.ok,flux.ok
+$ layout=v ./compose.mk tux.open/flux.ok,flux.ok
+</code></pre>
+<p align="center"><a href="/compose.mk/img/tux.open-v.png"><img width="400px" src="/compose.mk/img/tux.open-v.png"></a></p>
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p>The main alternative to "horizontal" and "vertical" is called "spiral", and it looks like this:</p>
+<p align="center"><a href="/compose.mk/img/tux.open-s.png"><img width="400px" src="/compose.mk/img/tux.open-s.png"></a></p>
+
+<p>These 3 layouts are enough for most use-cases, but <code>compose.mk</code> actually supports whatever <code>tmux</code> does and also whatever <a href="https://github.com/sunaku/home/blob/master/bin/tmux-layout-dwindle">dwindle</a> supports.</p>
+<p>Of course, <code>flux.ok</code> is not very interesting, but it is the <em>simplest</em> target, and almost everything else we'll look at is some variation of the principles above.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../loadf/" class="btn btn-neutral float-left" title="Loading Compose Files"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../zero-config-tuis/" class="btn btn-neutral float-right" title="Zero-config TUIs">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../loadf/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../zero-config-tuis/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

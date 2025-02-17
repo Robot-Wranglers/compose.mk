@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/demos/packaging/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Self-extracting Executables - compose.mk</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="../../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Self-extracting Executables";
+        var mkdocs_page_input_path = "demos/packaging.md";
+        var mkdocs_page_url = "/compose.mk/demos/packaging/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../..">
+          <img src="../../img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../integration/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../bridge/">Import Services from Compose</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../container-dispatch/">Container Dispatch</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../standard-lib/">Library Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/">Full API</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../tool-overview/">Tool Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../embedded-tui/">TUI Overview & Gallery</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../cli-help/">CLI Help</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../signals/">Supervisors & Signals</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../ansible/">Custom Automation APIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../workflows/">Workflow Basics & Pipelining</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Self-extracting Executables</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#basic-packaging">Basic Packaging</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#make-target-to-executable">Make-target to Executable</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#tui-to-executable">TUI to Executable</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#extension-to-executable">Extension to Executable</a>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../but-why/">Design Philosophy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Demos</li>
+      <li class="breadcrumb-item active">Self-extracting Executables</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h2 id="demo-self-extracting-executables">Demo: Self Extracting Executables</h2>
+<p>One of the strangest features of <code>compose.mk</code> is that it can <strong>create self-extracting executable archives</strong> from Makefiles (or anything else really) using a dockerized version of <a href="https://makeself.io/">makeself</a>.</p>
+<p>Self-extracting executable archives have lots of use-cases, but our particular interest here is about "compiling" a project Makefile plus any dependencies (<em>like data files, <code>compose.mk</code> itself, and any tool containers spec'd inside a <code>docker-compose.yml</code></em>)  down into a single executable file.</p>
+<p>Automation and pipelines are a big part of what <code>compose.mk</code> is used for, and <strong>compressing those into a frozen "release"</strong> like this is a definitely a weird idea, although it might have applications for notebooking / reproducible research.  </p>
+<p>But if you consider the <a href="/compose.mk/embedded-tui">embedded TUI</a> capabilities, you'll notice that <code>compose.mk</code> can also create things that feel more like apps, and there are <a href="/compose.mk/demos/ansible">other examples of how you can use it to build tools</a>.  </p>
+<p>Another point of view is that what we're really talking about is <strong>the ability to turn a project into a tool</strong>.  Let's be real: No one wants to look at your project, because it's a mess of docs/examples/tests/support data, and they have to understand how it's all organized before they can even try to use it.  Usually, even after a project is understood, it's not like you can <em>use</em> it directly, it must adapted or edited, or you go down a rabbit hole of dependencies.  </p>
+<p>Meanwhile, the ability to organize, reference, run, and script over potentially <em>lots</em> of possibly customized containers in an organized way using <code>docker-compose.yml</code> and <code>compose.mk</code> without <em>explicitly shipping either</em> feels like a different way to build/release tools.  Put simply, <a href="#">easy access to containers</a> <a href="#">and multiple programming languages</a> and <a href="#">workflows</a> is usually stuff that we associate with microservices and distributed systems like Kubernetes, Jenkins or Airflow.  What happens if it is easy to design "undistributed" applications, tools, and pipelines with similar architectures?</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="basic-packaging">Basic Packaging</h3>
+<p>For starters, <code>compose.mk</code> allows fairly direct access to <code>makeself</code> via the <a href="/compose.mk/api#mkself"><code>mk.self</code> target</a>.</p>
+<pre><code class="language-bash">$ ./compose.mk help mk.self
+</code></pre>
+<p>For those unfamiliar with <code>makeself</code>, this section is a quick tutorial, but you can use this to package up anything.  Here's an example of freezing the contents of a directory and an arbitrary script that <em>uses</em> that directory.  </p>
+<p>We only need to provide a space-separated list of stuff to archive, plus a name for the executable file, plus a script for the entrypoint. The script can be anything as long as it works properly relative to the archive root.. so for now we'll just use <code>pwd; find .</code> to demonstrate that we are indeed running <em>in</em> the archive.</p>
+<pre><code class="language-bash">$ archive=docs/demos bin=archive.run script='sh -c &quot;pwd; find .&quot;' ./compose.mk mk.self
+
+① ≣ docker.from.def // Dockerfile.makeself 
+①  ≣ docker.from.def // tag=compose.mk:makeself .. cached 
+① ⇄ mk.self // Archive for docs/demos will be released as ./archive.run
+① ⇄ mk.self // Total files: 13
+① ⇄ mk.self // Entrypoint: sh -c &quot;pwd; find .&quot;
+Header is 716 lines long
+About to compress 100 KB of data...
+Adding files to archive named &quot;archive.run&quot;...
+./demos/README.md
+CRC: ...
+MD5: ...
+Self-extractable archive &quot;archive.run&quot; successfully created.
+</code></pre>
+<p>So far so good.  Running the exported <code>archive.run</code> bin looks like this:</p>
+<pre><code class="language-bash">$  ./archive.run 
+/home/user/code/.tmp.oZWg1AYyc
+./demos
+./demos/README.md
+</code></pre>
+<p>That covers everything except for passing arguments, which can get tricky.  In the example above, the value used for <code>script</code> does not take arguments.  </p>
+<p>Handling arguments can be tricky.  Here's an example that takes <em>arguments in the form of a shell script</em>, which script will run inside the archive directory.</p>
+<pre><code class="language-bash">$ archive=demos/ bin=archive.run script='bash -x -c' ./compose.mk mk.self 
+</code></pre>
+<p><strong>One major limitation of <code>makeself</code> is that passing arguments to the generated executable always requires the <code>--</code> syntax that you see below.</strong>  And in this case since we're passing in a script, we need to quote all the input too.</p>
+<pre><code class="language-bash">$ ./archive.run -- 'pwd; find .'
++ pwd
+/home/user/.tmp.5idV3NHp6
++ find .
+./demos
+./demos/README.md
+</code></pre>
+<p>To pass arguments to <code>makeself</code> itself, you can put stuff before the <code>--</code>.  Mostly this isn't useful because <code>compose.mk</code> already uses <code>makeself</code> in such a way that <code>--quiet --noprogress</code> is implied for pipe-safety.  For debugging workflows though, check out <code>--keep</code> to preserve the uncompressed archive, and <code>--noexec</code> to disable the script execution.  See also the output of <code>./archive.run --help</code>, which provides help for <code>makeself</code> and <strong>not</strong> for whatever you've packaged with it.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="make-target-to-executable">Make-target to Executable</h3>
+<p>Beyond the direct access to <code>makeself</code> described above, <code>compose.mk</code> offers some shortcuts for packaging up make-targets using <a href="/compose.mk/api#mkpkg"><code>mk.pkg</code></a>.</p>
+<p>For the first example, we'll spin-off an individual utility from <code>compose.mk</code> as a stand-alone executable.  Let's look at the <a href="/compose.mk/api#streamimg">stream.img</a> target, which uses a dockerized version of the <code>chafa</code> tool for displaying images on console, comparable to <code>imgcat</code> or similar.  It takes no arguments, and works with streams.</p>
+<pre><code class="language-bash">$ bin=./stream.img ./compose.mk mk.pkg/stream.img
+$ cat img.png | ./stream.img
+</code></pre>
+<p>It works, and we use <code>chafa</code> without <em>having</em> chafa because containers don't build or pull before they are used.  In fact.. now we can use <code>compose.mk</code> without <em>having</em> <code>compose.mk</code>.  </p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<h3 id="tui-to-executable">TUI to Executable</h3>
+<p>While <a href="/compose.mk/api#streamimg"><code>stream.img</code></a> is just a small utility, the approach demonstrated above also works with "applications" implemented using <code>compose.mk</code>, i.e. <a href="/compose.mk/embedded-tui">full blown TUIs</a>.  As an example, how about exporting the <a href="#"><code>tux.demo</code> target</a>?</p>
+<pre><code class="language-bash">bin=./tux.demo ./compose.mk mk.pkg/tux.demo
+./tux.demo
+</code></pre>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="extension-to-executable">Extension to Executable</h3>
+<p>In the examples so far, the <code>./compose.mk mk.pkg/&lt;target&gt;</code> examples only use <em>targets that are built-in</em>.  If you want to extend <code>compose.mk</code> with your own automation and export <em>that</em>, then you'll want to use <code>mk.pkg</code> from the extension instead.</p>
+<p>As an example, let's export the tools we built for the <a href="/compose.mk/demos/ansible.md">Custom Automation APIs Demo</a>.</p>
+<pre><code class="language-bash">$ bin=./ansible.adhoc archive=demos make -f demos/ansible-adhoc.mk mk.pkg/ansible.adhoc.pipe
+$ echo msg=HelloWorld | module=debug ./ansible.adhoc
+</code></pre>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<hr style="width:100%;border-bottom:3px solid black;">
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../mad-science/" class="btn btn-neutral float-left" title="Embedding Containers or Data"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../../but-why/" class="btn btn-neutral float-right" title="Design Philosophy">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../mad-science/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../../but-why/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

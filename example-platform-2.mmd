@@ -1,0 +1,30 @@
+---
+title: Data/Control Flow for Multi-Platform Bootstrap
+---
+graph LR
+  M[make bootstrap] -->  |require| p1(platform1) -->|require| platform1.app
+  M -->  |require| p2(platform2) -->|require| platform2.app
+  p1 -->|require| platform1.infrastructure
+  p2 -->|require| platform2.infrastructure
+platform1.app{{platform1.app}} -.->|data| logging((logging))
+platform2.app{{platform2.app}} -.-> logging
+platform1.infrastructure[/platform1.infrastructure/] -.-> logging
+platform2.infrastructure[/platform2.infrastructure/] -.-> logging
+platform1.app -.-> events((events))
+platform2.app -.-> events
+platform1.infrastructure -.-> events
+platform2.infrastructure -.-> events
+platform1.app -.-> metrics((metrics))
+platform2.app -.-> metrics
+platform1.infrastructure -.-> metrics
+platform2.infrastructure -.->|data| metrics
+style M fill:#fffee0,stroke:#333,stroke-width:4px
+style p1 fill:#fffec8
+style p2 fill:#fffec8
+style platform1.app fill:#fffdaf
+style platform2.app fill:#fffdaf
+style platform2.infrastructure fill:#fffd8d
+style platform1.infrastructure fill:#fffd8d
+style logging fill:#fdfa72
+style metrics fill:#fdfa72
+style events fill:#fdfa72

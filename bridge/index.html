@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/bridge/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Import Services from Compose - compose.mk</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Import Services from Compose";
+        var mkdocs_page_input_path = "bridge.md";
+        var mkdocs_page_url = "/compose.mk/bridge/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="..">
+          <img src="../img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../integration/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Import Services from Compose</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#dynamic-api">Dynamic API</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#svc_nameshell">&lt;svc_name&gt;/shell</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#svc_nameshellpipe">&lt;svc_name&gt;/shell/pipe</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#svc_name">&lt;svc_name&gt;</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#svc_namespecial">&lt;svc_name&gt;/&lt;special&gt;</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#compose_stemsvc">&lt;compose_stem&gt;/&lt;svc&gt;</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#compose_stemcmd">&lt;compose_stem&gt;.&lt;cmd&gt;</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#import-macro-arguments">Import Macro Arguments</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#import-macro-implementation">Import Macro Implementation</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../container-dispatch/">Container Dispatch</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../standard-lib/">Library Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Full API</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../tool-overview/">Tool Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../embedded-tui/">TUI Overview & Gallery</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-help/">CLI Help</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../signals/">Supervisors & Signals</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/ansible/">Custom Automation APIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/workflows/">Workflow Basics & Pipelining</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/packaging/">Self-extracting Executables</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../but-why/">Design Philosophy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Docker Compose Support</li>
+      <li class="breadcrumb-item active">Import Services from Compose</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h2 id="import-services-from-compose">Import Services from Compose</h2>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<p>One of the main features for <code>compose.mk</code> is a method for "importing" docker compose files into Makefiles.  This uses the <code>compose.import</code> macro to automatically generate several related make-targets for each docker-compose service.  Sometimes this "importing" process is referred to as <em>automation scaffolding</em>, or we might refer to it as <em>the make/compose bridge</em> or simply <em>the bridge</em>.</p>
+<p>Let's walk through a minimal example, starting with a hypothetical compose file.  We'll use images for debian and alpine just as examples, but these might be any tool containers that your workflow requires.</p>
+<pre><code class="language-yaml"># example docker-compose.yml
+services:
+  debian:
+    image: debian
+  alpine:
+    image: alpine 
+</code></pre>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+<p>Next, the Makefile.  To generate make-targets for every service in the given compose file, we just need to import the <code>compose.import</code> macro and call it.</p>
+<pre><code class="language-Makefile"># Inside your project Makefile
+include compose.mk
+$(eval $(call compose.import, ▰, TRUE, docker-compose.yml))
+</code></pre>
+<p>The arguments <em><code>(▰, TRUE)</code></em> above allow for control of the scaffolding's namespace and syntax.  <em>(More on that later in the <a href="#macro-arguments">Macro Arguments section</a>.)</em>  The final argument is just the (unquoted) name of the file you want to import services from.  </p>
+<p>That's it for the minimal Make/Compose boilerplate, but we already have lots of interoperability for the containers involved.  This includes stuff like:</p>
+<ul>
+<li>The ability to quickly shell into these containers </li>
+<li>The ability to trigger <code>docker compose</code> commands on them</li>
+<li>The ability to easily pass in data on pipes</li>
+</ul>
+<p>See the next section for details about the autogenerated targets, or, if you're interested in running tasks inside of the compose-services skip ahead to the <a href="/compose.mk/container-dispatch">container-dispatch section</a></p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="dynamic-api">Dynamic API</h3>
+<p>Targets created as part of the automation scaffolding fall into the following categories.</p>
+<p>Assuming <code>compose.import</code> was allowed to import to the root namespace:</p>
+<ul>
+<li><a href="#target-svc_name"><strong><code>&lt;svc_name&gt;</code></strong></a></li>
+<li><a href="#target-svc_nameshell"><strong><code>&lt;svc_name&gt;</code>/shell</strong></a></li>
+<li><a href="#target-svc_nameshellpipe"><strong><code>&lt;svc_name&gt;</code>/shell/pipe</strong></a></li>
+<li><a href="#target-svc_namespecial"><strong><code>&lt;svc_name&gt;</code>/get_shell</strong></a></li>
+</ul>
+<p>So for our simple example so far, <code>svc_name</code> would be either <code>debian</code> or <code>alpine</code>.</p>
+<p>Regardless of whether you're importing to the root namespace, you'll get "absolute paths" to similar targets that are created automatically.</p>
+<ul>
+<li><a href="#target-compose_stemspecial"><strong><code>&lt;compose_stem&gt;</code>.services</strong></a></li>
+<li><a href="#target-compose_stemspecial"><strong><code>&lt;compose_stem&gt;</code>.build</strong></a></li>
+<li><a href="#target-compose_stemspecial"><strong><code>&lt;compose_stem&gt;</code>.clean</strong></a></li>
+<li><a href="#target-svc_nameshell"><strong><code>&lt;compose_stem&gt;</code>/<code>&lt;svc_name&gt;</code></strong></a></li>
+</ul>
+<p>So for our example so far, <code>compose_stem</code> from <code>docker-compose.yml</code>would be <code>docker-compose</code>.</p>
+<p>See the sections below for more concrete examples of what these targets can do.</p>
+<hr style="width:95%;border-bottom:1px dashed black;">
+<p>}</p>
+<h4 id="svc_nameshell"><strong><code>&lt;svc_name&gt;</code>/shell</strong></h4>
+<p>The <strong><code>&lt;svc_name&gt;</code>/shell</strong> target drops to a containter shell for the named service, and is usually interactive.</p>
+<pre><code class="language-bash">
+# Interactive shell on debian container
+$ make debian/shell
+
+# Interactive shell on &quot;alpine&quot; container
+$ make alpine/shell
+</code></pre>
+<p align="center"><a href="/compose.mk/img/demo-bridge-shell.gif"><img width="90%" src="/compose.mk/img/demo-bridge-shell.gif"></a></p>
+
+<hr />
+<h4 id="svc_nameshellpipe"><strong><code>&lt;svc_name&gt;</code>/shell/pipe</strong></h4>
+<p>The <strong><code>&lt;svc_name&gt;</code>/shell/pipe</strong> target allows streaming data:</p>
+<pre><code class="language-bash"># Stream commands into debian container
+$ echo uname -n -v | make debian/shell/pipe
+
+# Equivalent to above, since the debian image's default entrypoint is bash
+$ echo uname -n -v | make debian/pipe
+
+# Streams command input / output between containers
+echo echo echo hello-world | make alpine/pipe | make debian/pipe
+</code></pre>
+<p align="center"><a href="/compose.mk/img/demo-bridge-stream.gif"><img width="90%" src="/compose.mk/img/demo-bridge-stream.gif"></a></p>
+
+<hr />
+<h4 id="svc_name"><strong><code>&lt;svc_name&gt;</code></strong></h4>
+<p>The top-level <strong><code>&lt;svc_name&gt;</code></strong> target is more generic and can be used without arguments, or with optional explicit overrides for the compose-service defaults.  Usually this isn't used directly, but it's sometimes useful to call from automation. Indirectly, most other targets are implemented using this target.</p>
+<pre><code class="language-bash"># Runs an arbitrary command on debian container (overriding compose defaults)
+$ entrypoint=ls cmd='-l' make debian
+
+# Streams data into an arbitrary command on alpine container
+$ echo hello world | pipe=yes entrypoint=cat cmd='/dev/stdin' make alpine
+</code></pre>
+<hr />
+<h4 id="svc_namespecial"><strong><code>&lt;svc_name&gt;</code>/<code>&lt;special&gt;</code></strong></h4>
+<p>Besides targets for working <em>with</em> services there are targets for answering questions <em>about</em> services.</p>
+<p>The <em><code>&lt;svc_name&gt;/get_shell</code></em> targets answers what shell can be used as an entrypoint for the container. Usually this is <code>bash</code>, <code>sh</code>, or an error, but when there's an answer you'll get it in the form of an absolute path.</p>
+<pre><code class="language-bash">
+$ make debian/get_shell
+/bin/bash
+</code></pre>
+<hr />
+<h4 id="compose_stemsvc"><strong><code>&lt;compose_stem&gt;/&lt;svc&gt;</code></strong></h4>
+<p>Namespaced aliases are also available, so that you can reference compose services by something like an "absolute path".  Due to the file-stem of the compose file we imported, all of the stuff above will work on targets like you see below. </p>
+<pre><code class="language-bash">$ make docker-compose/debian
+$ make docker-compose/debian/shell
+</code></pre>
+<hr />
+<h4 id="compose_stemcmd"><strong><code>&lt;compose_stem&gt;</code>.<code>&lt;cmd&gt;</code></strong></h4>
+<p>Besides targets for working with compose-services, some targets work on the compose file itself.  Assuming your compose file is named <code>docker-compose.yml</code>, the special targets work like this:</p>
+<pre><code class="language-bash">
+# Build (equivalent to `docker compose -f docker-compose.yml build`)
+make docker-compose.build
+
+# Build (equivalent to `docker compose -f docker-compose.yml stop`)
+make docker-compose.stop
+
+# Clean (equivalent to `docker compose -f docker-compose.yml down --remove-orphans`)
+make docker-compose.clean
+
+# List all services defined for file (Array of strings, xargs-friendly)
+make docker-compose.services
+</code></pre>
+<p>Using the <code>&lt;compose_stem&gt;.services</code> target, it's easy to map a command onto every container.  Try something like this:</p>
+<pre><code class="language-bash">$ make docker-compose.services | xargs -n1 -I% sh -x -c &quot;echo uname -n |make docker-compose/%/shell/pipe&quot;
+</code></pre>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="import-macro-arguments">Import Macro Arguments</h3>
+<p>Make isn't big on named-arguments, so let's unpack the typical <code>compose.import</code> macro invocation.</p>
+<pre><code class="language-Makefile"># your project Makefile (make sure you have real tabs, not spaces)
+
+include compose.mk
+
+$(eval $(call compose.import, ▰, TRUE, docker-compose.yml))
+</code></pre>
+<p><strong>The 1st argument for <code>compose.import</code> is called <code>target_namespace</code></strong>.  You can swap the unicode for <code>▰</code> out, opting instead for different symbols, path-like prefixes, whatever.  If you're bringing in services from several compose files, one way to control syntax and namespacing is to use different symbols for different calls to <code>compose.import</code>.  (For a 2-file example, see the <a href="/compose.mk/multiple-compose-files">Multiple Compose Files</a> section.)</p>
+<p><strong>The 2nd argument for <code>compose.import</code> controls whether service names are available as top-level Makefile targets.</strong>  The only value that means True is <em><code>TRUE</code></em>, because Make isn't big on bool types.  Regardless of the value here, service targets are always under <code>&lt;compose_file_stem&gt;/&lt;compose_service_name&gt;</code>. </p>
+<p><strong>The last argument for <code>compose.import</code> is the compose-file to load services from.</strong>  It will be tempting to quote this and the other arguments, but that won't work, so resist the urge!</p>
+<p>See also the docs for <a href="/compose.mk/container-dispatch/#dispatch-syntaxsemantics">container dispatch syntax/semantics</a>.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="import-macro-implementation">Import Macro Implementation</h3>
+<p>For those unfamiliar with esoteric <code>make</code>, let's unpack the incantation: </p>
+<pre><code class="language-Makefile">$(eval $(call compose.import, ▰, TRUE, docker-compose.yml))
+</code></pre>
+<p>The <a href="https://www.gnu.org/software/make/manual/html_node/Eval-Function.html"><code>eval</code></a> / <a href="https://www.gnu.org/software/make/manual/html_node/Call-Function.html"><code>call</code></a> combination is how you make dynamic targets.  This is basically a code-generation step, where <code>compose.import</code> is a templated string, and then using <code>call</code> binds the values <code>( ▰, TRUE, docker-compose.yml)</code> as template parameters.  Since the templated string happens renders to legal Makefile syntax, the call to <code>eval</code> results in the declaration of new concrete targets.  </p>
+<p>Obviously metaprogramming in <code>make</code> like this is something that's guaranteed to inspire horror or delight.  If you're <em>that</em> type of weirdo, you might like to [read more about the technique[(https://make.mad-scientist.net/the-eval-function/).</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../integration/" class="btn btn-neutral float-left" title="Installation"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../container-dispatch/" class="btn btn-neutral float-right" title="Container Dispatch">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../integration/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../container-dispatch/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

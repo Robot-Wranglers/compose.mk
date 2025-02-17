@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/signals/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Supervisors & Signals - compose.mk</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Supervisors \u0026 Signals";
+        var mkdocs_page_input_path = "signals.md";
+        var mkdocs_page_url = "/compose.mk/signals/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="..">
+          <img src="../img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../integration/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../bridge/">Import Services from Compose</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../container-dispatch/">Container Dispatch</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../standard-lib/">Library Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Full API</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../tool-overview/">Tool Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../embedded-tui/">TUI Overview & Gallery</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-help/">CLI Help</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Supervisors & Signals</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#background-motivation">Background &amp; Motivation</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#use-cases">Use-Cases</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#implementation">Implementation</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#for-developers">For Developers</a>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/ansible/">Custom Automation APIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/workflows/">Workflow Basics & Pipelining</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/packaging/">Self-extracting Executables</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../but-why/">Design Philosophy</a>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Misc Features</li>
+      <li class="breadcrumb-item active">Supervisors & Signals</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h2 id="signals-and-supervisors">Signals and Supervisors</h2>
+<p><strong>Working with signals (or understanding them) is not required for most use-cases of <code>compose.mk</code>,</strong> especially if you're using it as a library.   But <a href="/compose.mk//tool-overview/#tool-wrappers">for some tool mode invocations</a>, supervisors and signals might be involved implicitly.  Signals also enable certain experimental features, and in principle the supervisor can be extended with new entry/exit hooks.</p>
+<p>Power users will be interested to understand the caveats and limitations around this, and anyone looking to work deeply on <code>compose.mk</code> itself may need to grok the implementation.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="background-motivation">Background &amp; Motivation</h3>
+<p>Without <a href="https://remake.readthedocs.io/en/latest/">forking make</a>, there's no simple method to get hooks into the default way that it handles interrupts and signals.  But why would you want to anyway?  Most of the time this occurs to people <a href="https://www.gnu.org/software/make/manual/html_node/Interrupts.html">it's about cleanup</a>, but <code>compose.mk</code> doesn't exactly look like traditional use-cases.  </p>
+<p>For <code>compose.mk</code> specifically, signals come up when we need to stop <code>make</code> from processing the command line input, and pass control over to a new process.  But why?  Well, short-circuiting the default CLI option parsing for <code>make</code> <em>really useful</em>.  Especially since <code>compose.mk</code> allows us to "wrap" lots of containerized tools, we want to be able to proxy arguments over to those tools without <code>make</code> being greedy about parsing everything.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="use-cases">Use-Cases</h3>
+<p>The <a href="#loading-compose-files"><code>loadf</code> command</a> is a typical example: the 2nd argument, a filename, must <strong>not</strong> be parsed as a Makefile target because no such target exists.</p>
+<pre><code class="language-bash"># Opens all shells for each service in the given file inside the TUI
+./compose.mk loadf tests/docker-compose.yml
+</code></pre>
+<p><strong>Sometimes we want individual targets to essentially be able to consume the rest of the command line.</strong>  In this case, the filename is best understood as an argument to the first target, and not a target itself.  </p>
+<p>The <a href="/compose.mk/tool-overview/#proxy-wrappers">wrappers for <code>jq</code> and <code>jb</code></a> are another example that requires reading the whole command-line.</p>
+<pre><code class="language-bash">$ echo '{&quot;foo&quot;:&quot;bar&quot;}' | ./compose.mk jq .foo
+$ echo foo=bar | ./compose.mk jb
+</code></pre>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="implementation">Implementation</h3>
+<p>Since the last section describes the goal, you might be wondering how this kind of semi-magical behavior can be achieved.   And since the answer to that question is frankly kind of ridiculous, this should probably be considered experimental :)  <em>With that sternly worded warning out of the way..</em></p>
+<p>Signals and supervisors are implemented using <a href="https://en.wikipedia.org/wiki/Shebang_(Unix)">a shebang hack</a> and a <a href="https://en.wikipedia.org/wiki/Polyglot_(computing)">polyglot</a>, whereby <code>compose.mk</code> is simultaneously a Makefile, a Makefile library, <em>and</em> a bash script.  The bash script invokes <code>make</code>, but wraps it to catch any signals that are thrown.  After throwing a supported signal causes <code>make</code> to exit, bash catches, and then passes the code for the caught signal back to <em>another</em> invocation of <code>make</code> for an exit handler.</p>
+<p><strong>As a consequence of this, signals can only be handled when <code>compose.mk</code> is invoked directly,</strong> i.e. with <code>./compose.mk ...</code>.  So note that <strong>project Makefile's that are using <code>include compose.mk</code> cannot currently inherit this ability.</strong>  </p>
+<p>Also note that while passing control over to a completely different process like this seems to <em>actually work</em> for both Linux and MacOS, this is still bad form.  In particular, complex argument passing might be misquoted, or exit codes may not be reliable.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h3 id="for-developers">For Developers</h3>
+<p>All targets related to signals/supervisors can be found under the <code>mk.interrupt</code> and <code>mk.super</code> namespaces, respectively.  </p>
+<ul>
+<li><a href="/compose.mk/api#mksupervisorenterarg"><code>mk.supervisor.enter/&lt;arg&gt;</code></a> </li>
+<li><a href="/compose.mk/api#mksupervisorexitarg"><code>mk.supervisor.exit/&lt;arg&gt;</code></a> </li>
+<li><a href="/compose.mk/api#mksupervisorinterrupt"><code>mk.supervisor.interrupt</code></a> </li>
+<li><a href="/compose.mk/api#mksupervisorinterruptarg"><code>mk.supervisor.interrupt/&lt;arg&gt;</code></a> </li>
+<li><a href="/compose.mk/api#mksupervisorpid"><code>mk.supervisor.pid</code></a> </li>
+<li><a href="/compose.mk/api#mksupervisortraparg"><code>mk.supervisor.trap/&lt;arg&gt;</code></a> </li>
+<li><a href="/compose.mk/api#mkinterrupt"><code>mk.interrupt</code></a> </li>
+<li><a href="/compose.mk/api#mkinterruptarg"><code>mk.interrupt/&lt;arg&gt;</code></a> </li>
+<li><a href="/compose.mk/api#mkinterruptSIGINT"><code>mk.interrupt/SIGINT</code></a> </li>
+</ul>
+<p>Targets above are for low-level internal use, and even hacking directly on <code>compose.mk</code> source probably won't require editing them.  To implement a new <a href="/compose.mk/tool-overview/#proxy-wrappers">proxy-wrapper</a>, use <code>mk.yield</code>.  Here's how you'd give <code>compose.mk</code> a new proxy-wrapper for the <code>ls</code> command:</p>
+<pre><code class="language-Makefile"># compose.mk src 
+ls:
+    ls $${MAKE_CLI#*ls}
+    ${mk.interrupt}
+</code></pre>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../cli-help/" class="btn btn-neutral float-left" title="CLI Help"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../demos/ansible/" class="btn btn-neutral float-right" title="Custom Automation APIs">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../cli-help/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../demos/ansible/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

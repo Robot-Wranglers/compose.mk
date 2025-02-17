@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://robot-wranglers.github.io/compose.mk/but-why/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Design Philosophy - compose.mk</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/night-owl.min.css" />
+        <link href="../extra.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Design Philosophy";
+        var mkdocs_page_input_path = "but-why.md";
+        var mkdocs_page_url = "/compose.mk/but-why/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/makefile.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/bash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="..">
+          <img src="../img/icon.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Overview</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../overview/">Intro</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../integration/">Installation</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Docker Compose Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../bridge/">Import Services from Compose</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../container-dispatch/">Container Dispatch</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../multiple-compose-files/">Multiple Compose Files</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../raw-docker/">Raw Docker Support</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Standard Library</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../standard-lib/">Library Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/">Full API</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Stand Alone Mode</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../tool-overview/">Tool Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../loadf/">Loading Compose Files</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">TUI Support</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../embedded-tui/">TUI Overview & Gallery</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../zero-config-tuis/">Zero-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../low-config-tuis/">Low-config TUIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../advanced-tuis/">Advanced TUIs</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc Features</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../cli-help/">CLI Help</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../signals/">Supervisors & Signals</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Demos</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/ansible/">Custom Automation APIs</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/workflows/">Workflow Basics & Pipelining</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/platform/">Platform Lifecycle Example</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/polyglots/">Polyglot Makefiles</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/mad-science/">Embedding Containers or Data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../demos/packaging/">Self-extracting Executables</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Misc</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Design Philosophy</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#intro">Intro</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#is-this-even-for-real">Is this even for real?</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#a-problem-statement">A Problem Statement</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#the-happy-medium">The Happy Medium</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#the-obligatory-comparecontrast">The Obligatory Compare/Contrast</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#the-top-of-the-stack">The Top of the Stack</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#no-golden-version-for-frameworks">No Golden Version for Frameworks</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#dags-rule-everything-around-me">DAGs Rule Everything Around Me</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#glue-code-notebooking-and-data-science">Glue Code, Notebooking, and Data Science</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#just-use-tasks-in-containers">Just Use Tasks in Containers</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="" href="https://github.com/robot-wranglers/compose.mk/">Project Source</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">compose.mk</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Misc</li>
+      <li class="breadcrumb-item active">Design Philosophy</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <hr style="width:100%;border-bottom:3px solid black;">
+
+<p><center></p>
+<h1 id="motivation-design-philosophy">Motivation &amp; Design Philosophy</h1>
+<p></center></p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<p align="center"><a href="/compose.mk/img/y-tho.png"><img width="65%" src="/compose.mk/img/y-tho.png"></a></p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h2 id="intro">Intro</h2>
+<p><strong>Most of the documentation deals with <em>how</em>, but if you want to know more about <em>why</em>, then the rest of this page is for you.</strong>  It's more essay-form than FAQ, but it might address what you're interested in.  </p>
+<p>So, much of the content here is thoughts on the landscape of automation challenges in general.  But anticipating objections, much of the content is preoccupied with certain evangelism and advocacy.  </p>
+<p>You can take or leave any of the major components, but the most controversial design choices for <code>compose.mk</code> will be around the usage of <code>make</code> itself, or perhaps <code>docker compose</code>, and/or DIND (docker in docker).  Much ink (and maybe some blood) has been spilled over both advocacy and protest for those components.  You can probably start a fight today on the orange site, or over coffee in the break room, and you'll get the usual references.<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>  But much of the criticism <em>and</em> the advocacy arises from misunderstandings or myopic treatment of the tools or the use-cases involved.</p>
+<p><strong>Working theory: philosophy rarely changes hearts and minds, but tooling and examples might?</strong></p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h2 id="is-this-even-for-real">Is this even for real?</h2>
+<p>Some people might be skeptical about getting involved with <em>the biggest, baddest, and most highly-powered mutant Makefile the world has ever seen</em>, so let's be clear about a few things.  </p>
+<p>The source code for <code>compose.mk</code> weighs in at 3500+ lines of pure Makefile, and some features use on-the-fly code-generation. There are other eyebrow raising implementation details, such as use (abuse?) of POSIX signals.  One might even say that the whole feature set is a very long list of terrible hacks that can only be redeemed by a <em>'but look what you can do with this!'</em> moment.  Pushing the boundaries of a simple toolchain is part of the goal.</p>
+<p>At the same time, this isn't some esolang flex like a <a href="https://github.com/siraben/hasktran">fractran compiler</a> or <a href="https://nicholas.carlini.com/writing/2025/regex-chess.html">regex-chess</a>.  Honestly, <code>compose.mk</code> started as an experiment in basic docker-support for <code>make</code> and became an experiment in dependency minimalism in general, <em>but it just never hit a wall</em>, and it seems like it ended up in an interesting place.  You would think that minimalism cannot be compatible with <em>aggressively reusing available tools</em>, but in the limit, scripting with <code>compose.mk</code> <strong>feels like a genuinely new way to write glue code that pulls in foreign tools as first class objects</strong>, and it introduces various primitives and idioms that make <code>make</code> feel like a "real language".</p>
+<p>And speaking of "real languages", <code>compose.mk</code> can actually help you <a href="/compose.mk/demos/polyglots/">write make-targets in foreign languages</a> too, but that's just another example of the kind of thing might make people nervous!  Opinions will differ about whether that kind of sorcery is really a good idea.  Maybe if you see something that offends your sensibilities let's call it a prototyping workflow? ;)</p>
+<p><strong>So cue the obligatory disclaimer:</strong> With great power comes great responsibility, and like most things you'll have to exercise some judgement.  It has to be said that some of the demos are pretty crazy, and most likely no one will thank you for <a href="/compose.mk/demos/polyglots/">going wild</a> with introducing <a href="/compose.mk/demos/mad-science/">mad science techniques</a> into real projects.  But sometimes you gotta weigh a hack against the utility it provides, and evaluate things in terms of <em>simplicity, stability, and portability</em> rather than pure aesthetics.  Just don't be antisocial by embedding a gnarly and frequently-changing 300-line Dockerfile into your team's Makefile, and you'll be fine.  </p>
+<p><em>So, with that stern warning out of the way..</em> <strong>yes, <code>compose.mk</code> is for real.</strong>  It solves real problems, real fast.  Here's a few things that might help to convince the anxious:</p>
+<ul>
+<li>The <code>compose.mk</code> line count is scary.. but code-to-comment ratios are ~ 1:1.</li>
+<li>Makefile as a language is scary too.. but <code>compose.mk</code> deliberately avoids advanced features whenever possible.  Working <em>with</em> <code>compose.mk</code> is very different from working <em>on</em> it, and should be friendly for the novice as well as the wizard.</li>
+<li>The docs, demos, and test-suites are pretty extensive.</li>
+<li>As a project, <code>compose.mk</code> is mature enough to be self-hosting, and handles generation of its own docs and running its own test-suite.  <em>(Plus the suite itself also confirms that docker-in-docker usage of tooling won't make CI/CD lose its mind.)</em></li>
+<li>As a tool/library, <code>compose.mk</code> is largely <em>written in <code>compose.mk</code></em> rather than what you'd call Makefile.  For example, the <a href="#">TUI generator</a> exercising the <a href="#">workflows module</a>).  (It's not possible to get coverage-data from the test suite, but dogfooding like this should be a confidence builder.)</li>
+<li>The API explicitly aims at <em>frozen</em> status, and after <code>compose.mk</code> is general enough <em>extend</em>, then the project is finished.  Bugfixes if necessary but no "forever" development, and no upstream to track.</li>
+</ul>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h2 id="a-problem-statement">A Problem Statement</h2>
+<p>So, automation.  How should we even do it?  </p>
+<p>People tend to have strong opions about this topic, but here are some observations that probably aren't too controversial: </p>
+<ul>
+<li><strong>Orchestration <em>between</em> or <em>across</em> tool containers is usually awkward.</strong> This is a challenge that needs some structure imposed.  You can get that structure in lots of ways, but it's always frustrating to see your work locked into esoteric JenkinsFile / GitHubAction blobs where things get complicated to describe, run, or read.  <em>Project automation ideally needs to run smoothly both inside and outside of CI/CD.</em></li>
+<li><strong>If running commands with different containers is easy, then there is less need to try and get everything into <em>one</em> tool container.</strong>  The omnibus approach is usually time-consuming, and can be pretty hard if very different base images are involved.</li>
+<li><strong>Tool containers are much more useful when you can easily dispatch commands to them,</strong> especially without a long, fragile CLI invocation.  A compose file specifying volumes and such helps a lot, but no one wants <code>docker run</code> or <code>docker compose run</code> littered <em>all over</em> your scripts for builds and orchestration.  Avoiding friction here seems like a small thing, but it matters a lot. </li>
+<li><strong>Tool containers don't necessarily change that often, but there are potentially a lot of them,</strong> and if you need a separate git repository to describe / build / ship each of them to a registry before you can use them elsewhere, it's painful. Prototyping and debugging are awkward, but bootstrapping new projects is especially awkward because starting anything is blocked on having new git repos, new docker-registry repos, and new CI/CD for the same.</li>
+<li><strong>Plain shell scripts won't take you far.</strong> Everyone knows that readability and maintainability isn't great, but that's just the start.  To name a few related issues.. features involving option/argument parsing, multiple entrypoints, code-reuse, partial-execution for partial-updates, dry-runs, parallelism, and other things you're going to need <em>just aren't simple to get.</em>  </li>
+<li><strong>CM tools like Ansible can fix some things, but bring their own problems</strong>.  A few examples of those problems are: Significant setup, significant dependencies, ongoing upstream changes, and the fact that many people cannot read or write it.</li>
+<li><strong>The general need for "glue" code and glue languages is large and getting larger all the time, but still woefully underserved.</strong>  This isn't just about devops either, because things like notebooking and data-pipelines stand to benefit.</li>
+</ul>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h2 id="the-happy-medium">The Happy Medium</h2>
+<p>Much more controversially: <strong>Make is the happy medium here</strong>, despite the haters, the purists, and the skeptics who argue that <em>make is not a task-runner</em>, and despite the often-misunderstood <a href="https://accu.org/journals/overload/14/71/miller_2004/">recursive-make-harmful</a> paper.  </p>
+<p>That's because <code>make</code> is <em>just too good to ignore</em>, and there are several major benefits: </p>
+<ol>
+<li>It is old but it is everywhere, it's expressive but has relatively few core concepts, and it's fast.  </li>
+<li>It's the lingua franca for engineers, devops, and data-science, probably because easy things stay easy and advanced things are still possible.  </li>
+<li>It's the lingua franca for javascript, python, or golang enthusiasts who need to be able to somehow work together.  </li>
+<li>Most importantly: <code>make</code> is probably the <em>least</em> likely thing in your toolkit to ever be affected by externalities like pypi or npm breakage, package updates, or changing operating systems completely;  <code>make</code> won't care if you run it from your laptop, or github-actions, or Airflow.</li>
+</ol>
+<p>If you need something <em>outside</em> of docker that you want stability &amp; ubiquity from, it's hard to find a better choice.  As a bonus, most likely tab-completion for make-targets already works out of the box with your OS and shell, and to a certain extent, <code>make</code> can even support plan/apply workflows (via <code>--dry-run</code>) and parallel execution (via <code>--jobs</code>).  At the most basic level, <code>make</code> does DAGs, and <a href="#DAGs-Rule-Everything-Around-Me">DAGs are everywhere</a>.</p>
+<p>The biggest problem for many modern use-cases is just that <em>Makefiles have nothing like native support for running tasks in containers</em>, <strong>but this is exactly what <em><code>compose.mk</code></em> fixes.</strong>  Makefiles are already pretty good at describing task execution, but describing the containers themselves is far outside of that domain.  Meanwhile, docker-compose is exactly the opposite, and so <a href="/compose.mk/bridge">Make/Compose is a perfect combination</a>.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h2 id="the-obligatory-comparecontrast">The Obligatory Compare/Contrast</h2>
+<p>Yes.. there are things such as <a href="https://remake.readthedocs.io/en/latest/">remake</a>, <a href="https://taskfile.dev/">taskfile</a>, and <a href="https://github.com/casey/just">just</a> to give a few examples.  All task-runners can <a href="#">run the other ones</a> so it's not like it's really a competition, especially if the goals and feature-sets are very different.  For a sufficiently large project you might even want to use a few runners, each for what they are best at.  But this is the part where one is supposed to say the competition sucks, so here it is :) </p>
+<p>With big projects, just using <code>just</code> means asking 100 people to install something, and often means asking people to learn 10 new things as the <em>easy way</em> to avoid learning 1 new thing.<sup id="fnref:4"><a class="footnote-ref" href="#fn:4">4</a></sup>  Again, feature sets differ of course, and it's not an apples to apples comparison, but.. in terms of back-end implementation <code>just</code> source weighs in at ~100 files, with ~17k lines of code, so in comparison to <code>compose.mk</code> that's roughly 100x and 10x, respectively.  Makes perfect sense right?, because <code>just</code> has to rebuild <code>make</code>, whereas <code>compose.mk</code> just uses it.  The most frequent reasons cited for <code>just</code> over <code>make</code> are probably polyglots, task listing, online help, "private" targets, etc.  All of which are provided by <code>compose.mk</code> to some extent, plus native-ish support for docker, TUIs, etc.  Without a doubt the more advanced features of <code>compose.mk</code> have more bugs and/or limitations compared to <code>just</code>, but <code>compose.mk</code> does more, and at the bottom it's as stable as <code>make</code> is.</p>
+<p>In terms of minimalism and dependencies, <code>just</code> just requires <code>just</code>, and is available from package managers, whereas <code>compose.mk</code> does require <code>make</code> and most use-cases will want <code>docker</code>.  However if you want to use tools like <code>jq</code> from <code>just</code>, then you need those too, whereas <code>compose.mk</code> <a href="/compose.mk/tool-overview/#tool-wrappers">wraps things like jq implicitly</a> and provides easy access to everything else as long as it's available (or constructable) with docker.</p>
+<p>Love it or hate it, <strong>the main differentiator for <code>compose.mk</code> is that it's designed first and foremost <em>to be extended</em></strong>.  It moonlights as a tool, but in many ways is closer to a scripting language.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h2 id="the-top-of-the-stack">The Top of the Stack</h2>
+<p>Tools like <code>ansible</code>, <code>cloudformation</code>, <code>docker</code>, <code>docker-compose</code>, <code>eksctl</code> are just a few examples where it's normal to have extremely long &amp; complex command-line invocations, awkward to type and hard to remember.  Those invocations possibly depend on environment variables and other config-context for correct behaviour.  You can't get around this with bash-aliases, because developers won't have those in sync, and problems with plain bash scripts have already been discussed.  Sourcing <code>.env</code> files or loading bash functions as part of developer-shells all tends to create issues, because people lose track of the env state in one tabbed terminal vs another, or the state is unavailable to IDEs, etc.  Complicating the matter further, some of these tools actually need access to the same config data, and some operations require multiple tools, or data-flow <em>between</em> tools.</p>
+<p>Having a well defined "top" of your stack that sets some context, and provides aliased entrypoints for cumbersome-but-common stuff becomes really important.  Just as important, that context needs to be project based, and shouldn't leak out into your shell in general, or your system in general.  <strong>Makefiles are the obvious choice here,</strong> because they enable everything and require nothing, allowing for a pretty seamless mixture of config, overrides, entrypoint aliases, context management, task orchestration, and new automation layers that connect and recombine existing ones.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h2 id="no-golden-version-for-frameworks">No Golden Version for Frameworks</h2>
+<p>If you're using large frameworks like Terraform/Ansible at all, then there's a good chance you'll eventually need multiple versions of that framework, at least temporarily.  You can even see this at the level of tools like <code>awscli</code> and the split for v1/v2.   Basically your options at a time like this are to:</p>
+<ol>
+<li>Start building a "do everything" golden container or VM, put both versions in the same place.</li>
+<li>Start messing around with tools like <code>virtualenv</code>, <code>tox</code>, or <code>terragrunt</code> for sandboxing different versions.</li>
+<li>Start replacing lots of <code>foo-tool</code> invocations with awkward-but-versioned <code>docker run foo/foo-tool:VERSION ...</code> commands.</li>
+<li>Rely completely on CI/CD like Jenkins/Github or workflow-engines like Atlantis or Argo for mapping your tasks onto versioned containers.</li>
+</ol>
+<p>Choices 1 &amp; 2 are labor intensive and fragile; choice 3 is ugly, fragile, and particularly hard to maintain.  Choice 4 is <em>maybe</em> fine once it's actually working, but it's also basically punting on <em>all local development forever</em>, so it can be pretty painful to change or debug.  In the worst-case, Choice 4 also has the downsides that you're accepting platform lock-in as well as betting everything on a single point of failure.</p>
+<p><strong>Alternatively, you could start managing tool-containers with docker compose, then launch any target in any container with compose.mk's approach to <a href="/compose.mk/container-dispatch">target dispatch</a>.</strong>  You can still call <code>make</code> from Jenkins, Argo, or Github.  While you added smooth workflows for local development, you also just fixed lots of bad coupling because now you can easily switch your whole CI/CD backend from any of these choices to any of the the others.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h2 id="dags-rule-everything-around-me">DAGs Rule Everything Around Me</h2>
+<p>You probably already know that <a href="https://en.wikipedia.org/wiki/Directed_acyclic_graph">directed acyclic graphs</a> aren't just for Airflow, and these come up practically any time you're thinking about dependency trees, scheduling, and lots of other stuff.  DAGs are pretty much what <code>make</code> <em>does</em>, and it's good at it.  </p>
+<p>For lots of automation work, and <em>especially</em> lifecycle automation, DAGs of tasks/prerequisites are the most natural way model things.  <strong>Engines for resolving "desired state" like Terraform/Ansible are great at what they do, but they are not really built for describing DAGs.</strong>  If you're spending lots of time messing around with hooks and plugins, it might be a sign that you're struggling to turn your desired-state-management tools into DAG processors.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h2 id="glue-code-notebooking-and-data-science">Glue Code, Notebooking, and Data Science</h2>
+<p>Opinions will differ about whether it is <em>good or pleasant</em>, but glue code is increasing everywhere.  Different projects publishing or hosting notebooks/pipelines are sometimes tidy, or, sometimes admonish you to complete 12 steps of copy-paste to get started.  But most people have probably seen wildly disorganized notebooks <em>shoved into production directly</em> as pipelines or pipeline-components at one time or another.  You can try to stop that with culture and code reviews but it's worth asking: what can be done with tooling so that the "good" way is the same as the "easy" way?</p>
+<p>Believe it or not, related topics in this neighborhood actually include things like the reproducibility problem in science, the idea of <a href="https://ccmc.gsfc.nasa.gov/executable-papers/">executable papers in CS</a> and the fact that <em>no one cares about your project repo</em>.  <em>(Let's be real: No one wants to look at your project because it's a mess of docs/examples/tests/support data, and they have to understand how it's all organized before they can even try to use it.  Usually, even after a project is understood, it's not like you can </em>use<em> it directly, it must be adapted or edited or installed or configured, and now we're down the rabbit hole of dependencies.</em>)</p>
+<p>So, part of what we're really talking about is <strong>the ability to turn a project into a tool</strong> with minimal extra effort, and that won't be easy without some structure imposed.  But it would be great if that structure doesn't always strictly require <a href="https://registry.terraform.io/providers/databricks/databricks/latest/docs/data-sources/pipelines">some kind of proprietary format</a> that guarantees you can never even prototype flows locally.  And it would also be nice if it didn't <a href="https://github.com/imbue-ai/jupyter_ascending">make it harder to just edit code</a>.  Notebook-driven development has obvious benefits <a href="https://yobibyte.github.io/notebooks.html">and many problems</a> that are perhaps less obvious.</p>
+<p>To point the microscope at data-engineering instead of data-science.. most people have probably also seen the phenomenon where some team is struggling with enterprise java frameworks and/or cloud-based services for 3 months, just to deliver a CSV -&gt; JSON conversion tool.</p>
+<p>Of course, none of this is to suggest that <a href="#">mini ETL demos</a> mean you can throw away products like Airflow, Databricks, AWS Glue / Step Functions, etc.  (What's more realistic is that maybe your <code>compose.mk</code>-backed DAG is just a node in a bigger Airflow-DAG, or that Airflow/ECS/Fargate/Databricks calls your tasks piece-wise.)</p>
+<p>And none of this is meant to suggest that <a href="#">compose.mk's self-extracting archives</a> will cure the reproducibility crisis either, or that <a href="#">embedded container definitions</a> are always good idea.  What is a good idea though is making structured prototyping simpler, and trying to make sure that it's actually a positive step towards shipping.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<h2 id="just-use-tasks-in-containers">Just Use Tasks in Containers</h2>
+<p>Consider a typical workflow for devops:</p>
+<ol>
+<li>You want new software available on your Kubernetes.</li>
+<li>You go read the installation instructions, which tell you to  <code>helm repo add ..</code> then <code>helm install ..</code> or to <code>kubectl</code> something.</li>
+<li>Great, you already use ArgoCD, but there's something's up with the chart.  Maybe helm inputs need a load-balancer endpoint from terraform output and it's not available ahead of time, or maybe there's a helm version mismatch.</li>
+<li>You dutifully translate <code>helm</code> install instructions into another preferred ecosystem's tool wrappers.  (Maybe it's a <a href="https://registry.terraform.io/providers/hashicorp/helm/latest/docs">terraform helm provider</a> or an <a href="https://docs.ansible.com/ansible/latest/collections/kubernetes/core/helm_module.html">ansible helm module</a> or a <a href="https://www.jenkins.io/doc/pipeline/steps/kubernetes/#-container-run-build-steps-in-a-container">jenkins container-step</a>).</li>
+<li>That's not a ton of work by itself, but soon you find you're deep into fiddling with the abstraction.</li>
+<li>Looks like you need another version of your core tooling <em>(yay, Terraform upgrade)</em></li>
+<li>Or maybe another version of the plugin <em>(yay, sifting Jenkins ecosystem abandonware, yay, fighting with custom-tool manifests for Argo)</em></li>
+<li>Or maybe you have to pull in lots of config you <strong>don't</strong> need to access some config that you <strong>do</strong> need <em>(yay, our Ansible needs a submodule full of irrelevant plugins/tasks/inventory just to get started)</em></li>
+<li>You realize your mission was to <em>deploy something, not change the way deployments work</em>.  Oops, any upgrades or changes at the "top" or the "outside" of your tool chain might fix one thing and break something else.  Now changes are hard, or scary, or both.</li>
+</ol>
+<p>So that's how easy stuff gets hard, and if delays last long enough to block other work, things start to get ugly.</p>
+<ul>
+<li>Pressure is mounting to <em>"simplify things"</em>, i.e. just calling who-knows-what-version of system <code>helm</code> directly, usually from a tangle of disorganized shell scripts.</li>
+<li>Pressure is mounting to <em>split up things that belong together</em>, ie. allow <em>just this one special snowflake this one time</em>, and go ahead and multiply your platforms or repositories or fork the chart.  No one likes it, but isolation, separation and breaking with all existing standards looks like the easiest way to work around the blocker. (Hope this won't happen again next week!)</li>
+<li>Pressure is mounting to <em>randomly switch</em> your Terraform to Ansible, or Ansible to Terraform, or Atlantis to ArgoWF, hoping you're lucky enough that swapping one complex ecosystem for another just makes the whole problem disappear.</li>
+</ul>
+<p>Frustratingly, none of this actually has anything to do with <code>helm</code>, or the problem we were trying to solve with it.  None of the options above are appealing functionally or aesthetically.  Longer term, compromising on this stuff too often erodes standards and can wreck reproducibility, maintainability, or sane organization, especially for small teams.  After you get something working, you realize you're now relying on a remote execution environment that might itself depend on multiple layers of event-triggering happening correctly, and.. if it ever breaks then no one can actually <em>run anything locally</em>.</p>
+<p><strong>Simply using tool containers as directly as possible is often a better way,</strong> and it won't rule out your GitOps in general or your specific platform of choice.  </p>
+<p>Unlike the "<em>helm bolted on to terraform/ansible/jenkins</em>" approach, using <code>compose.mk</code> makes it easy to get closer to your tools, and directly use <em>multiple versions</em> of the actual tools you care about, and without affecting existing work.  If a tool breaks, you can debug that issue directly, without re-running ansible you don't care about, without digging in terraform core dumps, without trying to connect to weird remote runtimes via ssh or kubectl, and without looking up that one weird environment variable to enable plugin traces.  If you need a tool, then <em>you just use it</em>.</p>
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:1">
+<p>[Recursive make Considered Harmful][https://aegis.sourceforge.net/auug97.pdf]&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+<li id="fn:2">
+<p><a href="https://www.microsoft.com/en-us/research/wp-content/uploads/2016/03/hadrian.pdf">Non-recursive Make Considered Harmful</a>&#160;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 2 in the text">&#8617;</a></p>
+</li>
+<li id="fn:3">
+<p><a href="https://matt-rickard.com/the-unreasonable-effectiveness-of-makefiles">Unreasonable effectiveness of Makefiles</a>&#160;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 3 in the text">&#8617;</a></p>
+</li>
+<li id="fn:4">
+<p>https://github.com/casey/just?tab=readme-ov-file#what-are-the-idiosyncrasies-of-make-that-just-avoids&#160;<a class="footnote-backref" href="#fnref:4" title="Jump back to footnote 4 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../demos/packaging/" class="btn btn-neutral float-left" title="Self-extracting Executables"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../demos/packaging/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
