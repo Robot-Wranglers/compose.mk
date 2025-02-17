@@ -41,6 +41,7 @@ jobs:
     # Specify runner +  build & upload the static files as an artifact
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
       - name: Build static files
         id: build
         run: make clean init mkdocs.build
