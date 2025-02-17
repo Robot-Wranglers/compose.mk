@@ -57,7 +57,7 @@ services:
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
 endef 
 $(eval $(call compose.import.def,  ▰,  TRUE, docs.builder.composefile))
-.mkdocs.build:; make mkdocs.build; tree site
+.mkdocs.build:; set -x && (make docs && mkdocs build --clean --strict --verbose && tree site) ; find site docs|xargs chmod o+rw; ls site/index.html
 docs.build: docs.builder/build ▰/docs.builder/.mkdocs.build
 mkdocs: mkdocs.build mkdocs.serve
 mkdocs.build build.mkdocs:; mkdocs build
@@ -133,8 +133,8 @@ itest/%:; make test-suite/itest/${*}
 # 	@# by walking through cluster-lifecycle stuff inside a 
 # 	@# project-local kubernetes cluster.
 
-lme-test: test-suite/lme
-	@# Logging/Metrics/Events demo.  FIXME
+# lme-test: test-suite/lme
+# 	@# Logging/Metrics/Events demo.  FIXME
 
 mad: mad/all 
 mad/%:; set -x && make test-suite/mad-science/${*}
@@ -160,7 +160,7 @@ docs.jinja/%:
 	@# Render the named docs twice (once to use includes, then to get the ToC)
 	pynchon --version \
 	&& $(call io.mktemp) && first=$${tmpf} \
-	&& set -x && pynchon jinja render docs/${*} -o $${tmpf} --preview \
+	&& set -x && pynchon jinja render docs/${*} -o $${tmpf} --print \
 	&& dest="docs/`dirname ${*}`/`basename -s .j2 ${*}`" \
 	&& [ "${*}" == "README.md.j2" ] && mv $${tmpf} README.md || mv $${tmpf} $${dest}
 
