@@ -24,6 +24,12 @@ jobs:
       - uses: actions/checkout@v3
       - name: Initialize
         run: make clean init
+      - name: Bootstrap Tests
+        # GitHub Actions runs without a TTY device. This is a workaround to get one,
+        # based on https://github.com/actions/runner/issues/241#issuecomment-842566950.
+        # This is required for some of the integration tests that are using gum
+        # shell: 'script -q -e -c "bash --noprofile --norc -eo pipefail {0}"'
+        run: sudo apt-get install -y bash make
       - name: Test Demos
         # GitHub Actions runs without a TTY device. This is a workaround to get one,
         # based on https://github.com/actions/runner/issues/241#issuecomment-842566950.
