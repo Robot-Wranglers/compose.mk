@@ -39,6 +39,7 @@ demo-test: demos.test
 demos.test:
 	ls demos/*mk | xargs -I% -n1 sh -x -c "make -f %||exit 255"
 
+mkdocs.init:; pip install mkdocs==1.5.3 --break-system-packages
 mkdocs: mkdocs.build mkdocs.serve
 mkdocs.build build.mkdocs:; mkdocs build
 mkdocs.serve serve:; mkdocs serve --dev-addr 0.0.0.0:8000
