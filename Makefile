@@ -40,10 +40,11 @@ demos.test:
 	ls demos/*mk | xargs -I% -n1 sh -x -c "make -f %||exit 255"
 
 mkdocs.init:
+	pip install -e git+git@github.com:elo-enterprises/pynchon.git@f63f2418583145ae701048e7c25706c25942e640#egg=pynchon
 	pip install \
 		mkdocs==1.5.3 \
-		-e git+git@github.com:elo-enterprises/pynchon.git@f63f2418583145ae701048e7c25706c25942e640#egg=pynchon \
-		mkdocs-autolinks-plugin==0.7.1 --break-system-packages
+		mkdocs-autolinks-plugin==0.7.1 \
+		--break-system-packages
 mkdocs: mkdocs.build mkdocs.serve
 mkdocs.build build.mkdocs:; mkdocs build
 mkdocs.serve serve:; mkdocs serve --dev-addr 0.0.0.0:8000
