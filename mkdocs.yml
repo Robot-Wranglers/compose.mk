@@ -89,5 +89,5 @@ markdown_extensions:
       pygments_lang_class: true
   - attr_list
 docs_dir: docs
-site_dir: _site
+site_dir: site
   
