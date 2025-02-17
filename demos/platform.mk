@@ -9,12 +9,9 @@
 #   2. Application is configured by the ansible container,
 #   3. Assume both tasks emit json events (simulating terraform state output, etc)
 
-# Squash the default noisy output, then override 
-# the default goal and include compose.mk primitives
-MAKEFLAGS=-sS --warn-undefined-variables
-.DEFAULT_GOAL := platform.setup
 
 include compose.mk
+.DEFAULT_GOAL := platform.setup
 
 # Import terraform/ansible targets from compose file services 
 $(eval $(call compose.import, ▰, TRUE, demos/docker-compose.platform.yml))

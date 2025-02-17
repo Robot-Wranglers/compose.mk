@@ -9,10 +9,6 @@
 #   2. Application is configured by the ansible container,
 #   3. Assume both tasks emit json events (simulating terraform state output, etc)
 
-# Squash the default noisy output, then override 
-# the default goal and include compose.mk primitives
-MAKEFLAGS=-sS --warn-undefined-variables
-
 # Import the contents of the last demo so we can elaborate on it here.
 include demos/platform.mk 
 

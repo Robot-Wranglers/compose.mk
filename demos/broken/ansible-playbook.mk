@@ -37,6 +37,7 @@ self.demo.playbook:
 	@# so now the ansible CLI is available.  First we write the `Ansible.playbook` 
 	@# def above as a tmpfile, and call ansible, ensuring JSON oputput.
 	$(call io.mktemp) \
-	&& ${make} mk.def.to.file/Ansible.playbook/$${tmpf} \
+	&& ${make} mk.def.read/Ansible.playbook | ${stream.peek} > $${tmpf} \
+	&& cat $${tmpf} \
 	&& ANSIBLE_STDOUT_CALLBACK=json \
 	ansible-playbook -i localhost, -c local $${tmpf}

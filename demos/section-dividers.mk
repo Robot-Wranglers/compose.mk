@@ -4,6 +4,12 @@
 #
 #   USAGE: make -f demos/section-dividers.mk clean build test
 
+include compose.mk 
+
+.DEFAULT_GOAL := all 
+
+all: clean build test
+
 # use `io.print.div` implicitly as a prereq => Timestamped divider
 clean: io.print.div
 	echo Cleaning stuff

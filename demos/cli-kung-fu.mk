@@ -9,7 +9,7 @@ include compose.mk
 
 # Top-level / public entrypoint.
 demo.fu: 
-	find demos | ./compose.mk flux.each/show_arg 
+	find demos | ${make} flux.each/show_arg 
 	
 show_arg/%:; echo ${*}
 	

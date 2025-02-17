@@ -15,7 +15,7 @@ Set CursorBlink false
 #Enter
 #Type 'clear' Enter
 Show 
-Type "make -f demos/tui-extension.mk"
+Type "make -f demos/tui/extension.mk"
 Enter
 Sleep 5s
 Screenshot img/tui-extension.png

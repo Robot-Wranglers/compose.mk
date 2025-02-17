@@ -2,7 +2,7 @@
 #   Mad-science demo. See the docs for discussion
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: make -f demos/ansible.mk
+#   USAGE: make -f demos/ansible-adhoc.mk
 
 .DEFAULT_GOAL := demo.adhoc 
 # NB: this boilerplate helps to quit the default output- 

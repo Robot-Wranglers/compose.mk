@@ -60,7 +60,7 @@ $(eval $(call compose.import.def,  ▰,  TRUE, docs.builder.composefile))
 .mkdocs.build:; make mkdocs.build; tree _site
 docs.build: docs.builder/build ▰/docs.builder/.mkdocs.build
 demos.test:
-	ls demos/*mk | xargs -I% -n1 sh -x -c "make -f %||exit 255"
+	ls demos/*mk | xargs -I% -n1 env -i script -q -e -c "sh -x -c \"make -f %||exit 255\""
 
 
 # pip install -e git+git@github.com:elo-enterprises/pynchon.git@f63f2418583145ae701048e7c25706c25942e640#egg=pynchon
