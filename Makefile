@@ -36,9 +36,34 @@ clean: flux.stage.clean
 test: integration-test smoke-test tui-test demo-test 
 demo-test: demos.test
 
+define docs.builder.composefile
+services:
+  docs.builder: &base
+    hostname: docs-builder
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.9.21-bookworm
+        RUN pip3 install --break-system-packages pynchon==2024.7.20.14.38 mkdocs==1.5.3 mkdocs-autolinks-plugin==0.7.1 mkdocs-autorefs==1.0.1 mkdocs-material==9.5.3 mkdocs-material-extensions==1.3.1 mkdocstrings==0.25.2
+        RUN apt-get update && apt-get install -y tree
+    entrypoint: bash
+    working_dir: /workspace
+    volumes:
+      - ${PWD}:/workspace
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+endef 
+$(eval $(call compose.import.def,  ▰,  TRUE, docs.builder.composefile))
+.mkdocs.build:; make mkdocs.build; tree _site
+docs.build: ▰/docs.builder/.mkdocs.build
 demos.test:
 	ls demos/*mk | xargs -I% -n1 sh -x -c "make -f %||exit 255"
 
+
+# pip install -e git+git@github.com:elo-enterprises/pynchon.git@f63f2418583145ae701048e7c25706c25942e640#egg=pynchon
+# pip install \
+# 	mkdocs==1.5.3 \
+# 	mkdocs-autolinks-plugin==0.7.1 \
+# 	--break-system-packages
 mkdocs: mkdocs.build mkdocs.serve
 mkdocs.build build.mkdocs:; mkdocs build
 mkdocs.serve serve:; mkdocs serve --dev-addr 0.0.0.0:8000

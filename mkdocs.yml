@@ -70,9 +70,9 @@ nav:
     - 'Self-extracting Executables': demos/packaging.md
   - Misc:
     - 'Design Philosophy': but-why.md 
-    - 'Configuration / Env Vars': config.md
+    # - 'Configuration / Env Vars': config.md
     # - limitations.md
-    - contributing.md
+    # - contributing.md
     - 'Project Source': 'https://github.com/robot-wranglers/compose.mk/'
 plugins:
   - search
@@ -89,5 +89,5 @@ markdown_extensions:
       pygments_lang_class: true
   - attr_list
 docs_dir: docs
-site_dir: site
+site_dir: _site
   

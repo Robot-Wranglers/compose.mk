@@ -4,3 +4,5 @@
 .vscode/
 .tmp.*.ipynb_checkpoints/
 .tmp.*
+_site
+.ipynb_checkpoints/
