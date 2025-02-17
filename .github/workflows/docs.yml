@@ -3,7 +3,7 @@ name: Project Docs
 on:
   workflow_call: {}
   push:
-    branches: ["master"]
+    branches: ["main"]
     paths:
       - 'docs/**'
     # paths-ignore:
@@ -14,8 +14,6 @@ on:
     # - '**.svg'
     # - '**.gif'
 
-  # pull_request:
-  #   branches: [ "master" ]
 permissions:
   contents: read
 jobs:
