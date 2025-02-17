@@ -4,41 +4,10 @@ on:
   workflow_call: {}
   push:
     branches: ["main"]
-    paths:
-      - 'docs/**'
-    # paths-ignore:
-    # - '**.md'
-    # - '**.md.j2'
-    # - '**.mmd'
-    # - '**.png'
-    # - '**.svg'
-    # - '**.gif'
-
 permissions:
   contents: read
 jobs:
-  # test:
-  #   name: Build Docs
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - name: Initialize
-  #       run: make clean init
-  #     - name: Docs
-  #       # GitHub Actions runs without a TTY device. This is a workaround to get one,
-  #       # based on https://github.com/actions/runner/issues/241#issuecomment-842566950.
-  #       # This is required for some of the integration tests that are using gum
-  #       shell: 'script -q -e -c "bash --noprofile --norc -eo pipefail {0}"'
-  #       run: make docs mkdocs.build
-  #     # - name: TUI Tests
-  #     #   # GitHub Actions runs without a TTY device. This is a workaround to get one,
-  #     #   # based on https://github.com/actions/runner/issues/241#issuecomment-842566950.
-  #     #   # This is required for some of the integration tests that are using gum
-  #     #   shell: 'script -q -e -c "bash --noprofile --norc -eo pipefail {0}"'
-  #     #   run: make tui-test
-  # Build job
   build:
-    # Specify runner +  build & upload the static files as an artifact
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -50,8 +19,6 @@ jobs:
         uses: actions/upload-pages-artifact@v3 
         with:
           path: _site/
-
-  # Deployment job
   deploy:
     environment:
       name: github-pages
