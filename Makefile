@@ -25,7 +25,11 @@ include compose.mk
 ## BEGIN: Top-level
 ##
 
-all: init clean test docs
+all: init clean build test docs
+
+build:
+	@# NOP
+
 init: mk.stat docker.stat
 clean: flux.stage.clean
 	@# Only used during development; normal usage involves build-on-demand.
@@ -54,7 +58,7 @@ services:
 endef 
 $(eval $(call compose.import.def,  ▰,  TRUE, docs.builder.composefile))
 .mkdocs.build:; make mkdocs.build; tree _site
-docs.build: ▰/docs.builder/.mkdocs.build
+docs.build: docs.builder/build ▰/docs.builder/.mkdocs.build
 demos.test:
 	ls demos/*mk | xargs -I% -n1 sh -x -c "make -f %||exit 255"
 
