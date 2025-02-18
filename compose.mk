@@ -186,7 +186,8 @@ endif
 
 # IMPORTANT: this is the way to safely call `make` recursively. 
 # It determines MAKE and MAKEFILE_LIST are not reliable!
-make=make ${MAKE_FLAGS} $(addprefix -f,$(shell echo "${MAKE_CLI}"|awk '{for(i=1;i<=NF;i++)if($$i=="-f"&&i+1<=NF){print$$(++i)}else if($$i~/^-f./){print substr($$i,3)}}' | xargs))
+makefile_list=$(addprefix -f,$(shell echo "${MAKE_CLI}"|awk '{for(i=1;i<=NF;i++)if($$i=="-f"&&i+1<=NF){print$$(++i)}else if($$i~/^-f./){print substr($$i,3)}}' | xargs))
+make=make ${MAKE_FLAGS} ${makefile_list}
 
 # Stream constants
 stderr:=/dev/stderr
@@ -672,20 +673,21 @@ docker.from.def/% docker.build.def/%:
 	@#   make docker.from.def/<my_def_name>
 	@#
 	@# REFS:
-	@#  [1]: https://github.com/robot-wranglers/compose.mk/blob/master/tests/Makefile.mad-science.mk
+	@#  [1]: https://robot-wranglers.github.io/compose.mk/#demos
 	@#
 	def_name="Dockerfile.${*}" \
 	&& tag="compose.mk:$${tag:-${*}}" \
 	&& header="${GLYPH_DOCKER} docker.from.def ${sep} ${dim_cyan}${ital}$${def_name}${no_ansi_dim}" \
 	&& $(call log.trace, $${header} ) \
 	&& $(trace_maybe) \
-	&& export builder=none \
+	&& $(call io.mktemp) \
+	&& ${make} mk.def.read/$${def_name} >> $${tmpf} \
 	&& case `${make} docker.def.is.cached/${*}` in \
 		yes) $(call log.trace,${GLYPH_DOCKER}${no_ansi_dim}  Tag ${bold}${ital}$${tag}${no_ansi_dim} is ready); ;; \
 		no) ( $(call log.trace,${GLYPH_DOCKER}${no_ansi_dim}  Tag ${bold}${ital}$${tag}${no_ansi_dim} needs building) \
 				&& case $${quiet:-1} in \
-					1) ${make} mk.def.read/$${def_name}| tag=$${tag} ${make} docker.build.quiet/- ; ;; \
-					*) ${make} mk.def.read/$${def_name}| tag=$${tag} ${make} docker.build/- ; ;; \
+					1) cat $${tmpf} | tag=$${tag} ${make} docker.build.quiet/- ; ;; \
+					*) cat $${tmpf} | ${stream.peek} | tag=$${tag} ${make} docker.build/- ; ;; \
 				esac \
 				&& $(call log.trace,$${header} ${sep} ${no_ansi_dim} Built ok. (quiet=${bold}${ital}$${quiet:-1}${no_ansi_dim})) \
 			); ;; \
@@ -783,7 +785,7 @@ docker.run/%:
 	@#
 	$(trace_maybe) \
 	&& entrypoint=make \
-		cmd="${MAKE_FLAGS} -f ${MAKEFILE} ${*}" \
+		cmd="${MAKE_FLAGS} ${makefile_list} ${*}" \
 			img=$${img} ${make} docker.run.sh
 docker.run.image/%:
 	@# Runs the given commands in the given image.
@@ -2384,7 +2386,7 @@ stream.strip:
 	@#
 	cat ${stdin} | awk '{gsub(/[\t\n]/, ""); gsub(/ +/, " "); print}' ORS=''
 
-stream.ini.pygmentize:; cat ${stdin} | lexer=ini make stream.pygmentize
+stream.ini.pygmentize:; cat ${stdin} | lexer=ini ${make} stream.pygmentize
 	@# Highlights input stream using the 'ini' lexer.
 
 stream.csv.pygmentize:
@@ -2508,7 +2510,7 @@ stream.pygmentize:
 	&& src="$${src} img=${@} ${make} docker.from.def/${@} mk.docker.run.sh" \
 	&& [ -p ${stdin} ] && ${stream.stdin} | eval $${src} || eval $${src}
 
-stream.json.pygmentize:; lexer=json make stream.pygmentize
+stream.json.pygmentize:; lexer=json ${make} stream.pygmentize
 	@# Syntax highlighting for the JSON on stdin.
 	@#
 stream.indent.to.stderr=( ${stream.stdin} | ${stream.indent} | ${stream.to.stderr} )
@@ -2574,6 +2576,8 @@ stream.to.stderr=( cat ${stdin} > ${stderr} )
 stream.to.stderr stream.preview:; ${stream.to.stderr}
 	@# Sends input stream to stderr.
 	@# Unlike 'stream.peek', this does not pass on the input stream.
+
+stream.yaml.pygmentize=lexer=yaml ${make} stream.pygmentize
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## END: stream.* targets

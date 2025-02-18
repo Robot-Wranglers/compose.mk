@@ -12,7 +12,6 @@ include compose.mk
 # that's required for using target dispatch.
 define Dockerfile.demo_dockerfile
 FROM alpine
-RUN echo Building container spec from inlined dockerfile
 RUN apk add --update --no-cache coreutils alpine-sdk bash procps-ng
 endef
 
@@ -27,15 +26,15 @@ demo.dockerfile: docker.from.def/demo_dockerfile
 
 	# Working with compose.mk builtins omits prefix, 
 	# and can do dispatch targets to run inside the new image
-	img=demo_dockerfile make mk.docker.run/self.demo.dockerfile
+	img=demo_dockerfile ${make} mk.docker.run/self.demo.dockerfile
 
 	# Add the prefix explicitly, and you can use `docker.run` instead
-	img=compose.mk:demo_dockerfile make docker.run/self.demo.dockerfile
+	img=compose.mk:demo_dockerfile ${make} docker.run/self.demo.dockerfile
 	entrypoint=sh cmd='-c "ls"' img=compose.mk:demo_dockerfile make docker.run.sh 
 	
 	# Subsequent runs will use the cached image.  
 	# Pass 'force' to work around this.
-	force=1 make docker.from.def/demo_dockerfile
+	force=1 ${make} docker.from.def/demo_dockerfile
 
 self.demo.dockerfile:
 	echo "Testing target from inside the inlined-container"

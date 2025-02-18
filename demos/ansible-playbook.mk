@@ -12,7 +12,7 @@ include compose.mk
 define Dockerfile.Ansible.base
 FROM debian:bookworm
 RUN apt-get update
-RUN apt-get install -y ansible make 
+RUN apt-get install -y ansible make procps
 endef
 
 # Look, it's a simple Ansible playbook 
@@ -33,11 +33,13 @@ demo.playbook: docker.from.def/Ansible.base
 	img=compose.mk:Ansible.base ${make} docker.run/self.demo.playbook
 
 self.demo.playbook:
-	@# This target runs inside the `Ansible.base` container described earlier, 
+	@# This target runs inside the `Ansible.base` container described above, 
 	@# so now the ansible CLI is available.  First we write the `Ansible.playbook` 
 	@# def above as a tmpfile, and call ansible, ensuring JSON oputput.
 	$(call io.mktemp) \
+	&& $(call log, ${GLYPH_IO} ${dim_green} Running playbook:) \
 	&& ${make} mk.def.read/Ansible.playbook | ${stream.peek} > $${tmpf} \
-	&& cat $${tmpf} \
 	&& ANSIBLE_STDOUT_CALLBACK=json \
-	ansible-playbook -i localhost, -c local $${tmpf}
+	ansible-playbook -i localhost, -c local $${tmpf} \
+	&& $(call log, ${GLYPH_IO} ${dim_green} Playbook finished.) 
+	

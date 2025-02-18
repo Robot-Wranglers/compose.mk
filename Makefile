@@ -15,7 +15,7 @@ THIS_MAKEFILE:=$(abspath $(firstword $(MAKEFILE_LIST)))
 .DEFAULT_GOAL:=help
 
 .SUFFIXES:
-.PHONY: docs
+.PHONY: docs demos
 
 export SRC_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 export PROJECT_ROOT := $(shell dirname ${THIS_MAKEFILE})
@@ -39,7 +39,7 @@ test: integration-test tui-test demo-test smoke-test
 	
 smoke-test stest:
 	set -x && bash tests/tool-wrappers.sh
-demos.test demo-test test.demos:
+demos demos.test demo-test test.demos:
 	ls demos/*mk | xargs -I% -n1 script -q -e -c "env -i PATH=$${PATH} HOME=$${HOME} bash -x -c \"make -f %\"||exit 255"
 
 test-suite/%:

@@ -15,7 +15,7 @@ $ ./compose.mk loadf tests/docker-compose.yml
 
 {{macros.img_link("loadf-1.png", mkdocs, "350px")}}
 
-Implicitly the `loadf` is dynamically creating make-targets corresponding to the compose-services.  We can get explicit by using `tux.open` as seen in the [Layout Section](#layout-basics), and passing in services names or target names:
+Implicitly the `loadf` is dynamically creating make-targets corresponding to the compose-services.  We can get explicit by using `tux.open` as seen in the [Layout Section]({{mkdocs.site_relative_url}}/embedded-tui/#layout-basics), and passing in services names or target names:
 
 ```bash
 # Equivalent to above, but more explicit and less magical.

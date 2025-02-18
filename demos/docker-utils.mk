@@ -8,4 +8,16 @@ include compose.mk
 
 .DEFAULT_GOAL := demo.docker
 
-demo.docker: docker.init
+demo.docker: 
+	
+	# show docker version info
+	${make} docker.init
+	
+	# build a Dockerfile to a tag
+	tag=testing ${make} docker.from.file/demos/Dockerfile
+	
+	# run an image with a command
+	img=testing entrypoint=sh cmd='-c ls' ${make} docker.run.sh
+	
+	# run a target inside an image
+	img=testing ${make} docker.run/flux.ok

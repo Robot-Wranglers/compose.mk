@@ -27,7 +27,7 @@ jobs:
       # - name: Bootstrap Tests
       #   run: sudo apt-get install -y bash make
       - name: Test Demos
-        run: make demos.test
+        run: make demos
       - name: Smoke Tests
         run: make smoke-test
         # GitHub Actions runs without a TTY device. This is a workaround to get one,
