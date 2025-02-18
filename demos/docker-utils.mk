@@ -14,7 +14,7 @@ demo.docker:
 	${make} docker.init
 	
 	# build a Dockerfile to a tag
-	tag=testing ${make} docker.from.file/demos/Dockerfile
+	tag=testing ${make} docker.from.file/demos/data/Dockerfile
 	
 	# run an image with a command
 	img=testing entrypoint=sh cmd='-c ls' ${make} docker.run.sh

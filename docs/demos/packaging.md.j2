@@ -106,7 +106,7 @@ bin=./tux.demo ./compose.mk mk.pkg/tux.demo
 
 In the examples so far, the `./compose.mk mk.pkg/<target>` examples only use *targets that are built-in*.  If you want to extend `compose.mk` with your own automation and export *that*, then you'll want to use `mk.pkg` from the extension instead.
 
-As an example, let's export the tools we built for the [Custom Automation APIs Demo]({{mkdocs.site_relative_url}}/demos/ansible.md).
+As an example, let's export the tools we built for the [Custom Automation APIs Demo]({{mkdocs.site_relative_url}}/demos/ansible).
 
 ```bash 
 $ bin=./ansible.adhoc archive=demos make -f demos/ansible-adhoc.mk mk.pkg/ansible.adhoc.pipe
