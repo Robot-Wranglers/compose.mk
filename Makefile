@@ -38,7 +38,8 @@ clean: flux.stage.clean
 test: integration-test tui-test demo-test smoke-test 
 	
 smoke-test stest:
-	set -x && bash tests/tool-wrappers.sh
+	ls tests/*.sh | grep -v bootstrap.sh | xargs -I% -n1 script -q -e -c "env -i PATH=$${PATH} HOME=$${HOME} bash -x %||exit 255"
+
 demos demos.test demo-test test.demos:
 	ls demos/*mk | xargs -I% -n1 script -q -e -c "env -i PATH=$${PATH} HOME=$${HOME} bash -x -c \"make -f %\"||exit 255"
 

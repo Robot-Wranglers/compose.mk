@@ -3887,7 +3887,7 @@ yq:
 	&& cmd=$${cmd:-$${after:-.}} \
 	&& dcmd="${yq.run.pipe} $${cmd}" \
 	&& ([ -p ${stdin} ] && dcmd="cat ${stdin} | $${dcmd}" || true) \
-	&& eval $${dcmd}; ${make} mk.interrupt
+	&&  $(call mk.yield2, $${dcmd})
 
 jq:
 	@# A wrapper for jq.  
@@ -3895,7 +3895,7 @@ jq:
 	&& cmd=$${cmd:-$${after:-.}} \
 	&& dcmd="${jq.run.pipe} $${cmd}" \
 	&& ([ -p ${stdin} ] && dcmd="cat ${stdin} | $${dcmd}" || true) \
-	&& eval $${dcmd}; ${make} mk.interrupt
+	&& $(call mk.yield2, $${dcmd})
 
 jb jb.pipe:
 	@# An interface to `jb`[1] tool for building JSON from the command-line.

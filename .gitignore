@@ -6,3 +6,10 @@
 .tmp.*
 _site
 .ipynb_checkpoints/
+docs/signals.md
+docs/overview.md
+docs/low-config-tuis.md
+docs/zero-config-tuis.md
+site
+docs/loadf.md
+docs/demos/ansible.md docs/demos/inlined-docker-files.md docs/demos/mad-science.md docs/demos/overview.md docs/demos/packaging.md docs/demos/platform.md docs/demos/polyglots.md docs/demos/workflows.md

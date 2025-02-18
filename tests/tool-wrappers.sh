@@ -1,4 +1,8 @@
 #!/usr/bin/env -S bash -x -euo pipefail
+#
+# This demo ships with the `compose.mk` repository and runs as part of the test-suite.
+#
+# USAGE: bash -x tests/tool-wrappers.sh
 
 # Use `stream.chafa` to preview an image on the console with chafa
 cat docs/img/icon.png | ./compose.mk stream.chafa
@@ -21,8 +25,11 @@ cat Makefile | lexer=Makefile ./compose.mk stream.pygmentize
 # # Use `stream.json.pygmentize` to preview JSON (minified)
 ./compose.mk jb key=val | ./compose.mk stream.json.pygmentize
 
-# # Use `stream.json.pygmentize` to preview JSON (expanded)
-# ./compose.mk jb key=val | ./compose.mk jq . | ./compose.mk stream.json.pygmentize
+# Use `stream.json.pygmentize` to preview JSON (expanded)
+./compose.mk jb key=val | ./compose.mk jq . | ./compose.mk stream.json.pygmentize
 
-# # Use `stream.peek` to preview data somewhere in the middle of a pipe and pass it on
-# ./compose.mk jb key=val | ./compose.mk stream.peek > /tmp/tmp.stream.out
+# Use `stream.peek` to preview data somewhere in the middle of a pipe and pass it on
+./compose.mk jb key=val | ./compose.mk stream.peek > /tmp/tmp.stream.out
+
+# pull data from yaml with yq
+echo 'one: two' | ./compose.mk yq .one
