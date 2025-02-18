@@ -963,7 +963,7 @@ docker.volume.panic:; docker volume prune -f
 io.gum.div_style:=--border double --align center --width $${width:-$$(echo "x=$$(tput cols) - 5;if (x < 0) x=-x; default=30; if (default>x) default else x" | bc)}
 io.gum.default_style:=--border double --foreground 2 --border-foreground 2
 
-charm.glow:=docker run -i charmcli/glow -s dracula
+charm.glow:=docker run -i charmcli/glow:v1.5.1 -s dracula
 
 io.gum.style=label="${1}" make io.gum.style
 
