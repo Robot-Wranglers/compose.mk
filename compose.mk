@@ -745,15 +745,7 @@ docker.commander:
 	@# Automation also ensures that lazydocker always starts with the "statistics" tab open.
 	@#
 	$(call log, ${GLYPH_DOCKER} ${@} ${sep} ${no_ansi_dim}Opening commander TUI for docker)
-	TUX_CMDR_PANE_COUNT=3 \
-		TUX_LAYOUT_CALLBACK=.${@}.layout \
-			${make} tux.commander/.tux.widget.lazydocker
-.docker.commander.layout:
-	geometry="${GEO_DOCKER}" \
-	${make} \
-		.tux.commander.layout \
-		.tux.pane/2/flux.apply/docker.stat,io.envp/DOCKER \
-		.tux.pane/1/.tux.widget.img
+	geometry="${GEO_DOCKER}" ${make} tux.open/.tux.widget.lazydocker,flux.wrap/docker.stat:io.envp/DOCKER,.tux.widget.img
 
 docker.network.panic:; docker network prune -f
 	@# Runs 'docker network prune' for the entire system.
@@ -2638,17 +2630,7 @@ tui.demo tux.demo:
 	@#   * `[1]`: https://github.com/ChrisBuilds/terminaltexteffects
 	@#
 	$(call tux.log, tui.demo ${sep} ${dim}Starting demo) \
-	&& TUX_LAYOUT_CALLBACK=.${@}.layout \
-		TUX_CMDR_PANE_COUNT=4 \
-			${make} tux.commander
-
-.tui.demo.layout .tux.demo.layout: 
-	$(call tux.log, tui.demo.layout ${sep} ${dim}Laying out panes) \
-	&& ${make} .tux.layout.spiral \
-		.tux.pane/0/flux.apply/.tte/${CMK_SRC} \
-		.tux.pane/1/flux.apply/.tte/${CMK_SRC} \
-		.tux.pane/2/flux.apply/.tte/${CMK_SRC} \
-		.tux.pane/3/flux.apply/.tte/${CMK_SRC}
+	&& layout=spiral ${make} tux.open/.tte/${CMK_SRC},.tte/${CMK_SRC},.tte/${CMK_SRC},.tte/${CMK_SRC}
 
 tux.pane/%:
 	@# Sends the given make-target into the given pane.
@@ -2691,24 +2673,23 @@ tux.require: ${CMK_COMPOSE_FILE} compose.validate.quiet/${CMK_COMPOSE_FILE}
 			&& exit 0 ) \
 		)
 
-tux.commander: tux.require
-	@# Starts a tmux layout defaulting to 4 panes, using the "commander" layout callback.
-	@# See `.tux.commander.layout` for more details.
-	@#
-	@# USAGE:
-	@#  ./compose.mk tux.commander
-	@#
-	${make} tux.mux.count/$${TUX_CMDR_PANE_COUNT:-4}
-
-tux.commander/%:
-	@# A 4-pane session using the commander layout, 
-	@# proxying the given targets into the main pane.
-	@# See `.tux.commander.layout` for more details.
-	@#
-	@# EXAMPLE: (Runs 'io.env' target in the primary pane)
-	@#   ./compose.mk tux.commander/io.env
-	@#
-	tux_commander_targets="${*}" ${make} tux.commander
+# tux.commander: tux.require
+# 	@# Starts a tmux layout defaulting to 4 panes, using the "commander" layout callback.
+# 	@# See `.tux.commander.layout` for more details.
+# 	@#
+# 	@# USAGE:
+# 	@#  ./compose.mk tux.commander
+# 	@#
+# 	${make} tux.mux.count/$${TUX_CMDR_PANE_COUNT:-4}
+# tux.commander/%:
+# 	@# A 4-pane session using the commander layout, 
+# 	@# proxying the given targets into the main pane.
+# 	@# See `.tux.commander.layout` for more details.
+# 	@#
+# 	@# EXAMPLE: (Runs 'io.env' target in the primary pane)
+# 	@#   ./compose.mk tux.commander/io.env
+# 	@#
+# 	tux_commander_targets="${*}" ${make} tux.commander
 
 tux.open/%: tux.require
 	@# Opens the comma-separated targets in tmux panes.
@@ -2755,7 +2736,7 @@ tux.callback/%:
 	@#   layout=.. ./compose.mk tux.spiral/<t1>,<t2>
 	@#
 	pane_targets=`printf "${*}" | ./compose.mk stream.comma.to.nl | nl -v0 | awk '{print ".tux.pane/" $$1 "/" substr($$0, index($$0,$$2))}'` \
-	&& pane_targets=".tux.layout.$${layout} $${pane_targets}" \
+	&& pane_targets=".tux.layout.$${layout} .tux.geo.set $${pane_targets}" \
 	&& layout="flux.apply/$${pane_targets}" \
 	&& layout=`echo $$layout|${stream.space.to.comma}` \
 	&& $(call log.trace, tux.callback ${sep} ${no_ansi_dim}Generated layout callback:\n  $${layout}) \
@@ -2857,6 +2838,7 @@ tux.mux.detach/%:
 		-e TUI_INIT_CALLBACK="$${TUI_INIT_CALLBACK}" \
 		-e TUX_LAYOUT_CALLBACK="$${TUX_LAYOUT_CALLBACK}" \
 		-e TUI_SVC_STARTED=1 \
+		-e geometry=$${geometry:-} \
 		-e reattach="$${reattach}" \
 		-e k8s_commander_targets="$${k8s_commander_targets:-}" \
 		-e tux_commander_targets="$${tux_commander_targets:-}" \
@@ -3124,12 +3106,15 @@ endef
 	@# USAGE:
 	@#   geometry=... ./compose.mk .tux.geo.set
 	@#
-	true \
-	&& $(call log.part1, ${GLYPH_TUI} ${@} ${sep} ${dim}Setting geometry) \
-	&& tmux select-layout "$${geometry}" \
-	; case $$? in \
-		0) $(call log.part2, ${dim_green}geometry ok); ;; \
-		*) $(call log.part2, ${red}error setting geometry); ;; \
+	case "$${geometry:-}" in \
+		"") $(call log.trace,${GLYPH_TUI} ${@} ${sep} ${dim}No geometry provided) ;; \
+		*) ( \
+			$(call log.part1, ${GLYPH_TUI} ${@} ${sep} ${dim}Setting geometry) \
+			&& tmux select-layout "$${geometry}" \
+			; case $$? in \
+				0) $(call log.part2, ${dim_green}geometry ok); ;; \
+				*) $(call log.part2, ${red}error setting geometry); ;; \
+			esac );; \
 	esac 
 # ${GLYPH_TUI} ${@} ${sep} ${red}Error setting geometry:${no_ansi_dim}\n `printf "$${geometry}"|fmt -w 20|${stream.indent}`)
 
