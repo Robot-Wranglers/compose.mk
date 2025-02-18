@@ -2,7 +2,7 @@
 
 ## Loading Compose Files
 
-For the simplest use-cases where you have a compose-file, and want some of the `compose.mk` features, but you don't have a project Makefile, it's possible to skip some of the steps in the [usual integration]({{mkdocs.site_relative_url}}/bridge) by letting `loadf` generate integration for you just in time.
+For the simplest use-cases where you have a compose-file, and want some of the `compose.mk` features, but you **don't have a project Makefile**, it's possible to skip some of the steps in the [usual integration]({{mkdocs.site_relative_url}}/bridge) by letting `loadf` generate integration for you just in time.
 
 The general usage looks something like this:
 
@@ -10,13 +10,15 @@ The general usage looks something like this:
 $ ./compose.mk loadf <path_to_compose_file> <other_instructions>
 ```
 
+The sections below will look at more specific use-cases.
+
 <hr style="width:100%;border-bottom:3px solid black;">
 
 ## No arguments 
 
 If no additional downstream targets are passed, the default behaviour is to open a shell for each tool container [using the TUI]({{mkdocs.site_relative_url}}/embedded-tui).  Here's what it looks like:
 
-{{macros.img_link("loadf-2.gif", mkdocs)}}
+{{macros.img_link("loadf-1.gif", mkdocs)}}
 
 <hr style="width:100%;border-bottom:3px solid black;">
 

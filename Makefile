@@ -24,7 +24,6 @@ include compose.mk
 
 ## BEGIN: Top-level
 ##
-
 all: init clean build test docs
 
 build:
@@ -35,64 +34,13 @@ clean: flux.stage.clean
 	@# Only used during development; normal usage involves build-on-demand.
 	@# Cache-busting & removes temporary files used by build / tests 
 	rm -f tests/compose.mk
-	find .| grep .tmp | xargs rm 2>/dev/null|| true
+	find . | grep .tmp | xargs rm 2>/dev/null|| true
+test: integration-test tui-test demo-test smoke-test 
 	
-test: integration-test smoke-test tui-test demo-test 
-demo-test: demos.test
-
-define docs.builder.composefile
-services:
-  docs.builder: &base
-    hostname: docs-builder
-    build:
-      context: .
-      dockerfile_inline: |
-        FROM python:3.9.21-bookworm
-        RUN pip3 install --break-system-packages pynchon==2024.7.20.14.38 mkdocs==1.5.3 mkdocs-autolinks-plugin==0.7.1 mkdocs-autorefs==1.0.1 mkdocs-material==9.5.3 mkdocs-material-extensions==1.3.1 mkdocstrings==0.25.2
-        RUN apt-get update && apt-get install -y tree jq
-    entrypoint: bash
-    working_dir: /workspace
-    volumes:
-      - ${PWD}:/workspace
-      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-endef 
-$(eval $(call compose.import.def,  ▰,  TRUE, docs.builder.composefile))
-.mkdocs.build:; set -x && (make docs && mkdocs build --clean --strict --verbose && tree site) ; find site docs|xargs chmod o+rw; ls site/index.html
-docs.build: docs.builder/build ▰/docs.builder/.mkdocs.build
-mkdocs: mkdocs.build mkdocs.serve
-mkdocs.build build.mkdocs:; mkdocs build
-mkdocs.serve serve:; mkdocs serve --dev-addr 0.0.0.0:8000
-
-demos.test:
-	ls demos/*mk | xargs -I% -n1 env -i script -q -e -c "sh -x -c \"make -f %||exit 255\""
-
-
-normalize: 
-
-## BEGIN: CI/CD related targets
-##
-
-cicd.clean: clean.github.actions
-
-clean.github.actions:
-	@#
-	@#
-	query=".workflow_runs[].id" \
-	&& org_name=`pynchon github cfg|jq -r .org_name` \
-	&& repo_name=`pynchon github cfg|jq -r .repo_name` \
-	&& repo_name="$${org_name}/$${repo_name}" \
-	&& set -x && failed_runs=$$(\
-		gh api --paginate \
-			-X GET "/repos/$${repo_name}/actions/runs" \
-			-F status=failure -q "$${query}") \
-	&& for run_id in $${failed_runs}; do \
-		echo "Deleting failed run ID: $${run_id}"; \
-		gh api -X DELETE "/repos/$${repo_name}/actions/runs/$${run_id}"; \
-	done
-
-## BEGIN: Testing entrypoints
-##
-##
+smoke-test stest:
+	set -x && bash tests/tool-wrappers.sh
+demos.test demo-test test.demos:
+	ls demos/*mk | xargs -I% -n1 script -q -e -c "env -i PATH=$${PATH} HOME=$${HOME} bash -x -c \"make -f %\"||exit 255"
 
 test-suite/%:
 	@# Generic test-suite runner, just provide the test-suite name.
@@ -118,33 +66,38 @@ ttest tui-test: test-suite/tui/all
 	@# container and various ways to automate tmux.
 	
 ttest/%:; make test-suite/tui/${*}
-stest smoke-test: #test-suite/smoke-test-k8s/all test-suite/smoke-test-k8s-tools/all
-	@# Smoke-test suite, exercising the containers we built.
-	@# This just covers the compose file at k8s-tools.yml, ignoring Makefile integration
 
 itest integration-test: test-suite/itest/all
 	@# Integration-test suite.  This tests compose.mk and ignores k8s-tools.yml.
 	@# Exercises container dispatch and the make/compose bridge.  No kubernetes.
 itest/%:; make test-suite/itest/${*}
 
-# etest/% e2e/%:; make test-suite/e2e/${*}
-# etest e2e-test: test-suite/e2e/all
-# 	@# End-to-end tests.  This tests k8s.mk + compose.mk + k8s-tools.yml
-# 	@# by walking through cluster-lifecycle stuff inside a 
-# 	@# project-local kubernetes cluster.
-
-# lme-test: test-suite/lme
-# 	@# Logging/Metrics/Events demo.  FIXME
-
-mad: mad/all 
-mad/%:; set -x && make test-suite/mad-science/${*}
-	@# Polyglot tests, mad-science, and other bad ideas that
-	@# allow make-targets to be written in real programming languages,
-	@# embedding docker-containers in make-defines, and quickly mapping 
-	@# containerized APIs onto make-targets.
 
 ## BEGIN: Documentation related targets
 ##
+define docs.builder.composefile
+services:
+  docs.builder: &base
+    hostname: docs-builder
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.9.21-bookworm
+        RUN pip3 install --break-system-packages pynchon==2024.7.20.14.38 mkdocs==1.5.3 mkdocs-autolinks-plugin==0.7.1 mkdocs-autorefs==1.0.1 mkdocs-material==9.5.3 mkdocs-material-extensions==1.3.1 mkdocstrings==0.25.2
+        RUN apt-get update && apt-get install -y tree jq
+    entrypoint: bash
+    working_dir: /workspace
+    volumes:
+      - ${PWD}:/workspace
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+endef 
+$(eval $(call compose.import.def,  ▰,  TRUE, docs.builder.composefile))
+.mkdocs.build:; set -x && (make docs && mkdocs build --clean --verbose && tree site) ; find site docs|xargs chmod o+rw; ls site/index.html
+docs.build: docs.builder/build ▰/docs.builder/.mkdocs.build
+mkdocs: mkdocs.build mkdocs.serve
+mkdocs.build build.mkdocs:; mkdocs build
+mkdocs.serve serve:; mkdocs serve --dev-addr 0.0.0.0:8000
+
 docs: docs.jinja #docs.mermaid
 
 docs.deploy:

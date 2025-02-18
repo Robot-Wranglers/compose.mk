@@ -1,6 +1,5 @@
 #!/usr/bin/env -S PS1="\$ " vhs
 # This file describes terminal videos with the `vhs` tool (https://github.com/charmbracelet/vhs)
-Output img/demo-io.gif 
 Require "make"
 Require "docker"
 Set Shell "bash"
@@ -36,3 +35,4 @@ Sleep 2s
 Type "label=MyStageName ./compose.mk io.print.div"
 Enter
 Sleep 5s
+Output img/demo-io.gif 

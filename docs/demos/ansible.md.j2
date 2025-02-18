@@ -2,6 +2,8 @@
 
 ## Custom Automation APIs
 
+### Introduction
+
 This demo describes one way to very quickly expose custom automation APIs using `compose.mk`.  *What does that even mean?*
 
 When it comes to automation, combining different tools that might be in different containers together is part of the job, but at the end of the day you always want a *coherent vocabulary of verbs that operate on your domain.*  
@@ -56,11 +58,13 @@ As an aside, the eagle-eyed reader will have noticed that `docker_host_info` act
 
 So anyway, the examples so far are contrived, and the technique itself is more important than the involvement of ansible.  But actually the result so far is pretty powerful.  Ansible has lots of random utilities, but previously the friction involved to actually use them might have felt daunting.  But our new targets now make it easy to pull in a discrete chunk of ansible very quickly without having to ansible all the things.  
 
-As a more practical example, one can imagine raiding the [kubernetes.core.k8s module](#) for useful stuff:
+As a more practical example, one can imagine raiding the [kubernetes.core.k8s module](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_module.html) for useful stuff:
 
 ```Makefile
+
 cluster.purge:
-    echo namespace=testing kind=Deployment delete_all=true | make ansible.adhoc.args/kubernetes.core.k8s
+	echo namespace=testing kind=Deployment delete_all=true \
+	| make ansible.adhoc.args/kubernetes.core.k8s
 ```
 
 This is what we were really aiming at originally: a verby high-level and domain-specific API, with tasks accessible individually or in groups from CLI, or available to programmatically chain together as DAGs.

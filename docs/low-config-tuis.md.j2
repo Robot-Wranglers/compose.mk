@@ -1,0 +1,24 @@
+{% import 'macros.j2' as macros -%}
+
+### Low Config TUIs
+
+If you already have a project Makefile with some existing automation, you can `include compose.mk` at the top and still use the TUI with no other changes by using [`tux.mux`]({{mkdocs.site_relative_url}}/api/#tuxopenarg).  The `tux.open` target simply accepts any number of `make` targets, and then opens 1 TUI pane for each target.  
+
+Let's walk through some examples, supposing you already have targets for `clean`, `build`, `test`.  You can open a 3-pane TUI by just calling `make tux.mux/clean,build,test`.  This runs all of the named targets in parallel, and the whole TUI will exit after the individual tasks are completed.
+
+Of course, it probably doesn't make sense to run `clean`/`build`/`test` in parallel.  To get more flexibility here, it's often useful to use [`flux.*`, aka the workflow library]({{mkdocs.site_relative_url}}/api/#api-flux).  
+
+* We can run sequentially run `clean` and `build` by using `flux.wrap`, i.e. `flux.wrap/clean,build`
+* We can run `test` in a loop forever by using `flux.loopf/test`
+
+Putting it together, we can make a completely different TUI with this command line: 
+
+```bash 
+$ make tux.mux/flux.wrap/clean,build,flux.loopf/test
+```
+
+{#
+And if you're interested in building your own TUIs, see the [Dashboarding demo]({{mkdocs.site_relative_url}}/demos/dashboarding.mk).
+#}
+
+<hr style="width:100%;border-bottom:3px solid black;">

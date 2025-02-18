@@ -320,8 +320,9 @@ docker.images.filter=docker images --filter reference=${1} --format "{{.Reposito
 # External tool used for parsing Makefile metadata
 PYNCHON_CLI_VERSION=baf56b7
 pynchon=$(trace_maybe) && ${pynchon.run}
-pynchon.run=python -m pynchon.util.makefile
-
+# pynchon.run=python -m pynchon.util.makefile
+pynchon.docker=${docker.run.base} -v `pwd`:/workspace -w/workspace --entrypoint python robotwranglers/pynchon:$${PYNCHON_VERSION:-baf56b7} 
+pynchon.run:=$(shell which pynchon >/dev/null 2>/dev/null && echo python || echo "${pynchon.docker}") -m pynchon.util.makefile
 # Macros for use with jq/yq/jb, using local tools if available and falling back to dockerized versions
 jq.docker=${docker.run.base} -e key=$${key:-} -v `pwd`:/workspace -w/workspace ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}
 yq.docker=${docker.run.base} -e key=$${key:-} -v `pwd`:/workspace -w/workspace mikefarah/yq:$${YQ_VERSION:-4.43.1}
@@ -551,7 +552,7 @@ compose.validate/%:
 ## This interface is deliberately minimal, focusing on verbs like 'stop' and 'stat' more than verbs like 'build' and 'run'. That's because containers that are managed by docker compose are preferred, but some ability to work with inlined Dockerfiles for simple use-cases is supported. See stream.pygmentize for an example.
 ##
 ## DOCS:
-##   * `[1]`: https://github.com/robot-wranglers/compose.mk/docs/api#api-docker
+##   * `[1]`: https://robot-wranglers.github.io/compose.mk/api#api-docker
 ##
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -943,15 +944,15 @@ docker.volume.panic:; docker volume prune -f
 ## END: docker.* targets
 ## BEGIN: io.* targets
 ##
-## The `io.*` namespace has misc helpers for working with input/output, including utilities
-## for working with temp files and showing output to users.  User-facing output leverages 
-## charmbracelet utilities like gum[1] and glow[2].  Generally we use tools directly if they 
-## are available, falling back to utilities in containers.
+## The `io.*` namespace has misc helpers for working with input/output, including
+## utilities for working with temp files and showing output to users.  User-facing 
+## output leverages  charmbracelet utilities like gum[1] and glow[2].  Generally we 
+## use tools directly if they are available, falling back to utilities in containers.
 ##
-## See also `io.print.*` and `stream.pygmentize` for simpler versions of some of these features.
+## See also `io.print.*` and `stream.pygmentize` for simpler versions of some features.
 ##
 ## DOCS:
-##  * [0] https://github.com/robot-wranglers/compose.mk/docs/api#api-io
+##  * [0] https://robot-wranglers.github.io/compose.mk/api#api-io
 ##  * [1] https://github.com/charmbracelet/gum
 ##  * [1] https://github.com/charmbracelet/glow
 ##
@@ -1013,12 +1014,6 @@ io.gum.style/%:; ( width=`echo \`tput cols\` / ${*} | bc` ${make} io.gum.style )
 	@#
 	@# EXAMPLE: (A half-width labeled divider)
 	@#   label=... ./compose.mk io.gum.style/2
-
-##
-## ----------------------------------------------------------------------------
-## DOCS:
-##   [1] https://github.com/robot-wranglers/compose.mk/docs/api#api-io
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # Helper for working with temp files.  Returns filename,
 # and uses 'trap' to handle at-exit file-deletion automatically.
@@ -1243,8 +1238,9 @@ io.time.wait/% io.wait/%:
 ## END: io.* targets
 ## BEGIN: mk.* targets
 ##
-## The 'mk.*' targets are meta-tooling that include various extensions to `make` itself.  
-## 
+## The 'mk.*' targets are meta-tooling that include various extensions to 
+## `make` itself, including some support for reflection and runtime changes.
+##
 ## A rough guide to stuff you can find here:
 ## 
 ## * `mk.supervisor.*` for signals and supervisors
@@ -1253,9 +1249,8 @@ io.time.wait/% io.wait/%:
 ## * `mk.help.*` for help-generation
 ##
 ## For more details: 
-## * Full API Docs: https://github.com/robot-wranglers/compose.mk/docs/api#api-mk
-## * Signals & Supervisors: https://github.com/robot-wranglers/compose.mk/#signals-and-supervisors
-## * Mad Science Test-Suite: https://github.com/robot-wranglers/compose.mk/tests/Makefile.mad-science.mk
+## * Full API Docs: https://robot-wranglers.github.io/compose.mk/api#api-mk
+## * Signals & Supervisors: https:/robot-wranglers.github.io/compose.mk/signals
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
@@ -1728,9 +1723,9 @@ mk.vars:; echo "${.VARIABLES}\n" | sed 's/ /\n/g' | sort
 ## ----------------------------------------------------------------------------
 ##
 ## DOCS:
-##   * `[1]:` https://github.com/robot-wranglers/compose.mk/docs/api#api-flux
-##   * `[1]:` https://github.com/robot-wranglers/compose.mk/docs/api#api-flux
-##   * `[1]:` https://github.com/robot-wranglers/compose.mk/docs/api#api-flux
+##   * `[1]:` https://robot-wranglers.github.io/compose.mk/api#api-flux
+##   * `[1]:` https://robot-wranglers.github.io/compose.mk/api#api-flux
+##   * `[1]:` https://robot-wranglers.github.io/compose.mk/api#api-flux
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 
@@ -2359,9 +2354,8 @@ flux.try.except.finally/%:
 ## ----------------------------------------------------------------------------
 ## DOCS:
 ## 
-##   * `[1]:` https://github.com/robot-wranglers/compose.mk/docs/api#api-stream
+##   * `[1]:` https://robot-wranglers.github.io/compose.mk/docs/api#api-stream
 ##   * `[2]:` https://github.com/h4l/json.bash
-##   * `[1]:` https://github.com/robot-wranglers/compose.mk/docs/api#api-stream
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 stream.stdin=cat /dev/stdin
@@ -3499,7 +3493,7 @@ define compose.get_services
 endef
 
 # Macro to create all the targets for a given compose-service.
-# See docs @ https://github.com/robot-wranglers/compose.mk/#composemk-api-dynamic
+# See docs @ https://robot-wranglers.github.io/compose.mk/bridge
 define compose.create_make_targets
 $(eval compose_service_name := $1)
 $(eval target_namespace := $2)
@@ -3916,7 +3910,7 @@ jb jb.pipe:
 	@#
 	@# REFS:
 	@#   * `[1]`: https://github.com/h4l/json.bash
-	@#   * `[2]`: https://github.com/robot-wranglers/compose.mk/tree/master/#signals-and-supervisors
+	@#   * `[2]`: https://robot-wranglers.github.io/compose.mk/signals
 	@#
 	case $$(test -p /dev/stdin && echo pipe) in \
 		pipe) sh ${dash_x_maybe} -c "${jb.run} `${stream.stdin}`"; ;; \

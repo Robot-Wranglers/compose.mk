@@ -25,7 +25,7 @@ The [`loadf` command](#loading-compose-files) is a typical example: the 2nd argu
 ./compose.mk loadf tests/docker-compose.yml
 ```
  
-**Sometimes we want individual targets to essentially be able to consume the rest of the command line.**  In this case, the filename is best understood as an argument to the first target, and not a target itself.  
+**Sometimes we want individual targets to essentially be able to consume the rest of the command line.**  In other words.. the filename is best understood as an argument to the first target, and not a target itself.  
 
 The [wrappers for `jq` and `jb`]({{mkdocs.site_relative_url}}/tool-overview/#proxy-wrappers) are another example that requires reading the whole command-line.
 
@@ -58,11 +58,10 @@ All targets related to signals/supervisors can be found under the `mk.interrupt`
 {%for target in targets %} {% set target=target.strip().replace('%','<arg>') %}{%if target%}
 * [`{{target}}`]({{mkdocs.site_relative_url}}/api#{{target.replace('<','').replace('>','').replace('/','').replace('.','')}}){%endif%}{%endfor%}
 
-Targets above are for low-level internal use, and even hacking directly on `compose.mk` source probably won't require editing them.  To implement a new [proxy-wrapper]({{mkdocs.site_relative_url}}/tool-overview/#proxy-wrappers), use `mk.yield`.  Here's how you'd give `compose.mk` a new proxy-wrapper for the `ls` command:
+Targets above are for low-level internal use, and even hacking directly on `compose.mk` source probably won't require editing them.  To implement a new [proxy-wrapper]({{mkdocs.site_relative_url}}/tool-overview/#proxy-wrappers), use `mk.yield2`.  Here's how you'd give `compose.mk` a new proxy-wrapper for the `ls` command:
 
 ```Makefile 
 # compose.mk src 
 ls:
-	ls $${MAKE_CLI#*ls}
-	${mk.interrupt}
+	$(call mk.yield2, ls $${MAKE_CLI#*ls})
 ```

@@ -8,7 +8,7 @@ Set FontSize 10
 Set Width 1000
 Set Height 768
 Show 
-Type "./compose.mk loadf tests/docker-compose.yml tux.open.horizontal/debian/shell,alpine/shell,ubuntu/shell"
+Type "layout=horizontal ./compose.mk loadf tests/docker-compose.yml tux.open.service_shells/debian,alpine,ubuntu"
 Enter
 Sleep 15s
 Screenshot img/loadf-2.png

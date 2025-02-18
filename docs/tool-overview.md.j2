@@ -74,38 +74,12 @@ Proxy-wrappers are very useful for simple stuff, but the wrapped tools `jq`, `yq
 
 #### Other Wrappers 
 
-Setting aside the big 3 tools that use [proxy-wrappers](#proxy-wrappers), other wrappers are more simple because `compose.mk` gets tactical and won't even try to expose a 1:1 interface.  Sometimes we accept arguments, but mostly we just pass data on pipes.  
+Setting aside the big 3 tools that use [proxy-wrappers](#proxy-wrappers), other wrappers are simpler because `compose.mk` gets tactical and won't even try to expose a 1:1 interface.  Sometimes we accept arguments, but mostly we just pass data on pipes.  
 
 Here's a few examples:
 
 ```bash 
-# Use `stream.chafa` to preview an image on the console with chafa
-$ cat img.png | ./compose.mk stream.chafa
-
-# Use `stream.chafa` to preview an image on the console with chafa (alternate)
-$ cat img.png | ./compose.mk stream.img.preview
-
-# Use `stream.glow` to preview markdown
-$ cat README.md | ./compose.mk stream.glow
-
-# Use `stream.glow` to preview markdown (alternate)
-$ cat README.md | ./compose.mk stream.markdown.preview
-
-# Use `stream.pygmentize` to syntax-highlight code with pygments (guess lexer)
-$ cat Makefile | ./compose.mk stream.pygmentize
-
-# Use `stream.pygmentize` to syntax-highlight code with pygments (explicit lexer)
-$ cat Makefile | ./compose.mk stream.pygmentize lexer=Makefile
-
-# Use `stream.json.pygmentize` to preview JSON (minified)
-$ ./compose.mk jb key=val | ./compose.mk stream.json.pygmentize
-
-# Use `stream.json.pygmentize` to preview JSON (expanded)
-$ ./compose.mk jb key=val | ./compose.mk jq . | ./compose.mk stream.json.pygmentize
-
-# Use `stream.peek` to preview data somewhere in the middle of a pipe and pass it on
-$ ./compose.mk jb key=val | ./compose.mk stream.peek | ./compose.mk jq .
-
+{{open('tests/tool-wrappers.sh','r').read().strip()}}
 ```
 
 In the case of `tmux`, see the separate [documentation for the embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui).
@@ -114,6 +88,9 @@ Most of these targets are also available as makefile-macros.  See also the docum
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+{#
 ### Kung-Fu with Flux 
 
 ```bash
@@ -124,7 +101,6 @@ $ ls /tmp | ./compose.mk stream.nl.to.space
 <hr style="width:95%;border-bottom:1px dashed black;">
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{#
 ### Logging Facilities
 
 {{macros.img_link("demo-io.gif", mkdocs, "90%")}}

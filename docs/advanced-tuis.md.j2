@@ -1,0 +1,31 @@
+{% import 'macros.j2' as macros -%}
+
+### Extensions & Scripting
+
+In the limit, `compose.mk` can help you to script *custom console applications* that potentially involve many containers, and by using [mk.self]({{mkdocs.site_relative_url}}/demos/packaging) you can even "compile" them to stand-alone executables.  This works best for building things like dashboards, but it's even possible to build portable, project-specific IDEs.
+
+As a minimal example of extending the TUI, consider the following Makefile:
+
+```Makefile
+{{open('demos/tui/extension.mk','r').read().strip()}}
+```
+
+Running this opens a split-screen console with both panes showing an interactive bash terminal.  
+
+{{macros.img_link("tui-extension.png", mkdocs, "350px")}}
+
+This example helps to give an idea of the general structure of TUI extensions, but it isn't very useful.  The eagle-eyed reader will have noticed that the shells we opened are *running inside the TUI container*.  The project folder is already volume-mounted though, as is the hosts docker-socket.
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+### Widgets Etc 
+
+Widgets are just targets like everything else in `compose.mk`, but they are targets that are especially useful for display inside the TUI.
+
+```bash
+# Rotates a string across the display, marquee style.
+text=mytext ./compose.mk tux.widget.ticker
+```
+
+<hr style="width:100%;border-bottom:3px solid black;">
+

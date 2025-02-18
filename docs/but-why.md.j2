@@ -90,13 +90,7 @@ In terms of minimalism and dependencies, `just` just requires `just`, and is ava
 
 Love it or hate it, **the main differentiator for `compose.mk` is that it's designed first and foremost *to be extended***.  It moonlights as a tool, but in many ways is closer to a scripting language.
 
-{#
-#}
 <hr style="width:100%;border-bottom:3px solid black;">
-
-{#
-<hr style="width:95%;border-bottom:1px dashed black;">
-#}
 
 ## The Top of the Stack
 
@@ -104,9 +98,6 @@ Tools like `ansible`, `cloudformation`, `docker`, `docker-compose`, `eksctl` are
 
 Having a well defined "top" of your stack that sets some context, and provides aliased entrypoints for cumbersome-but-common stuff becomes really important.  Just as important, that context needs to be project based, and shouldn't leak out into your shell in general, or your system in general.  **Makefiles are the obvious choice here,** because they enable everything and require nothing, allowing for a pretty seamless mixture of config, overrides, entrypoint aliases, context management, task orchestration, and new automation layers that connect and recombine existing ones.
 
-{#Suppose you want to make no assumptions about python/node/maven availability for a build context. is easily done by **versioning those platforms explicitly in your compose file**, then calling them with [target dispatch](#container-dispatch).  This gives a frictionless local-dev experience at the same time that it frees you up from worrying about whether automation and images are in sync for local-dev / Jenkins / Github.#}
-
-{#<hr style="width:100%;border-bottom:3px solid black;">#}
 <hr style="width:100%;border-bottom:3px solid black;">
 
 ## No Golden Version for Frameworks
@@ -139,8 +130,6 @@ Opinions will differ about whether it is *good or pleasant*, but glue code is in
 Believe it or not, related topics in this neighborhood actually include things like the reproducibility problem in science, the idea of [executable papers in CS](https://ccmc.gsfc.nasa.gov/executable-papers/) and the fact that *no one cares about your project repo*.  *(Let's be real: No one wants to look at your project because it's a mess of docs/examples/tests/support data, and they have to understand how it's all organized before they can even try to use it.  Usually, even after a project is understood, it's not like you can *use* it directly, it must be adapted or edited or installed or configured, and now we're down the rabbit hole of dependencies.*)
 
 So, part of what we're really talking about is **the ability to turn a project into a tool** with minimal extra effort, and that won't be easy without some structure imposed.  But it would be great if that structure doesn't always strictly require [some kind of proprietary format](https://registry.terraform.io/providers/databricks/databricks/latest/docs/data-sources/pipelines) that guarantees you can never even prototype flows locally.  And it would also be nice if it didn't [make it harder to just edit code](https://github.com/imbue-ai/jupyter_ascending).  Notebook-driven development has obvious benefits [and many problems](https://yobibyte.github.io/notebooks.html) that are perhaps less obvious.
-
-{#Real world projects are messy though, and `compose.mk` is focused on remaining agnostic about your languages, tools, and domain.#}
 
 To point the microscope at data-engineering instead of data-science.. most people have probably also seen the phenomenon where some team is struggling with enterprise java frameworks and/or cloud-based services for 3 months, just to deliver a CSV -> JSON conversion tool.
 
@@ -202,8 +191,6 @@ Obviously if additional deep platform-setup must be involved, **DIND does remain
 <hr style="width:100%;border-bottom:3px solid black;">
 
 #}
-
-
 {#
 
 ## Pragma for Developers
@@ -217,7 +204,7 @@ To the extent you really *need* advanced Makefile features like eval-call macros
 #}
 <hr style="width:100%;border-bottom:3px solid black;">
 
-[^1]: [Recursive make Considered Harmful][https://aegis.sourceforge.net/auug97.pdf]
+[^1]: [Recursive make Considered Harmful](https://aegis.sourceforge.net/auug97.pdf)
 [^2]: [Non-recursive Make Considered Harmful](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/03/hadrian.pdf)
 [^3]: [Unreasonable effectiveness of Makefiles](https://matt-rickard.com/the-unreasonable-effectiveness-of-makefiles)
-[^4]: https://github.com/casey/just?tab=readme-ov-file#what-are-the-idiosyncrasies-of-make-that-just-avoids
+[^4]: [make vs just](https://github.com/casey/just?tab=readme-ov-file#what-are-the-idiosyncrasies-of-make-that-just-avoids)

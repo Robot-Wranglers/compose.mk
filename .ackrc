@@ -1,0 +1,4 @@
+--ignore-dir=.tmp
+--ignore-dir=docs/theme
+--ignore-dir=site/
+--ignore-dir=.tox
