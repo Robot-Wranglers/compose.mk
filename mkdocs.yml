@@ -59,6 +59,7 @@ nav:
   - Misc Features:
       - 'CLI Help': cli-help.md
       - 'Supervisors & Signals': signals.md
+      - 'Self Extracting Executables': demos/packaging.md
   - Demos:
     # - 'Demos Overview': demos/overview.md
     - 'Custom Automation APIs': demos/ansible.md
@@ -67,7 +68,6 @@ nav:
     - 'Platform Lifecycle Example': demos/platform.md
     - 'Polyglot Makefiles': demos/polyglots.md
     - 'Embedding Containers or Data': demos/mad-science.md
-    - 'Self-extracting Executables': demos/packaging.md
   - Misc:
     - 'Design Philosophy': but-why.md 
     # - 'Configuration / Env Vars': config.md

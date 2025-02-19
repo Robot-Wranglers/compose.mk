@@ -158,6 +158,7 @@ glyph.tree_item:=├┈
 
 export TERM?=xterm-256color
 
+# FIXME: docs 
 export DOCKER_HOST_WORKSPACE?=$(shell pwd)
 
 OS_NAME:=$(shell uname -s)
@@ -745,7 +746,8 @@ docker.commander:
 	@# Automation also ensures that lazydocker always starts with the "statistics" tab open.
 	@#
 	$(call log, ${GLYPH_DOCKER} ${@} ${sep} ${no_ansi_dim}Opening commander TUI for docker)
-	geometry="${GEO_DOCKER}" ${make} tux.open/.tux.widget.lazydocker,flux.wrap/docker.stat:io.envp/DOCKER,.tux.widget.img
+	# geometry="${GEO_DOCKER}" ${make} tux.open/.tux.widget.ctop,flux.wrap/docker.stat:io.envp/DOCKER,.tux.widget.img
+	geometry="${GEO_DOCKER}" ${make} tux.open/.tux.widget.lazydocker,flux.loopf/flux.wrap/docker.stat:.tux.widget.ctop,.tux.widget.img
 
 docker.network.panic:; docker network prune -f
 	@# Runs 'docker network prune' for the entire system.
@@ -814,6 +816,15 @@ docker.run.def:
 	&& script_pre="$${cmd:-}" && unset cmd \
 	&& script="$${script_pre} $${tmpf}" img=$${img} ${make} docker.run.sh) ${stderr_stdout_indent}
 
+.tux.img.rotate/%:
+	$(call log, ${@})
+	$(call io.mktemp) \
+	&& entrypoint=python3 img=robotwranglers/imgrot \
+	cmd="/opt/imgrot/imgrot.py ${*} --range 360 --stream" \
+	${make} docker.run.sh > $${tmpf} \
+	&& chafa --duration inf --speed .5 \
+	--clear --center on $${tmpf}
+
 docker.run.sh:
 	@# Runs the given command inside the named container.
 	@#
@@ -843,7 +854,8 @@ docker.run.sh:
 		--rm -i $${tty} $${extra_env} \
 		-e TERM="$${TERM}" \
 		-e CMK_INTERNAL=1 \
-		-v `pwd`:/workspace \
+		-e DOCKER_HOST_WORKSPACE=$${DOCKER_HOST_WORKSPACE:-$${PWD}} \
+		-v $${workspace:-$${PWD}}:/workspace \
 		-v $${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock \
 		-w /workspace \
 		$${entry} \
@@ -2097,7 +2109,7 @@ flux.ok:
 	@#
 	@# See also `flux.fail`
 	@#
-	$(call log, ${GLYPH_FLUX} flux.ok${no_ansi_dim} ${sep} ${no_ansi} succceeding as requested!) \
+	$(call log, ${GLYPH_FLUX} flux.ok${no_ansi_dim} ${sep} ${no_ansi} succeeding as requested!) \
 	&& exit 0
 
 flux.split/%:
@@ -3248,8 +3260,8 @@ endef
 			&& fname=$${tmpf}; ;; \
 		*) fname=$${url}; ;; \
 	esac \
-	&& interval=$${interval:-10} \
-		${make} flux.loopf/.tux.img.display/$${fname}
+	&& interval=$${interval:-10} ${make} flux.loopf/.tux.img.rotate/$${fname}
+	# && interval=$${interval:-10} ${make} flux.loopf/.tux.img.display/$${fname}
 
 .tux.img.display/%:
 	@# Displays the named file using chafa, and centering it in the available terminal width.
@@ -3258,6 +3270,7 @@ endef
 	@#  ./compose.mk .tux.img.display/<fname>
 	@#
 	chafa --clear --center on ${*}
+
 
 .tux.widget.img.var/%:
 	@# Unpacks an image URL from the given make/shell variable name, then displays it as TUI widget.
@@ -3272,6 +3285,10 @@ endef
 
 .tux.widget.lazydocker: .tux.widget.lazydocker/0
 
+.tux.widget.ctop:
+	sleep 2; tty=1 img=moncho/dry ${make} docker.start
+# .tux.widget.dockdash:; tty=1 img=wagoodman/dive:latest ${make} docker.start
+	
 .tux.widget.lazydocker/%:
 	@# Starts lazydocker in the TUI, then switches to the "statistics" tab.
 	@#
@@ -3279,10 +3296,11 @@ endef
 	&& filter=`echo ${*}|cut -s -d/ -f2` \
 	&& $(trace_maybe) \
 	&& tmux send-keys -t 0.$${pane_id} "lazydocker" Enter "]" \
-	&& [ -z "$${filter:-}" ] && true || ( \
-		tmux send-keys -t 0.$${pane_id} "/$${filter}" C-m \
-		&& tmux send-keys -t 0.$${pane_id} Down; \
-		)
+	&& cmd="tmux send-keys -t 0.$${pane_id} Down" ${make} flux.apply.later.sh/3 \
+	&& case "$${filter:-}" in \
+		"") true;; \
+		*) (tmux send-keys -t 0.$${pane_id} "/$${filter}" C-m );; \
+	esac
 
 .tte/%:
 	@# Interface to terminal-text-effects[1], just for fun.  Used as part of the main TUI demo.

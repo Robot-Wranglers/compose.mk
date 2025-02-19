@@ -2,15 +2,17 @@
 
 Usually it's a good idea to separate task-definitions from the containers they run, and [using the docker compose support]({{mkdocs.site_relative_url}}/bridge) is the recommended way to arrange things.  However, `compose.mk` sometimes needs more direct and low-level access to docker primitives for internal use, and this functionality is exposed for external use as well. 
 
-* **For use-cases related to cleaning and refactoring bash-script or Makefiles that are already using the docker CLI,** there are various utility functions that are available as part of the [`docker.*` namespace of the API]({{mkdocs.site_relative_url}}/api/#api-docker).
-
-* **For use-cases related to rapidly prototyping systems and pipelines,** check out the [mad science demos]({{mkdocs.site_relative_url}}/demos/mad-science).  These examples show how to work with inlined Dockerfiles and ways to implement tasks in arbitrary programming languages.
-
 The rest of this page is a quick introduction to both.
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
 ### Docker Utilities
+
+**For use-cases related to cleaning and refactoring bash-script or Makefiles that are already using the docker CLI,** there are various utility functions that are available as part of the [`docker.*` namespace of the API]({{mkdocs.site_relative_url}}/api/#api-docker).  
+
+Example usage for some of the utilities can be seen below.
+
+{#<hr style="width:95%;border-bottom:1px dashed black;">#}
 
 ```Makefile
 {{open('tests/docker-utils.sh','r').read().strip()}}
@@ -18,4 +20,24 @@ The rest of this page is a quick introduction to both.
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{% include "demos/inlined-docker-files.md.j2"%}
+### Docker API 
+
+Shortcuts for the relevant sections of the API are below:
+
+{% set targets=bash('./compose.mk help|grep docker') %}
+{% set targets=targets.split('\n') %}
+{%for target in targets %} {% set target=target.strip().replace('%','<arg>') %}{%if target%}
+* [`{{target}}`]({{mkdocs.site_relative_url}}/api#{{target.replace('<','').replace('>','').replace('/','').replace('.','')}}){%endif%}{%endfor%}
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+### Inlined Docker Files
+
+**For use-cases related to rapidly prototyping systems and pipelines,** check out [these mad-science demos]({{mkdocs.site_relative_url}}/demos/mad-science).  These examples show how to work with inlined Dockerfiles and ways to implement tasks in arbitrary programming languages.
+
+
+```Makefile
+{{open('demos/inlined-dockerfile.mk','r').read().strip()}}
+```
+
+<hr style="width:100%;border-bottom:3px solid black;">

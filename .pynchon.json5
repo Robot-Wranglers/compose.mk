@@ -25,7 +25,7 @@
       "--fix"
     ]
   },
-  "github": { "org_name": "elo-enterprises"},
+  "github": { "org_name": "robot-wranglers"},
   "jinja": {
     "template_includes": ['docs']
   },

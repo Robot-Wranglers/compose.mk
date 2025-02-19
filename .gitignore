@@ -12,4 +12,15 @@ docs/low-config-tuis.md
 docs/zero-config-tuis.md
 site
 docs/loadf.md
-docs/demos/ansible.md docs/demos/inlined-docker-files.md docs/demos/mad-science.md docs/demos/overview.md docs/demos/packaging.md docs/demos/platform.md docs/demos/polyglots.md docs/demos/workflows.md
+docs/demos/*.md
+docs/features.md
+.flux.stage.*
+archive.run
+Untitled*.ipynb
+docs/api.md
+docs/embedded-tui.md
+docs/index.md
+docs/cli-help.md
+docs/bridge.md
+docs/raw-docker.md
+docs/tool-overview.md

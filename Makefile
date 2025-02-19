@@ -76,6 +76,7 @@ itest/%:; make test-suite/itest/${*}
 
 ## BEGIN: Documentation related targets
 ##
+
 define docs.builder.composefile
 services:
   docs.builder: &base
@@ -100,10 +101,6 @@ mkdocs.build build.mkdocs:; mkdocs build
 mkdocs.serve serve:; mkdocs serve --dev-addr 0.0.0.0:8000
 
 docs: docs.jinja #docs.mermaid
-
-docs.deploy:
-	#[ `git rev-parse --abbrev-ref HEAD` == "docs" ] || (echo this isnt docs branch; exit 1) \
-	mkdocs gh-deploy --config-file mkdocs.yml --remote-branch docs
 
 docs.jinja:
 	@# Render all docs with jinja
