@@ -78,6 +78,7 @@ plugins:
   - search
   - autolinks 
 
+# https://squidfunk.github.io/mkdocs-material/reference/lists/#using-definition-lists
 markdown_extensions:
   - footnotes 
   - admonition

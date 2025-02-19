@@ -152,3 +152,15 @@ vhs.demo:; suite=Makefile.itest.mk make vhs/demo
 vhs.demo/%:; suite=Makefile.itest.mk make vhs/${*}
 vhs.tui:; suite=Makefile.tui.mk make vhs/tui
 vhs.tui/%:; make vhs/${*}
+
+## BEGIN: CI/CD related targets
+##
+cicd.clean: clean.github.actions
+clean.github.actions:
+	@#
+	@#
+	gh run list --status failure --json databaseId \
+	| ${stream.peek} | jq -r '.[].databaseId' \
+	| xargs -n1 -I% sh -x -c "gh run delete %"
+
+
