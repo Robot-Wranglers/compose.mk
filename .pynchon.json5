@@ -27,6 +27,10 @@
   },
   "github": { "org_name": "robot-wranglers"},
   "jinja": {
-    "template_includes": ['docs']
+    "template_includes": ['docs'],
+    "vars": {
+      "k8stools_repo_url": "https://github.com/Robot-Wranglers/k8s-tools",
+      "k8stools_docs_url": "https://robot-wranglers.github.io/k8s-tools/",
+    }
   },
 }

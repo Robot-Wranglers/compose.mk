@@ -26,15 +26,16 @@ include compose.mk
 ##
 all: init clean build test docs
 
-build:
-	@# NOP
-
 init: mk.stat docker.stat
+
 clean: flux.stage.clean
 	@# Only used during development; normal usage involves build-on-demand.
 	@# Cache-busting & removes temporary files used by build / tests 
 	rm -f tests/compose.mk
 	find . | grep .tmp | xargs rm 2>/dev/null|| true
+
+build normalize: # NOP
+
 test: integration-test tui-test demo-test smoke-test 
 	
 smoke-test stest:
@@ -69,14 +70,11 @@ ttest tui-test: test-suite/tui/all
 ttest/%:; make test-suite/tui/${*}
 
 itest integration-test: test-suite/itest/all
-	@# Integration-test suite.  This tests compose.mk and ignores k8s-tools.yml.
-	@# Exercises container dispatch and the make/compose bridge.  No kubernetes.
 itest/%:; make test-suite/itest/${*}
 
 
 ## BEGIN: Documentation related targets
 ##
-
 define docs.builder.composefile
 services:
   docs.builder: &base
@@ -119,12 +117,9 @@ docs.mermaid docs.mmd:
 	@# Renders all diagrams for use with the documentation 
 	pynchon mermaid apply
 
+
 ## BEGIN: targets for recording demo-gifs used in docs
-##
 ## Uses charmbracelete/vhs to record console videos of the test suites 
-## Videos for demos of the TUI
-## Videos of the e2e test suite. ( Order matters here )
-## Videos of the integration test suite. ( Order matters here )
 ##
 vhs: vhs.demo vhs.tui
 vhs/%:

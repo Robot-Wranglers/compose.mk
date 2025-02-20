@@ -2,7 +2,9 @@
 
 ## Demo: Platform Lifecycle
 
-This demo describes one way to express platform lifecycle automation using `compose.mk`.
+This demo describes one way to express platform lifecycle automation using `compose.mk`.  
+
+Since `compose.mk` is a *domain agnostic* approach to automation, this demo is just a toy use-case that focuses mainly on data-flows and doesn't *do real work*.  If you want something that's more than a toy, see the sibling project that's focused on kubernetes over at [k8s-tools]({{jinja.vars.k8stools_docs_url}}/demos/cluster-lifecycle).
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -71,6 +73,8 @@ self.events:
 
 So that illustrates [container dispatch](#) combined with the [flux.dmux target]({{mkdocs.site_relative_url}}/api#fluxdmux).  There are many other `flux.*` targets ([see the API docs]({{mkdocs.site_relative_url}}/api#api-flux)).. see also the [Workflow Demo]({{mkdocs.site_relative_url}}/demos/ansible/).  
 
+<hr style="width:100%;border-bottom:3px solid black;">
+
 ### Discussion 
 
 This tight expression of complex flow will already be familiar to lots of people: whether they are bash wizards, functional programming nerds, or the Airflow/MLFlow/ArgoWF users.  *But this example pipes data between 5 containers, with no dependencies, and in remarkably direct way that feels pretty seamless!*  It neatly separates the automation itself from the context that it runs in, all with no platform lock-in.  Plus.. compared to the alternatives, doesn't it feel more like working with a programming language and less like jamming bash into yaml? 🤔
@@ -79,11 +83,7 @@ As mentioned previously, the workflow description weighs in at only ~20 lines.  
 
 It's a neat party trick that `compose.mk` has some features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.  Really, `flux.*` is more similar in spirit to things like [declarative pipelines in Jenkins](https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline).
 
-{#
-This example mostly runs as written, but properly escaping the JSON properly is awkward, etc. (Actually builtin's for working with [`jb`]({{mkdocs.site_relative_url}}/api#jb) or [`stream.json.object.append`]({{mkdocs.site_relative_url}}/api#api-stream) can help with this, but it tends to obfuscate the example.)  If you want to see something that actually runs, check out the [simple dispatch demo]({{mkdocs.site_relative_url}}/compose.mk#container-dispatch) (which runs as part of [integration tests]({{github.repo_url}}/tree/master/tests/Makefile.itest.mk)).
-#}
-
-For a full blown project, check out [k3d-faas.git](https://github.com/elo-enterprises/k3d-faas), which also breaks down automation into platforms, infrastructure, and app phases.
+Again, for a full blown project, check out the sister projects at [k8s-tools.git]({{jinja.vars.k8stools_docs_url}}/demos/cluster-lifecycle) and [k3d-faas.git](https://github.com/robot-wranglers/k3d-faas), which also break down automation into platforms, infrastructure, and app phases.
 
 <hr style="width:100%;border-bottom:3px solid black;">
  

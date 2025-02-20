@@ -2,9 +2,48 @@
 
 ### Zero Config TUIs
 
-As a quick option for interacting with third-party projects that you can't control and don't want to edit, zero-config TUIs are part of what makes `compose.mk` useful in [tool mode]({{mkdocs.site_relative_url}}).  Since the TUI is mainly focused around *building* TUIs instead of providing them ready to use, the idea of a "zero config" TUI might seem strange.  Ultimately, you do need to bring a docker-compose file **or** a Makefile, but you can skip the usual [project integration]({{mkdocs.site_relative_url}}/integration).  
+As a quick option for interacting with third-party projects that you can't control and don't want to edit, zero-config TUIs are part of what makes `compose.mk` useful in [tool mode]({{mkdocs.site_relative_url}}).  
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+#### Basic Examples 
+
+For a simple demo that's just exercising containerized `tmux`, geometry, and dispatching targets to panes.. try `./compose.mk tux.demo`:
+
+{{macros.img_link("tui-tte.gif", mkdocs, "350px")}}
 
 <hr style="width:95%;border-bottom:1px dashed black;">
+
+For a more involved example of dashboarding, you can try `./compose.mk docker.commander`.  This demonstrates using other containers as TUI widgets- in this case we combine [lazydocker](https://github.com/jesseduffield/lazydocker), [ctop](https://github.com/moncho/dry), and [imgrot](https://github.com/Robot-Wranglers/docker-imgrot).
+
+
+{{macros.img_link("docker.commander.gif", mkdocs, "350px")}}
+
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+#### Working with Compose-Files
+
+{#
+`./compose.mk tux.demo`
+
+:   Tests basic functionality with `tmux` and `tte`, exercising geometry, task dispatch, etc.
+
+`./compose.mk loadf path/to/docker-compose.yml tux.open.service_shells/<svc1>,<svc2>,..<svcN>`
+
+:   Opens interactive shells for named services in N panes.
+
+`./compose.mk mk.include/demos/no-include.mk tux.open/clean,build,test`
+
+:   Opens named targets from named makefile
+
+the idea of a "zero config" TUI might seem strange.  
+
+
+TUI support is mainly focused around *building* TUIs instead of providing them ready to use, but there are a few exceptions.
+
+Ultimately, you do need to bring a docker-compose file **or** a Makefile, but you can skip the usual [project integration]({{mkdocs.site_relative_url}}/integration).  
+#}
 
 **If your project has a docker-compose file,** you might be interested in the `loadf` command (full docs [here]({{mkdocs.site_relative_url}}/loadf)).  For convenience, the `loadf` command bypasses integration and will still let you do basic stuff with the containers defined inside the compose file.  
 
@@ -27,7 +66,11 @@ $ layout=spiral ./compose.mk loadf tests/docker-compose.yml \
     tux.open/debian/shell,alpine/shell,ubuntu/shell
 ```
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+{#<hr style="width:95%;border-bottom:1px dashed black;">#}
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+#### Working with Makefiles
 
 **If your project has a Makefile,** you might be interested in the `mk.include` target, which effectively simulates a `include compose.mk` in your project Makefile without actually adding one.  For demonstrating this, consider the following classic Makefile that just defines fake `build`, `clean`, and `test` targets that do nothing.
 

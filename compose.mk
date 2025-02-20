@@ -746,7 +746,6 @@ docker.commander:
 	@# Automation also ensures that lazydocker always starts with the "statistics" tab open.
 	@#
 	$(call log, ${GLYPH_DOCKER} ${@} ${sep} ${no_ansi_dim}Opening commander TUI for docker)
-	# geometry="${GEO_DOCKER}" ${make} tux.open/.tux.widget.ctop,flux.wrap/docker.stat:io.envp/DOCKER,.tux.widget.img
 	geometry="${GEO_DOCKER}" ${make} tux.open/.tux.widget.lazydocker,flux.loopf/flux.wrap/docker.stat:.tux.widget.ctop,.tux.widget.img
 
 docker.network.panic:; docker network prune -f
@@ -964,27 +963,20 @@ docker.volume.panic:; docker volume prune -f
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-io.gum.div_style:=--border double --align center --width $${width:-$$(echo "x=$$(tput cols) - 5;if (x < 0) x=-x; default=30; if (default>x) default else x" | bc)}
-io.gum.default_style:=--border double --foreground 2 --border-foreground 2
+io.gum=(which gum >/dev/null && ( ${1} ) \
+	|| (entrypoint=gum cmd="${1}" quiet=0 \
+		img=charmcli/gum:v0.15.2 ${make} docker.run.sh)) > /dev/stderr
+
+io.gum.style.div:=--border double --align center --width $${width:-$$(echo "x=$$(tput cols) - 5;if (x < 0) x=-x; default=30; if (default>x) default else x" | bc)}
+io.gum.style.default:=--border double --foreground 2 --border-foreground 2
 
 charm.glow:=docker run -i charmcli/glow:v1.5.1 -s dracula
 
-io.gum.style=label="${1}" make io.gum.style
+io.gum.style=label="${1}" ${make} io.gum.style
 
-define Dockerfile.gum
-# Default container does not include any shell, 
-# which prevents using 'gum spin -- sleep ..', etc
-FROM ${GUM_IMAGE:-ghcr.io/charmbracelet/gum} as gum
-FROM ${DEBIAN_CONTAINER_VERSION:-debian:bookworm}
-COPY --from=gum /usr/local/bin/gum /usr/bin
-endef
-
-io.gum=(which gum >/dev/null && ( ${1} ) \
-	|| (entrypoint=bash cmd="${dash_x_maybe} -c '${1}'" quiet=1 \
-		img=gum ${make} docker.from.def/gum mk.docker.run.sh)) > /dev/stderr
 io.gum.tty=export tty=1; $(call io.gum, ${1})
-io.gum.format.code=$(call io.gum, ${stream.stdin} | gum format -t code) | ${stream.trim}
-io.gum.format.code:; $(call io.gum.format.code)
+# io.gum.format.code=$(call io.gum, ${stream.stdin} | gum format -t code) | ${stream.trim}
+# io.gum.format.code:; $(call io.gum.format.code)
 io.gum.spin:
 	@# Runs `gum spin` with the given command/label.
 	@#
@@ -1011,7 +1003,7 @@ io.gum.style:
 	@#   label="..." ./compose.mk io.gum.style 
 	@#   width=30 label='...' ./compose.mk io.gum.style 
 	@#
-	$(call io.gum, gum style ${io.gum.default_style} ${io.gum.div_style} \"$${label}\")
+	$(call io.gum, style ${io.gum.style.default} ${io.gum.style.div} \"$${label}\")
 
 io.gum.style/%:; ( width=`echo \`tput cols\` / ${*} | bc` ${make} io.gum.style )
 	@# Prints a divider on stdout for the given fraction of the full terminal width,
@@ -3261,7 +3253,6 @@ endef
 		*) fname=$${url}; ;; \
 	esac \
 	&& interval=$${interval:-10} ${make} flux.loopf/.tux.img.rotate/$${fname}
-	# && interval=$${interval:-10} ${make} flux.loopf/.tux.img.display/$${fname}
 
 .tux.img.display/%:
 	@# Displays the named file using chafa, and centering it in the available terminal width.
@@ -3270,7 +3261,6 @@ endef
 	@#  ./compose.mk .tux.img.display/<fname>
 	@#
 	chafa --clear --center on ${*}
-
 
 .tux.widget.img.var/%:
 	@# Unpacks an image URL from the given make/shell variable name, then displays it as TUI widget.
@@ -3285,9 +3275,9 @@ endef
 
 .tux.widget.lazydocker: .tux.widget.lazydocker/0
 
+# https://github.com/moncho/dry
 .tux.widget.ctop:
 	sleep 2; tty=1 img=moncho/dry ${make} docker.start
-# .tux.widget.dockdash:; tty=1 img=wagoodman/dive:latest ${make} docker.start
 	
 .tux.widget.lazydocker/%:
 	@# Starts lazydocker in the TUI, then switches to the "statistics" tab.

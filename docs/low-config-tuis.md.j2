@@ -2,7 +2,16 @@
 
 ### Low Config TUIs
 
-If you already have a project Makefile with some existing automation, you can `include compose.mk` at the top and still use the TUI with no other changes by using [`tux.mux`]({{mkdocs.site_relative_url}}/api/#tuxopenarg).  The `tux.open` target simply accepts any number of `make` targets, and then opens 1 TUI pane for each target.  
+In the docs for zero-config TUIs, we saw a few ways to start up interfaces without any project integration.  In the end though, the CLI starts to get pretty clunky, and it's better to have somewhere else to put configuration.
+
+Let's revisit that [previous example]({{mkdocs.site_relative_url}}/zero-config-tuis/#working-with-makefiles) in a less adhoc way, extending the classic *clean/build/test* project Makefile with a TUI as before, but using code this time.
+
+```Makefile
+{{open('demos/dashboarding.mk','r').read().strip()}}
+```
+
+{{macros.img_link("dashboarding.gif", mkdocs, "250px")}}
+{#
 
 Let's walk through some examples, supposing you already have targets for `clean`, `build`, `test`.  You can open a 3-pane TUI by just calling `make tux.mux/clean,build,test`.  This runs all of the named targets in parallel, and the whole TUI will exit after the individual tasks are completed.
 
@@ -17,7 +26,6 @@ Putting it together, we can make a completely different TUI with this command li
 $ make tux.mux/flux.wrap/clean,build,flux.loopf/test
 ```
 
-{#
 And if you're interested in building your own TUIs, see the [Dashboarding demo]({{mkdocs.site_relative_url}}/demos/dashboarding.mk).
 #}
 

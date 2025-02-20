@@ -23,3 +23,5 @@ build:
 test:
 	${io.print.div}
 	echo Testing stuff
+	label="divider using gum" ${make} io.gum.style
+	
