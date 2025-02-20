@@ -4,6 +4,10 @@
 
 In the docs for zero-config TUIs, we saw a few ways to start up interfaces without any project integration.  In the end though, the CLI starts to get pretty clunky, and it's better to have somewhere else to put configuration.
 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+#### Basic Example 
+
 Let's revisit that [previous example]({{mkdocs.site_relative_url}}/zero-config-tuis/#working-with-makefiles) in a less adhoc way, extending the classic *clean/build/test* project Makefile with a TUI as before, but using code this time.
 
 ```Makefile
@@ -11,22 +15,63 @@ Let's revisit that [previous example]({{mkdocs.site_relative_url}}/zero-config-t
 ```
 
 {{macros.img_link("dashboarding.gif", mkdocs, "250px")}}
-{#
 
-Let's walk through some examples, supposing you already have targets for `clean`, `build`, `test`.  You can open a 3-pane TUI by just calling `make tux.mux/clean,build,test`.  This runs all of the named targets in parallel, and the whole TUI will exit after the individual tasks are completed.
+As before, the goal was to loop the test-target and run the clean/build sequentially, in separate panes at the same time.  But look, **no target bodies!**  The declarative flavor is nice, and this is frequently the case for TUI customization: mostly we just need declare groups of existing targets and/or flow between them. We've seen that this frequently involves `compose.mk::flux` targets, like [flux.loopf](#) and [flux.apply](#).  
 
-Of course, it probably doesn't make sense to run `clean`/`build`/`test` in parallel.  To get more flexibility here, it's often useful to use [`flux.*`, aka the workflow library]({{mkdocs.site_relative_url}}/api/#api-flux).  
+Anyway, it's really no surprise that the implementation is short since it only needs minor changes compared with the CLI version we saw earlier.  
 
-* We can run sequentially run `clean` and `build` by using `flux.wrap`, i.e. `flux.wrap/clean,build`
-* We can run `test` in a loop forever by using `flux.loopf/test`
+{# <hr style="width:95%;border-bottom:1px dashed black;"> #}
+<hr style="width:100%;border-bottom:3px solid black;">
 
-Putting it together, we can make a completely different TUI with this command line: 
+#### Adding a Container as a "Widget"
 
-```bash 
-$ make tux.mux/flux.wrap/clean,build,flux.loopf/test
+One powerful technique is to run a container inside a dedicated pane as a "widget".  As a simple example, we'll extend the example so far to include [`moncho/dry`](https://github.com/moncho/dry), a docker-monitoring application.  
+
+Adding a new "middle" pane using this image only changes two lines, and doesn't break the declarative style:
+
+```Makefile
+{{open('demos/dashboarding-widgets.mk','r').read().strip()}}
 ```
 
-And if you're interested in building your own TUIs, see the [Dashboarding demo]({{mkdocs.site_relative_url}}/demos/dashboarding.mk).
-#}
+Above, the [docker.start.tty target](#) does the heavy lifting for us, and depending on your exact use-case you might have to write a target-body, or use other related targets like [docker.start](#), [docker.run](#), or [docker.run.sh](#).
+
+Crucially, the `docker.*` targets are designed to launch tool containers, so they **always share the working directory and the docker socket by default**.  You can always launch a dockerized "widget" by writing any target-body that directly calls `docker run ...`, but if you do it this way you probably need to remember add volume-mounts.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+#### Container Dispatch
+
+Eagle-eyed readers will have noticed that our fake clean/build/test targets don't need special tools, and that we are lucky so far because *these targets are running inside the embedded TUI container*, and not on the host or in a dedicated tool container.
+
+Of course, if your automation fails to run inside the embedded TUI container, then it would probably also fail to run inside any fresh environment... or in other words, your automation is already broken =P
+
+So regardless of whether you want to use the TUI, the way to begin to address this problem may involve some combination of [container dispatch](#) with internal or externally-defined Dockerfiles, compose-files, etc.  In many cases though, tool containers are already available, and already ship with basics like `make` and `bash`.  For this situation, we can again get away with very minimal changes.
+
+To see what it looks like, let's suppose for the next example that we need golang tools available for *clean/build* phases:
+
+```Makefile
+{{open('demos/dashboarding-dispatch.mk','r').read().strip()}}
+```
+
+The magic line uses `docker.image.dispatch/<image>/<target>`, and in this case the image is `golang:1.24-bookworm`.  (To stick with the declarative style, we have to escape the colon to declare a legal prerequisite target.)
+
+Above, we've also changed the *clean/build* targets to actually *use* golang tools.  And we changed `flux.apply` arguments to include `io.bash` at the end so that the interactive shell we're left with in that pane is *running inside the golang container*, and not the TUI container.
+
+As with the zero-config TUI examples before, this is getting somewhat unwieldy and hard to read.  But since we're scripting now, there are several ways to refactor it as something cleaner.  Typically for something like this you just need to introduce 1 or more intermediate targets:
+
+```Makefile 
+# refactoring example
+
+IMG_GOLANG=golang:1.24-bookworm
+
+bottom: golang.dispatch/chain
+chain: flux.apply/clean,build,io.bash
+golang.dispatch/%:
+	${make} docker.image.dispatch/${IMG_GOLANG}/${*}
+```
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+So much for low-config TUIs.  In the next section, we'll cover more advanced usage.
 
 <hr style="width:100%;border-bottom:3px solid black;">

@@ -780,6 +780,12 @@ docker.run/%:
 	&& entrypoint=make \
 		cmd="${MAKE_FLAGS} ${makefile_list} ${*}" \
 			img=$${img} ${make} docker.run.sh
+docker.image.dispatch/%:
+	@# Similar to `docker.run/<arg>`, but accepts the image and the target.
+	@# USAGE:
+	@#  ./compose.mk docker.image.dispatch/<img>/<target>
+	tty=1 img=`printf "${*}"|cut -d/ -f1` ${make} docker.run/`printf "${*}"|cut -d/ -f2-`
+
 docker.run.image/%:
 	@# Runs the given commands in the given image.
 	@#
@@ -874,7 +880,7 @@ docker.start/%:; img="${*}" entrypoint=none ${make} docker.run.sh
 	@# Starts the named docker image with the default entrypoint
 	@# USAGE: 
 	@#   ./compose.mk docker.start/<img>
-
+docker.start.tty/%:; tty=1 ${make} docker.start/${*}
 docker.start:; ${make} docker.start/$${img}
 	@# Like 'docker.run', but uses the default entrypoint.
 	@# USAGE: 
@@ -3276,8 +3282,7 @@ endef
 .tux.widget.lazydocker: .tux.widget.lazydocker/0
 
 # https://github.com/moncho/dry
-.tux.widget.ctop:
-	sleep 2; tty=1 img=moncho/dry ${make} docker.start
+.tux.widget.ctop:; sleep 2; ${make} docker.start.tty/moncho/dry
 	
 .tux.widget.lazydocker/%:
 	@# Starts lazydocker in the TUI, then switches to the "statistics" tab.
