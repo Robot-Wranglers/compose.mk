@@ -15,7 +15,7 @@ THIS_MAKEFILE:=$(abspath $(firstword $(MAKEFILE_LIST)))
 .DEFAULT_GOAL:=help
 
 .SUFFIXES:
-.PHONY: docs demos
+.PHONY: docs demos README.md
 
 export SRC_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 export PROJECT_ROOT := $(shell dirname ${THIS_MAKEFILE})
@@ -98,17 +98,19 @@ mkdocs: mkdocs.build mkdocs.serve
 mkdocs.build build.mkdocs:; mkdocs build
 mkdocs.serve serve:; mkdocs serve --dev-addr 0.0.0.0:8000
 
-docs: docs.jinja #docs.mermaid
-
+docs: README.md docs.jinja #docs.mermaid
+README.md:
+	set -x && pynchon jinja render README.md.j2 -o README.md
 docs.jinja:
 	@# Render all docs with jinja
 	find docs | grep .j2 | sort | sed 's/docs\///g' | grep -v macros.j2 \
 	| xargs -I% sh -x -c "make docs.jinja/% || exit 255"
 
-docs.jinja/%: 
+docs.init:; pynchon --version 
+
+docs.jinja/%: docs.init
 	@# Render the named docs twice (once to use includes, then to get the ToC)
-	pynchon --version \
-	&& $(call io.mktemp) && first=$${tmpf} \
+	$(call io.mktemp) && first=$${tmpf} \
 	&& set -x && pynchon jinja render docs/${*} -o $${tmpf} --print \
 	&& dest="docs/`dirname ${*}`/`basename -s .j2 ${*}`" \
 	&& [ "${*}" == "README.md.j2" ] && mv $${tmpf} README.md || mv $${tmpf} $${dest}

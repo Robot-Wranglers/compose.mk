@@ -1,0 +1,12 @@
+##
+# tests/docker-compose.yml: 
+#  Typical compose file that works with target dispatch.
+#  (For more discussion, see the installation docs)
+##
+services:
+  debian: &base
+    image: debian:bookworm
+  ubuntu: 
+    image: ubuntu:noble
+  alpine:
+    image: alpine

@@ -41,7 +41,7 @@ Crucially, the `docker.*` targets are designed to launch tool containers, so the
 
 #### Container Dispatch
 
-Eagle-eyed readers will have noticed that our fake clean/build/test targets don't need special tools, and that we are lucky so far because *these targets are running inside the embedded TUI container*, and not on the host or in a dedicated tool container.
+Eagle-eyed readers will have noticed that our fake *clean/build/test* targets don't need special tools, and that we are lucky so far because *these targets are running inside the embedded TUI container*, and not on the host or in a dedicated tool container.
 
 Of course, if your automation fails to run inside the embedded TUI container, then it would probably also fail to run inside any fresh environment... or in other words, your automation is already broken =P
 
