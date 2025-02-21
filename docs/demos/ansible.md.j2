@@ -8,9 +8,11 @@ This demo describes one way to very quickly expose custom automation APIs using 
 
 When it comes to automation, combining different tools that might be in different containers together is part of the job, but at the end of the day you always want a *coherent vocabulary of verbs that operate on your domain.*  
 
-Those verbs might just be the classic build/clean/test, but even then you're often orchestrating across different containers. But your vocabulary might look more like build/deploy.  And if things get complicated enough your vocabulary might become develop more object oriented instructions like `queue.stop` and `cluster.create`.  So that's an automation API in broad strokes, and `compose.mk` has the tools to build it.
+Those verbs might just be the classic build/clean/test, but even then you're often orchestrating across different containers. *And* your vocabulary might look more like build/deploy.  *And* if things get complicated enough your vocabulary might develop more object-oriented instructions, like `queue.stop` and `cluster.create`.  
 
-Really, `compose.mk` is a foundation to build on, and it doesn't make assumptions about your domain.  Combining `compose.mk` with your own toolkit and *building* a new vocabulary is where it really starts to shine.  For a deep dive into a much larger example of this where `compose.mk` is used orchestrating kubernetes tools, see the [sibling project for k8s-tools](#).
+So that's an automation API in broad strokes, and `compose.mk` has the tools to build it.
+
+Really, `compose.mk` is a foundation to build on, and it doesn't make assumptions about your domain.  But combining `compose.mk` with your own toolkit and **building** a new vocabulary is where it really starts to shine.  For a deep dive into a much larger example of this where `compose.mk` is used for orchestrating kubernetes tools, see the [sibling project for k8s-tools]({{jinja.vars.k8stools_docs_url}}).
 
 **For our purposes here, we'll look at a concrete use-case that's much smaller, so let's talk about hacking Ansible.**
 
