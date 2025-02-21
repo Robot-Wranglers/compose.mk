@@ -876,23 +876,24 @@ docker.run.sh:
 	&& printf ${*} | sed 's/,/\n/g' \
 	| xargs -I% printf " -e %=\"\`echo \$${%}\`\""; printf '\n'
 
-docker.start/%:; img="${*}" entrypoint=none ${make} docker.run.sh
-	@# Starts the named docker image with the default entrypoint
-	@# USAGE: 
-	@#   ./compose.mk docker.start/<img>
-docker.start.tty/%:; tty=1 ${make} docker.start/${*}
 docker.start:; ${make} docker.start/$${img}
 	@# Like 'docker.run', but uses the default entrypoint.
 	@# USAGE: 
 	@#   img=.. ./compose.mk docker.start
 
+docker.start/%:; img="${*}" entrypoint=none ${make} docker.run.sh
+	@# Starts the named docker image with the default entrypoint
+	@# USAGE: 
+	@#   ./compose.mk docker.start/<img>
 .docker.start/%:; ${make} docker.start/compose.mk:${*}
 	@# Like 'docker.start' but implicitly uses 'compose.mk' prefix. This is used with "local" images.
+
+docker.start.tty/%:; tty=1 ${make} docker.start/${*}
+
 
 docker.socket:; ${make} docker.context/current | ${jq.run} -r .Endpoints.docker.Host
 	@# Returns the docker socket in use for the current docker context.
 	@# No arguments & pipe-friendly.
-	
 
 docker.stat:
 	@# Show information about docker-status.  No arguments.
@@ -972,15 +973,13 @@ docker.volume.panic:; docker volume prune -f
 io.gum=(which gum >/dev/null && ( ${1} ) \
 	|| (entrypoint=gum cmd="${1}" quiet=0 \
 		img=charmcli/gum:v0.15.2 ${make} docker.run.sh)) > /dev/stderr
-
+io.gum.style=label="${1}" ${make} io.gum.style
 io.gum.style.div:=--border double --align center --width $${width:-$$(echo "x=$$(tput cols) - 5;if (x < 0) x=-x; default=30; if (default>x) default else x" | bc)}
 io.gum.style.default:=--border double --foreground 2 --border-foreground 2
+io.gum.tty=export tty=1; $(call io.gum, ${1})
 
 charm.glow:=docker run -i charmcli/glow:v1.5.1 -s dracula
 
-io.gum.style=label="${1}" ${make} io.gum.style
-
-io.gum.tty=export tty=1; $(call io.gum, ${1})
 # io.gum.format.code=$(call io.gum, ${stream.stdin} | gum format -t code) | ${stream.trim}
 # io.gum.format.code:; $(call io.gum.format.code)
 io.gum.spin:
@@ -3283,7 +3282,7 @@ endef
 
 # https://github.com/moncho/dry
 .tux.widget.ctop:; sleep 2; ${make} docker.start.tty/moncho/dry
-	
+
 .tux.widget.lazydocker/%:
 	@# Starts lazydocker in the TUI, then switches to the "statistics" tab.
 	@#
