@@ -974,7 +974,8 @@ export ALPINE_VERSION?=3.21.2
 export GUM_VERSION?=v0.15.2
 export GLOW_VERSION?=v1.5.1
 # This is a hack because charmcli/gum is distroless, but the spinner needs to use "sleep", etc
-io.gum.alt=docker run -it --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nRUN apk add --update --no-cache bash\nCOPY --from=charmcli/gum:${GUM_VERSION} /usr/local/bin/gum /usr/local/bin/gum")`
+io.gum.alt.dumb=docker run -it -e TERM=dumb --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nRUN apk add --update --no-cache bash\nCOPY --from=charmcli/gum:${GUM_VERSION} /usr/local/bin/gum /usr/local/bin/gum")`
+io.gum.alt=docker run -it -e TERM=$${TERM:-xterm} --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nRUN apk add --update --no-cache bash\nCOPY --from=charmcli/gum:${GUM_VERSION} /usr/local/bin/gum /usr/local/bin/gum")`
 
 
 io.gum=(which gum >/dev/null && ( ${1} ) \
@@ -987,7 +988,7 @@ io.gum.tty=export tty=1; $(call io.gum, ${1})
 
 charm.glow:=docker run -i charmcli/glow:${GLOW_VERSION} -s dracula
 
-io.gum.choose/%:
+io.gum.choice/% io.gum.choose/%:
 	@# Interface to `gum choose`.
 	@# This uses gum if it's available and falls back to docker.
 	@#
@@ -1509,12 +1510,40 @@ mk.namespace.filter/%:
 	
 mk.parse/%:
 	@# Parses the given Makefile, returning JSON output that describes the targets, docs, etc.
+	@# This parsing is "deep", i.e. it returns metadata for *included* targets as well.  
 	@# This uses a dockerized version of the pynchon[1] tool.
 	@#
 	@# REFS:
 	@#   * `[1]`: https://github.com/elo-enterprises/pynchon/
 	@#
 	${pynchon} parse --markdown ${*} 2>/dev/null
+
+# mk.target.choice/%:
+# 	@# Interactive target-selection from the given Makefile (via `gum choose`)
+# 	@#
+# 	@#
+# 	@#
+# 	$(call mk.target.choice,${*})
+# mk.target.choice=${make} io.gum.choice/$${choices}`${make} mk.parse.shallow/${*}|${stream.nl.to.comma}`
+
+mk.select/%:
+	@#
+	@#
+	@#
+	choices=`${make} mk.parse.shallow/${*}|${stream.nl.to.space}` \
+	&& $(call io.mktemp) \
+	&& script -qefc --return --command "${io.gum.alt} choose $${choices}" $${tmpf} \
+	&& choice=`cat $${tmpf} |col |tail -n-3|head -1|awk -F"006l" '{print $$2}'` \
+	&& set -x && make -f ${*} $${choice}
+
+.mk.select/%:
+	${make} -f ${*} `${stream.stdin}`
+
+mk.parse.shallow/%:
+	@# Returns a newline-delimited list of targets inside the given Makefile.
+	@# Unlike `mk.parse`, this is "flat" and too naive to parse includes.
+	@# Targets starting with "." are considered private, and ommitted from the return value
+	cat ${*} | awk '/^[a-zA-Z0-9._-]+:/ {sub(/:.*$$/,"");print $$0}'|grep -v '^[.]'
 
 mk.parse.block/%:
 	@# Pulls out documentation blocks that match the given pattern.
@@ -2580,6 +2609,7 @@ stream.nl.enum:; ${stream.nl.enum}
 	@# 		1	two
 
 stream.nl.to.comma=( cat ${stdin} | xargs | sed 's/ /,/g' )
+stream.nl.to.comma:; ${stream.nl.to.comma}
 
 # FIXME: rewrite with 'jb'
 stream.nl.to.json.array:
