@@ -2,6 +2,8 @@
 
 ## TUI Overview
 
+<hr style="width:100%;border-bottom:3px solid black;">
+
 The TUI capabilities of `compose.mk` are best thought of as an **interface-builder rather than a specific interface.**  As usual and despite appearances, support for the TUI requires *no dependencies except for `make` and `docker`*.  It aims for low-config and sane defaults, so for high level usage it requires no configuration at all.  Under the hood, the TUI uses a dockerized version of [tmux](https://github.com/tmux/tmux) for core drawing and geometry.
 
 There's a few ways to describe what the TUI actually *does*.  
@@ -36,9 +38,9 @@ For the impatient, here's a small gallery that show-cases the type of stuff you 
 * For low-level API reference, see the [`tux.*` targets]({{mkdocs.site_relative_url}}/api/#api-tux).  
 * For TUI-related stand-alone tools, see [the loadf docs]({{mkdocs.site_relative_url}}/loadf) and the [tool wrappers docs]({{mkdocs.site_relative_url}}/tool-overview/#other-wrappers).
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ### Batteries Included
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Besides a dockerized `tmux`, the basic pre-configured components of the TUI are things like [tmuxp](https://github.com/tmux-python/tmuxp) for dynamic session management, and overridable defaults for [tmux themes](https://github.com/jimeh/tmux-themepack/), [tmux plugins](https://github.com/tmux-plugins/tpm), [keybindings](#tui-keybindings), etc.  
 

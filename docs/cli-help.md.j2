@@ -2,6 +2,8 @@
 
 ## CLI Help
 
+<hr style="width:100%;border-bottom:3px solid black;">
+
 When using `compose.mk` directly, help not only *works,* it goes beyond simply listing available targets, and actually parses and displays documentation per target, and per target-namespace. *(Under the hood, a dockerized version of [charmbracelete/glow](https://github.com/charmbracelet/glow) renders markdown.)*.
 
 {{macros.img_link("tui-7.gif", mkdocs, "90%")}}
@@ -20,9 +22,9 @@ $ ./compose.mk help docker.run
 $ ./compose.mk help docker
 ```
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ## Help For Project Makefiles
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 To enable help for your project Makefile, it is helpful to use `include compose.mk` somewhere near the top.  By itself, this enables target listing with `make help`, including both the inherited targets from `compose.mk` as well as the new targets that are project specific.
 
@@ -52,6 +54,8 @@ my-parametric-target/%:
 <hr style="width:100%;border-bottom:3px solid black;">
 
 ## Implementation Details
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 The implementation for help uses `mk.help.*` family of targets, and if you want to customize help or error messages they might be useful.  
 

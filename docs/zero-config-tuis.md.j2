@@ -2,11 +2,13 @@
 
 ### Zero Config TUIs
 
-As a quick option for interacting with third-party projects that you can't control and don't want to edit, zero-config TUIs are part of what makes `compose.mk` useful in [tool mode]({{mkdocs.site_relative_url}}).  
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
+As a quick option for interacting with third-party projects that you can't control and don't want to edit, zero-config TUIs are part of what makes `compose.mk` useful in [tool mode]({{mkdocs.site_relative_url}}).  
+
 #### Basic Examples 
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 For a simple demo that's just exercising containerized `tmux`, geometry, and dispatching targets to panes.. try `./compose.mk tux.demo`:
 
@@ -20,9 +22,9 @@ For a more involved example of dashboarding, you can try `./compose.mk docker.co
 {{macros.img_link("docker.commander.gif", mkdocs, "350px")}}
 
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 #### Working with Compose-Files
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 {#
 `./compose.mk tux.demo`
@@ -68,9 +70,9 @@ $ layout=spiral ./compose.mk loadf tests/docker-compose.yml \
 
 {#<hr style="width:95%;border-bottom:1px dashed black;">#}
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 #### Working with Makefiles
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 **If your project has a Makefile,** you might be interested in the `mk.include` target, which effectively simulates a `include compose.mk` in your project Makefile without actually adding one.  For demonstrating this, consider the following classic Makefile that just defines fake `build`, `clean`, and `test` targets that do nothing.
 

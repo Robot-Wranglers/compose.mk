@@ -2,6 +2,8 @@
 
 ## TUI Implementation Details
 
+<hr style="width:100%;border-bottom:3px solid black;">
+
 {{macros.img_link("tui-5.gif", mkdocs)}}
 
 How does this work?  The behaviour above relies on a few things.  First, the `compose.mk:tux` container supports docker-in-docker style host-socket sharing with zero configuration.  This means that the TUI can generally do all the same container orchestration tasks as the docker host.  
@@ -21,6 +23,8 @@ Beyond the simple examples of customization mentioned in the last section, more 
 Documentation for this process isn't great right now, but for a start, have a look at the differences between targets like [docker.commander]({{mkdocs.site_relative_url}}/api#dockercommander) vs the similar-but-different [k3d.commander]({{mkdocs.site_relative_url}}/api#k3dcommander).
 
 ### TUI Keybindings
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 The TUI ships with some default keybindings that are aimed at keeping things pretty user-friendly even for those who are not already familiar with tmux.  
 

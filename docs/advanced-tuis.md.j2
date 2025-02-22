@@ -2,6 +2,8 @@
 
 ### Extensions & Scripting
 
+<hr style="width:100%;border-bottom:3px solid black;">
+
 In the limit, `compose.mk` can help you to script *custom console applications* that potentially involve many containers, and by using [mk.self]({{mkdocs.site_relative_url}}/demos/packaging) you can even "compile" them to stand-alone executables.  This works best for building things like dashboards, but it's even possible to build portable, project-specific IDEs.
 
 As a minimal example of extending the TUI, consider the following Makefile:
@@ -20,12 +22,20 @@ This example helps to give an idea of the general structure of TUI extensions, b
 
 ### Widgets Etc 
 
+<hr style="width:100%;border-bottom:3px solid black;">
+
 Widgets are just targets like everything else in `compose.mk`, but they are targets that are especially useful for display inside the TUI.
 
 ```bash
 # Rotates a string across the display, marquee style.
 text=mytext ./compose.mk tux.widget.ticker
 ```
+
+### Config 
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Lorem ipsum etc
 
 <hr style="width:100%;border-bottom:3px solid black;">
 

@@ -1,9 +1,11 @@
 {% import 'macros.j2' as macros -%}
 ## Mad Science
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr style="width:100%;border-bottom:3px solid black;">
 
 ### Inlined Compose Files
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 ```Makefile
 {{open('demos/inlined-composefile.mk','r').read().strip()}}
@@ -13,9 +15,9 @@
 
 {% include "demos/inlined-docker-files.md.j2"%}
 
-<hr style="width:95%;border-bottom:1px dashed black;">
-
 ### Extending Inlined Docker Files 
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Inlined containers can actually be extended with other inlines, but notice again the `compose.mk:` prefix which is used as a "repository".
 
@@ -23,9 +25,9 @@ Inlined containers can actually be extended with other inlines, but notice again
 {{open('demos/extend-inlined-dockerfile.mk','r').read().strip()}}
 ```
 
-<hr style="width:95%;border-bottom:1px dashed black;">
-
 ### Passing Inlined Data-Structures
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Building on the [Custom Automation APIs](#) demo, let's embed an ansible playbook, pass *that* into an embeddded container.
 

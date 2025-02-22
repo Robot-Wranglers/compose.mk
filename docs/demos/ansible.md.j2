@@ -4,11 +4,13 @@
 
 ### Introduction
 
+<hr style="width:100%;border-bottom:3px solid black;">
+
 This demo describes one way to very quickly expose custom automation APIs using `compose.mk`.  *What does that even mean?*
 
 When it comes to automation, combining different tools that might be in different containers together is part of the job, but at the end of the day you always want a *coherent vocabulary of verbs that operate on your domain.*  
 
-Those verbs might just be the classic build/clean/test, but even then you're often orchestrating across different containers. *And* your vocabulary might look more like build/deploy.  *And* if things get complicated enough your vocabulary might develop more object-oriented instructions, like `queue.stop` and `cluster.create`.  
+Those verbs might just be the classic *build/clean/test*, but even then you're often orchestrating across different containers. And your vocabulary might look more like *build/deploy*, or if things get complicated enough, your vocabulary might develop more object-oriented instructions, like *queue.stop* and *cluster.create*.  
 
 So that's an automation API in broad strokes, and `compose.mk` has the tools to build it.
 
@@ -16,17 +18,20 @@ Really, `compose.mk` is a foundation to build on, and it doesn't make assumption
 
 **For our purposes here, we'll look at a concrete use-case that's much smaller, so let's talk about hacking Ansible.**
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ### Hijacking Ansible
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 **The problem:** Ansible is neat for lots of stuff, but it comes with a lot of baggage.  Depending on how you're using it.. you'll need a playbook, maybe a config file and an inventory file, not to mention a python stack, and you'll need the ansible version itself pinned.  It's a whole stack and it has to be layed out in a certain way; command line invocations are long, tedious, and easy to get wrong.  Simple stuff can be a lot of drama, especially if you're trying to make sure it's reproducible. And things gets worse if you need to run it from different contexts, or if you're trying to keep this work small and self-contained.  
 
 As an exercise.. let's look at what `compose.mk` can bring to adress some of that.  
 
-<hr style="width:95%;border-bottom:1px dashed black;">
 
 ### Map Ansible Modules to Targets
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+{#<hr style="width:95%;border-bottom:1px dashed black;">#}
 
 [Ansible's adhoc mode](#) gives some direct access to ansible-modules and lets you skip a playbook.  For our first trick, we'll try to expose access to those modules.  Here are the basic goals:
 
@@ -57,6 +62,8 @@ As an aside, the eagle-eyed reader will have noticed that `docker_host_info` act
 <hr style="width:100%;border-bottom:3px solid black;">
 
 ### Discussion
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 So anyway, the examples so far are contrived, and the technique itself is more important than the involvement of ansible.  But actually the result so far is pretty powerful.  Ansible has lots of random utilities, but previously the friction involved to actually use them might have felt daunting.  But our new targets now make it easy to pull in a discrete chunk of ansible very quickly without having to ansible all the things.  
 

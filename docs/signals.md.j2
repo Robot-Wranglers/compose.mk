@@ -2,6 +2,8 @@
 
 ## Signals and Supervisors
 
+<hr style="width:100%;border-bottom:3px solid black;">
+
 **Working with signals (or understanding them) is not required for most use-cases of `compose.mk`,** especially if you're using it as a library.   But [for some tool mode invocations]({{mkdocs.site_relative_url}}//tool-overview/#tool-wrappers), supervisors and signals might be involved implicitly.  Signals also enable certain experimental features, and in principle the supervisor can be extended with new entry/exit hooks.
 
 Power users will be interested to understand the caveats and limitations around this, and anyone looking to work deeply on `compose.mk` itself may need to grok the implementation.
@@ -38,6 +40,8 @@ $ echo foo=bar | ./compose.mk jb
 
 ### Implementation
 
+<hr style="width:100%;border-bottom:3px solid black;">
+
 Since the last section describes the goal, you might be wondering how this kind of semi-magical behavior can be achieved.   And since the answer to that question is frankly kind of ridiculous, this should probably be considered experimental :)  *With that sternly worded warning out of the way..*
 
 Signals and supervisors are implemented using [a shebang hack](https://en.wikipedia.org/wiki/Shebang_(Unix)) and a [polyglot](https://en.wikipedia.org/wiki/Polyglot_(computing)), whereby `compose.mk` is simultaneously a Makefile, a Makefile library, *and* a bash script.  The bash script invokes `make`, but wraps it to catch any signals that are thrown.  After throwing a supported signal causes `make` to exit, bash catches, and then passes the code for the caught signal back to *another* invocation of `make` for an exit handler.
@@ -49,6 +53,8 @@ Also note that while passing control over to a completely different process like
 <hr style="width:100%;border-bottom:3px solid black;">
 
 ### For Developers
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 All targets related to signals/supervisors can be found under the `mk.interrupt` and `mk.super` namespaces, respectively.  
 

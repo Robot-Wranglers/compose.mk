@@ -10,9 +10,10 @@
 <hr style="width:100%;border-bottom:3px solid black;">
 
 {{macros.img_link("y-tho.png", mkdocs, "65%")}}
-<hr style="width:100%;border-bottom:3px solid black;">
 
 ## Intro 
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 **Most of the documentation deals with *how*, but if you want to know more about *why*, then the rest of this page is for you.**  It's more essay-form than FAQ, but it might address what you're interested in.  
 
@@ -22,9 +23,9 @@ You can take or leave any of the major components, but the most controversial de
 
 **Working theory: philosophy rarely changes hearts and minds, but tooling and examples might?**
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ## Is this even for real?
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Some people might be skeptical about getting involved with *the biggest, baddest, and most highly-powered mutant Makefile the world has ever seen*, so let's be clear about a few things: 
 
@@ -45,9 +46,9 @@ And speaking of "real languages", `compose.mk` can actually help you [write make
 * As a tool/library, `compose.mk` is largely *written in `compose.mk`* rather than what you'd call Makefile.  For example, the [TUI generator](#) exercising the [workflows module](#)).  (It's not possible to get coverage-data from the test suite, but dogfooding like this should be a confidence builder.)
 * The API explicitly aims at *frozen* status, and after `compose.mk` is general enough *extend*, then the project is finished.  Bugfixes if necessary but no "forever" development, and no upstream to track.
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ## A Problem Statement
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 So, automation.  How should we even do it?  
 
@@ -61,9 +62,9 @@ People tend to have strong opions about this topic, but here are some observatio
 * **CM tools like Ansible can fix some things, but bring their own problems**.  A few examples of those problems are: Significant setup, significant dependencies, ongoing upstream changes, and the fact that many people cannot read or write it.
 * **The general need for "glue" code and glue languages is large and getting larger all the time, but still woefully underserved.**  This isn't just about devops either, because things like notebooking and data-pipelines stand to benefit.
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ## The Happy Medium
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Much more controversially: **Make is the happy medium here**, despite the haters, the purists, and the skeptics who argue that *make is not a task-runner*, and despite the often-misunderstood [recursive-make-harmful](https://accu.org/journals/overload/14/71/miller_2004/) paper.  
 
@@ -78,9 +79,9 @@ If you need something *outside* of docker that you want stability & ubiquity fro
 
 The biggest problem for many modern use-cases is just that *Makefiles have nothing like native support for running tasks in containers*, **but this is exactly what *`compose.mk`* fixes.**  Makefiles are already pretty good at describing task execution, but describing the containers themselves is far outside of that domain.  Meanwhile, docker-compose is exactly the opposite, and so [Make/Compose is a perfect combination]({{mkdocs.site_relative_url}}/bridge).
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ## The Obligatory Compare/Contrast
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Yes.. there are things such as [remake](https://remake.readthedocs.io/en/latest/), [taskfile](https://taskfile.dev/), and [just](https://github.com/casey/just) to give a few examples.  All task-runners can [run the other ones](#) so it's not like it's really a competition, especially if the goals and feature-sets are very different.  For a sufficiently large project you might even want to use a few runners, each for what they are best at.  But this is the part where one is supposed to say the competition sucks, so here it is :) 
 
@@ -90,17 +91,17 @@ In terms of minimalism and dependencies, `just` just requires `just`, and is ava
 
 Love it or hate it, **the main differentiator for `compose.mk` is that it's designed first and foremost *to be extended***.  It moonlights as a tool, but in many ways is closer to a scripting language.
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ## The Top of the Stack
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Tools like `ansible`, `cloudformation`, `docker`, `docker-compose`, `eksctl` are just a few examples where it's normal to have extremely long & complex command-line invocations, awkward to type and hard to remember.  Those invocations possibly depend on environment variables and other config-context for correct behaviour.  You can't get around this with bash-aliases, because developers won't have those in sync, and problems with plain bash scripts have already been discussed.  Sourcing `.env` files or loading bash functions as part of developer-shells all tends to create issues, because people lose track of the env state in one tabbed terminal vs another, or the state is unavailable to IDEs, etc.  Complicating the matter further, some of these tools actually need access to the same config data, and some operations require multiple tools, or data-flow *between* tools.
 
 Having a well defined "top" of your stack that sets some context, and provides aliased entrypoints for cumbersome-but-common stuff becomes really important.  Just as important, that context needs to be project based, and shouldn't leak out into your shell in general, or your system in general.  **Makefiles are the obvious choice here,** because they enable everything and require nothing, allowing for a pretty seamless mixture of config, overrides, entrypoint aliases, context management, task orchestration, and new automation layers that connect and recombine existing ones.
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ## No Golden Version for Frameworks
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 If you're using large frameworks like Terraform/Ansible at all, then there's a good chance you'll eventually need multiple versions of that framework, at least temporarily.  You can even see this at the level of tools like `awscli` and the split for v1/v2.   Basically your options at a time like this are to:
 
@@ -113,17 +114,17 @@ Choices 1 & 2 are labor intensive and fragile; choice 3 is ugly, fragile, and pa
 
 **Alternatively, you could start managing tool-containers with docker compose, then launch any target in any container with compose.mk's approach to [target dispatch]({{mkdocs.site_relative_url}}/container-dispatch).**  You can still call `make` from Jenkins, Argo, or Github.  While you added smooth workflows for local development, you also just fixed lots of bad coupling because now you can easily switch your whole CI/CD backend from any of these choices to any of the the others.
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ## DAGs Rule Everything Around Me
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 You probably already know that [directed acyclic graphs](https://en.wikipedia.org/wiki/Directed_acyclic_graph) aren't just for Airflow, and these come up practically any time you're thinking about dependency trees, scheduling, and lots of other stuff.  DAGs are pretty much what `make` *does*, and it's good at it.  
 
 For lots of automation work, and *especially* lifecycle automation, DAGs of tasks/prerequisites are the most natural way model things.  **Engines for resolving "desired state" like Terraform/Ansible are great at what they do, but they are not really built for describing DAGs.**  If you're spending lots of time messing around with hooks and plugins, it might be a sign that you're struggling to turn your desired-state-management tools into DAG processors.
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ## Glue Code, Notebooking, and Data Science 
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Opinions will differ about whether it is *good or pleasant*, but glue code is increasing everywhere.  Different projects publishing or hosting notebooks/pipelines are sometimes tidy, or, sometimes admonish you to complete 12 steps of copy-paste to get started.  But most people have probably seen wildly disorganized notebooks *shoved into production directly* as pipelines or pipeline-components at one time or another.  You can try to stop that with culture and code reviews but it's worth asking: what can be done with tooling so that the "good" way is the same as the "easy" way?
 
@@ -137,9 +138,9 @@ Of course, none of this is to suggest that [mini ETL demos](#) mean you can thro
 
 And none of this is meant to suggest that [compose.mk's self-extracting archives](#) will cure the reproducibility crisis either, or that [embedded container definitions](#) are always good idea.  What is a good idea though is making structured prototyping simpler, and trying to make sure that it's actually a positive step towards shipping.
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ## Just Use Tasks in Containers 
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Consider a typical workflow for devops:
 
@@ -165,9 +166,9 @@ Frustratingly, none of this actually has anything to do with `helm`, or the prob
 
 Unlike the "*helm bolted on to terraform/ansible/jenkins*" approach, using `compose.mk` makes it easy to get closer to your tools, and directly use *multiple versions* of the actual tools you care about, and without affecting existing work.  If a tool breaks, you can debug that issue directly, without re-running ansible you don't care about, without digging in terraform core dumps, without trying to connect to weird remote runtimes via ssh or kubectl, and without looking up that one weird environment variable to enable plugin traces.  If you need a tool, then *you just use it*.
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ## DIND and Docker Compose Both Considered Pretty Reasonable
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 People have long memories about the tech that has burned them in the past, and `docker compose` and DIND are great examples of that.
 

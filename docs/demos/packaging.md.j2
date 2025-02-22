@@ -2,21 +2,23 @@
 
 ## Demo: Self Extracting Executables
 
+<hr style="width:100%;border-bottom:3px solid black;">
+
 One of the strangest features of `compose.mk` is that it can **create self-extracting executable archives** from Makefiles (or anything else really) using a dockerized version of [makeself](https://makeself.io/).
 
 Self-extracting executable archives have lots of use-cases, but our particular interest here is about "compiling" a project Makefile plus any dependencies (*like data files, `compose.mk` itself, and any tool containers spec'd inside a `docker-compose.yml`*)  down into a single executable file.
 
 Automation and pipelines are a big part of what `compose.mk` is used for, and **compressing those into a frozen "release"** like this is a definitely a weird idea, although it might have applications for notebooking / reproducible research.  
 
-But if you consider the [embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui) capabilities, you'll notice that `compose.mk` can also create things that feel more like apps, and there are [other examples of how you can use it to build tools]({{mkdocs.site_relative_url}}/demos/ansible).  
+If you consider the [embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui) capabilities though, you'll notice that `compose.mk` can also create things that feel more like apps, and there are [other examples of how you can use it to build tools]({{mkdocs.site_relative_url}}/demos/ansible).  
 
 Another point of view is that what we're really talking about is **the ability to turn a project into a tool**.  Let's be real: No one wants to look at your project, because it's a mess of docs/examples/tests/support data, and they have to understand how it's all organized before they can even try to use it.  Usually, even after a project is understood, it's not like you can *use* it directly, it must adapted or edited, or you go down a rabbit hole of dependencies.  
 
 Meanwhile, the ability to organize, reference, run, and script over potentially *lots* of possibly customized containers in an organized way using `docker-compose.yml` and `compose.mk` without *explicitly shipping either* feels like a different way to build/release tools.  Put simply, [easy access to containers](#) [and multiple programming languages](#) and [workflows](#) is usually stuff that we associate with microservices and distributed systems like Kubernetes, Jenkins or Airflow.  What happens if it is easy to design "undistributed" applications, tools, and pipelines with similar architectures?
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ### Basic Packaging
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 For starters, `compose.mk` allows fairly direct access to `makeself` via the [`mk.self` target]({{mkdocs.site_relative_url}}/api#mkself).
 

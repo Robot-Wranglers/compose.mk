@@ -1,8 +1,9 @@
 ## Installation
 
-<hr style="width:100%;border-bottom:3px solid black;">
 
 ### Basic Installation
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Just copy the `compose.mk` and make it executable:
 
@@ -86,17 +87,18 @@ This example above is typical, but not necessarily minimal, so let's highlight a
 If you're not interested in custom automation that requires project-Makefile integration, some features of `compose.mk` can be used without that.  See for example the [Loading Compose Files]({{mkdocs.site_relative_url}}/compose.mk#loading-compose-files) docs, plus the [full CLI docs]({{mkdocs.site_relative_url}}/api) for more details.
 #}
 
-<hr style="width:100%;border-bottom:3px solid black;">
 
 ### Compatibility Notes
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Platforms used in development include modern docker (say `25+`), make (`3.8+`), and bash `(~5`) on both Linux and MacOS. Testing in github-actions only uses Linux, and won't try every possible combination of versions.  
 
 In general though, *the goal is to support most things you'll encounter in the wild*, including OSX, out of the box.  But you may see some of the usual problems with certain arguments to non-posix OSX default `sed` / `ps` / `xargs`, etc.  Please report issues!
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ### For Developers
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 For development on `compose.mk` itself, here's how you can clone the project, build related containers, and run the test suites.
 
@@ -111,9 +113,9 @@ $ git clone {{github.repo_url}}
 $ make clean build test
 ```
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ### Forks & Versioning
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Given the advice above to simply embed `compose.mk` directly into your project repositories, some people might be reading this and thinking **what if compose.mk changes upstream?**  
 

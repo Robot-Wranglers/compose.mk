@@ -4683,7 +4683,7 @@ hr {
   height: 1px;
   border: 0;
   border-top: 1px solid #e1e4e5;
-  margin: 24px 0;
+  margin: 4px 0px 20px;
   padding: 0;
 }
 .rst-content code,
@@ -5600,14 +5600,17 @@ footer span.commit code {
     display: block;
   }
 }
-.rst-content .toctree-wrapper > p.caption,
+.rst-content .toctree-wrapper > p.caption,{
+  margin-bottom: 24px;
+}
+
 .rst-content h1,
 .rst-content h2,
 .rst-content h3,
 .rst-content h4,
 .rst-content h5,
 .rst-content h6 {
-  margin-bottom: 24px;
+    margin-bottom: 2px;
 }
 .rst-content img {
   max-width: 100%;

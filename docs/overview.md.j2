@@ -5,10 +5,9 @@
 {#{macros.img_link("loadf-2.gif", mkdocs, "90%")}#}
 {{macros.img_link("docker.commander.gif", mkdocs, "90%")}}
 
+## Intro
 
 <hr style="width:100%;border-bottom:3px solid black;">
-
-## Intro
 
 <strong>`compose.mk` extends `make` to add native support for docker, workflows, TUI elements, and more.</strong>
 
@@ -31,9 +30,9 @@ The interactive TUI stuff above makes for attention-grabbing demos and has the a
 
 {#Here's a quick rundown of some other major features and design goals:#}
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ### Features & Design Goals
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 * **Radically minimal,** in terms of dependencies and conceptual overhead. Out of the box, `make` is expressive but has relatively few core concepts, it's ubiquitous, and it's fast. Building on this, `compose.mk` adds just enough extra concepts to get *a lot* of extra power and flexibility.
 * **Seamless and simple idioms for working with containers in a way that's platform agnostic.** Code that automates tasks in project management should not be locked inside Jenkinsfiles or Github Actions.  Using `compose.mk` tends to [help projects to decouple and run elsewhere]({{mkdocs.site_relative_url}}/container-dispatch), but afterwards running from CI/CD still works.
@@ -42,9 +41,9 @@ The interactive TUI stuff above makes for attention-grabbing demos and has the a
 * **Basic workflow support is also available.**  Tasks and DAGs are built-ins for `make` naturally, and `compose.mk` adds support for other primitives, [like parallel tasks and task retries]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).
 * **Hacker friendly.** The single-file approach used with `compose.mk` makes it easy to embed alongside existing projects.  The project itself uses [the unlicense](https://unlicense.org/), and the goal is for the base API to eventually become completely frozen.  Rip out the parts you don't need, contribute upstream if you can, but if you don't want to track upstream or if your customizations become too specific to your project, no need to ever look back.
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ### Choose Your Path
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 This is all pretty abstract though, and it's time to choose your own adventure:
 
