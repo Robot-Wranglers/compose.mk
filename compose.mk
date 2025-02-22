@@ -2246,6 +2246,33 @@ FLUX_STAGES=
 export FLUX_STAGE?=
 flux.stage.file=.flux.stage.${*}
 
+flux.stage: mk.get/FLUX_STAGE
+	@# Returns the name of the current stage. No Arguments.
+flux.stage.stack/%:; ${make} io.stack/${flux.stage.file}
+	@# 
+	@# Declares entry for the given stage.
+flux.stage/%:
+	@# Declares entry for the given stage.
+	@# Stage names are generally target names or similar, no spaces allowed.
+	@#
+	@# This is mostly used to just to print a pretty divider that makes output 
+	@# easier to parse, but stages also add an idea of persistence to otherwise 
+	@# stateless workflows, via a file-backed JSON stack object that cooperating 
+	@# tasks can push to / pop from.
+	@#
+	@# USAGE:
+	@#  ./compose.mk flux.stage/<stage_name>
+	@# 
+	stagef="${flux.stage.file}" \
+	&& header="${GLYPH_IO} flux.stage ${sep} ${bold}${underline}${*}${no_ansi} ${sep}" \
+	&& label="${*}" ${make} io.gum.style/2 \
+	&& true $(eval export FLUX_STAGE=${*}) $(eval export FLUX_STAGES+=${*}) \
+	&& $(call log, $${header} ${dim} stack file @ ${dim_ital}$${stagef})
+
+flux.stage.exit/%:; ${make} flux.stage.clean/${*}
+	@# Declares exit for the given stage.
+	@# Calling this is optional but if you don't, stack-files will not be deleted
+
 flux.stage.file/%:
 	@# Returns the name of the current stage file.
 	echo "${flux.stage.file}"
@@ -2294,35 +2321,11 @@ flux.stage.clean:
 	@#
 	rm -f .flux.stage.*
 
-flux.stage: mk.get/FLUX_STAGE
-	@# Returns the name of the current stage. No Arguments.
-
 flux.stage.stack:
 	@# Retrieves all the data on the current stack-file.  No arguments.
 	$(call log, ${GLYPH_FLUX} flux.stage.stack ${sep} ) 
 	$(call io.stack, ${flux.stage.file})
 flux.stage.stack=$(call io.stack, ${flux.stage.file})
-
-flux.stage/%:
-	@# Declares entry for the given stage.
-	@# Stage names are generally target names or similar, no spaces allowed.
-	@#
-	@# This is generally used to just to print a pretty divider that makes output 
-	@# easier to parse, but stages also add an idea of persistence to otherwise 
-	@# stateless workflows, via a file-backed JSON stack object that cooperating 
-	@# tasks can push to / pop from.
-	@#
-	@# Stack files contain at least the parent pid for this 'make' process.
-	@#
-	@# USAGE:
-	@#  ./compose.mk flux.stage/<stage_name>
-	@# 
-	stagef="${flux.stage.file}" \
-	&& header="${GLYPH_IO} flux.stage ${sep} ${bold}${underline}${*}${no_ansi} ${sep}" \
-	&& trap "rm -f $${stagef}" INT TERM \
-	&& label="${*}" ${make} io.gum.style/2 \
-	&& true $(eval export FLUX_STAGE=${*}) $(eval export FLUX_STAGES+=${*}) \
-	&& $(call log, $${header} ${dim} stack file @ ${dim_cyan} $${stagef})
 
 flux.match/% flux.star/%:
 	@# Runs all targets in the local namespace matching given pattern
@@ -2330,11 +2333,11 @@ flux.match/% flux.star/%:
 	@# USAGE: (run all the test targets)
 	@#   make -f project.mk flux.star/test.*
 	@# 
-	matches=`${make} mk.parse.local | grep ${*}` \
+	matches=`${make} mk.parse.local | grep "${*}"` \
 	&& count=`printf "$${matches}"|wc -l` \
 	&& $(call log.target, ${bold}$${count}${no_ansi_dim} matches for pattern ${dim_cyan}${*}) \
 	&& printf "$${matches}" | ${stream.dim.indent.stderr} \
-	&& set -x && ${make} `printf "$${matches}"|${stream.nl.to.space}`
+	&& printf "$${matches}" |xargs -n1 -I% sh -x -c "${make} %||exit 255"
 
 flux.timer/%:
 	@# Emits run time for the given make-target in seconds.
