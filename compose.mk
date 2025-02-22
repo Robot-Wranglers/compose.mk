@@ -220,7 +220,7 @@ log.fmt=( ${log} && (printf "${2}" | fmt -w 55 | ${stream.indent} | ${stream.ind
 log.escape=(printf \"${log.prefix.makelevel}`echo "$(or $(1),)"| ${stream.lstrip}`${no_ansi}\n\" >${stderr})
 log.json=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.run} ${1} | ${jq.run} . | ${stream.dim.indent.stderr}
 log.json.min=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.run} ${1} | ${jq.run} -c . | ${stream.dim.indent.stderr}
-log.target=$(call log, ${GLYPH_IO}${dim_green} $(shell printf "${@}" | cut -d/ -f1) ${sep} ${dim_ital} $(or $(1),$(shell printf "${@}" | cut -d/ -f2-)))
+log.target=$(call log, ${GLYPH_IO}${dim_green} $(shell printf "${@}" | cut -d/ -f1) ${sep}${dim_ital}$(or $(1),$(shell printf "${@}" | cut -d/ -f2-)))
 log.trace=[ "${TRACE}" == "0" ] && true || (printf "${log.prefix.makelevel}`echo "$(or $(1),)"| ${stream.lstrip}`${no_ansi}\n" >${stderr} )
 log.trace.fmt=( ${log.trace} && [ "${TRACE}" == "0" ] && true || (printf "${2}" | fmt -w 70 | ${stream.indent.to.stderr} ) )
 log.trace.part1=[ "${TRACE}" == "0" ] && true || $(call log.part1, ${1})
@@ -1530,17 +1530,15 @@ mk.parse/%:
 # 	@#
 # 	$(call mk.target.choice,${*})
 # mk.target.choice=${make} io.gum.choice/$${choices}`${make} mk.parse.shallow/${*}|${stream.nl.to.comma}`
-
+io.get.choice=$(call io.mktemp) && script -qefc --return --command "${io.gum.alt} choose $${choices}" $${tmpf} && chosen=`cat $${tmpf} |col |tail -n-3|head -1|awk -F"006l" '{print $$2}'`
 mk.select/%:
 	@# Interactive target-selector for the given Makefile.
 	@# This uses `gum choose`[1] for user-input.
 	@#
 	@# `[1]: FIXME`
 	choices=`${make} mk.parse.shallow/${*}|${stream.nl.to.space}` \
-	&& $(call io.mktemp) \
-	&& script -qefc --return --command "${io.gum.alt} choose $${choices}" $${tmpf} \
-	&& choice=`cat $${tmpf} |col |tail -n-3|head -1|awk -F"006l" '{print $$2}'` \
-	&& set -x && env -i PATH=$${PATH} HOME=$${HOME} make -f ${*} $${choice}
+	&& ${io.get.choice} \
+	&& set -x && env -i PATH=$${PATH} HOME=$${HOME} make -f ${*} $${chosen}
 
 mk.parse.shallow/%:
 	@# Returns a newline-delimited list of targets inside the given Makefile.
@@ -2278,7 +2276,7 @@ flux.stage.push/%:
 
 flux.stage.push:
 	@# Push the JSON data on stdin into the stack for the implied stage 
-	${make} flux.stage.push/${FLUX_STAGE}
+	${stream.stdin} | ${make} flux.stage.push/${FLUX_STAGE}
 
 flux.stage.clean/%:
 	@# Cleans only stage files that belong to the given stage.
@@ -2325,6 +2323,18 @@ flux.stage/%:
 	&& label="${*}" ${make} io.gum.style/2 \
 	&& true $(eval export FLUX_STAGE=${*}) $(eval export FLUX_STAGES+=${*}) \
 	&& $(call log, $${header} ${dim} stack file @ ${dim_cyan} $${stagef})
+
+flux.match/% flux.star/%:
+	@# Runs all targets in the local namespace matching given pattern
+	@# 
+	@# USAGE: (run all the test targets)
+	@#   make -f project.mk flux.star/test.*
+	@# 
+	matches=`${make} mk.parse.local | grep ${*}` \
+	&& count=`printf "$${matches}"|wc -l` \
+	&& $(call log.target, ${bold}$${count}${no_ansi_dim} matches for pattern ${dim_cyan}${*}) \
+	&& printf "$${matches}" | ${stream.dim.indent.stderr} \
+	&& set -x && ${make} `printf "$${matches}"|${stream.nl.to.space}`
 
 flux.timer/%:
 	@# Emits run time for the given make-target in seconds.

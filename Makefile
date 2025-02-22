@@ -161,3 +161,6 @@ clean.github.actions:
 	| xargs -n1 -I% sh -x -c "gh run delete %"
 
 
+demo:
+	choices="`ls demos/*mk | ${stream.nl.to.space}`" \
+	&& ${io.get.choice} && set -x && make -f $${chosen}

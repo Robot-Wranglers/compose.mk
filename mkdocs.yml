@@ -58,6 +58,7 @@ nav:
     #- 'Configuration & Customization':  tui-customization-config.md
   - Misc Features:
       - 'CLI Help': cli-help.md
+      - 'Stacks & Stages': stages.md
       - 'Supervisors & Signals': signals.md
       - 'Self Extracting Executables': demos/packaging.md
   - Demos:
