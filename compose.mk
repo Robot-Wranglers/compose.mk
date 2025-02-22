@@ -970,6 +970,13 @@ docker.volume.panic:; docker volume prune -f
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
+export ALPINE_VERSION?=3.21.2
+export GUM_VERSION?=v0.15.2
+export GLOW_VERSION?=v1.5.1
+# This is a hack because charmcli/gum is distroless, but the spinner needs to use "sleep", etc
+io.gum.alt=docker run -it --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nRUN apk add --update --no-cache bash\nCOPY --from=charmcli/gum:${GUM_VERSION} /usr/local/bin/gum /usr/local/bin/gum")`
+
+
 io.gum=(which gum >/dev/null && ( ${1} ) \
 	|| (entrypoint=gum cmd="${1}" quiet=0 \
 		img=charmcli/gum:v0.15.2 ${make} docker.run.sh)) > /dev/stderr
@@ -978,7 +985,16 @@ io.gum.style.div:=--border double --align center --width $${width:-$$(echo "x=$$
 io.gum.style.default:=--border double --foreground 2 --border-foreground 2
 io.gum.tty=export tty=1; $(call io.gum, ${1})
 
-charm.glow:=docker run -i charmcli/glow:v1.5.1 -s dracula
+charm.glow:=docker run -i charmcli/glow:${GLOW_VERSION} -s dracula
+
+io.gum.choose/%:
+	@# Interface to `gum choose`.
+	@# This uses gum if it's available and falls back to docker.
+	@#
+	@# USAGE:
+	@#  ./compose.mk io.gum.choose/choice-one,choice-two
+	choices="$(shell echo "${*}" | ${stream.comma.to.space})" \
+	&& ${io.gum.alt} choose $${choices}
 
 # io.gum.format.code=$(call io.gum, ${stream.stdin} | gum format -t code) | ${stream.trim}
 # io.gum.format.code:; $(call io.gum.format.code)
@@ -991,10 +1007,11 @@ io.gum.spin:
 	@# REFS:
 	@# [1] https://github.com/charmbracelet/gum for more details.
 	@#
-	$(call io.gum.tty, gum spin \
+	${trace_maybe} \
+	&& ${io.gum.alt} spin \
 		--spinner $${spinner:-meter} \
 		--spinner.foreground $${color:-39} \
-		--title \"$${label:-?}\" -- $${cmd:-sleep 2};)
+		--title "$${label:-?}" -- $${cmd:-sleep 2};
 
 io.gum.style:
 	@# Helper for formatting text and banners using `gum style` and `gum format`.
@@ -1751,7 +1768,7 @@ flux.wrap/%:
 flux.apply/% flux.and/%:
 	@# Performs an 'and' operation with the named comma-delimited targets.
 	@# This is equivalent to the default behaviour of `make t1 t2 .. tN`.
-	@# This is mostly used as a wrapper in case targets are unary.
+	@# This is mostly used as a wrapper in case arguments are unary.
 	@#
 	@# See also 'flux.or'.
 	@#
@@ -1883,16 +1900,35 @@ flux.if.then/%:
 	$(trace_maybe) \
 	&& _if=`printf "${*}"|cut -s -d, -f1` \
 	&& _then=`printf "${*}"|cut -s -d, -f2-` \
-	header="${GLYPH_FLUX} flux.if.then ${sep}${dim}" \
-	&& $(call log, $${header} ${ital}$${_if}${no_ansi} ${sep} ${dim}${bold}$${_then}) \
+	&& header="${GLYPH_FLUX} flux.if.then ${sep}${dim}" \
+	&& $(call log.part1, $${header} if//${ital}$${_if}${no_ansi} ) \
 	&& case $${verbose:-0} in \
 		0) ${make} $${_if} 2>/dev/null; st=$$?; ;; \
 		*) ${make} $${_if}; st=$$?; ;; \
 	esac \
 	&& case $${st} in \
-		0) $(call log.trace, $${header} ${yellow}(Condition ok)); ${make} $${_then}; ;; \
-		*) $(call log.trace, $${header} ${yellow}(Condition failed)); ;; \
+		0) ($(call log.part2, ${dim_green}true${no_ansi_dim}) \
+			; $(call log, $${header} then//${dim_cyan}$${_then}); ${make} $${_then}); ;; \
+		*) $(call log.part2, ${yellow}false${no_ansi_dim}); ;; \
 	esac
+stream.obliviate=${all_devnull}
+flux.if.then.else/%:
+	@# Standard if/then/else control flow, for make targets.
+	@#
+	@# USAGE: ( generic )
+	@#   ./compose.mk flux.if.then.else/<name_of_test_target>,<name_of_then_target>,<name_of_else_target>
+	@#
+	_if=`printf "${*}"|cut -s -d, -f1` \
+	&& _then=`printf "${*}"|cut -s -d, -f2` \
+	&& _else=`printf "${*}"|cut -s -d, -f3-` \
+	&& header="${GLYPH_FLUX} flux.if.then.else ${sep}${dim} testing ${dim_ital}$${_if} " \
+	&& $(call log.part1, $${header}) \
+	&& ${make} $${_if} 2>&1 > /dev/null \
+	; case $${?} in \
+		0) $(call log.part2, ${dim_green}true${no_ansi_dim} - dispatching ${dim_cyan}$${_then}) ; ${make} $${_then};; \
+		*) $(call log.part2, ${yellow}false${no_ansi_dim} - dispatching ${dim_cyan}$${_else}); ${make} $${_else};; \
+	esac
+
 
 flux.indent/%:
 	@# Given a target, this runs it and indents both the resulting output for both stdout/stderr.
