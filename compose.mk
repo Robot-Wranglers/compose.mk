@@ -186,7 +186,8 @@ else
 endif 
 
 # IMPORTANT: this is the way to safely call `make` recursively. 
-# It determines MAKE and MAKEFILE_LIST are not reliable!
+# It determines better-than-default values for MAKE and MAKEFILE_LIST,
+# and uses the lowercase.  Defaults are not reliable! 
 makefile_list=$(addprefix -f,$(shell echo "${MAKE_CLI}"|awk '{for(i=1;i<=NF;i++)if($$i=="-f"&&i+1<=NF){print$$(++i)}else if($$i~/^-f./){print substr($$i,3)}}' | xargs))
 make=make ${MAKE_FLAGS} ${makefile_list}
 
@@ -217,15 +218,15 @@ log=([ "$${quiet:-0}" == "1" ] || ( ${log.stdout} >${stderr} ))
 log.noindent=(printf "${log.prefix.makelevel.glyph} `echo "$(or $(1),)"| ${stream.lstrip}`${no_ansi}\n" >${stderr})
 log.fmt=( ${log} && (printf "${2}" | fmt -w 55 | ${stream.indent} | ${stream.indent} | ${stream.indent.to.stderr} ) )
 log.escape=(printf \"${log.prefix.makelevel}`echo "$(or $(1),)"| ${stream.lstrip}`${no_ansi}\n\" >${stderr})
+log.json=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.run} ${1} | ${jq.run} . | ${stream.dim.indent.stderr}
+log.json.min=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.run} ${1} | ${jq.run} -c . | ${stream.dim.indent.stderr}
+log.target=$(call log, ${GLYPH_IO}${dim_green} $(shell printf "${@}" | cut -d/ -f1) ${sep} ${dim_ital} $(or $(1),$(shell printf "${@}" | cut -d/ -f2-)))
 log.trace=[ "${TRACE}" == "0" ] && true || (printf "${log.prefix.makelevel}`echo "$(or $(1),)"| ${stream.lstrip}`${no_ansi}\n" >${stderr} )
 log.trace.fmt=( ${log.trace} && [ "${TRACE}" == "0" ] && true || (printf "${2}" | fmt -w 70 | ${stream.indent.to.stderr} ) )
 log.trace.part1=[ "${TRACE}" == "0" ] && true || $(call log.part1, ${1})
 log.trace.part2=[ "${TRACE}" == "0" ] && true || $(call log.part2, ${1})
 log.target.rerouting=$(call log, ${GLYPH_IO} ${@} ${sep}${dim} Invoked from top; rerouting to tool-container)
 log.trace.target.rerouting=( [ "${TRACE}" == "0" ] && true || $(call log.target.rerouting) )
-log.json=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.run} ${1} | ${jq.run} . | ${stream.dim.indent.stderr}
-log.json.min=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.run} ${1} | ${jq.run} -c . | ${stream.dim.indent.stderr}
-log.target=$(call log, ${GLYPH_IO}${dim_green} $(shell printf "${@}" | cut -d/ -f1) ${sep} ${dim_ital} $(shell printf "${@}" | cut -d/ -f2-))
 tux.log=$(call log,${GLYPH_TUI} $(1))
 io.log=$(call log,${GLYPH_IO} $(1))
 
@@ -287,7 +288,7 @@ export CMK_COMPOSE_FILE?=.tmp.compose.mk.yml
 export CMK_DIND?=0
 export CMK_DEBUG?=1
 export CMK_INTERNAL?=0
-export CMK_SRC=$(shell echo ${MAKEFILE_LIST}|sed 's/ /\n/g'|grep compose.mk)
+export CMK_SRC=$(shell echo ${MAKEFILE_LIST} | sed 's/ /\n/g' | grep compose.mk)
 export CMK_SUPERVISOR?=1
 
 ifneq ($(findstring compose.mk, ${MAKE_CLI}),)
@@ -970,6 +971,8 @@ docker.volume.panic:; docker volume prune -f
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
+log.file.contents=([ "$${quiet:-0}" == "1" ] || printf "`printf "${1}"|${stream.lstrip}` ${dim}`cat ${2}`${no_ansi}\n" > /dev/stderr) 
+log.maybe=([ "$${quiet:-0}" == "1" ] || $(call log, ${1}))
 export ALPINE_VERSION?=3.21.2
 export GUM_VERSION?=v0.15.2
 export GLOW_VERSION?=v1.5.1
@@ -1049,38 +1052,40 @@ define io.mktempd
 	export tmpd=$$(TMPDIR=`pwd` mktemp -d ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
 endef
 
+io.stack=(${io.stack.require} && cat ${1} | ${jq.run} .)
+io.stack.pop=(${io.stack} | ${jq.run} '.[0]'; ${io.stack} | ${jq.run} '.[1:]' > ${1}.tmp && mv ${1}.tmp ${1})
+io.stack.require=( ls ${1} >/dev/null 2>/dev/null || echo '[]' > ${1})
+
 io.stack/%:; $(call io.stack, ${*})
 	@# Returns all the data in the named stack-file 
 	@#
 	@# USAGE:
 	@#  ./compose.mk io.stack/<fname>
+	@#
 	@#  [ {.. data ..}, .. ]
-io.stack=(${io.stack.require} && cat ${1} | ${jq.run} .)
 	
-io.stack.pop/%:; $(call io.stack.pop, ${*})
-	@# Pops first item off the given stack file
+io.stack.pop/%:
+	@# Pops first item off the given stack file.  
+	@# Not strict: popping an empty stack is allowed.
 	@#
 	@# USAGE:
-	@#  ./compose.mk io.stack/<fname>
+	@#  ./compose.mk io.stack.pop/<fname>
 	@#  {.. data ..}
-io.stack.pop=(${io.stack} | ${jq.run} '.[0]'; ${io.stack} | ${jq.run} '.[1:]' > ${1}.tmp && mv ${1}.tmp ${1})
-
-io.stack.require=( ls ${1} >/dev/null 2>/dev/null || echo '[]' > ${1})
-log.file.contents=([ "$${quiet:-0}" == "1" ] || printf "`printf "${1}"|${stream.lstrip}` ${dim}`cat ${2}`${no_ansi}\n" > /dev/stderr) 
-log.maybe=([ "$${quiet:-0}" == "1" ] || $(call log, ${1}))
+	@#
+	$(call log, ${GLYPH_IO} io.stack.pop ${sep} ${dim}stack@${no_ansi}${*} ${cyan_flow_right})
+	$(call io.stack.pop, ${*})
+	
 io.stack.push/%:
-	@# Returns all the data in the named stack-file 
+	@# Pushes new JSON data onto the named stack-file
 	@#
 	@# USAGE:
 	@#   echo '<json>' | ./compose.mk io.stack.push/<fname>
 	@#
-	set -x \
+	${trace_maybe} \
 	&& $(call io.stack.require, ${*}) && $(call io.mktemp) \
-	&& header="${GLYPH_IO} io.stack.push ${sep}" \
-	&& ([ "$${quiet:-0}" == "1" ] || $(call log, $${header} ${dim}stack=${no_ansi}${*})) \
-	&& ${stream.stdin} | ${jq.run} -c . > $${tmpf} \
-	&& $(call log.file.contents, ${log.prefix.makelevel}${green_flow_left}, $${tmpf}) \
-	&& ${jq.docker} -n --slurpfile obj $${tmpf} --slurpfile stack ${*} '$$stack[0]+$$obj' > ${*}.tmp
+	&& ([ "$${quiet:-0}" == "1" ] || $(call log, ${GLYPH_IO} io.stack.push ${sep} ${dim}stack@${no_ansi}${*} ${cyan_flow_left})) \
+	&& ${stream.peek} | ${jq.run} -c . > $${tmpf} \
+	&& ${jq} -n --slurpfile obj $${tmpf} --slurpfile stack ${*} '$$stack[0]+$$obj' > ${*}.tmp
 	mv ${*}.tmp ${*}
 
 io.bash:
@@ -1510,7 +1515,7 @@ mk.namespace.filter/%:
 	
 mk.parse/%:
 	@# Parses the given Makefile, returning JSON output that describes the targets, docs, etc.
-	@# This parsing is "deep", i.e. it returns metadata for *included* targets as well.  
+	@# This parsing is "deep", i.e. it returns docs & metadata for *included* targets as well.
 	@# This uses a dockerized version of the pynchon[1] tool.
 	@#
 	@# REFS:
@@ -1527,23 +1532,25 @@ mk.parse/%:
 # mk.target.choice=${make} io.gum.choice/$${choices}`${make} mk.parse.shallow/${*}|${stream.nl.to.comma}`
 
 mk.select/%:
+	@# Interactive target-selector for the given Makefile.
+	@# This uses `gum choose`[1] for user-input.
 	@#
-	@#
-	@#
+	@# `[1]: FIXME`
 	choices=`${make} mk.parse.shallow/${*}|${stream.nl.to.space}` \
 	&& $(call io.mktemp) \
 	&& script -qefc --return --command "${io.gum.alt} choose $${choices}" $${tmpf} \
 	&& choice=`cat $${tmpf} |col |tail -n-3|head -1|awk -F"006l" '{print $$2}'` \
-	&& set -x && make -f ${*} $${choice}
-
-.mk.select/%:
-	${make} -f ${*} `${stream.stdin}`
+	&& set -x && env -i PATH=$${PATH} HOME=$${HOME} make -f ${*} $${choice}
 
 mk.parse.shallow/%:
 	@# Returns a newline-delimited list of targets inside the given Makefile.
 	@# Unlike `mk.parse`, this is "flat" and too naive to parse includes.
 	@# Targets starting with "." are considered private, and ommitted from the return value
+	@#
 	cat ${*} | awk '/^[a-zA-Z0-9._-]+:/ {sub(/:.*$$/,"");print $$0}'|grep -v '^[.]'
+mk.select.local: mk.select/${MAKEFILE}
+mk.parse.local: mk.parse.shallow/${MAKEFILE}
+	@# Output of `mk.select/` for the current val of MAKEFILE
 
 mk.parse.block/%:
 	@# Pulls out documentation blocks that match the given pattern.
@@ -2254,7 +2261,7 @@ flux.stage.pop/%:
 	@#   {"key":"val"}
 	@#
 	$(call log, ${GLYPH_FLUX} flux.stage.pop ${sep} ${*}) 
-	$(call io.stack.pop, ${flux.stage.file})
+	${make} io.stack.pop/${flux.stage.file}
 
 flux.stage.push/%: 
 	@# Push the JSON data on stdin into the stack for the named stage.
@@ -2263,7 +2270,7 @@ flux.stage.push/%:
 	@#   echo '<json_data>' | ./compose.mk flux.stage.push/<stage_name>
 	@#
 	header="${GLYPH_FLUX} flux.stage.push ${sep} ${bold}${underline}${*}${no_ansi}" \
-	&& $(call log, $${header} ${sep}${dim} pushing to stack file @ ${dim_cyan} ${flux.stage.file}) \
+	&& $(call log, $${header} ) \
 	&& test -p ${stdin}; st=$$?; case $${st} in \
 		0) ${stream.stdin} | ${make} io.stack.push/${flux.stage.file}; ;; \
 		*) $(call log, $${header} ${sep} ${red}Failed pushing data${no_ansi} because no data is present on stdin); ;; \
@@ -2283,18 +2290,11 @@ flux.stage.clean/%:
 	&& $(call log, $${header} ${dim} removing stack file @ ${dim_cyan} ${flux.stage.file}) \
 	&& rm ${flux.stage.file} 2>/dev/null || $(call log, $${header} ${yellow} stack file not found)
 
-flux.stage.clean flux.stage.clean/:
-	@# Cleans all stage-files from all runs, including ones that don't belong to this pid.
+flux.stage.clean:
+	@# Cleans all stage-files from all runs, including ones that don't belong to this pid!
 	@# No arguments.
 	@#
-	[ -z ${FLUX_STAGE} ] \
-	&& $(call log, ${GLYPH_FLUX} flux.stage.clean ${sep}${dim} no stage activated yet.) \
-	|| ${make} flux.stage.clean/${FLUX_STAGE}
-
-# ${make} flux.stage.clean/${flux.stage.file}
-# exit 1 
-# echo
-# find . | grep .flux.stage | ${stream.peek} | xargs rm 2>/dev/null || true
+	rm -f .flux.stage.*
 
 flux.stage: mk.get/FLUX_STAGE
 	@# Returns the name of the current stage. No Arguments.
@@ -2325,9 +2325,6 @@ flux.stage/%:
 	&& label="${*}" ${make} io.gum.style/2 \
 	&& true $(eval export FLUX_STAGE=${*}) $(eval export FLUX_STAGES+=${*}) \
 	&& $(call log, $${header} ${dim} stack file @ ${dim_cyan} $${stagef})
-# && (echo ppid=$${PPID} | ${make} jb | ${make} flux.stage.push/${*} \
-# 	|| $(call log, ${yellow}WARNING:${no_ansi} could not push pid-data to stage-file)) \
-# && true $(eval export FLUX_STAGE=${*}) $(eval export FLUX_STAGES+=${*}) \
 
 flux.timer/%:
 	@# Emits run time for the given make-target in seconds.
