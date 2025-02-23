@@ -1,30 +1,55 @@
 {% import 'macros.j2' as macros -%}
-## Mad Science
+## Polyglot Makefiles: Working with Foreign Languages
+
+<br/>
+### Intro & Background
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-### Polyglot Makefiles: Working with Foreign Languages
+This section collects several demos of working with foreign languages.  
 
-```Makefile
-{{open('demos/elixir.mk','r').read().strip()}}
-```
-<hr style="width:95%;border-bottom:1px dashed black;">
+Polyglots in `compose.mk` are roughly comparable to [justfile shebang recipes](https://github.com/casey/just?tab=readme-ov-file#shebang-recipes). It comes up sometimes that people want to do this with pure `make`, and it historically involves dodgey .ONESHELL hacks[^1].  The approach used by `compose.mk` still has some limitations[^2], but it is overall much more robust and reliable than previous approaches, and easily supports *multiple* polyglots side-by-side, and alongside more traditional targets.
+
+Because `compose.mk` also adds native-ish support for docker, [including inlined Dockerfiles]({{mkdocs.site_relative_url}}/raw-docker), we can super-charge our polyglots with *arbitrary containerized interpretters*, with or without customizing stock images.  
+
+**Polyglots are, of course, mad science.** You probably don't want to go crazy with this stuff 
 
 ### Local Interpretters without Containers
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 ```Makefile
 {{open('demos/local-interpretter.mk','r').read().strip()}}
 ```
-<hr style="width:95%;border-bottom:1px dashed black;">
 
-### Containerized Python + Deps
+### Containerized Interpretters 
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Suppose you have a burning desire to write write a target in elixir.  If there's a stock image available and no customization needed, you can use {{macros.api_link('docker.run.def',mkdocs)}}.
+
+```Makefile
+{{open('demos/elixir.mk','r').read().strip()}}
+```
+
+### Containerized Script+Deps with UV
+
+Lorem ipsum etc 
+
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 ```Makefile
 {{open('demos/uv.mk','r').read().strip()}}
 ```
-<hr style="width:95%;border-bottom:1px dashed black;">
 
-## Exotic Targets & Pipes
+```Makefile
+{{open('demos/uv.mk','r').read().strip()}}
+```
+{# <hr style="width:95%;border-bottom:1px dashed black;">#}
+
+### Exotic Targets & Pipes
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 ```Makefile
 {{open('demos/exotic-targets.mk','r').read().strip()}}
@@ -42,4 +67,15 @@ Note also that the [*`mk.def.*`* targets]({{mkdocs.site_relative_url}}/api#api-m
 <hr style="width:100%;border-bottom:3px solid black;">
 #}
 
+
+### Lean Prover
+
 <hr style="width:100%;border-bottom:3px solid black;">
+
+Lorem ipsum etc  Lorem ipsum etc  Lorem ipsum etc  Lorem ipsum etc  Lorem ipsum etc  Lorem ipsum etc  Lorem ipsum etc  Lorem ipsum etc  Lorem ipsum etc  Lorem ipsum etc  Lorem ipsum etc  Lorem ipsum etc 
+
+```Makefile
+{{open('demos/lean.mk','r').read().strip()}}
+```
+
+[^1]: http://web.archive.org/web/20200515180041/https://agdr.org/2020/05/14/Polyglot-Makefiles.html

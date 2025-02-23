@@ -1,6 +1,7 @@
 {% import 'macros.j2' as macros -%}
 
 ### Logging Facilities
+<hr style="width:100%;border-bottom:3px solid black;">
 
 One goal for `compose.mk` is to enable program output that is clean, curated, and human-friendly on stderr, and machine-friendly on stdout.  There are a few features available in support of this.  In general `compose.mk` prefers make-targets over make-functions and macros, because targets are more reusable.[^2]  Logging is a special case though, and might use all 3.
 
@@ -20,9 +21,9 @@ A few other things that are worth mentioning:
 
 Tools for working with JSON are also discussed in more detail in the section on [Structured IO](#structured-io-basics).
 
-<hr style="width:95%;border-bottom:1px dashed black;">
 
 #### File and Stream Previews
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 Whether you're working on build processes, data-pipelines, or infrastructure deployments, it's convenient to have the ability to "preview" things like files, streams, or intermediate representations.  [Docs for compose.mk's built-in tool wrappers]({{mkdocs.site_relative_url}}/tool-overview/#other-wrappers) cover this topic also, but let's look at some more programmatic usage.
 
@@ -33,6 +34,7 @@ Whether you're working on build processes, data-pipelines, or infrastructure dep
 ```
 
 #### Visual Dividers
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 **Visually separating stages with some kind of output divider** is something that is nice to have to for otherwise messy output.  Here's an example of several different ways of using `io.print.div` to get labeled or timestamped dividers that are shown between clean/build/test stages.  
 
@@ -44,7 +46,7 @@ In the `build` task above, you can see one way to call `io.print.div` explicitly
 
 {{macros.img_link("demo-io.gif", mkdocs, "90%")}}
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+-----------------------------------
 
 Even though [`io.print.div`]({{mkdocs.site_relative_url}}/api/#ioprintdiv) detects terminal width, it isn't fancy otherwise.  A related utility is `io.gum.style`, which can print dividers with [charmbracelet/gum](https://github.com/charmbracelet/gum).  *If you have a local copy of `gum` then it is used, otherwise, we fall back to docker.*
 

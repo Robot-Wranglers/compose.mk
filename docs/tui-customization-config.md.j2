@@ -22,12 +22,3 @@ Beyond the simple examples of customization mentioned in the last section, more 
 
 Documentation for this process isn't great right now, but for a start, have a look at the differences between targets like [docker.commander]({{mkdocs.site_relative_url}}/api#dockercommander) vs the similar-but-different [k3d.commander]({{mkdocs.site_relative_url}}/api#k3dcommander).
 
-### TUI Keybindings
-
-<hr style="width:100%;border-bottom:3px solid black;">
-
-The TUI ships with some default keybindings that are aimed at keeping things pretty user-friendly even for those who are not already familiar with tmux.  
-
-{{bash("pattern='*Keybindings*' make mk.parse.block/compose.mk")}}
-
-These are configurable of course, since there's no way guarantee that such defaults won't collide with whatever existing applications you're trying to stitch together.  See the previous section for more details.

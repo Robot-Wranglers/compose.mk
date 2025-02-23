@@ -1,0 +1,90 @@
+{% import 'macros.j2' as macros -%}
+
+### Reflection Support
+<hr style="width:100%;border-bottom:3px solid black;">
+
+[Reflective programming](https://en.wikipedia.org/wiki/Reflective_programming) is the ability of a process to examine, introspect, and modify its own structure and behavior.
+
+As a simple example of why this is practical, features like [CLI help](#) and [automatically generated API docs](#) require that `compose.mk` has at least *some* ability to parse its own contents.  And if we need that kind of ability, why not allow for parsing of other Makefiles?  Most of the meta-tooling that's available for stuff like this is somewhere in the [`mk.*` target namespace](#).
+
+#### Makefile Metadata 
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+For metadata parsing, you can use the `mk.parse/<fname>` target, and get back targets, target chains, target docs, etc.  
+
+For testing, there is a super lightweight `demos/no-includes.mk` Makefile included in the repository for situations like this. Like the name suggests, it doesn't actually include or use `compose.mk` in any way.
+
+```bash
+$ ./compose.mk mk.parse/demos/no-include.mk
+{
+  "clean": {
+    "file": "demos/no-include.mk",
+    "lineno": 13,
+    "chain": [],
+    "type": "file",
+    "docs": [""],
+    "prereqs": []
+  },
+  "build": {
+    "file": "demos/no-include.mk",
+    "lineno": 14,
+    "chain": [],
+    "type": "file",
+    "docs": [""],
+    "prereqs": []
+  },
+  "test": {
+    "file": "demos/no-include.mk",
+    "lineno": 15,
+    "chain": [],
+    "type": "file",
+    "docs": [""],
+    "prereqs": []
+  },
+}
+```
+
+*Under the hood, the heavy lifting for Makefile-parsing uses a dockerized version of the  [`pynchon` tool]({{jinja.vars.pynchon_repo_url}}).*
+
+#### Dynamic Includes and Targets
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+To a certain extent, `compose.mk` can do experimental *runtime* modification of `make` itself (or at least simulate it).  Under the hood, this works by code-generation to create a new Makefile just in time, and then [turning execution over to it]({{mkdocs.site_relative_url}}/signals/).  
+
+For example, typically `make` cannot define targets dynamically, but here's an example that creates a new target on the fly, assigning it to an existing target that simply returns success.  
+
+After the target is defined, it can be used on the same command line.
+
+```bash 
+./compose.mk mk.let/foo:flux.ok foo
+```
+
+As another example, how about fearlessly mixing `compose.mk` functionality with an existing Makefile that *does not actually `include compose.mk`*?
+
+```bash 
+$ ./compose.mk \
+  mk.include/demos/no-include.mk \
+  mk.let/foo:clean \
+  foo
+```
+
+Pulling apart this command, let's note that the final target `foo` *does not exist* in either `compose.mk` or in the simple `demos/no-include.mk` Makefile.  And the `clean` target does not exist in `compose.mk`.  The command above basically creates and runs this non-existant Makefile just in time:
+
+```Makefile
+include compose.mk
+include demos/no-include.mk
+foo: clean 
+DEFAULT_GOAL=foo
+```
+
+
+#### Reading Defines
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Reading `define ... endef` blocks from makefiles is important for several different `compose.mk` features that rely on embedded data.  And crucially, the contents of those blocks **must not be mangled**, escaped, interpolated, etc.  This feature is the foundation that all sorts of other stuff is built on, including support for [polyglots](#) and [the embedded tui](#) as well as [inlined Dockerfiles](#), etc.
+
+Related targets include: 
+
+{{macros.api_link_many('mk.def',mkdocs)}}
+
+Currently, if you want to embed data that includes tokens like "endef", you are sadly out of luck!

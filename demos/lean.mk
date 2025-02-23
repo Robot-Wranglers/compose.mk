@@ -1,6 +1,7 @@
 # demos/lean.mk: 
-#   lean4
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+#   See the docs for more discussion: https://robot-wranglers.github.io/compose.mk/demos/polyglots
 #
 #   USAGE: make -f demos/lean.mk
 #

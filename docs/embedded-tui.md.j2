@@ -8,11 +8,14 @@ The TUI capabilities of `compose.mk` are best thought of as an **interface-build
 
 There's a few ways to describe what the TUI actually *does*.  
 
-One way to look at it is, the TUI is just a way of **mapping `make` targets into tmux panes**.   But since [`compose.import`]({{mkdocs.site_relative_url}}/compose.mk) allows you to *map docker-compose services onto `make` targets*, yet another way to think of the TUI is that it allows you to **map containers onto tmux panes**.  And if you're already using `compose.mk` to [build custom automation APIs]({{mkdocs.site_relative_url}}/demos/ansible/), you can map those onto tmux panes too.
+* One way to look at it is, the TUI is just a way of **mapping `make` targets into tmux panes**.   
+* But since [`compose.import`]({{mkdocs.site_relative_url}}/compose.mk) allows you to *map docker-compose services onto `make` targets*, yet another way to think of the TUI is that it allows you to **map containers onto tmux panes**.  
+* And if you're already using `compose.mk` to [build custom automation APIs]({{mkdocs.site_relative_url}}/demos/ansible/), you can map those onto tmux panes too.
 
-<hr style="width:100%;border-bottom:3px solid black;">
 
 ### TUI Gallery
+
+<hr style="width:100%;border-bottom:3px solid black;">
 
 For the impatient, here's a small gallery that show-cases the type of stuff you can do with the TUI capabilities that `compose.mk` offers.  
 
@@ -49,12 +52,22 @@ These components are configurable, but not something that you necessarily have t
 * Leave the TUI by hitting the escape key
 * Click to open a new pane
 * Advanced layouts like spiral & fibbonacci, using [dwindle](https://github.com/sunaku/home/blob/master/bin/tmux-layout-dwindle)
+* Status bar including details like user, pid, & working-dir 
 
 These elements, plus access to other tools like [gum](https://github.com/charmbracelet/gum) and [chafa](https://hpjansson.org/chafa/), are all setup in the embedded `compose.mk:tux` container, which is built and used only on demand.
 
+#### Default Keybindings
+
 <hr style="width:100%;border-bottom:3px solid black;">
 
+The TUI ships with some default keybindings that are aimed at keeping things pretty user-friendly even for those who are not already familiar with tmux.  
+
+{{bash("pattern='*Keybindings*' make mk.parse.block/compose.mk")}}
+
+These are configurable of course, since there's no way guarantee that such defaults won't collide with whatever existing applications you're trying to stitch together.  See the previous section for more details.
+
 ### Layout Basics
+<hr style="width:100%;border-bottom:3px solid black;">
 
 We'll start by showing **how to map targets onto a specific pane orientation**, using the [`tux.open`]({{mkdocs.site_relative_url}}/api/#tuxopenarg) target-family.  For mapped targets, we'll use `flux.ok`, which has no arguments and simply succeeds without doing anything.
 
@@ -69,7 +82,7 @@ $ layout=h ./compose.mk tux.open/flux.ok,flux.ok,flux.ok
 
 Running this command shows some log messages detailing the startup process and the first time it runs you'll see the TUI bootstrapping itself (i.e. building the necessary support containers for running `tmux`).  (Afterwards it will be cached, so startup is much faster.)
 
-At the end of setup, you'll see an interface like this, and it ran the `flux.ok` target for you, once in each pane.
+After it starts, you'll see an interface like this, and it ran the `flux.ok` target for you, once in each pane.
 
 {{macros.img_link("tux.open-h.png", mkdocs, "400px")}}
 
@@ -93,11 +106,12 @@ The main alternative to "horizontal" and "vertical" is called "spiral", and it l
 
 {{macros.img_link("tux.open-s.png", mkdocs, "400px")}}
 
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+
 These 3 layouts are enough for most use-cases, but `compose.mk` actually supports whatever `tmux` does and also whatever [dwindle](https://github.com/sunaku/home/blob/master/bin/tmux-layout-dwindle) supports.
 
-Of course, `flux.ok` is not very interesting, but it is the *simplest* target.  
-
-We'll move into more practical examples in the following sections, but almost everything else we'll look at is some variation of the principles above.
+Of course, `flux.ok` is not very interesting, but it is the *simplest* target.  We'll move into more practical examples in the following sections, and almost everything else we'll look at is some variation of the principles above.
 
 <hr style="width:100%;border-bottom:3px solid black;">
 

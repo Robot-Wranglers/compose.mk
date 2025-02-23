@@ -50,6 +50,7 @@ nav:
   - Stand Alone Mode:
     - 'Tool Overview': tool-overview.md
     - 'Loading Compose Files': loadf.md
+    - 'Interactive Target-Selection': selector.md
   - TUI Support:
     - 'TUI Overview & Gallery': embedded-tui.md
     - 'Zero-config TUIs': zero-config-tuis.md

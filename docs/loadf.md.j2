@@ -1,7 +1,6 @@
 {% import 'macros.j2' as macros -%}
 
 ## Loading Compose Files
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 For the simplest use-cases where you have a compose-file, and want some of the `compose.mk` features, but you **don't have a project Makefile**, it's possible to skip some of the steps in the [usual integration]({{mkdocs.site_relative_url}}/bridge) by letting `loadf` generate integration for you just in time.
@@ -14,18 +13,17 @@ $ ./compose.mk loadf <path_to_compose_file> <other_instructions>
 
 The sections below will look at more specific use-cases.
 
-<hr style="width:100%;border-bottom:3px solid black;">
 
-## No arguments 
+### Basic Usage
+<hr style="width:100%;border-bottom:3px solid black;">
 
 If no additional downstream targets are passed, the default behaviour is to open a shell for each tool container [using the TUI]({{mkdocs.site_relative_url}}/embedded-tui).  Here's what it looks like:
 
 {{macros.img_link("loadf-1.gif", mkdocs)}}
 
-<hr style="width:100%;border-bottom:3px solid black;">
+For *interactively* selecting a container instead of opening all of them, see the [target selection docs]({{mkdocs.site_relative_url}}/selector).
 
-### Downstream Targets
-
+### Arbitrary Downstream Targets
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Using `loadf` effectively runs [`compose.import`]({{mkdocs.site_relative_url}}/bridge) *for you* so that afterwards you can use any of the other targets documented as [part of the bridge]({{mkdocs.site_relative_url}}/bridge/#dynamic-api) or the [static targets]({{mkdocs.site_relative_url}}/api).

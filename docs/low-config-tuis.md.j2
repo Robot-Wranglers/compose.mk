@@ -1,15 +1,13 @@
 {% import 'macros.j2' as macros -%}
 
 ### Low Config TUIs
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
-In the docs for zero-config TUIs, we saw a few ways to start up interfaces without any project integration.  In the end though, the CLI starts to get pretty clunky, and it's better to have somewhere else to put configuration.
+In the docs for [zero-config TUIs]({{mkdocs.site_relative_url}}/zero-config-tuis) leading up to this point, we saw a few ways to start up interfaces without any project integration.  In the end though, the CLI starts to get pretty clunky, and it's better to have somewhere else to put configuration.
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
 #### Basic Example 
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Let's revisit that [previous example]({{mkdocs.site_relative_url}}/zero-config-tuis/#working-with-makefiles) in a less adhoc way, extending the classic *clean/build/test* project Makefile with a TUI as before, but using code this time.
@@ -25,9 +23,9 @@ As before, the goal was to loop the test-target and run the clean/build sequenti
 Anyway, it's really no surprise that the implementation is short since it only needs minor changes compared with the CLI version we saw earlier.  
 
 {# <hr style="width:95%;border-bottom:1px dashed black;"> #}
-<hr style="width:100%;border-bottom:3px solid black;">
 
 #### Adding a Container as a "Widget"
+<hr style="width:100%;border-bottom:3px solid black;">
 
 One powerful technique is to run a container inside a dedicated pane as a "widget".  As a simple example, we'll extend the example so far to include [`moncho/dry`](https://github.com/moncho/dry), a docker-monitoring application.  
 
@@ -41,10 +39,7 @@ Above, the [docker.start.tty target](#) does the heavy lifting for us, and depen
 
 Crucially, the `docker.*` targets are designed to launch tool containers, so they **always share the working directory and the docker socket by default**.  You can always launch a dockerized "widget" by writing any target-body that directly calls `docker run ...`, but if you do it this way you probably need to remember add volume-mounts.
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 #### Container Dispatch
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Eagle-eyed readers will have noticed that our fake *clean/build/test* targets don't need special tools, and that we are lucky so far because *these targets are running inside the embedded TUI container*, and not on the host or in a dedicated tool container.

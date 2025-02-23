@@ -1,24 +1,23 @@
 {% import 'macros.j2' as macros -%}
 
 ## Signals and Supervisors
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 **Working with signals (or understanding them) is not required for most use-cases of `compose.mk`,** especially if you're using it as a library.   But [for some tool mode invocations]({{mkdocs.site_relative_url}}//tool-overview/#tool-wrappers), supervisors and signals might be involved implicitly.  Signals also enable certain experimental features, and in principle the supervisor can be extended with new entry/exit hooks.
 
 Power users will be interested to understand the caveats and limitations around this, and anyone looking to work deeply on `compose.mk` itself may need to grok the implementation.
 
-<hr style="width:100%;border-bottom:3px solid black;">
 
 ### Background & Motivation
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Without [forking make](https://remake.readthedocs.io/en/latest/), there's no simple method to get hooks into the default way that it handles interrupts and signals.  But why would you want to anyway?  Most of the time this occurs to people [it's about cleanup](https://www.gnu.org/software/make/manual/html_node/Interrupts.html), but `compose.mk` doesn't exactly look like traditional use-cases.  
 
 For `compose.mk` specifically, signals come up when we need to stop `make` from processing the command line input, and pass control over to a new process.  But why?  Well, short-circuiting the default CLI option parsing for `make` *really useful*.  Especially since `compose.mk` allows us to "wrap" lots of containerized tools, we want to be able to proxy arguments over to those tools without `make` being greedy about parsing everything.
 
-<hr style="width:100%;border-bottom:3px solid black;">
 
 ### Use-Cases 
+<hr style="width:100%;border-bottom:3px solid black;">
 
 The [`loadf` command](#loading-compose-files) is a typical example: the 2nd argument, a filename, must **not** be parsed as a Makefile target because no such target exists.
 
@@ -36,10 +35,7 @@ $ echo '{"foo":"bar"}' | ./compose.mk jq .foo
 $ echo foo=bar | ./compose.mk jb
 ```
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ### Implementation
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Since the last section describes the goal, you might be wondering how this kind of semi-magical behavior can be achieved.   And since the answer to that question is frankly kind of ridiculous, this should probably be considered experimental :)  *With that sternly worded warning out of the way..*
@@ -50,19 +46,14 @@ Signals and supervisors are implemented using [a shebang hack](https://en.wikipe
 
 Also note that while passing control over to a completely different process like this seems to *actually work* for both Linux and MacOS, this is still bad form.  In particular, complex argument passing might be misquoted, or exit codes may not be reliable.
 
-<hr style="width:100%;border-bottom:3px solid black;">
 
 ### For Developers
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 All targets related to signals/supervisors can be found under the `mk.interrupt` and `mk.super` namespaces, respectively.  
 
-{% set targets=bash('./compose.mk mk.namespace.filter/mk.super') %}
-{% set targets=targets + bash('./compose.mk mk.namespace.filter/mk.interrupt')%}
-{% set targets=targets.split('\n') %}
-{%for target in targets %} {% set target=target.strip().replace('%','<arg>') %}{%if target%}
-* [`{{target}}`]({{mkdocs.site_relative_url}}/api#{{target.replace('<','').replace('>','').replace('/','').replace('.','')}}){%endif%}{%endfor%}
+{{macros.api_link_many('mk.super',mkdocs)}}
+{{macros.api_link_many('mk.interrupt',mkdocs)}}
 
 Targets above are for low-level internal use, and even hacking directly on `compose.mk` source probably won't require editing them.  To implement a new [proxy-wrapper]({{mkdocs.site_relative_url}}/tool-overview/#proxy-wrappers), use `mk.yield2`.  Here's how you'd give `compose.mk` a new proxy-wrapper for the `ls` command:
 

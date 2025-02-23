@@ -9,6 +9,8 @@
 #   scratch, but using the ideas from `demos/makeception.mk`, we will build them in-situ and 
 #   defer to `make` itself for the provisioning details.
 #
+#   See the docs for more discussion: https://robot-wranglers.github.io/compose.mk/demos/notebooking
+#
 #   USAGE: make -f demos/app.mk
 
 include demos/lean.mk 

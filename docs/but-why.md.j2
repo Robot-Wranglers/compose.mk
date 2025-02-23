@@ -17,11 +17,9 @@
 
 **Most of the documentation deals with *how*, but if you want to know more about *why*, then the rest of this page is for you.**  It's more essay-form than FAQ, but it might address what you're interested in.  
 
-So, much of the content here is thoughts on the landscape of automation challenges in general.  But anticipating objections, much of the content is preoccupied with certain evangelism and advocacy.  
+Much of the content here is thoughts on the landscape of automation challenges in general.  But anticipating objections, much of the content is preoccupied with certain evangelism and advocacy.  
 
-You can take or leave any of the major components, but the most controversial design choices for `compose.mk` will be around the usage of `make` itself, or perhaps `docker compose`, and/or DIND (docker in docker).  Much ink (and maybe some blood) has been spilled over both advocacy and protest for those components.  You can probably start a fight today on the orange site, or over coffee in the break room, and you'll get the usual references.[^1]  But much of the criticism *and* the advocacy arises from misunderstandings or myopic treatment of the tools or the use-cases involved.
-
-**Working theory: philosophy rarely changes hearts and minds, but tooling and examples might?**
+You can take or leave any of the major components, but the most controversial design choices for `compose.mk` will be around the usage of `make` itself, or perhaps `docker compose`, and/or DIND (docker in docker).  Much ink (and maybe some blood) has been spilled over both advocacy and protest for those components.  You can probably start a fight today on the orange site, or over coffee in the break room, and you'll get the usual references.[^1]  But much of the criticism *and* the advocacy arises from misunderstandings or myopic treatment of the tools or the use-cases involved.  **Working theory: philosophy rarely changes hearts and minds, but tooling and examples might?**
 
 ## Is this even for real?
 
@@ -29,7 +27,7 @@ You can take or leave any of the major components, but the most controversial de
 
 Some people might be skeptical about getting involved with *the biggest, baddest, and most highly-powered mutant Makefile the world has ever seen*, so let's be clear about a few things: 
 
-The source code for `compose.mk` weighs in at ~3500 lines of pure Makefile, and some features use on-the-fly code-generation. There are other eyebrow raising implementation details, including lots of metaprogramming and use (abuse?) of POSIX signals.  One might even say that the whole feature set is a very long list of terrible hacks that can only be redeemed by a *'but look what you can do with this!'* moment.  But pushing the envelope of a simple toolchain is part of the goal.
+The source code for `compose.mk` weighs in at ~3500 lines of pure Makefile, and some features use on-the-fly code-generation. There are other eyebrow raising implementation details, including use (abuse?) of POSIX signals and lots of white-knuckled wild-eyed metaprogramming.  *One might even say that the whole feature set is a very long list of terrible hacks that can only be redeemed by a* **but look what you can do with this!** *moment.*  But pushing the boundaries of a simple toolchain is part of the goal.
 
 At the same time, this isn't some esolang flex like a [fractran compiler](https://github.com/siraben/hasktran) or [regex-chess](https://nicholas.carlini.com/writing/2025/regex-chess.html). Honestly, `compose.mk` started as an experiment in basic docker-support for `make` and became an experiment in dependency minimalism in general, *but it just never hit a wall*, and it seems like it ended up in an interesting place.  You would think that minimalism cannot be compatible with *aggressively reusing available tools*, but in the limit, scripting with `compose.mk` **feels like a genuinely new way to write glue code that pulls in foreign tools as first class objects**, and it introduces various primitives and idioms that make `make` feel like a "real language".
 
@@ -166,15 +164,19 @@ Frustratingly, none of this actually has anything to do with `helm`, or the prob
 
 Unlike the "*helm bolted on to terraform/ansible/jenkins*" approach, using `compose.mk` makes it easy to get closer to your tools, and directly use *multiple versions* of the actual tools you care about, and without affecting existing work.  If a tool breaks, you can debug that issue directly, without re-running ansible you don't care about, without digging in terraform core dumps, without trying to connect to weird remote runtimes via ssh or kubectl, and without looking up that one weird environment variable to enable plugin traces.  If you need a tool, then *you just use it*.
 
-## DIND and Docker Compose Both Considered Pretty Reasonable
+## Docker Compose Considered Pretty Reasonable
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-People have long memories about the tech that has burned them in the past, and `docker compose` and DIND are great examples of that.
+People have long memories about the tech that has burned them in the past, and `docker compose` is a great example of that.
 
 **With `docker compose`,** lots of people are going to remember the bad old days with lots of crashes and confusion stemming from the fact that earlier incarnations depended on python/pip and inherited from this much instability.  For a long time there was also churn in configuration schema.  But compose has been a part of docker core for a while now and the schema is stable to the point that even the [`version:` key is obsolete](https://docs.docker.com/reference/compose-file/version-and-name/).  Other sins of the past might include YOLOing a compose file onto EC2 to try and get by without a kubernetes cluster, but managed clusters are easy to get these days.  A compose-file is not a "production ready" way to manage *services*, but the situation is completely different if you're using it exclusively to manage *tool containers*.  ( *This does leave open the question of whether pipelines should be considered as services or as DAGs of tools though, and the answer is that it depends.* )
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+## DIND & DFD Considered Pretty Reasonable
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+People have long memories about the tech that has burned them in the past, and DIND is also great example of that.
 
 **With DIND,** historically this was a great way to cause all kinds of chaos including layer corruption, performance problems, etc.  But the first search result for "docker in docker" as of *today* is probably [still](https://stackoverflow.com/questions/27879713/is-it-ok-to-run-docker-from-inside-docker) a discussion that's like 10 years old, and times have changed.  Meanwhile [Rootless DIND](https://docs.docker.com/engine/security/rootless/#rootless-docker-in-docker) is about ~5 years old.  
 
@@ -182,7 +184,7 @@ Another thing that confuses the issue is real *docker in docker*, i.e. running a
 
 For CI/CD platforms, finding DIND support available out of the box is pretty normal.  For platforms like Argo / Atlantis / Airflow / Databricks, of course there's a way to dispatch a container *as a step*.  But what about using a container *from inside* a step?  It turns out that supporting this isn't usually that hard, because there's almost always a way to bring-your-own-container for the platform-base itself.  Or in the absolute worst case, platforms that don't allow you to bring your own image will somehow allow bind-mounting tricks, remote docker-hosts, or a side-car.  This suggests that for the type of scenario described in [Just Use Tasks in Containers](#just-use-tasks-in-containers), you *could* go through the effort N times to add support for N custom tool versions.  But if you're at that level of customization anyway, why not just support another layer of docker and do it once?  
 
-Obviously if additional deep platform-setup must be involved, **DIND does remain a subtle issue**, and we haven't even touched on security.  But at the same time: DIND is very *feasible* and it's not automatically bad!
+Obviously if additional deep platform-setup must be involved, **DIND does remain a subtle issue**.  But at the same time: DIND is *feasible* and it's not automatically bad!
 
 {#
 <hr style="width:100%;border-bottom:3px solid black;">

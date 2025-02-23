@@ -1,8 +1,8 @@
 ## Pipelining & Workflow Basics
 
-<hr style="width:100%;border-bottom:3px solid black;">
 
 ### Miniature ETL
+<hr style="width:100%;border-bottom:3px solid black;">
 
 So we've seen that the [**`flux.*` target namespace**]({{mkdocs.site_relative_url}}/api#api-flux) provides basic tooling for workflows, and [looked at an example with try-except-finally]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).  
 
@@ -49,9 +49,9 @@ Cleaning up ETL!
 For more information, see the api docs for [`flux.pipeline`]({{mkdocs.site_relative_url}}/api/#fluxpipeline), Also related, the [Platform Lifecycle Demo]({{mkdocs.site_relative_url}}/demos/platform) shows flow control with [`flux.dmux`]({{mkdocs.site_relative_url}}/demos/platform).
 
 {# <hr style="width:95%;border-bottom:1px dashed black;"> #}
-<hr style="width:100%;border-bottom:3px solid black;">
 
 ### Extending the Pipeline
+<hr style="width:100%;border-bottom:3px solid black;">
 
 So yeah, any example passing around fake JSON looks tight and tidy, but.. it's really easy to extend this.  Let's sketch small changes that can actually turn this into an image pipeline, using docker idioms from `compose.mk` to leverage external tools.  As usual, `compose.mk` can setup a lot of functionality without much code, so it takes longer to explain than it does to build!
 
@@ -61,9 +61,9 @@ So yeah, any example passing around fake JSON looks tight and tidy, but.. it's r
 
 For more information, see the api docs for [`docker.run.image`]({{mkdocs.site_relative_url}}/api/#dockerrunimagearg) and the docs for [raw docker support]({{mkdocs.site_relative_url}}/vanilla-docker).
 
+### Discussion 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-### Discussion 
 {# <hr style="width:95%;border-bottom:1px dashed black;"> #}
 
 It's a neat party trick that `compose.mk` has some features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.  Really, `flux.*` is more similar in spirit to things like [declarative pipelines in Jenkins](https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline).

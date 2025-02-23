@@ -1534,6 +1534,12 @@ mk.parse/%:
 # 	$(call mk.target.choice,${*})
 # mk.target.choice=${make} io.gum.choice/$${choices}`${make} mk.parse.shallow/${*}|${stream.nl.to.comma}`
 io.get.choice=$(call io.mktemp) && script -qefc --return --command "${io.gum.alt} choose $${choices}" $${tmpf} && chosen=`cat $${tmpf} |col |tail -n-3|head -1|awk -F"006l" '{print $$2}'`
+compose.select/%:
+	choices="`${make} compose.services/${*}|${stream.nl.to.space}`" \
+	&& ${io.get.choice} \
+	&& set -x && env -i PATH=$${PATH} HOME=$${HOME}  ${CMK_EXEC} loadf ${*} $${chosen}/shell
+CMK_EXEC=`dirname ${CMK_SRC}`/`basename ${CMK_SRC}`
+
 mk.select/%:
 	@# Interactive target-selector for the given Makefile.
 	@# This uses `gum choose`[1] for user-input.

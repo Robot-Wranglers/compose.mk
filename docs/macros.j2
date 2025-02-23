@@ -24,6 +24,20 @@ Jinja macros used in building docs (not make macros :)
 {{search_base}}
 {%- endmacro -%}
 
+
+
+{% macro api_link_many(target_fam,mkdocs) -%}
+{% set targets=bash('./compose.mk mk.namespace.filter/'+target_fam) %}
+{% set targets=targets.split('\n') %}
+{%for target in targets %} {% set target=target.strip().replace('%','<arg>') %}{%if target%}
+* {{api_link(target,mkdocs)}}{%endif%}{%endfor%}
+{%- endmacro -%}
+
+
+{% macro api_link(target,mkdocs) -%}
+[`{{target}}`]({{mkdocs.site_relative_url}}/api/#{{target.replace('-',''.replace('.','')).replace('<','').replace('>','').replace('/','').replace('.','') }})
+{%- endmacro -%}
+
 {% macro parse_module_help(fname, namespace) -%}
 {% set lines=bash('pynchon makefile parse --module-docs ' + fname + '| jq \'.'+namespace+'\'', load_json=True) %}{% if not lines %}{%set lines=[]%}{%endif%}
 {#% if lines|length > 2%}{% set lines=lines[1:-1] %}{% endif %#}
