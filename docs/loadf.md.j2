@@ -3,7 +3,7 @@
 ## Loading Compose Files
 <hr style="width:100%;border-bottom:3px solid black;">
 
-For the simplest use-cases where you have a compose-file, and want some of the `compose.mk` features, but you **don't have a project Makefile**, it's possible to skip some of the steps in the [usual integration]({{mkdocs.site_relative_url}}/bridge) by letting `loadf` generate integration for you just in time.
+For simple use-cases where you have a compose-file, and want some of the `compose.mk` features, but you **don't have a project Makefile**, it's possible to skip some of the steps in the [usual integration]({{mkdocs.site_relative_url}}/bridge) by letting `loadf` generate integration for you just in time.
 
 The general usage looks something like this:
 
@@ -21,23 +21,26 @@ If no additional downstream targets are passed, the default behaviour is to open
 
 {{macros.img_link("loadf-1.gif", mkdocs)}}
 
-For *interactively* selecting a container instead of opening all of them, see the [target selection docs]({{mkdocs.site_relative_url}}/selector).
+For *interactively* selecting a container instead of opening all of them, see instead [the selector docs]({{mkdocs.site_relative_url}}/selector).
+
 
 ### Arbitrary Downstream Targets
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Using `loadf` effectively runs [`compose.import`]({{mkdocs.site_relative_url}}/bridge) *for you* so that afterwards you can use any of the other targets documented as [part of the bridge]({{mkdocs.site_relative_url}}/bridge/#dynamic-api) or the [static targets]({{mkdocs.site_relative_url}}/api).
+Using `loadf` effectively runs [`compose.import`]({{mkdocs.site_relative_url}}/bridge) *for you* so that afterwards you can use any of the other targets documented as [part of the bridge]({{mkdocs.site_relative_url}}/bridge/#target-scaffolding) or the [static targets]({{mkdocs.site_relative_url}}/api).
 
-This means that `loadf` doesn't really need to involve the TUI at all.  The example below is using the [`<svc_name>/get_shell`]({{mkdocs.site_relative_url}}/bridge/#svc_namespecial) target:
+This means that `loadf` doesn't really need to involve the TUI at all.  The example below is using the [`<svc_name>.get_shell`]({{mkdocs.site_relative_url}}/bridge/#svc_namespecial) target:
 
 {{macros.img_link("loadf-no-tui.png", mkdocs)}}
 
 Note that despite all the output **this is pipe-safe**, in case the commands involved might return JSON for downstream parsing, etc.  
 
-As another example, you can use the [`<svc_name>/pipe` target]({{mkdocs.site_relative_url}}/bridge/#svc_nameshellpipe) to push data *into* a container with a command like this:
+---------------------------------------
+
+As another example, you can use the [`<svc_name>.pipe` target]({{mkdocs.site_relative_url}}/bridge/#svc_nameshellpipe) to push data *into* a container with a command like this:
 
 ```bash
-$ echo hostname | ./compose.mk loadf tests/docker-compose.yml debian/shell/pipe
+$ echo hostname | ./compose.mk loadf demos/data/docker-compose.yml debian.shell.pipe
 debian
 ```
 
@@ -45,13 +48,15 @@ Ultimately though, using the TUI for quick and convenient inspection is probably
 
 ```bash 
 # Opens 3 panes with container-shells
-$ ./compose.mk loadf tests/docker-compose.yml tux.open.service_shells/debian,alpine,debian
+$ ./compose.mk loadf demos/data/docker-compose.yml \
+    tux.open.service_shells/debian,alpine,debian
 
 # Equivalently, using lower-level generic targets
-$ ./compose.mk loadf tests/docker-compose.yml tux.open/debian/shell,alpine/shell,debian/shell
+$ ./compose.mk loadf demos/data/docker-compose.yml \
+    tux.open/debian.shell,alpine.shell,debian.shell
 
 # Opens 2 panes of bash-shells for the TUI container itself
-$ ./compose.mk loadf tests/docker-compose.yml tux.open/io.bash,io.bash
+$ ./compose.mk loadf demos/data/docker-compose.yml tux.open/io.bash,io.bash
 ```
 
 See also the [Embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui/#zero-config-tuis) docs for other examples that are using `loadf`, discussion of default pane layouts, etc.

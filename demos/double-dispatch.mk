@@ -1,16 +1,14 @@
 # demos/double-dispatch.mk: 
-#   Demonstrates the container dispatch idiom.
+#   Demonstrates the container dispatch idiom using "namespace" style invocation.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
 #   USAGE: make -f demos/double-dispatch.mk 
 
-# Squash the default noisy output, then override 
-# the default goal and include compose.mk primitives
-MAKEFLAGS=-sS --warn-undefined-variables
-.DEFAULT_GOAL := demo.double.dispatch
-include compose.mk
 
-$(eval $(call compose.import, ▰, TRUE, tests/docker-compose.yml))
+include compose.mk
+.DEFAULT_GOAL := demo.double.dispatch
+
+$(eval $(call compose.import, demos/data/docker-compose.yml, ▰))
 
 # User-facing top-level target, with two dependencies
 demo.double.dispatch: ▰/debian/self.demo ▰/alpine/self.demo

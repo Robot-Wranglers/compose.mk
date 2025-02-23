@@ -1,0 +1,10 @@
+##
+# demos/data/docker-compose.docs-tools.yml:
+#   A compose file faking a suite of documentation tooling
+##
+services:
+  latex: 
+    image: debian/buildd:bookworm
+    working_dir: /workspace
+    volumes:
+      - ${PWD}:/workspace

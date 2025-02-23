@@ -27,7 +27,7 @@ Tools for working with JSON are also discussed in more detail in the section on 
 
 Whether you're working on build processes, data-pipelines, or infrastructure deployments, it's convenient to have the ability to "preview" things like files, streams, or intermediate representations.  [Docs for compose.mk's built-in tool wrappers]({{mkdocs.site_relative_url}}/tool-overview/#other-wrappers) cover this topic also, but let's look at some more programmatic usage.
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+------------------------------------------
 
 ```Makefile
 {{open('demos/logging.mk','r').read().strip()}}
@@ -52,5 +52,27 @@ Even though [`io.print.div`]({{mkdocs.site_relative_url}}/api/#ioprintdiv) detec
 
 {{macros.img_link("demo-gum.gif", mkdocs, "90%")}}
 
-For other tools like showing syntax-highlighted files or iput streams, check out [these docs for stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview). See also the [full documentation for all `io.*` targets]({{mkdocs.site_relative_url}}/api/#api-io)
+If you want to make extensive use of these kinds of banners, you can organize around [stages]({{mkdocs.site_relative_url}}/stages) to get them implicitly.  You can use figlet too, like this:
+
+```bash
+# or, ./compose.mk io.figlet/banner
+$ label=banner ./compose.mk io.figlet
+
+ ██                                                
+░██                                                
+░██       ██████   ███████  ███████   █████  ██████
+░██████  ░░░░░░██ ░░██░░░██░░██░░░██ ██░░░██░░██░░█
+░██░░░██  ███████  ░██  ░██ ░██  ░██░███████ ░██ ░ 
+░██  ░██ ██░░░░██  ░██  ░██ ░██  ░██░██░░░░  ░██   
+░██████ ░░████████ ███  ░██ ███  ░██░░██████░███   
+░░░░░    ░░░░░░░░ ░░░   ░░ ░░░   ░░  ░░░░░░ ░░░    
+```
+
+To add color, you can use a context manager and any of the colors that `compose.mk` natively understands.
+
+```bash 
+./compose.mk io.with.color/red,io.figlet/banner
+```
+
+For other TUI-components like this that fall short of a full-blown interface,  see [these docs for stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview). See also the [full documentation for all `io.*` targets]({{mkdocs.site_relative_url}}/api/#api-io)
 

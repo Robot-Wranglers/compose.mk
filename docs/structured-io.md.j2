@@ -3,24 +3,26 @@
 ### Structured IO
 <hr style="width:100%;border-bottom:3px solid black;">
 
-One problem with `make` is that the lack of structured output tends to be a limiting factor.  A big part of the explanation for this is just that a Makefile might be using any random tools with any kind of behaviour, but that's sort of inevitable for automation.  The other part is just a missing approach to idioms and tools, and `compose.mk` can help with that.
+An annoying lack of structured output options for `make` is something that it has in common with [lots of other](https://kellyjonbrazil.github.io/jc/) classic unix tools.  Making matters worse, if you're working *inside* of make, then you're probably constantly annoyed by the lack of any support for keyword-args.  
 
-The `compose.mk::stream` module, aka the [**`stream.*` target namespace**]({{mkdocs.site_relative_url}}/api#api-stream) adds basic support for working with streams, including newline/comma/space delimited streams, common use cases with JSON, etc.  Most of the utilities here are in the form of make-targets that are intended to be used with pipes (i.e. they reads from stdin).  
+Part of the explanation for this is just that a Makefile might be using any random tools with any kind of output format, but that's sort of inevitable for automation.  The other part is just a missing approach to idioms and tools, and `compose.mk` can help with that.  
 
-**This is not what you'd call "typed", but it reduces error-prone parsing and moves a little bit closer to structured data.**  
+First a word about terminology: "*structured*" is intentionally vague here, and there's a few ways it's applicable to basic features in `compose.mk`. Usually [structured just means means JSON](#structured-io-basics) ^[6].  There is also support for a concept of [stream types](#structured-io-stream-types-pipes), which isn't *really* typed*, but at least lets you tell markdown content from image content, newline-delimited vs space-delimited, etc.  And in terms of datastructures, there is [basic support for stacks and stages]({{mkdocs.site_relative_url}}/stages).  For things like sets datastructures, see also the (unrelated) [GMSL](https://mxe.cc/gmsl.html) library.
 
-[The classical GMSL](https://mxe.cc/gmsl.html) adds support for things like sets and string-lists, and the `compose.mk::stream` module does some of that too.  But the biggest benefit comes from exposing tools like [`jq`](#) and [`jb`](#) without explicitly depending on them.  How does that work?  Basically `compose.mk` will use local tools if they are available, and fall back to using dockerized versions of them.
+The main benefit of the approach that `compose.mk` takes to structured data comes from **exposing tools like [`jq`](https://github.com/jqlang/jq), [`jb`](https://github.com/h4l/json.bash), and [`yq`](https://github.com/mikefarah/yq) without explicitly depending on them.**  How does that work?  Basically `compose.mk` will use local tools if they are available, and fall back to using dockerized versions of them if necessary.  Other than that, `compose.mk` tries to stay out of the way of `jq` and `jb` and let them do what they do.
+
+{#The `compose.mk::stream` module, aka the [**`stream.*` target namespace**]({{mkdocs.site_relative_url}}/api#api-stream) adds basic support for working with streams, including newline/comma/space delimited streams, common use cases with JSON, etc.  Most of the utilities here are in the form of make-targets that are intended to be used with pipes (i.e. they read from stdin).
+#}
+
+#### Structured IO: Basics
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 Before we get into code examples, let's introduce basic principles with the command line.  
 
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-#### Structured IO: Basics
-
-The `jb`[^3], `jq`[^4], and `yq`[^5] tools are so much revered, they get top-level entrypoints.  
+The `jb`[^3], `jq`[^4], and `yq`[^5] tools are so much revered, they are wrapped as top-level entrypoints.  
 
 ```bash 
-# output JSON using `jb` =>
+# output JSON using `jb`
 $ echo key=val | ./compose.mk jb
 {"key":"val"}
 
@@ -28,24 +30,30 @@ $ echo key=val | ./compose.mk jb
 $ echo key=val | ./compose.mk jb | ./compose.mk jq -r .key
 val
 ```
+Wrapped top-level entrypoints are documented in more detail as part of [tool mode]({{mkdocs.site_relative_url}}/tool-overview/#proxy-wrappers).  
 
-Top-level entrypoints are documented in more detail as part of [tool mode]({{mkdocs.site_relative_url}}/tool-overview/#proxy-wrappers).  Inside a project Makefile, we can always use direct calls to `compose.mk` as seen above, or recursive calls to `make`.  But if arguments to these tools get complicated, quoting will be dodgy.  Luckily there are equivalent forms that are more idiomatic, and these also spawn fewer processes:
+Inside a project Makefile, we can always use direct calls to `compose.mk` as seen above, or recursive calls to `make`.  This is often good enough, but if arguments to these tools get complicated then quoting could get sketchy, or determining a path to `compose.mk` could be tricky, etc. 
+
+Luckily there are equivalent forms that are more idiomatic, still use local tools if available and fall back to docker if they are missing, and spawn fewer processes:
 
 ```Makefile
 {{open('demos/structured-io.mk','r').read().strip()}}
 ```
+*Now `make emit | make consume` is doing basic IO with JSON,* and we haven't added any new dependencies.  
 
-For the most part `compose.mk` tries to stay out of the way of `jq` and `jb` and let them do what they do, but remember, we need this thin abstraction layer to transparently choose between a local tool and a dockerized tool.
+Besides using JSON for structured output somewhere at the *end* of a pipeline for output, you can use it internally for target input as well.  In terms of style, it is *certainly unusual* for targets to use pipes like this, but it's definitely worthwhile for, well, structure.  (*The alternative to this is environment variables, and then you have to worry about variable scopes, so statelessness here is a major advantage.*) 
 
-You get the idea.  *Now `make emit | make consume` is doing basic IO with JSON,* and we haven't added any new dependencies.
+Since you could also say that this goes part of the way towards emulating "keyword arguments", it also has the benefit of generalizing targets as something closer to "functions".
 
-From here you'll probably want to provide user-feedback and status messages without wrecking pipe-safety; see also the section on [logging facilities](#logging-facilities).  Since you've got structured output anyway, this is also a good segue into the [workflow example](#workflow-example-etl).
+From here you'll probably want to provide user-feedback and status messages **without** wrecking pipe-safety, so see also the section on [logging facilities](#logging-facilities).  For a look at structured IO in action, you also might like to check out [the workflow demos](#workflow-demos).
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 #### Structured IO: Stream Types & Pipes
 
-The `compose.mk::stream` module, aka the [`stream.*` target namespace]({{mkdocs.site_relative_url}}/api/#api-stream) is full of targets that can help to handle common tasks with streams.  Inside a project Makefile, we can always use direct calls to `compose.mk`, or recursive calls to `make`, but most targets are *also available as macros*.  Using macros looks tidy and is easier to type, but the main benefit is that it saves extra processes.
+The `compose.mk::stream` module, aka the [`stream.*` target namespace]({{mkdocs.site_relative_url}}/api/#api-stream) is full of targets that can help to handle common tasks with streams.  
+
+Such targets work fine in [stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview).  Inside a project Makefile, we can always use direct calls to `compose.mk`, or recursive calls to `make`, but most targets are *also available as macros*.  Using macros looks tidy and is easier to type, but the main benefit is as an optimization, because this removes the need for extra processes.
 
 As a really simple example, targets that have to deal with streams will begin with `cat /dev/stdin` to capture input and start a pipeline, but this can be rewritten as simply `${stream.stdin}` for readability.  
 
@@ -56,11 +64,3 @@ This isn't exhaustive, but you can see the section below for a few more samples.
 ```
 
 <hr style="width:95%;border-bottom:1px dashed black;">
-
-<hr style="width:100%;border-bottom:3px solid black;">
-
-[^1]: See https://www.jenkins.io/doc/book/pipeline/syntax/
-[^2]: Make-targets can be used as task-prerequisites as well as command line entrypoints
-[^3]: https://github.com/h4l/json.bash
-[^4]: https://github.com/jqlang/jq
-[^5]: https://github.com/mikefarah/yq

@@ -1,10 +1,7 @@
-##
-# tests/docker-compose.yml: 
-#  Typical compose file that works with target dispatch.
-#  (For more discussion, see the installation docs)
-##
+# demos/data/docker-compose.minimal.yml: 
+#  A minimal compose file with a few base images.  
 services:
-  debian: &base
+  debian:
     image: debian:bookworm
   ubuntu: 
     image: ubuntu:noble

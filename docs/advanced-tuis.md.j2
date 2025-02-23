@@ -3,14 +3,14 @@
 ## Advanced TUIs 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-In the limit, `compose.mk` can help you to script *custom console applications* that potentially involve many containers, and by using [mk.self]({{mkdocs.site_relative_url}}/demos/packaging) you can even "compile" them to stand-alone executables.  This works best for building things like dashboards, but it's even possible to build things that resemble **portable, project-specific IDEs**.
+In the limit, `compose.mk` can help you to script *custom console applications* that potentially involve many containers, and by using [mk.self]({{mkdocs.site_relative_url}}/demos/packaging) you can "compile" them to stand-alone executables.  This works best for building things like dashboards, but it's even possible to build things that resemble **portable, project-specific IDEs**.
 
 Extreme customization of the TUI isn't well documented yet, but this page has a few hints and an overview of existing examples.
 
 ### Extensions & Scripting
 <hr style="width:100%;border-bottom:3px solid black;">
 
-As a minimal example of extending the TUI, let's throw together some support for `yazi`, a pretty cool terminal-based file-manager.  It[supports lots of stuff](https://yazi-rs.github.io/features), including file-previews, skins, and plugins.
+As a minimal example of extending the TUI, let's throw together some support for `yazi`, a pretty cool terminal-based file-manager.  It[supports lots of stuff](https://yazi-rs.github.io/features), including file-previews, skins, and plugins.  
 
 Consider the following Makefile:
 
@@ -18,37 +18,49 @@ Consider the following Makefile:
 {{open('demos/tui/extension-1.mk','r').read().strip()}}
 ```
 
-Running this opens a split-screen console with both panes showing an interactive bash terminal.  
+Running this opens a split-screen console with both panes showing file browsers.  
 
 {{macros.img_link("tui-extension-1.png", mkdocs, "350px")}}
 
-The eagle-eyed reader will have noticed that the shells we opened are *running inside the TUI container*.  The project folder is already volume-mounted though, as is the hosts docker-socket.
+The eagle-eyed reader will have noticed that the shells we opened are *running inside the TUI container*.  The project folder is already volume-mounted though, as is the hosts docker-socket.  From here, you can imagine setting different working directories for each browser, or even different yazi builds with very different configuration and plugins.  
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+So you can see that while things like `vim` and `emacs` don't ship with the default container that enables the embedded TUI.. we don't really *need that* because it's already extensible.  Adding the editor of your choice can be accomplished with the same technique we used for the file manager.
 
 ### Understanding Widgets
 <hr style="width:100%;border-bottom:3px solid black;">
 
-We've seen [previously]({{mkdocs.site_relative_url}}/low-config-tuis/) that "widgets", i.e. TUI pane-content, are nothing very special.  Like everything else in `compose.mk`, these are just targets, but some targets are more useful than others for display inside the TUI!  
+We've seen [previously]({{mkdocs.site_relative_url}}/low-config-tuis/) that "widgets", i.e. TUI pane-content, are nothing very special.  Whether it's yazi or [your existing automation tasks]({{mkdocs.site_relative_url}}/low-config-tuis/), pane content declarations are ultimately just targets, [the same as everything else is]({{mkdocs.site_relative_url}}/matrioshka#homoiconic).
 
-Typically you might want targets that loop, like we saw with running a basic `test` target.  Looping tricks with {{macros.api_link('flux.loopf',mkdocs)}} and friends can also "restore" pane content in case of crash, like say a hiccup in networking activity.
+In a TUI though, some targets are more useful than others, and typically you might want targets that loop, like we [saw before in the docs for low-config TUIs]({{mkdocs.site_relative_url}}/low-config-tuis).  Looping tricks with {{macros.api_link('flux.loopf',mkdocs)}} and friends can also "restore" pane content in case of crash, like say a hiccup in networking activity.
 
-As a reminder, **all widgets run *in* the TUI container, not on the docker host**, even though we can frequently ignore this!  Thus, we don't know for sure what tooling is available on the host, and many widgets should be considered a ["private" section of the API](#).  
+For this example we'll add a console-friendly, full-featured webbrowser, using [carbonyl](https://github.com/fathyb/carbonyl).
 
+{{macros.img_link("tui-extension-2.png", mkdocs, "80%")}}
+
+--------------------------------------------
 ```Makefile
 {{open('demos/tui/extension-2.mk','r').read().strip()}}
 ```
+--------------------------------------------
 
-{{macros.img_link("tui-extension-2.png", mkdocs, "350px")}}
+Although the resolution is low.. the browser actually works and includes mouse support, and the gif actually plays =P 
 
-{#
-Some widgets can run anywhere though, and those targets may be considered "public".  See for example {{macros.api_link('tux.widget.ticket',mkdocs)}}.
+The browser container defaults to using the host network, and the [notebooking demo uses it](#) to create a TUI for jupyter lab.  Another interesting possibility is using the browser *without* relying on port-forwarding and the host's network.. this way you can get visibility and interaction into otherwise completely sandboxed docker-compose networks.
 
-```bash
-# Rotates a string across the display, marquee style.
-text=mytext ./compose.mk tux.widget.ticker
-```
-#}
+### Custom Geometry & Dynamic Panes
+<hr style="width:100%;border-bottom:3px solid black;">
+
+You can setup a custom layout by just exporting a magic value for the "*geometry*" variable.  This variable is respected by targets such as {{macros.api_link('tux.open',mkdocs, arg='targets')}} and ultimately acted on by `tmux`.   And of course, if you're already knowledgeable about scripting with `tmux`, then you can use it directly and `compose.mk` will try to stay out of the way.
+
+But the easiest way to get started with custom geometries is to do something like this:
+
+1. Setup your TUI initially to use the built-in spiral/horizontal/vertical layout that's closest to what you want.
+1. Start your app and manually rearrange the pane sizes to suit.  There's a few ways to do that, but you probably want `Alt` + arrows keys to resize existing panes. (See also the [tmux docs](#) and the [compose.mk keybindings overview](#/embedded-tui/#default-keybindings))
+1. Add new panes using the 'New Pane' button at the bottom fo the TUI, or 
+1. Add new panes by right clicking an existing pane and choosing split-horizontal or split-vertical
+
+Once your geometry is how you like it, run `make .tux.geo.get > .tmp.geo` from inside the TUI.  Exit the TUI, copy the magic string from the file, and add a line like `export geometry=...` inside your code.  Note that this preserves *relative geometry* for the *number of panes that you are using* at the time of the snapshot.  If you added panes in the TUI, you need to adjust your code to launch and populate the same number of panes!  If you want specific contents in specific panes, just adjust the order of the arguments for `tux.open/`.
+
 ### Environment Variables
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -59,3 +71,14 @@ Here's a list of environment variables related to the TUI, as generated by the `
 ```ini 
 {{bash("./compose.mk io.env/TUI")}}
 ```
+
+{#As a reminder, **all widgets run *in* the TUI container, not on the docker host**, even though we can frequently ignore this!  Thus, we don't know for sure what tooling is available on the host, and thus some widgets should be considered a ["private" section of the API](#).  
+{#
+Some widgets can run anywhere though, and those targets may be considered "public".  See for example {{macros.api_link('tux.widget.ticket',mkdocs)}}.
+
+```bash
+# Rotates a string across the display, marquee style.
+text=mytext ./compose.mk tux.widget.ticker
+```
+#}
+<hr style="width:100%;border-bottom:3px solid black;">

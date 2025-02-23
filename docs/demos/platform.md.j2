@@ -1,44 +1,47 @@
 {% import 'macros.j2' as macros -%}
 
-## Demo: Platform Lifecycle
-
+## Platform Lifecycle Demo
 <hr style="width:100%;border-bottom:3px solid black;">
 
-This demo describes one way to express platform lifecycle automation using `compose.mk`.  
+This demo describes one way to express platform lifecycle automation using `compose.mk`, focusing on **data and control flows** without doing any real work.  If you want something that's more than a toy, see the sibling project that's focused on kubernetes over at [k8s-tools]({{jinja.vars.k8stools_docs_url}}/demos/cluster-lifecycle).
 
-Since `compose.mk` is a *domain agnostic* approach to automation, this demo is just a toy use-case that focuses mainly on data-flows and doesn't *do real work*.  If you want something that's more than a toy, see the sibling project that's focused on kubernetes over at [k8s-tools]({{jinja.vars.k8stools_docs_url}}/demos/cluster-lifecycle).
+{#Since `compose.mk` is a *domain agnostic* approach to automation, this demo focuses mainly #}
 
-<hr style="width:100%;border-bottom:3px solid black;">
+This demo shows examples of idioms like [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch), [structured io]({{mkdocs.site_relative_url}}/standard-lib/#structured-io), and [workflow helpers]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).
 
 ### Basic Platforming 
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Consider this hypothetical snippet:
+Consider the following Makefile:
 
 ``` Makefile
 {{open('demos/platform.mk','r').read().strip()}}
 ```
 
+Above we use the [container dispatch idiom]({{mkdocs.site_relative_url}}/container-dispatch) to call tasks in containers, and we use `jb` to emit JSON, pretending we are running `terraform output -json` or similar.  Also note the usage of `${jb}` instead of `jb`, which [is expanded]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) to use `jb` directly if available, or fall back to docker.
+
 It's powerful, concise, expressive, and already orchestrating tasks across two containers defined in some external compose-file.  The syntax is configurable, and it's even starting to look object-oriented.  
 
 Typically app-setup and infra-setup might further split into stages, but you get the idea.  And the infrastructure/app split always comes up, but it might look different.. for example your setup might replace `terraform` with `eksctl`, and `ansible` with `helm`.
 
-<hr style="width:100%;border-bottom:3px solid black;">
 
 ### Extension with LME
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Let's consider an extension of this.  Suppose output from `platform1.setup` needs to be used separately by the next bootstrap processes.  For example, sending the platform output to different backends for `logging`, `metrics`, and `events`, respectively.  
+Let's consider an extension of the platforming so far.  Suppose output from `platform.setup` needs to be used by the next phase of bootstrap.  For example, sending the platform output to different backends for `logging`, `metrics`, and `events`, respectively.  
 
-For this kind of thing it's most natural to think in terms of process algebra, and you can express it like this:
+For this kind of thing it's most natural to think in terms of process algebra, and `compose.mk` makes it pretty elegant to express.  
+In the next example we'll use everything from the last exercise.  For the sake of variety, we'll also switch to [namespace-style syntax for dispatch]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch), and introduce a few other new idioms.
 
 ```Makefile
 {{open('demos/platform-lme.mk','r').read().strip()}}
 ```
 
-Above, the builtin [flux.dmux target]({{mkdocs.site_relative_url}}/api#fluxdmux) is used to send platform-setup's output into the three backend handlers.  This is just syntactic sugar for a 1-to-many pipe (aka a demultiplexer, or "dmux").  Each handler pulls out the piece of the input that it cares about, simulating further setup using that info.  The `bootstrap` entrypoint kicks everything off.  
+The example above introduces the [flux.pipe.fork target]({{mkdocs.site_relative_url}}/api#fluxdmux) for flow-control, which is used to send platform-setup's output into the three backend handlers.
+
+We also use the [`${jq}` expansion]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) for safe access to JSON parsing, and the `${stream.stdin}` macro as pretty way to write `cat /dev/stdin`
+
+  This is just syntactic sugar for a 1-to-many pipe (aka a demultiplexer, or "dmux").  Each handler pulls out the piece of the input that it cares about, simulating further setup using that info.  The `bootstrap` entrypoint kicks everything off.  
 
 This is actually a lot of control and data-flow that's been expressed.  Ignoring ordering, graphing it would look something like this:
 
@@ -56,11 +59,11 @@ The stripped-down and combined automation that achieves this workflow is include
 
 ```Makefile 
 include compose.mk
-$(eval $(call compose.import, ▰, TRUE, my-containers.yml))
+$(eval $(call compose.import.generic, ▰, TRUE, my-containers.yml))
 
 all: bootstrap 
 bootstrap:
-    make platform1.setup | make flux.dmux/logging,metrics,events
+    make platform1.setup | make flux.pipe.fork/logging,metrics,events
 platform1.setup: ▰/terraform/self.infra.setup ▰/ansible/self.app.setup
 logging: ▰/elk/self.logging
 metrics: ▰/prometheus/self.metrics
@@ -77,13 +80,12 @@ self.events:
     cat /dev/stdin | jq .event
 ```
 
-So that illustrates [container dispatch](#) combined with the [flux.dmux target]({{mkdocs.site_relative_url}}/api#fluxdmux).  There are many other `flux.*` targets ([see the API docs]({{mkdocs.site_relative_url}}/api#api-flux)).. see also the [Workflow Demo]({{mkdocs.site_relative_url}}/demos/ansible/).  
+So that illustrates [container dispatch](#) combined with the [flux.pipe.fork target]({{mkdocs.site_relative_url}}/api#fluxdmux).  There are many other `flux.*` targets ([see the API docs]({{mkdocs.site_relative_url}}/api#api-flux)).. see also the [Workflow Demo]({{mkdocs.site_relative_url}}/demos/ansible/).  
 
 ### Discussion 
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
-This tight expression of complex flow will already be familiar to lots of people: whether they are bash wizards, functional programming nerds, or the Airflow/MLFlow/ArgoWF users.  *But this example pipes data between 5 containers, with no dependencies, and in remarkably direct way that feels pretty seamless!*  It neatly separates the automation itself from the context that it runs in, all with no platform lock-in.  Plus.. compared to the alternatives, doesn't it feel more like working with a programming language and less like jamming bash into yaml? 🤔
+This tight expression of complex flow will already be familiar to lots of people: whether they are bash wizards, functional programming nerds, or Airflow/MLFlow/ArgoWF users.  Still, this example pipes data between 5 containers, with no dependencies, and in remarkably direct way that feels pretty seamless!*  It separates the automation itself from the context that it runs in, all with no platform lock-in.  Plus.. compared to the alternatives, doesn't it feel more like working with a programming language and less like jamming bash into yaml? 🤔
 
 As mentioned previously, the workflow description weighs in at only ~20 lines.  That's almost exactly the same number of lines in the [mermaid source-code for the diagram](#), which is interesting, because usually implementations are usually *orders of magnitude larger* than the diagrams that describe them!  Zeroing in on a minimum viable description length?
 

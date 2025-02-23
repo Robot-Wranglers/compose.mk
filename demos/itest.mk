@@ -1,3 +1,4 @@
+#!/usr/bin/env -S make -f
 # demos/itest.mk: 
 #   Integration test-suite.  
 #   This isn't pretty or instructive like the other demos, 
@@ -15,50 +16,35 @@ include compose.mk
 .DEFAULT_GOAL := all 
 
 # Load all services from 1 compose file, *not* into the root namespace.
-$(eval $(call compose.import, ▰, FALSE, demos/data/docker-compose.cm-tools.yml))
+# $(eval $(call compose.import.as, ▰, demos/data/docker-compose.cm-tools.yml))
 
 # Load all services from 2 compose files into 1 namespace.
-$(eval $(call compose.import, ▰, TRUE, demos/data/docker-compose.yml))
+$(eval $(call compose.import, demos/data/docker-compose.yml, ▰))
 
 all: flux.star/test.* 
-# test.mk \
-# 		flux.stage/core-compose \
-# 		demo demo.double.dispatch \
-# 		test.dispatch \
-# 		test.dispatch.retvals \
-# 		test.compose.pipes \
-# 		test.compose.services \
-# 		test.import.root \
-# 		test.main.bridge \
-# 		test.multiple.compose.files \
-# 		test.docker.core \
-# 		flux.stage/core-tui \
-# 		test.ticker \
-# 		test.containerized.tty.output \
-# 		flux.stage/core-flux \
-# 		test.flux.lib
 
-test.mk:
+test.mk.reflection:
+	$(call log.test_case, testing reflection)
 	./compose.mk \
 		mk.set/foo/bar mk.get/foo \
 		mk.ifdef/foo mk.ifndef/baz
 
 test.flux.if.then:
-	$(call log.target, test a few kinds of if/then flows)
+	$(call log.test_case, test a few kinds of if/then flows)
 	set -x \
 	&& ./compose.mk flux.if.then/flux.ok,flux.ok \
 	&& ./compose.mk flux.if.then/flux.fail,flux.ok 
 
 test.flux.do.when:
-	$(call log.target, test a few kinds of do/when flows)
+	$(call log.test_case, test a few kinds of do/when flows)
 	set -x \
 	&& ./compose.mk flux.do.when/flux.ok,flux.ok \
 	&&	./compose.mk flux.negate/flux.do.when/flux.fail,flux.ok
 
 test.signals:
-	$(call log.target, mk.interrupt should throw an error)
+	$(call log.test_case, mk.interrupt should throw an error)
 	! ./compose.mk mk.interrupt
-	$(call log.target, signal handler should not be installed for library usage)
+	$(call log.test_case, signal handler should not be installed for library usage)
 	! make mk.parse.local|grep mk.interrupt
 	
 demo: ▰/debian/self.demo
@@ -86,33 +72,34 @@ test.import.root:
 # $(call log, ${dim_cyan}Test import-to-root argument for compose.import)
 # # test that the 4th argument for
 # # import-to-root-namespace is honored
-# ! echo uname | make debian/pipe 2>/dev/null
-# echo uname | make docker-compose.cm-tools/debian/pipe 2>/dev/null
-# echo uname | make docker-compose/alpine/shell/pipe
+# ! echo uname | make debian.pipe 2>/dev/null
+# echo uname | make docker-compose.cm-tools/debian.pipe 2>/dev/null
+# echo uname | make docker-compose/alpine.shell.pipe
 
 test.main.bridge:
+	$(call log.test_case, main bridge)
 	make io.print.div label="${cyan}${@}${no_ansi}"
-	$(call log, ${dim_cyan}Test service enumeration\nTarget @ <compose_file>.services)
+	$(call log.test_case, Test service enumeration\nTarget @ <compose_file>.services)
 	${make} docker-compose.services
-	$(call log, ${dim_cyan}Test detection\nTarget @ <compose_file>/get_shell)
-	${make} docker-compose/alpine/get_shell
+	$(call log.test_case, Test detection\nTarget @ <compose_file>.get_shell)
+	${make} docker-compose/alpine.get_shell
 
 # test.multiple.compose.files:
 # 	make io.print.div label="${cyan}${@}${no_ansi}"
 # 	$(call log, ${dim_cyan}Test services enumeration, 2nd file\nTarget @ <compose_file>/<svc>.services)
 # 	${make} docker-compose.services
-# 	$(call log, ${dim_cyan}Test Streaming commands, 2nd file\nTarget @ <compose_file>/<svc>/pipe)
-# 	echo uname -n -v | ${make} docker-compose/debian/pipe \
+# 	$(call log, ${dim_cyan}Test Streaming commands, 2nd file\nTarget @ <compose_file>/<svc>.pipe)
+# 	echo uname -n -v | ${make} docker-compose/debian.pipe \
 
 # test.compose.pipes:
 # 	make io.print.div label="${cyan}${@}${no_ansi}"
-# 	$(call log, ${dim_cyan}Streaming commands to container\nTarget @ <svc>/shell/pipe)
-# 	echo uname -n -v | ${make} docker-compose/alpine/shell/pipe
-# 	$(call log, ${dim_cyan}Test streaming commands to container\nTarget @ <compose_file_stem><svc>/shell/pipe)
-# 	echo uname -n -v | ${make} docker-compose/alpine/shell/pipe
-# 	$(call log, ${dim_cyan}Test streaming data to container\nTarget @ <svc>/shell/pipe ${no_color})
-# 	echo 'foo: bar' | ${make} docker-compose.cm-tools/yq/pipe
-# 	set -x && echo '{"foo":"bar"}' | cmd='.foo' make docker-compose.cm-tools/jq/pipe
+# 	$(call log, ${dim_cyan}Streaming commands to container\nTarget @ <svc>.shell.pipe)
+# 	echo uname -n -v | ${make} docker-compose/alpine.shell.pipe
+# 	$(call log, ${dim_cyan}Test streaming commands to container\nTarget @ <compose_file_stem><svc>.shell.pipe)
+# 	echo uname -n -v | ${make} docker-compose/alpine.shell.pipe
+# 	$(call log, ${dim_cyan}Test streaming data to container\nTarget @ <svc>.shell.pipe ${no_color})
+# 	echo 'foo: bar' | ${make} docker-compose.cm-tools/yq.pipe
+# 	set -x && echo '{"foo":"bar"}' | cmd='.foo' make docker-compose.cm-tools/jq.pipe
 
 # test.compose.services:
 # 	make io.print.div label="${cyan}${@}${no_ansi}"
@@ -121,9 +108,9 @@ test.main.bridge:
 # 	${make} docker-compose.cm-tools/jq cmd='--version'
 
 test.dispatch.retvals:
-	$(call log, ${dim_cyan}Checking dispatch return codes:${no_color})
-	! (echo exit 1 | ${make} docker-compose/debian/shell/pipe 2>/dev/null)
-	echo exit  | ${make} docker-compose/debian/shell/pipe
+	$(call log.test_case, Checking dispatch return codes)
+	! (echo exit 1 | ${make} docker-compose/debian.shell.pipe 2>/dev/null)
+	echo exit  | ${make} docker-compose/debian.shell.pipe
 
 # test.dispatch:
 # 	make io.print.div label="${cyan}${@}${no_ansi}"
@@ -136,9 +123,10 @@ test.dispatch.retvals:
 # self.container.dispatch:
 # 	printf "in container `hostname`, platform info: `uname`\n"
 
-# test.flux.lib: test.flux.finally test.flux.try.except.finally test.flux.mux test.flux.dmux test.flux.loop
+# test.flux.lib: test.flux.finally test.flux.try.except.finally test.flux.mux test.flux.pipe.fork test.flux.loop
 
 test.flux.try.except.finally:
+	$(call log.test_case, Checking)
 	make flux.try.except.finally/flux.fail,flux.ok,flux.ok
 	! make flux.try.except.finally/flux.ok,flux.ok,flux.fail
 	# except fails, but try succeeds so it never runs
@@ -147,6 +135,7 @@ test.flux.try.except.finally:
 	make flux.try.except.finally/flux.ok,flux.ok,flux.ok
 
 test.flux.finally:
+	$(call log.test_case, Checking)
 	# demo of using finally/always functionality in a pipeline.  touches a tmpfile 
 	# somewhere in the middle of a failing pipeline without getting to the cleanup 
 	# task, and it should be cleaned up anyway.
@@ -164,23 +153,35 @@ test.flux.finally:
 # test.flux.loop:
 # 	${make} docker-compose.dispatch/alpine/flux.loop/2/io.time.wait
 
-# test.flux.dmux:
-# 	echo {} | ${make} flux.dmux/docker-compose.cm-tools/yq,docker-compose.cm-tools/jq
+# test.flux.pipe.fork:
+# 	echo {} | ${make} flux.pipe.fork/docker-compose.cm-tools/yq,docker-compose.cm-tools/jq
 # 	echo {} | ${make} flux.split/docker-compose.cm-tools/yq,docker-compose.cm-tools/jq
 
 test.flux.retry:
+	$(call log.test_case, Checking)
 	! interval=1 make flux.retry/3/flux.fail
 
 test.flux.apply:
-	make flux.apply.later/2/io.time.wait/1
+	$(call log.test_case, Checking)
+	${make} flux.apply/flux.echo,THUNK ${stream.obliviate}
+
+test.flux.starmap:
+	$(call log.test_case, Checking)
+	${make} ./compose.mk flux.starmap/flux.echo,flux.echo/bonk ${stream.obliviate}
+
+test.flux.apply.later:
+	$(call log.test_case, Checking)
+	${make} flux.apply.later/2/io.time.wait/1 ${stream.obliviate}
 
 test.flux.mux:
+	$(call log.test_case, Checking)
 	make flux.mux targets="io.time.wait,io.time.wait,io.time.wait/2" | jq .
 	make flux.join targets="io.time.wait,io.time.wait,io.time.wait/2" | jq .
 	make flux.mux/io.time.wait
 
 test.docker.run:
-	img=python:3.11-bookworm ./compose.mk docker.run/flux.ok
+	$(call log.test_case, Checking)
+	img=debian/buildd:bookworm ./compose.mk docker.dispatch/flux.ok
 	echo hello-python-docker1 | ${make} .test.docker.run.def
 	echo hello-python-docker2 | entrypoint=cat cmd=/dev/stdin img=python:3.11-slim-bookworm make docker.run.sh
 	entrypoint=python cmd='--version' img=python:3.11-slim-bookworm make docker.run.sh

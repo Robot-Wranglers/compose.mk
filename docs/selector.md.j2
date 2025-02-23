@@ -1,12 +1,61 @@
+{% import 'macros.j2' as macros -%}
+
 ## Selectors
 <hr style="width:100%;border-bottom:3px solid black;">
+
+Interactive selectors based on [gum's chooser](https://github.com/charmbracelet/gum?tab=readme-ov-file#choose) are something of a primitive for `compose.mk`.  
+
+This page covers these main use-cases for stand-alone mode:
+
+* [Interactive target-selection from Makefiles](#interactive-target-selection) 
+* [Interactive container-selection from compose files](#interactive-container-selection).
+
+For lower-level programmatic usage see instead the [user-input section of the standard-lib docs]({{mkdocs.site_relative_url}}/standard-lib/#user-input-interactivity).  For higher-level usage like apps with layered dialogs, see the examples in the [advanced TUI docs]({{mkdocs.site_relative_url}}/advanced-tuis/).
 
 ### Interactive Target-Selection
 <hr style="width:100%;border-bottom:3px solid black;">
 
+Given any random Makefile, `compose.mk` can wrap it with runner that offers target-selection using the {{macros.api_link("mk.select", mkdocs, arg='path_to_makefile')}} target.
+
+
+For testing in situations like this, there is a lightweight Makefile included in the repository @ {{macros.repo_link('demos/no-includes.mk',github)}}. Like the name suggests, it doesn't actually include or use `compose.mk` in any way.  
+
+You can launch this target-selector once, or use {{macros.api_link('flux.loopf', mkdocs, arg='target_name')}} for a simple looping runner.
+
+```bash
+# select target and run once
+$ ./compose.mk mk.select/demos/no-include.mk
+
+# looping runner
+$ ./compose.mk flux.loopf/mk.select/demos/no-include.mk
+```
+
+Using it looks like this:
+
+{{macros.img_link("user-input.gif", mkdocs, "60%")}}
+
 ### Interactive Container-Selection
-{#
 <hr style="width:100%;border-bottom:3px solid black;">
+
+Given any random docker compose file, `compose.mk` can wrap it with runner that offers container-selection, using {{macros.api_link('compose.select',mkdocs,arg='path_to_compose_file')}}.  
+
+For testing in situations like this the repo ships with a sample compose file @ {{macros.repo_link('demos/data/docker-compose.minimal.yml',github)}}, so we'll use that here.
+
+```bash
+$ ./compose.mk compose.select/demos/data/docker-compose.minimal.yml
+```
+
+After selecting a service, you'll be dropped into an interactive shell for that container.  
+
+This should work for most containers regardless of their default entrypoint, and `compose.mk` can help to autodetect whether using `bash` or `sh` is appropriate.  If there's no shell at all available in the container though, you're out of luck!
+
+As with the `mk.select` example above, we can use {{macros.api_link('flux.loopf',mkdocs,arg='target_name')}} to easily turn this into a a simple looping interface:
+
+```bash
+$ ./compose.mk flux.loopf/compose.select/demos/data/docker-compose.minimal.yml
+```
+
+{#
 
 Usually it's a good idea to separate task-definitions from the containers they run, and [using the docker compose support]({{mkdocs.site_relative_url}}/bridge) is the recommended way to arrange things.  However, `compose.mk` sometimes needs more direct and low-level access to docker primitives for internal use, and this functionality is exposed for external use as well. 
 
@@ -45,7 +94,7 @@ Shortcuts for the relevant sections of the API are below:
 
 ### Inlined Docker Files
 
-**For use-cases related to rapidly prototyping systems and pipelines,** check out [these mad-science demos]({{mkdocs.site_relative_url}}/demos/mad-science).  These examples show how to work with inlined Dockerfiles and ways to implement tasks in arbitrary programming languages.
+**For use-cases related to rapidly prototyping systems and pipelines,** check out [these mad-science demos]({{mkdocs.site_relative_url}}/demos/matrioshka).  These examples show how to work with inlined Dockerfiles and ways to implement tasks in arbitrary programming languages.
 
 
 ```Makefile

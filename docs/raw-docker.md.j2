@@ -1,16 +1,34 @@
-## Raw Docker Support
+{% import 'macros.j2' as macros -%}
 
+## Raw Docker Support
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Usually it's a good idea to separate task-definitions from the containers they run, and [using the docker compose support]({{mkdocs.site_relative_url}}/bridge) is the recommended way to arrange things.  However, `compose.mk` sometimes needs more direct and low-level access to docker primitives for internal use, and this functionality is exposed for external use as well. 
+Usually it's a good idea to separate task-definitions from the containers they run, and [using the docker compose support]({{mkdocs.site_relative_url}}/bridge) is the recommended way to arrange things.  However, `compose.mk` sometimes needs more direct and low-level access to docker primitives for internal use, and this functionality is exposed for external use as well.
 
-The rest of this page is a quick introduction to both.
+### Tool-Container Defaults
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Most of the low-level docker support in `compose.mk` makes the assumption that you're <u><strong>working with tool containers</strong></u>, and there's two important defaults that come along with this assumption:
+
+1. **The working directory, which is usually the project root, is volume-mounted by default** so that it can be shared with containers.  
+1. **The docker-socket is mounted and shared by default also.** 
+
+In the first case, without sharing the working directory, tools could not do any file IO, and only stream-based communication would be possible.  And in the second case, the ability to access *other* dockerized tools from inside docker containers enables many other `compose.mk` features, from [structured io](#) and [stage stacks](#) to the [embedded TUI](#).
 
 ### Docker Utilities
 <hr style="width:100%;border-bottom:3px solid black;">
 
 **For use-cases related to cleaning and refactoring bash-script or Makefiles that are already using the docker CLI,** there are various utility functions that are available as part of the [`docker.*` namespace of the API]({{mkdocs.site_relative_url}}/api/#api-docker).  
 
+{#
+--------------------------------------
+{{macros.inlined_help('docker.stat',mkdocs)}}
+---------------------------------------------------
+{{macros.inlined_help('Dockerfile.build',mkdocs)}}
+---------------------------------------------------
+{{macros.inlined_help('docker.stat',mkdocs)}}
+---------------------------------------------------
+#}
 Example usage for some of the utilities can be seen below.
 
 {#<hr style="width:95%;border-bottom:1px dashed black;">#}
@@ -20,25 +38,37 @@ Example usage for some of the utilities can be seen below.
 ```
 
 ### Docker API 
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Shortcuts for the relevant sections of the API are below:
 
-{% set targets=bash('./compose.mk help|grep docker') %}
-{% set targets=targets.split('\n') %}
-{%for target in targets %} {% set target=target.strip().replace('%','<arg>') %}{%if target%}
-* [`{{target}}`]({{mkdocs.site_relative_url}}/api#{{target.replace('<','').replace('>','').replace('/','').replace('.','')}}){%endif%}{%endfor%}
-
-<hr style="width:100%;border-bottom:3px solid black;">
+{{macros.api_link_many('docker', mkdocs, exclude='docker-compose')}}
+{{macros.api_link_many('mk.docker', mkdocs)}}
 
 ### Inlined Docker Files
+<hr style="width:100%;border-bottom:3px solid black;">
 
-**For use-cases related to rapidly prototyping systems and pipelines,** check out [these mad-science demos]({{mkdocs.site_relative_url}}/demos/mad-science).  These examples show how to work with inlined Dockerfiles and ways to implement tasks in arbitrary programming languages.
+**For use-cases related to rapidly prototyping systems and pipelines,** the [polyglot demos]({{mkdocs.site_relative_url}}/demos/polyglots) and [these mad-science demos]({{mkdocs.site_relative_url}}/demos/matrioshka) make use of embedded containers.
 
+Below you can see some of the test-cases that are exercising raw docker support.
 
 ```Makefile
 {{open('demos/inlined-dockerfile.mk','r').read().strip()}}
 ```
 
 <hr style="width:100%;border-bottom:3px solid black;">
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for MkDocs to fully render the page including ToC
+    setTimeout(function() {
+        const heading = document.getElementById('raw-docker-support');
+        const img = document.createElement('img');
+        img.style.height = '2em'; img.style.verticalAlign = 'middle';
+        img.src = '../img/docker.png'; 
+        heading.insertBefore(img, heading.firstChild);
+        img.style.marginRight = '10px';
+        //heading.appendChild(img);
+    }, 100); // Small delay to ensure ToC is already processed
+});
+</script>

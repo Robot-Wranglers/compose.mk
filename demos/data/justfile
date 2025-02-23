@@ -1,0 +1,9 @@
+# example justfile that's used in some demos.
+# taken from https://github.com/casey/just/#quick-start
+
+recipe-name:
+  echo 'This is a recipe!'
+
+# this is a comment
+another-recipe:
+  @echo 'This is another recipe.'

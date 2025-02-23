@@ -1,0 +1,72 @@
+# default to line-nos: https://github.com/jupyterlab/jupyterlab/issues/2395
+# docker images https://github.com/Z3Prover/z3/discussions/5740
+# https://github.com/z3prover/z3/pkgs/container/z3
+# docker pull ghcr.io/z3prover/z3:ubuntu-20.04-bare-z3-sha-d66609e
+name: notebooking 
+services:
+  
+  # Only used for inheritance, this collects common config.
+  lab.base: &base
+    image: hello-world
+    stdin_open: false
+    tty: false
+    environment:
+      DOCKER_HOST_WORKSPACE: ${DOCKER_HOST_WORKSPACE:-${PWD}}
+      CMK_DIND: "1"
+      workspace: /lab
+    working_dir: /lab
+    volumes:
+      - ${DOCKER_HOST_WORKSPACE:-${PWD}}:/lab
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+  
+  # https://github.com/Z3Prover/z3/discussions/5740
+  # z3 official container does not include bindings
+  z3:
+    <<: *base
+    hostname: z3
+    image: compose.mk:z3
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ghcr.io/z3prover/z3:ubuntu-20.04-bare-z3-sha-d66609e
+        RUN apt-get update -qq && apt-get install -qq -y python3 python3-pip
+        RUN pip3 install -q --break-system-packages z3-solver==4.14.0.0
+  
+  # no official container for alloy-lang, 
+  # but this one can run headless and return JSON
+  alloy:
+    <<: *base
+    hostname: alloy
+    image: compose.mk:alloy 
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM eloengineering/alloy-cli:4.2
+        RUN apt-get update && apt-get install -y make procps g++ openjdk-17-jdk-headless 
+    entrypoint: alloy-run
+    command: /dev/stdin
+  
+  # Reuse the lean container we built in `demos/lean.mk`
+  lean4: &lean4
+    <<: *base
+    hostname: lean4 
+    image: compose.mk:lean4
+    entrypoint: lean
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM debian:bookworm
+        SHELL ["/bin/bash", "-x", "-c"] 
+        RUN apt-get update -qq && apt-get install -qq -y git make procps curl sudo
+        RUN curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf \
+          > /usr/local/bin/elan-init.sh
+        RUN bash /usr/local/bin/elan-init.sh -y 
+        RUN cp /root/.elan/bin/lean /usr/local/bin 
+        RUN cp /root/.elan/bin/lake /usr/local/bin 
+        ENV PATH="$PATH:/root/.elan/bin/"
+        RUN lean --help
+        RUN lake new default
+        RUN cd default && \
+          printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' >> lakefile.toml
+        RUN cd default && lake update && lake build
+        RUN lean --version

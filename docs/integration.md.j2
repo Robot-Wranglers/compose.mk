@@ -1,11 +1,7 @@
 ## Installation
-
-
-### Basic Installation
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Just copy the `compose.mk` and make it executable:
+Just copy the `compose.mk` file and  make it executable:
 
 ```bash
 $ cd myproject 
@@ -17,69 +13,66 @@ $ curl -sL \
 
 $ chmod ugo+x compose.mk
 
-# now equivalent to `make -f compose.mk ..`
-$ ./compose.mk ... 
+# now equivalent to `make -f compose.mk ...`
+$ ./compose.mk ...
 ```
 
-That's all the setup you'll need just for [stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview) tool usage, but read on for tighter integration with your project.
-
-<hr style="width:100%;border-bottom:3px solid black;">
+If you have `make` and `docker`, that's all the setup you'll need for [stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview) tool usage, and while it's not recommended, you can always copy it to a bin folder if you want.  Read on for details about tighter integration with projects.
 
 ### Project Integration
+<hr style="width:100%;border-bottom:3px solid black;">
 
-If you're looking to integrate with existing automation or you brought your own tool containers, you'll probably be interested in setting up the [Make/Compose Bridge]({{mkdocs.site_relative_url}}/bridge) or preparing for [Container Dispatch]({{mkdocs.site_relative_url}}/container-dispatch).  See that full documentation for more discussion.
-
-<hr style="width:95%;border-bottom:1px dashed black;">
+If you're looking to integrate with existing automation or you brought your own tool containers, you'll probably be interested in setting up the [Make/Compose Bridge]({{mkdocs.site_relative_url}}/bridge) or preparing for [Container Dispatch]({{mkdocs.site_relative_url}}/container-dispatch).  See that full documentation for more discussion, or if you know what you're doing you can read on for the copy/paste stuff.
 
 #### Makefile Integration
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 A quick example of what your project Makefile should look like:
 
 ```Makefile
 # myproject/Makefile (Make sure you have real tabs, not spaces!)
  
-# Set sane defaults for quiet and fail-fast execution
-SHELL := bash
-.SHELLFLAGS := -euo pipefail -c
-MAKEFLAGS=-sS --warn-undefined-variables
-
 # Include compose.mk for access to target API and macros.
 include compose.mk
 
 # If you brought tool containers, you'll want to import them.
 # Call the bridge-building macro to get targets for each service.
-$(eval $(call compose.import, ▰, TRUE, docker-compose.yml))
+$(eval $(call compose.import.generic, ▰, TRUE, docker-compose.yml))
 
 # At this point, dynamic targets are defined for the services
 # defined in the external compose config and are ready to use.
 # Now you can dispatch any task to any tool container.
-test: ▰/my_compose_service_name/self.test
+test: my_compose_service_name.dispatch/self.test
 self.test:
   echo hello world from container `uname -n -v`
 ```
-<hr style="width:95%;border-bottom:1px dashed black;">
 
 #### Docker Compose Integration
+<hr style="width:95%;border-bottom:1px dashed black;">
 
-Working with docker compose is optional if you're just interested in [stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview/) or the [standard library]({{mkdocs.site_relative_url}}/standard-lib).  And if you *are* using docker-compose, then simple access to tools in containers from your docker-compose files should *just work*, using [the bridge]({{mkdocs.site_relative_url}}/bridge).  
+Working with docker compose is optional if you're just interested in [stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview/) or the [standard library]({{mkdocs.site_relative_url}}/standard-lib).  And if you *are* using docker-compose, then simple access to tools in containers from your docker-compose files will *just work* for many use-cases, [via the bridge]({{mkdocs.site_relative_url}}/bridge).  
 
 However.. more complicated use-cases probably require a volume-mount for your project directory to read/write files, and, container dispatch means your tool containers need `make` and `bash`.
 
-Here's a typical example compose file:
+Here is some fairly complete boilerplate that's usually a good starting place:
 
 ```yaml
-{{open('tests/docker-compose.yml','r').read().strip()}}
+{{open('demos/data/docker-compose.yml','r').read().strip()}}
 ```
 
-This example above is typical, but not necessarily minimal, so let's highlight a few things about it.  
+This example above is typical, but not necessarily minimal, so let's discuss a few things about it.  
 
-* **Notice how `dockerfile_inline` can be used to quickly extend a base-container without adding an extra Dockerfile to your repository.**  Tool-containers rarely change once established, and having a separate file and separate git/docker repos for everything can get tedious.  And again, there's a chance your tool-containers already include `make`, and you don't need to add packages at all.  (If you're looking for a reasonable base-container that includes `make` and will help you avoid initial package updates with `apt` or `apk`.. you can also look at [gcc containers](https://hub.docker.com/_/gcc/) or e.g. `debian/buildd:bookworm`.)
+**First, what you need to know about base images.** There's a good chance your tool-container already includes `make`, and you don't need to add packages at all.  But if you're looking for a reasonable base-containers that include `make` and will help you avoid initial package updates with `apt` or `apk`.. you might consider things like [`debian/buildd:bookworm`](https://packages.debian.org/bookworm/buildd) or [gcc containers](https://hub.docker.com/_/gcc/).
 
-* **Note also the usage of yaml inheritance with anchors,** i.e. `&base` and `<<: *base`.  This is a good trick to keep compose files DRY and as simple as possible.  Config keys for `entrypoint` and `hostname` are usually optional but provided for clarity, and this can help to clean up logging.  
 
-* Again, **config keys for `working_dir` and `volumes` are crucial for project file IO,** including reading your project `Makefile` if you're using container dispatch.
+Next, a few tips and tricks about the docker-compose config details:
 
-* It's optional, but *there are cases where you'll want `docker` to be available inside tool-containers* and you also might want to share the hosts docker-socket.[^1]  The boilerplate above goes half way, defaulting to using a volume mount but stopping short of actually installing docker.  
+1. **Use defaults-with-overrides in `FROM` lines to stay versioned but still keep some flexibility.** 
+1. **Use `dockerfile_inline` to quickly extend a base-container without adding an extra Dockerfile to your repository.**  Tool-containers rarely change once established, and having a separate file and separate git/docker repos for everything can get tedious.  
+1. **Use yaml inheritance with anchors,** i.e. `&base` and `<<: *base`.  This is a good trick to keep compose files DRY and as simple as possible.  Config keys for `entrypoint` and `hostname` are usually optional but provided for clarity, and this can help to clean up logging.  
+1. **Correct config keys for `working_dir` and `volumes` are crucial for project file IO,** which might include reading your project `Makefile` if you're using container dispatch.
+1. It's optional, but **there are cases where you'll want `docker` to be available inside tool-containers** and you also might want to share the hosts docker-socket.[^1]  The boilerplate above goes half way, defaulting to using a volume mount but stopping short of actually installing docker.  
+
 
 {#
 ### Embedding Tools With Makefiles
@@ -89,15 +82,13 @@ If you're not interested in custom automation that requires project-Makefile int
 
 
 ### Compatibility Notes
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Platforms used in development include modern docker (say `25+`), make (`3.8+`), and bash `(~5`) on both Linux and MacOS. Testing in github-actions only uses Linux, and won't try every possible combination of versions.  
+Platforms used in development include modern docker (say `25+`), recentish make (`3.8+`), and bash `(~5`) on both Linux and MacOS. Testing in github-actions only uses Linux, and won't try every possible combination of versions.  
 
-In general though, *the goal is to support most things you'll encounter in the wild*, including OSX, out of the box.  But you may see some of the usual problems with certain arguments to non-posix OSX default `sed` / `ps` / `xargs`, etc.  Please report issues!
+In general though, **the goal is to support most things you'll encounter in the wild**, including OSX, out of the box.  But you may see some of the usual problems with certain arguments to non-posix OSX default `sed` / `ps` / `xargs`, etc.  Please report issues!
 
 ### For Developers
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 For development on `compose.mk` itself, here's how you can clone the project, build related containers, and run the test suites.
@@ -114,7 +105,6 @@ $ make clean build test
 ```
 
 ### Forks & Versioning
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Given the advice above to simply embed `compose.mk` directly into your project repositories, some people might be reading this and thinking **what if compose.mk changes upstream?**  
@@ -124,3 +114,18 @@ If you're really worried about this, you can always setup `compose.mk.git` (or y
 <hr style="width:100%;border-bottom:3px solid black;">
 
 [^1]: For example, remote controlling the TUI relies on docker-sockets.  Also [tool wrappers]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) fall back to docker, so using them with [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) means docker-in-docker.
+
+{# <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for MkDocs to fully render the page including ToC
+    setTimeout(function() {
+        const heading = document.getElementById('basic-installation');
+        const img = document.createElement('img');
+        img.style.height = '2em'; img.style.verticalAlign = 'middle';
+        img.src = '../img/icon.png'; 
+        heading.insertBefore(img, heading.firstChild);
+        img.style.marginRight = '10px';
+        //heading.appendChild(img);
+    }, 100); // Small delay to ensure ToC is already processed
+});
+</script> #}

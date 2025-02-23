@@ -22,12 +22,12 @@ Type "./compose.mk io.print.div"
 Enter
 Sleep 2s
 Enter
-Type "# If an argument is provided, it is used to determine the width of the divider"
-Enter
-Enter
-Type "./compose.mk io.print.div/2"
-Enter
-Enter
+# Type "# If an argument is provided, it is used to determine the width of the divider"
+# Enter
+# Enter
+#Type "./compose.mk io.print.div/2"
+#Enter
+#Enter
 Type "# You can also override the default timestamp with an explicit label"
 Enter
 Enter

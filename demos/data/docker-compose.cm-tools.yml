@@ -1,0 +1,13 @@
+##
+# demos/data/docker-compose.cm-tools.yml:
+#   A compose file faking a suite of config-management and IaC tooling
+##
+services:
+  chef: 
+    image: debian 
+  terraform:
+    image: debian 
+  jq:
+    image: ghcr.io/jqlang/jq:${JQ_VERSION:-1.7.1}
+  yq:
+    image: mikefarah/yq:${YQ_VERSION:-4.43.1}

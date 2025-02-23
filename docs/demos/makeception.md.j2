@@ -1,0 +1,58 @@
+{% import 'macros.j2' as macros -%}
+
+## Makeception 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+This demo is a pretty extreme example of the capabilities of `compose.mk` to communicate [across matrioshka layers]({{mkdocs.site_relative_url}}/matrioshka/#advanced-matrioshka-idioms). 
+
+Consider the following example, which we might call "makeception".  It's well-commented, but it takes a minute to wrap your head around, so let's prime the intuition.  
+
+In this example, we'll use `compose.mk` to embed 2 container definitions and to build and steer them.  What's unusual about this example is that even *the build process* itself is encapsulated inside the same as file, and rather than jamming bash in the Dockerfile, it runs as a normal task/target.  We'll also see some practical examples of how to communicate across matrioshka layers, using the stage-stacks.
+
+### The Code 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+```Makefile 
+{{open('demos/matrioshka.mk','r').read()}}
+```
+
+😵‍💫 Whew! As usual, it's harder to explain what it does than to actually build it :)
+
+### The Output
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Abbreviated output looks something like this:
+
+```
+╔═════════════════════════════════════════════════════╗                                                   
+║                         RUN                         ║
+╚═════════════════════════════════════════════════════╝
+Running inside alice
+Special tools available: /usr/bin/figlet
+Pushing alice event to RUN stage
+...
+Running inside bob
+Special tools available: /usr/bin/ack
+Pushing bob event to RUN stage
+...
+[
+  { "stage.entered": "Thu 27 Feb 2025 06:20:17 PM PST" },
+  { "host": "alice", "timestamp": "..." },
+  { "host": "bob", "timestamp": "..."}
+]
+```
+
+### Discussion
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The "makeception" demo above is primarily intended to demonstrate control, but since we're here.. **is it actually *practical***?  Well, maybe.  To put this in perspective: It's pretty normal to have a Dockerfile with 100-300 lines of fragile "RUN"-prefixed madness that only runs top-to-bottom and tons of repetitious incantations because code re-use isn't possible.  And of course, people put up with a level of inlining already with bash-inside-Dockerfile because *they don't want a 3 line Dockerfile* **and** an *external shell script* just so they get can get a (bad) version of "reusable subroutines" in plain bash!  Looked at this way-- maybe the "really extreme" example of the matrioshka approach here actually isn't that bad?  It's also worth pointing out that this is structured enough to be easily extended, like adding tests for the container that's produced, or adding repository-push tasks iff tests finish successfully, etc.
+
+The main trouble with this example is that layer-caching does makes it impractical for [use as a `compose.mk`-backed application]({{mkdocs.site_relative_url}}/advanced-tui), but this isn't necessarily a problem if you're using it for automating container *build/test/push* work flows.
+
+The eagle-eyed reader will also notice that this uses `docker:dind` as a base image, which is ultimately how JSON can move via `flux.stage.push`, even though tools like `jq` and `jb` are not actually installed.  If you can't use a base with docker in it, then you'll have to explicitly install jq and jb to use the stack.
+
+Going further, one might also wonder whether the stage-stack could be used for **bidirectional communication during the build-phase** as well.  This is *also* actually possible, but left as an exercise for the reader.  (As a hint, this does require being "outside" of the finished build-phase currently, and then faking it with a `docker copy` call to concatenate  internal / external stacks.  There's an [open issue](https://github.com/docker/buildx/issues/1991) about allowing bind-mounts during build though, which would remove the special case and give stack access to *both* the build/run stages for the container.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+^[1]: If you want more long-format discussion around this sort of thing, [there is lots in the design docs]({{mkdocs.site_relative_url}}/but-why)

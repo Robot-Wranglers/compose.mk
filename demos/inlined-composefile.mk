@@ -1,13 +1,13 @@
+#!/usr/bin/env -S make -f
 # demos/inlined-composefile.mk: 
-#   Demonstrates `compose.import.define`.  
-#   This works exactly like `compose.import`, but it accepts embedded data instead of files.
+#   Demonstrates working with inlined compose-files via `compose.import.string`,
+#   which works exactly like `compose.import`, but accepts embedded data instead of files.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
 #   USAGE: make -f demos/inlined-composefile.mk
 
-.DEFAULT_GOAL := demo.inline
-
 include compose.mk
+.DEFAULT_GOAL := demo.inline
 
 # Look it's an embedded compose file.  This defines services `alice` & `bob`
 define inlined.composefile 
@@ -17,8 +17,8 @@ services:
     build:
       context: .
       dockerfile_inline: |
-        FROM debian:bookworm
-        RUN apt-get update && apt-get install -y make procps
+        FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
+        RUN apt-get update -qq && apt-get install -qq -y make procps
     entrypoint: bash
     working_dir: /workspace
     volumes:
@@ -31,15 +31,23 @@ services:
       context: .
       dockerfile_inline: |
         FROM alpine:3.21.2
-        RUN apk add --update --no-cache coreutils alpine-sdk bash procps-ng
+        RUN apk add -q --update --no-cache coreutils alpine-sdk bash procps-ng
 endef 
 
-# After the inline exists, just call `compose.import.define` on it.
-$(eval $(call compose.import.def,  ▰,  TRUE, inlined.composefile))
+# After the inline, just call `compose.import.string` on it to 
+# build target scaffolding.  See instead `compose.import` for 
+# using an external file.
+$(eval $(call compose.import.string, inlined.composefile,  TRUE))
 
-# So now you can use the automatically generated targets,
-# and dispatch tasks inside containers.
-demo.inline: alice/get_shell bob/get_shell ▰/alice/internal_task ▰/bob/internal_task
+# Top level entrypoint, run the other individual demos.
+demo.inline: demo.dispatch demo.compose.verbs
 
-internal_task:
-	echo "Running inside `hostname`"
+# Dispatch examples: run a task inside alice-container and bob-container.
+# Note that docker build is implicit, on-demand, and cached unless forced.
+demo.dispatch: alice.dispatch/self.internal_task bob.dispatch/self.internal_task
+self.internal_task:; echo "Running inside `hostname`"
+
+# Import modifies the `inlined.composefile` namespace with familiar verbs 
+# from docker compose, e.g. "build", "stop", "ps", etc
+demo.compose.verbs: inlined.composefile.stop inlined.composefile.build
+

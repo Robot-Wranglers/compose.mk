@@ -1,3 +1,4 @@
+#!/usr/bin/env -S make -f
 # demos/no-include.mk: 
 #   A very basic demo that *doesnt* include compose.mk.  
 #   This is mostly used for testing parsing and reflection utilities

@@ -1,0 +1,34 @@
+name: jupyter
+services:
+  # main jupyter container, includes the server and the main python kernel
+  lab:
+    hostname: lab
+    image: compose.mk:lab
+    entrypoint: jupyter 
+    ports: ['9999:9999']
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM compose.mk:dind_base
+        USER root 
+        RUN apt-get install -qq -y python3-venv python3-pip 
+        RUN apt-get install -qq -y nodejs npm
+        RUN pip3 install -q jupyter==1.1.1 nbconvert==7.16.6 ipywidgets==8.1.5 jupytext==1.16.7 --break-system-packages
+        RUN apt-get install -qq -y graphviz graphviz-dev 
+        RUN pip install networkx==3.4.2 matplotlib==3.10.1 pygraphviz==1.14 --break-system-packages
+        # NB: paths are relative to the docker-compose file!
+        COPY kernels/ /usr/share/jupyter/kernels/
+        COPY lab/ /usr/local/share/jupyter/lab/
+    command: >-
+      lab --allow-root --no-browser 
+      --ip=0.0.0.0 --port=9999 --ServerApp.token= 
+      --ServerApp.password= 
+      --ServerApp.root_dir=/lab/demos/data/jupyter/
+    environment:
+      DOCKER_HOST_WORKSPACE: ${DOCKER_HOST_WORKSPACE:-${PWD}}
+      CMK_DIND: "1"
+      workspace: /lab
+    working_dir: /lab
+    volumes:
+      - ${DOCKER_HOST_WORKSPACE:-${PWD}}:/lab
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
