@@ -2989,13 +2989,14 @@ tux.ps:
 	docker ps | grep k8s:tui | awk '{print $$1}'
 	docker ps | grep compose.mk:tux | awk '{print $$1}'
 
-tux/shell:
-	@# Bridge compatability.
+tux/shell: tux.require
+	@# Opens an interactive shell for the embedded TUI container.
 	@#
 	@# USAGE:
 	@#  ./compose.mk tux/shell
-	@#
-	svc=tux entrypoint=bash ${make} compose.dispatch.sh/${TUI_COMPOSE_FILE}
+	${trace_maybe} && ${docker.compose} -f ${TUI_COMPOSE_FILE} \
+		$${COMPOSE_EXTRA_ARGS} run --rm --remove-orphans \
+		--entrypoint bash $${TUI_SVC_NAME} ${dash_x_maybe} -i $(_compose_quiet)
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## END: tux.*' public targets
@@ -3093,11 +3094,6 @@ tux/shell:
 	&& tmux setw -g pane-base-index 0 \
 	&& tmux set -g pane-border-status top \
 	&& ${make} .tux.pane.focus/0 || true
-	# cat .tmp.tmuxp.yml | yq .windows[].panes[].name -c| xargs)))
-# $(eval export tmpseq=$(shell seq 1 $(words ${tmp})))
-# $(foreach i, $(tmpseq), $(shell bash -x -c "tmux select-pane -t `echo "${i}+1"|bc` -T $(strip $(shell echo ${tmp}| cut -d' ' -f ${i}));"))
-# Ensure window index numbers get reordered on delete.
-# tmux set-option -g renumber-windows on
 
 .tux.init.buttons:
 	@# Generates tmux-script that configures the buttons for "New Pane" and "Exit".
