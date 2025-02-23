@@ -1,20 +1,12 @@
-##
-# docker-compose.git integration tests, 
-# exercising compose.mk plus the compose file
-#   
+# demos/itest.mk: 
+#   Integration test-suite.  
+#   This isn't pretty or instructive like the other demos, 
+#   might contain WIP, and the main point is just increasing test coverage.
 #
-# Usage: 
+#  This is integration'y because it actually uses external compose files
+#  and exercises the bridge / automation scaffolding generation.
 #
-#   # from project root
-#   $ make etest
-##
-
-# Standard boilerplate for make itself, nothing to see here.
-# SHELL := bash
-# MAKEFLAGS=-sS --warn-undefined-variables
-# .DEFAULT_GOAL=help
-# .SHELLFLAGS := -euo pipefail -c
-# .SUFFIXES:
+#   USAGE: make -f demos/itest.mk
 
 # Include compose.mk so we can use `compose.import` macro, and
 # otherwise exercise base-targets that are provided by the lib
@@ -63,7 +55,7 @@ test.flux.do.when:
 	&& ./compose.mk flux.do.when/flux.ok,flux.ok \
 	&&	./compose.mk flux.negate/flux.do.when/flux.fail,flux.ok
 
-test.signals: flux.stage/test-signals
+test.signals:
 	$(call log.target, mk.interrupt should throw an error)
 	! ./compose.mk mk.interrupt
 	$(call log.target, signal handler should not be installed for library usage)
@@ -89,9 +81,6 @@ demo.double.dispatch: ▰/debian/self.demo ▰/alpine/self.demo
 # test.containerized.tty.output: 
 # 	cmd='sleep 2' label='testing gum spinner inside container' make io.gum.spin
 
-test.docker.core: \
-	flux.stage/core-docker \
-		test.docker.run
 test.import.root:
 # make io.print.div label="${bold_cyan}${@}${no_ansi}"
 # $(call log, ${dim_cyan}Test import-to-root argument for compose.import)

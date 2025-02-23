@@ -10,17 +10,19 @@ Extreme customization of the TUI isn't well documented yet, but this page has a 
 ### Extensions & Scripting
 <hr style="width:100%;border-bottom:3px solid black;">
 
-As a minimal example of extending the TUI, consider the following Makefile:
+As a minimal example of extending the TUI, let's throw together some support for `yazi`, a pretty cool terminal-based file-manager.  It[supports lots of stuff](https://yazi-rs.github.io/features), including file-previews, skins, and plugins.
+
+Consider the following Makefile:
 
 ```Makefile
-{{open('demos/tui/extension.mk','r').read().strip()}}
+{{open('demos/tui/extension-1.mk','r').read().strip()}}
 ```
 
 Running this opens a split-screen console with both panes showing an interactive bash terminal.  
 
-{{macros.img_link("tui-extension.png", mkdocs, "350px")}}
+{{macros.img_link("tui-extension-1.png", mkdocs, "350px")}}
 
-This example helps to give an idea of the general structure of TUI extensions, but it isn't very useful.  The eagle-eyed reader will have noticed that the shells we opened are *running inside the TUI container*.  The project folder is already volume-mounted though, as is the hosts docker-socket.
+The eagle-eyed reader will have noticed that the shells we opened are *running inside the TUI container*.  The project folder is already volume-mounted though, as is the hosts docker-socket.
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
@@ -31,13 +33,22 @@ We've seen [previously]({{mkdocs.site_relative_url}}/low-config-tuis/) that "wid
 
 Typically you might want targets that loop, like we saw with running a basic `test` target.  Looping tricks with {{macros.api_link('flux.loopf',mkdocs)}} and friends can also "restore" pane content in case of crash, like say a hiccup in networking activity.
 
-As a reminder, **all widgets run *in* the TUI container, not on the docker host**, even though we can frequently ignore this!  Thus, we don't know for sure what tooling is available on the host, and many widgets should be considered a ["private" section of the API](#).  Some widgets can run anywhere though, and those targets may be considered "public".  See for example {{macros.api_link('tux.widget.ticket',mkdocs)}}.
+As a reminder, **all widgets run *in* the TUI container, not on the docker host**, even though we can frequently ignore this!  Thus, we don't know for sure what tooling is available on the host, and many widgets should be considered a ["private" section of the API](#).  
+
+```Makefile
+{{open('demos/tui/extension-2.mk','r').read().strip()}}
+```
+
+{{macros.img_link("tui-extension-2.png", mkdocs, "350px")}}
+
+{#
+Some widgets can run anywhere though, and those targets may be considered "public".  See for example {{macros.api_link('tux.widget.ticket',mkdocs)}}.
 
 ```bash
 # Rotates a string across the display, marquee style.
 text=mytext ./compose.mk tux.widget.ticker
 ```
-
+#}
 ### Environment Variables
 <hr style="width:100%;border-bottom:3px solid black;">
 

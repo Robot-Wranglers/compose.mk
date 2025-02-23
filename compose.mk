@@ -659,8 +659,12 @@ docker.def.is.cached/%:
 			esac); ;;  \
 		*) $(call log.trace.part2, missing) && echo no; ;; \
 	esac
+docker.start.def/%:
+	${make} docker.from.def/${*} docker.start/compose.mk:${*}
 
-
+docker.def.run/%:
+	${make} docker.from.def/${*}
+	${make} docker.run/${*}
 docker.from.def/% docker.build.def/%:
 	@# Builds a container, treating the given 'define' block as a Dockerfile.
 	@# This implicitly prefixes the named define with 'Dockerfile.' to enforce 
@@ -825,15 +829,6 @@ docker.run.def:
 	&& script_pre="$${cmd:-}" && unset cmd \
 	&& script="$${script_pre} $${tmpf}" img=$${img} ${make} docker.run.sh) ${stderr_stdout_indent}
 
-.tux.img.rotate/%:
-	$(call log, ${@})
-	$(call io.mktemp) \
-	&& entrypoint=python3 img=robotwranglers/imgrot \
-	cmd="/opt/imgrot/imgrot.py ${*} --range 360 --stream" \
-	${make} docker.run.sh > $${tmpf} \
-	&& chafa --duration inf --speed .5 \
-	--clear --center on $${tmpf}
-
 docker.run.sh:
 	@# Runs the given command inside the named container.
 	@#
@@ -981,8 +976,13 @@ export GUM_VERSION?=v0.15.2
 export GLOW_VERSION?=v1.5.1
 # This is a hack because charmcli/gum is distroless, but the spinner needs to use "sleep", etc
 io.gum.alt.dumb=docker run -it -e TERM=dumb --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nRUN apk add --update --no-cache bash\nCOPY --from=charmcli/gum:${GUM_VERSION} /usr/local/bin/gum /usr/local/bin/gum")`
-io.gum.alt=docker run -it -e TERM=$${TERM:-xterm} --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nRUN apk add --update --no-cache bash\nCOPY --from=charmcli/gum:${GUM_VERSION} /usr/local/bin/gum /usr/local/bin/gum")`
 
+io.gum.docker=docker run -it -e TERM=$${TERM:-xterm} --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nRUN apk add --update --no-cache bash\nCOPY --from=charmcli/gum:${GUM_VERSION} /usr/local/bin/gum /usr/local/bin/gum")`
+ifeq ($(shell which gum >/dev/null 2> /dev/null && echo 1|| echo 0),1) 
+export io.gum.run?=`which gum`
+else 
+export io.gum.run?=${io.gum.docker}
+endif
 
 io.gum=(which gum >/dev/null && ( ${1} ) \
 	|| (entrypoint=gum cmd="${1}" quiet=0 \
@@ -1001,7 +1001,7 @@ io.gum.choice/% io.gum.choose/%:
 	@# USAGE:
 	@#  ./compose.mk io.gum.choose/choice-one,choice-two
 	choices="$(shell echo "${*}" | ${stream.comma.to.space})" \
-	&& ${io.gum.alt} choose $${choices}
+	&& ${io.gum.run} choose $${choices}
 
 # io.gum.format.code=$(call io.gum, ${stream.stdin} | gum format -t code) | ${stream.trim}
 # io.gum.format.code:; $(call io.gum.format.code)
@@ -1015,7 +1015,7 @@ io.gum.spin:
 	@# [1] https://github.com/charmbracelet/gum for more details.
 	@#
 	${trace_maybe} \
-	&& ${io.gum.alt} spin \
+	&& ${io.gum.run} spin \
 		--spinner $${spinner:-meter} \
 		--spinner.foreground $${color:-39} \
 		--title "$${label:-?}" -- $${cmd:-sleep 2};
@@ -1032,7 +1032,7 @@ io.gum.style:
 	@#   label="..." ./compose.mk io.gum.style 
 	@#   width=30 label='...' ./compose.mk io.gum.style 
 	@#
-	$(call io.gum, style ${io.gum.style.default} ${io.gum.style.div} \"$${label}\")
+	${io.gum.run} style ${io.gum.style.default} ${io.gum.style.div} $${label}
 
 io.gum.style/%:; ( width=`echo \`tput cols\` / ${*} | bc` ${make} io.gum.style )
 	@# Prints a divider on stdout for the given fraction of the full terminal width,
@@ -1526,27 +1526,21 @@ mk.parse/%:
 	@#
 	${pynchon} parse --markdown ${*} 2>/dev/null
 
-# mk.target.choice/%:
-# 	@# Interactive target-selection from the given Makefile (via `gum choose`)
-# 	@#
-# 	@#
-# 	@#
-# 	$(call mk.target.choice,${*})
-# mk.target.choice=${make} io.gum.choice/$${choices}`${make} mk.parse.shallow/${*}|${stream.nl.to.comma}`
-io.get.choice=$(call io.mktemp) && script -qefc --return --command "${io.gum.alt} choose $${choices}" $${tmpf} && chosen=`cat $${tmpf} |col |tail -n-3|head -1|awk -F"006l" '{print $$2}'`
+CMK_EXEC=`dirname ${CMK_SRC}`/`basename ${CMK_SRC}`
+io.get.choice=$(call io.mktemp) && script -qefc --return --command "${io.gum.run} choose --header=\"$${header:-Choose:}\" $${choices}" $${tmpf} && chosen=`cat $${tmpf} |col |tail -n-3|head -1|awk -F"006l" '{print $$2}'`
+io.dir.select=header="Choose a file: (@ $${dir})"; choices=`ls $${dir}/|${stream.nl.to.space}` && ${io.get.choice}
 compose.select/%:
 	choices="`${make} compose.services/${*}|${stream.nl.to.space}`" \
-	&& ${io.get.choice} \
+	&& header="Choose a container:" && ${io.get.choice} \
 	&& set -x && env -i PATH=$${PATH} HOME=$${HOME}  ${CMK_EXEC} loadf ${*} $${chosen}/shell
-CMK_EXEC=`dirname ${CMK_SRC}`/`basename ${CMK_SRC}`
-
+mk.select: mk.select/${MAKEFILE}
 mk.select/%:
 	@# Interactive target-selector for the given Makefile.
 	@# This uses `gum choose`[1] for user-input.
 	@#
 	@# `[1]: FIXME`
 	choices=`${make} mk.parse.shallow/${*}|${stream.nl.to.space}` \
-	&& ${io.get.choice} \
+	&& header="Choose a target:" && ${io.get.choice} \
 	&& set -x && env -i PATH=$${PATH} HOME=$${HOME} make -f ${*} $${chosen}
 
 mk.parse.shallow/%:
@@ -3316,7 +3310,12 @@ endef
 			&& sleep $${delta:-0.2}; \
 		done; \
 	done
+io.get.url=$(call io.mktemp) && curl -sL $${url} > $${tmpf}
 
+.tux.widget.img.rotate:
+	display_target=.tux.img.rotate ${make} .tux.widget.img
+
+.tux.widget.img/%:; url="${*}" ${make} .tux.widget.img
 .tux.widget.img:
 	@# Displays the given image URL or file-path forever, as a TUI widget.
 	@# This functionality requires a loop, otherwise chafa won't notice or adapt
@@ -3333,12 +3332,21 @@ endef
 	url="$${path:-$${url:-${ICON_DOCKER}}}" \
 	&& case $${url} in \
 		http*) \
-			export suffix=.png && $(call io.mktemp) \
-			&& curl -sL $${url:-"${ICON_DOCKER}"} > $${tmpf} \
+			export suffix=.png \
+			&&  $(call io.get.url,$${url:-"${ICON_DOCKER}"}) \
 			&& fname=$${tmpf}; ;; \
 		*) fname=$${url}; ;; \
 	esac \
-	&& interval=$${interval:-10} ${make} flux.loopf/.tux.img.rotate/$${fname}
+	&& interval=$${interval:-10} ${make} flux.loopf/$${display_target:-.tux.img.display}/$${fname}
+
+.tux.img.rotate/%:
+	$(call log, ${@})
+	$(call io.mktemp) \
+	&& entrypoint=python3 img=robotwranglers/imgrot \
+	cmd="/opt/imgrot/imgrot.py ${*} --range 360 --stream" \
+	${make} docker.run.sh > $${tmpf} \
+	&& chafa --duration inf --speed .5 \
+	--clear --center on $${tmpf}
 
 .tux.img.display/%:
 	@# Displays the named file using chafa, and centering it in the available terminal width.
@@ -3419,7 +3427,7 @@ services:
         RUN groupadd --gid ${DOCKER_GID:-1000} ${DOCKER_UGNAME:-root}||true
         RUN useradd --uid ${DOCKER_UID:-1000} --gid ${DOCKER_GID:-1000} --shell /bin/bash --create-home ${DOCKER_UGNAME:-root} || true
         RUN echo "${DOCKER_UGNAME:-root} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-        RUN apt-get update && apt-get install -y curl uuid-runtime git
+        RUN apt-get update && apt-get install -y curl uuid-runtime git bsdextrautils
         RUN curl -fsSL https://get.docker.com -o get-docker.sh && bash get-docker.sh
         RUN yes|apt-get install -y sudo
         RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
@@ -3468,7 +3476,7 @@ services:
         FROM compose.mk:dind_base
         COPY --from=gum /usr/local/bin/gum /usr/bin
         USER root
-        RUN apt-get update && apt-get install -y python3-pip wget tmux libevent-dev build-essential yacc ncurses-dev
+        RUN apt-get update && apt-get install -y python3-pip wget tmux libevent-dev build-essential yacc ncurses-dev bsdextrautils
         RUN wget https://github.com/tmux/tmux/releases/download/${TMUX_CLI_VERSION:-3.4}/tmux-${TMUX_CLI_VERSION:-3.4}.tar.gz
         RUN apt-get install -y jq yq bc ack-grep tree pv
         RUN pip3 install tmuxp --break-system-packages
