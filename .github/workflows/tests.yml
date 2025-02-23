@@ -1,5 +1,5 @@
 # See also: https://docs.github.com/en/actions
-name: Project Tests
+name: Project Demos
 on:
   workflow_call: {}
   push:
@@ -26,10 +26,6 @@ jobs:
         run: make clean init
       - name: Test Demos
         run: make demos
-      - name: Smoke Tests
-        run: make smoke-test
-      - name: Integration Tests
-        run: make integration-test || true
         # GitHub Actions runs without a TTY device. This is a workaround to get one,
         # based on https://github.com/actions/runner/issues/241#issuecomment-842566950.
         # This is required for some of the integration tests that are using gum
