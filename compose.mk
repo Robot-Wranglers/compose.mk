@@ -227,8 +227,11 @@ log.trace.part1=[ "${TRACE}" == "0" ] && true || $(call log.part1, ${1})
 log.trace.part2=[ "${TRACE}" == "0" ] && true || $(call log.part2, ${1})
 log.target.rerouting=$(call log, ${GLYPH_IO} ${@} ${sep}${dim} Invoked from top; rerouting to tool-container)
 log.trace.target.rerouting=( [ "${TRACE}" == "0" ] && true || $(call log.target.rerouting) )
+log.file.preview=$(call log.target, ${cyan_flow_left}) ; $(call io.file.preview, ${1})
+
 tux.log=$(call log,${GLYPH_TUI} $(1))
 io.log=$(call log,${GLYPH_IO} $(1))
+io.file.preview=cat ${1} |${stream.dim.indent.stderr}
 
 # Logger suitable for loops.  
 define log.loop.top # Call this at the top

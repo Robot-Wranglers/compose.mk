@@ -11,10 +11,10 @@
 #
 #   USAGE: make -f demos/app.mk
 
-include compose.mk
+include demos/lean.mk 
 
 .DEFAULT_GOAL := demo.entry
-export BUILD_TARGET?=lab.provision
+lab_url=http://localhost:9999/lab/tree/notebooks
 
 # WARNING: name is really important for use with `up --detach` and `exec`
 # if it's going to work inside the TUI.
@@ -32,19 +32,19 @@ services:
     build:
       context: .
       dockerfile_inline: |
-        FROM debian/buildd:bookworm
+        # inherit from the lean prover image defined in `lean.mk`
+        FROM compose.mk:Lean.base
         RUN apt-get update 
-        RUN apt-get install -y git make curl sudo python3.11-venv python3-pip
+        RUN apt-get install -y git make curl sudo python3.11-venv python3-pip wget
         RUN pip3 install jupyter --break-system-packages
-        RUN curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf > /usr/local/bin/elan-init.sh
-        RUN bash /usr/local/bin/elan-init.sh -y 
-        ENV PATH="$PATH:/root/.elan/bin"
-        RUN lean --help
-        RUN lake new project
-        RUN cd project && printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' >> lakefile.toml
-        RUN cd project && lake update && lake build
-        RUN pip install lean-dojo --break-system-packages
-        RUN apt-get install -y wget
+        #RUN curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf > /usr/local/bin/elan-init.sh
+        #RUN bash /usr/local/bin/elan-init.sh -y 
+        #ENV PATH="$PATH:/root/.elan/bin"
+        #RUN lean --help
+        #RUN lake new project
+        #RUN cd project && printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' >> lakefile.toml
+        #RUN cd project && lake update && lake build
+        #RUN pip install lean-dojo --break-system-packages
         COPY ./demos/data/jupyter/kernels/ /usr/share/jupyter/kernels/
         COPY ./demos/data/jupyter/lab/ /usr/local/share/jupyter/lab/
     ports: ['9999:9999']
@@ -58,7 +58,20 @@ endef
 # Autogenerate target scaffolding for each service.
 $(eval $(call compose.import.def,  ▰,  TRUE, proof.services))
 
-demo.entry: lab/build lab/up.detach tux.open/lab/exec/jupyter.up,lab/shell
+demo.entry: demo.init  \
+	lab/up.detach flux.apply.later/10/open.notebook \
+	tux.open/lab/exec/jupyter.up,lab/shell
+
+
+open.notebook:
+	@# Attempts to open a browser pointed at jupyter lab.
+	@# (This requires python on the host and can't run from docker)
+	python3 -c"import webbrowser; webbrowser.open(\"${lab_url}\")" \
+	|| $(call log.target, ${red}cannot open browser!)
+
+demo.init: docker.from.def/Lean.base lab/build
+	@# We inherit the base-image from `demos/lean.mk`, 
+	@# so make sure it's built first, then build local compose file.
 
 jupyter.up:
 	$(call tux.log, Starting lab server)

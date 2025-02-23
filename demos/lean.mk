@@ -8,6 +8,7 @@
 
 include compose.mk
 
+# Look, it's a minimal Dockerfile for running lean4 
 # See also: https://leanprover-community.github.io/install/debian.html
 define Dockerfile.Lean.base
 FROM debian:bookworm
@@ -16,19 +17,22 @@ RUN apt-get update
 RUN apt-get install -y git make curl sudo
 RUN curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf > /usr/local/bin/elan-init.sh
 RUN bash /usr/local/bin/elan-init.sh -y 
-RUN /root/.elan/bin/lean --help
-RUN /root/.elan/bin/lake new default
+RUN cp /root/.elan/bin/lean /usr/local/bin 
+RUN cp /root/.elan/bin/lake /usr/local/bin 
+ENV PATH="$PATH:/root/.elan/bin/"
+RUN lean --help
+RUN lake new default
 RUN cd default && printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' >> lakefile.toml
-RUN cd default &&  /root/.elan/bin/lake update && /root/.elan/bin/lake build
+RUN cd default && lake update && lake build
 endef
 
-# Look, it's hello-world in lean-lang
+# Look, it's hello-world in scriptwise lean-lang
 # https://lean-lang.org/functional_programming_in_lean/hello-world/running-a-program.html
 define Lean.script
 def main : IO Unit := IO.println "Hello, world!"
 endef
 
-# Law of the excluded middle in lean4
+# Look, it's a theorem we might want to prove
 # https://leanprover-community.github.io/logic_and_proof/classical_reasoning.html
 # https://lean-lang.org/theorem_proving_in_lean4/propositions_and_proofs.html
 define Lean.theorem 
@@ -48,17 +52,35 @@ example : A ∨ ¬ A := by
 end
 endef
 
-# Default entrypoint 
-# demo.lean: lean.run.def/Lean.script 
-demo.lean: lean.run.def/Lean.script
+# Default entrypoint.  
+# Ensure the container is built, then dispatch a script there
+demo.lean: 
+	# Slow build, so default silence is disabled by setting val for `quiet`.
+	# Pass `force=` to override cache, or `trace=1 for more info
+	quiet=0 ${make} docker.from.def/Lean.base 
+	${make} lean.run.script/Lean.script
+	${make} lean.run.theorem/Lean.theorem
 
-lean.run.target/%: docker.from.def/Lean.base
+# Top level helper to run the named target inside the base-container
+lean/%: 
 	img=compose.mk:Lean.base ${make} docker.run/${*}
 
-lean.run.def/%:
+# Top-level helper to write embedded-script to disk before we use them
+lean.run.script/%:
 	$(call io.mktemp) \
 	&& ${make} mk.def.to.file/${*}/$${tmpf} \
-	&& ${make} lean.run.target/self.lean.run.file/$${tmpf}
+	&& ${make} lean/self.lean.run.script/$${tmpf}
+
+lean.run.theorem/%:
+	$(call io.mktemp) \
+	&& ${make} mk.def.to.file/${*}/$${tmpf} \
+	&& ${make} lean/self.lean.run.file/$${tmpf}
+
+# Private target; this actually runs *inside* the container so using `lake` directly is safe.
+self.lean.run.script/%:
+	$(call log.file.preview,${*})
+	source ~/.profile && set -x && lean --run ${*}
 
 self.lean.run.file/%:
-	source ~/.profile && cd /default && lake env lean /workspace/${*}
+	$(call log.file.preview,${*})
+	source ~/.profile && set -x && lean ${*}
