@@ -9,20 +9,24 @@
 #   2. Application is configured by the ansible container,
 #   3. Assume both tasks emit json events (simulating terraform state output, etc)
 
-
 include compose.mk
 .DEFAULT_GOAL := platform.setup
 
-# Import terraform/ansible targets from compose file services 
-$(eval $(call compose.import, ▰, TRUE, demos/docker-compose.platform.yml))
+# Import the platform compose file, 
+# generating target-scaffolding for terraform and ansible
+$(eval $(call compose.import, ▰, TRUE, demos/data/docker-compose.platform.yml))
 
 # Map targets to containers.  A public, top-level target. 
-platform.setup: ▰/terraform/self.infra.setup ▰/ansible/self.app.setup
+platform.setup: \
+	terraform.dispatch/self.infra.setup \
+	ansible.dispatch/self.app.setup
 
 # Simulate the setup tasks for app and infrastructure.
-# We use the `self.` prefix to indicate these targets are "private",
-# and that they should not run from the host.
+# Note usage of `jb` to emit JSON, and `self.` prefix to hint 
+# these targets are "private" / not intended to run from the host. 
 self.infra.setup:
-	echo '{"event":"doing things in terraform container", "log":"infra setup done", "metric":123}'
+	${jb} log="infra setup done"  \
+		event="terraform container task" metric=123
 self.app.setup:
-	echo '{"event":"doing things in ansible container", "log":"app setup done", "metric":123}'
+	${jb} log="app setup done" \
+		event="ansible container task" metric=456

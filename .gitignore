@@ -25,3 +25,9 @@ docs/bridge.md
 docs/raw-docker.md
 docs/tool-overview.md
 typescript
+demos/data/jupyter/kernels/kernel.*
+*.pyc
+justfile
+img/
+demos/data/jupyter/notebooks/*.ipynb
+demos/data/jupyter/notebooks/networkx-atlas_files/

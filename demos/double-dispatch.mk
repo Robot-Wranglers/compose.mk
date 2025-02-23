@@ -4,13 +4,12 @@
 #
 #   USAGE: make -f demos/double-dispatch.mk 
 
-# Squash the default noisy output, then override 
-# the default goal and include compose.mk primitives
-MAKEFLAGS=-sS --warn-undefined-variables
-.DEFAULT_GOAL := demo.double.dispatch
+
 include compose.mk
 
-$(eval $(call compose.import, ▰, TRUE, tests/docker-compose.yml))
+.DEFAULT_GOAL := demo.double.dispatch
+
+$(eval $(call compose.import,  ▰,  TRUE, demos/data/docker-compose.yml))
 
 # User-facing top-level target, with two dependencies
 demo.double.dispatch: ▰/debian/self.demo ▰/alpine/self.demo

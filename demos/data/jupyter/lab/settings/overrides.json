@@ -1,0 +1,10 @@
+{
+    "@jupyterlab/apputils-extension:themes": {
+        "theme": "JupyterLab Dark"
+    },
+    "@jupyterlab/docmanager-extension:plugin":{
+        "autosave": false},
+    "@jupyterlab/apputils-extension:notification": {
+        "fetchNews": "false"
+        }
+}

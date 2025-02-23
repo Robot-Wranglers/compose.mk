@@ -1,13 +1,12 @@
 # demos/inlined-composefile.mk: 
-#   Demonstrates `compose.import.define`.  
-#   This works exactly like `compose.import`, but it accepts embedded data instead of files.
+#   Demonstrates working with inlined compose-files via `compose.import.define`,
+#   which works exactly like `compose.import`, but accepts embedded data instead of files.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
 #   USAGE: make -f demos/inlined-composefile.mk
 
-.DEFAULT_GOAL := demo.inline
-
 include compose.mk
+.DEFAULT_GOAL := demo.inline
 
 # Look it's an embedded compose file.  This defines services `alice` & `bob`
 define inlined.composefile 
@@ -35,11 +34,11 @@ services:
 endef 
 
 # After the inline exists, just call `compose.import.define` on it.
-$(eval $(call compose.import.def,  ▰,  TRUE, inlined.composefile))
+$(eval $(call compose.import.def, inlined.composefile,  TRUE))
 
-# So now you can use the automatically generated targets,
-# and dispatch tasks inside containers.
-demo.inline: alice/get_shell bob/get_shell ▰/alice/internal_task ▰/bob/internal_task
+# Now you can use the service target scaffolding, 
+# dispatching tasks inside containers, etc
+demo.inline: alice.dispatch/internal_task bob.dispatch/internal_task
 
 internal_task:
 	echo "Running inside `hostname`"

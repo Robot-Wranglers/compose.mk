@@ -1,14 +1,13 @@
 # demos/ansible-adhoc.mk: 
-#   Mad-science demo. See the docs for discussion
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#   Building a custom automation API with `compose.mk`.  
+#
+#   Here we build a wrapper around a containerized ansible, 
+#   exposing a new opinionated interface that is is versioned,
+#   slim, stateless, and defaults to JSON IO.
 #
 #   USAGE: make -f demos/ansible-adhoc.mk
-
-.DEFAULT_GOAL := demo.adhoc 
-# NB: this boilerplate helps to quit the default output- 
-# and you'll need this whenever you want to emit JSON.
-MAKEFLAGS=-sS --warn-undefined-variables
 include compose.mk
+.DEFAULT_GOAL := demo.adhoc 
 
 # Look, it's a container that has ansible & ansible has support for docker.
 # Could do this with a docker-compose file instead, for simplicity it's embedded.

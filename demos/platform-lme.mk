@@ -1,5 +1,5 @@
 # demos/platform-lme.mk: 
-#   Elaborating the `platform.mk` demo to including logging, metrics, and event handlers.
+#   Elaborating the `platform.mk` demo to including handlers for logging, metrics, and events.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
 #   USAGE: make -f demos/platform-lme.mk bootstrap
@@ -11,27 +11,30 @@
 
 # Import the contents of the last demo so we can elaborate on it here.
 include demos/platform.mk 
-
+.DEFAULT_GOAL=demo.lme
 # Fake some handlers for logging, metrics, events.
-#   1. Logging uses the `elk` container,
-#   2. Metrics uses the `prometheus` container,
-#   3. Events uses the `datadog` container.
+
+# 1. Logging uses the `elk` container,
 logging: ▰/elk/self.logging
 self.logging:
-	# pretending to push data somewhere with curl
-	cat /dev/stdin | jq .log
+	$(call log.target, pretending to push log data somewhere)
+	${stream.stdin} | ${jq} .log
 
+# 2. Metrics uses the `prometheus` container,
 metrics: ▰/prometheus/self.metrics
 self.metrics:
-	# pretending to do stuff with the promtool CLI
-	cat /dev/stdin | jq .metric
+	$(call log.target, pretending to do stuff with the promtool CLI)
+	${stream.stdin} | ${jq} .metric
 
+# 3. Events uses the `datadog` container.
 events: ▰/datadog/self.events
 self.events:
-	# pretending to do stuff with the datadog CLI
-	cat /dev/stdin | jq .event
+	$(call log.target, pretending to do stuff with the datadog CLI)
+	${stream.stdin} | ${jq} .event
 
-bootstrap:
-	# pipes all the platform.setup output into a handler-target for each LME backend
-	make platform.setup | make flux.dmux/logging,metrics,events
+# Bind all handlers into a single pipe
+downstream_handlers: flux.dmux/logging,metrics,events
+
+# Send the `platform.setup` output into a handler-target for each LME backend
+demo.lme: flux.pipeline/platform.setup,downstream_handlers
 

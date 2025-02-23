@@ -15,7 +15,7 @@ Enter
 Enter
 Sleep 3.3
 Set PlaybackSpeed 3
-Type "./compose.mk loadf tests/docker-compose.yml"
+Type "./compose.mk loadf demos/data/docker-compose.yml"
 Sleep 2.8
 Enter
 Sleep 30

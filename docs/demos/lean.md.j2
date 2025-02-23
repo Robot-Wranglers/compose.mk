@@ -1,0 +1,20 @@
+{% import 'macros.j2' as macros -%}
+
+## Theorem Proving 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Realistically most people are not sitting around and wondering whether they can prove Euclid or Gödel^[1] by using some wild [matrioshka doll](https://esolangs.org/wiki/Matrioshka_language) of a Makefile.  But then again, people do get up to all kinds of weird things.  
+
+For the purposes of this demo, we'll use `compose.mk` to take the [lean4 prover](https://esolangs.org/wiki/Matrioshka_language) for a test drive, and for starters just prove the law of the excluded middle.
+
+This demo is really just a variation on [many other ones]({{mkdocs.site_relative_url}}/demos/matrioshka) that are using inlined data and container-definitions.  But it's fun, self-contained, and marginally practical!  Because academic tools like lean frequently do not have official containers 🙃, and because this will eventually become part of a larger demo about using `compose.mk` for notebooking.
+
+### Lean Demo
+<hr style="width:100%;border-bottom:3px solid black;">
+
+```Makefile
+{{open('demos/lean.mk','r').read().strip()}}
+```
+<hr style="width:100%;border-bottom:3px solid black;">
+
+^[1]: https://leanprover-community.github.io/100.html#6

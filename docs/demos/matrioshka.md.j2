@@ -1,0 +1,83 @@
+{% import 'macros.j2' as macros -%}
+
+{{macros.img_link("mat.png", mkdocs, "6%",align="left")}}
+
+## Embedded Containers & Data
+<hr style="width:100%;border-bottom:3px solid black;">
+
+One of the core features of `compose.mk` involves the ability to declare **inlined containers and data** alongside the same automation that is making use of those containers.  You'll have to exercise some judgement about when and where that is a *good idea*, but as a few examples:
+
+* Since tool containers tend to be small and change infrequently, being self-contained reduces change-related friction that you usually get with external files, external repositories, and external registries.
+* Sometimes having nested containers or data is just a way of keeping demos or prototypes tight and small, because being self-contained is the most legible or instructive.  (Related, this is actually a pretty good format for a bug report / minimum reproducible example for some complex systems.)
+* Being self-contained is also at least *correlated* with other nice things like stability and reproducibility.
+
+The rest of this page is just an index of related concrete examples that introduces idioms for embedding containers and data.  If you're more interested in motivations, theory, and patterns, then you might prefer to start [here]({{mkdocs.site_relative_url}}/matrioshka).
+
+### Demo Index
+<hr style="width:100%;border-bottom:3px solid black;">
+
+**Basic Examples:**
+
+1. [Inlined docker files](#inlined-docker-files)
+1. [Extending inline docker files](#extending-inlined-docker-files)
+1. [Inlined compose files](#inlined-compose-files)
+1. [Passing inlined data structures](#passing-inlined-data-structures)
+
+**Intermediate Examples:**
+
+1. The [Theorem Proving demo](#) embeds a lean4 runtime, theorem, and code.
+1. The [Custom Automation API demo]({{mkdocs.site_relative_url}}/demos/custom-automation-apis.md) wraps an Ansible runtime, then customizes it and exposes a different interface
+1. The [Justfile demo]({{mkdocs.site_relative_url}}/demos/just.md) wraps a just-runner and a just-file, then customizes it and exposes a different interface
+
+**Advanced Examples:**
+
+1. [Matrioshka demo]({{mkdocs.site_relative_url}}/matrioshka#advanced-matrioshka-idioms)
+
+{#
+The rest of this page is dedicated to general discussion of matrioshka design and idioms, so that the demos can remain small and focused.
+**This section indexes demos that might be categorized by reasonable people as "mad science".** Embedding or "inlining" data directly alongside automation like this isn't generally a good idea, but when you need it, you need it!
+
+
+## Matrioshka Overview
+<hr style="width:100%;border-bottom:3px solid black;">
+<hr style="width:95%;border-bottom:1px dashed black;">
+<hr style="width:95%;border-bottom:1px dashed black;">
+#}
+
+
+{% import 'macros.j2' as macros -%}
+
+{#
+## Mad Science
+<hr style="width:100%;border-bottom:3px solid black;">
+#}
+### Inlined Compose Files
+<hr style="width:100%;border-bottom:3px solid black;">
+
+```Makefile
+{{open('demos/inlined-composefile.mk','r').read().strip()}}
+```
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+{% include "demos/inlined-docker-files.md.j2"%}
+
+### Extending Inlined Docker Files 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Inlined containers can actually be extended with other inlines, but notice again the `compose.mk:` prefix which is used as a "repository".
+
+```Makefile
+{{open('demos/extend-inlined-dockerfile.mk','r').read().strip()}}
+```
+
+### Passing Inlined Data-Structures
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Building on the [Custom Automation APIs](#) demo, let's embed an ansible playbook, pass *that* into an embeddded container.
+
+```Makefile
+{{open('demos/ansible-playbook.mk','r').read().strip()}}
+```
+
+<hr style="width:100%;border-bottom:3px solid black;">

@@ -16,7 +16,7 @@ Set CursorBlink false
 # Enter
 # Sleep 3.3
 # Set PlaybackSpeed 9
-Type "./compose.mk loadf tests/docker-compose.yml alpine/get_shell debian/get_shell ubuntu/get_shell"
+Type "./compose.mk loadf demos/data/docker-compose.yml alpine.get_shell debian.get_shell ubuntu.get_shell"
 Enter
 Sleep 8
 Screenshot img/loadf-no-tui.png

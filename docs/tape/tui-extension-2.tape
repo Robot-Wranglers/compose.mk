@@ -11,5 +11,5 @@ Show
 Type "make -f demos/tui/extension-2.mk"
 Enter
 Sleep 30s
-Screenshot img/tui-extension-2.png
+# Screenshot img/tui-extension-2.png
 Output img/tui-extension-2.gif

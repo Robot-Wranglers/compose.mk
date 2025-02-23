@@ -15,7 +15,7 @@ define Dockerfile.Lean.base
 FROM debian:bookworm
 SHELL ["/bin/bash", "-x", "-c"] 
 RUN apt-get update
-RUN apt-get install -y git make curl sudo
+RUN apt-get install -y git make curl sudo procps
 RUN curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf > /usr/local/bin/elan-init.sh
 RUN bash /usr/local/bin/elan-init.sh -y 
 RUN cp /root/.elan/bin/lean /usr/local/bin 
@@ -25,6 +25,7 @@ RUN lean --help
 RUN lake new default
 RUN cd default && printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' >> lakefile.toml
 RUN cd default && lake update && lake build
+RUN lean --version
 endef
 
 # Look, it's hello-world in scriptwise lean-lang
@@ -54,34 +55,34 @@ end
 endef
 
 # Default entrypoint.  
-# Ensure the container is built, then dispatch a script there
-demo.lean: 
-	# Slow build, so default silence is disabled by setting val for `quiet`.
-	# Pass `force=` to override cache, or `trace=1 for more info
-	quiet=0 ${make} docker.from.def/Lean.base 
-	${make} lean.run.script/Lean.script
-	${make} lean.run.theorem/Lean.theorem
+# Ensure the container is built, then test a script and a theorem
+demo.lean: lean.init \
+	lean.run.script/Lean.script \
+	lean.run.theorem/Lean.theorem
 
-# Top level helper to run the named target inside the base-container
-lean/%: 
-	img=compose.mk:Lean.base ${make} docker.run/${*}
+# Slow build, so default silence is disabled by setting val for `quiet`.
+# This caches the 2nd time it runs.  Pass `force=1` to override cache, 
+# or pass `trace=1 for more info.  
+lean.init:; quiet=0 ${make} docker.from.def/Lean.base 
 
-# Top-level helper to write embedded-script to disk before we use them
+# Top level helper to run the named target in the base-container
+lean/%:; img=Lean.base ${make} mk.docker.run/${*}
+
+# Top-level helpers to write embedded-scripts to disk before use
 lean.run.script/%:
 	$(call io.mktemp) \
 	&& ${make} mk.def.to.file/${*}/$${tmpf} \
-	&& ${make} lean/self.lean.run.script/$${tmpf}
-
+	&& ${make} lean/self.run.script/$${tmpf}
 lean.run.theorem/%:
 	$(call io.mktemp) \
 	&& ${make} mk.def.to.file/${*}/$${tmpf} \
-	&& ${make} lean/self.lean.run.file/$${tmpf}
+	&& ${make} lean/self.run.file/$${tmpf}
 
-# Private target; this actually runs *inside* the container so using `lake` directly is safe.
-self.lean.run.script/%:
+# Private targets. These run in the base container,
+# so using lean or lake from here directly is safe.
+self.run.script/%:
 	$(call log.file.preview,${*})
 	source ~/.profile && set -x && lean --run ${*}
-
-self.lean.run.file/%:
+self.run.file/%:
 	$(call log.file.preview,${*})
 	source ~/.profile && set -x && lean ${*}

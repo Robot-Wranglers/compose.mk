@@ -86,33 +86,33 @@ test.import.root:
 # $(call log, ${dim_cyan}Test import-to-root argument for compose.import)
 # # test that the 4th argument for
 # # import-to-root-namespace is honored
-# ! echo uname | make debian/pipe 2>/dev/null
-# echo uname | make docker-compose.cm-tools/debian/pipe 2>/dev/null
-# echo uname | make docker-compose/alpine/shell/pipe
+# ! echo uname | make debian.pipe 2>/dev/null
+# echo uname | make docker-compose.cm-tools/debian.pipe 2>/dev/null
+# echo uname | make docker-compose/alpine.shell.pipe
 
 test.main.bridge:
 	make io.print.div label="${cyan}${@}${no_ansi}"
 	$(call log, ${dim_cyan}Test service enumeration\nTarget @ <compose_file>.services)
 	${make} docker-compose.services
-	$(call log, ${dim_cyan}Test detection\nTarget @ <compose_file>/get_shell)
-	${make} docker-compose/alpine/get_shell
+	$(call log, ${dim_cyan}Test detection\nTarget @ <compose_file>.get_shell)
+	${make} docker-compose/alpine.get_shell
 
 # test.multiple.compose.files:
 # 	make io.print.div label="${cyan}${@}${no_ansi}"
 # 	$(call log, ${dim_cyan}Test services enumeration, 2nd file\nTarget @ <compose_file>/<svc>.services)
 # 	${make} docker-compose.services
-# 	$(call log, ${dim_cyan}Test Streaming commands, 2nd file\nTarget @ <compose_file>/<svc>/pipe)
-# 	echo uname -n -v | ${make} docker-compose/debian/pipe \
+# 	$(call log, ${dim_cyan}Test Streaming commands, 2nd file\nTarget @ <compose_file>/<svc>.pipe)
+# 	echo uname -n -v | ${make} docker-compose/debian.pipe \
 
 # test.compose.pipes:
 # 	make io.print.div label="${cyan}${@}${no_ansi}"
-# 	$(call log, ${dim_cyan}Streaming commands to container\nTarget @ <svc>/shell/pipe)
-# 	echo uname -n -v | ${make} docker-compose/alpine/shell/pipe
-# 	$(call log, ${dim_cyan}Test streaming commands to container\nTarget @ <compose_file_stem><svc>/shell/pipe)
-# 	echo uname -n -v | ${make} docker-compose/alpine/shell/pipe
-# 	$(call log, ${dim_cyan}Test streaming data to container\nTarget @ <svc>/shell/pipe ${no_color})
-# 	echo 'foo: bar' | ${make} docker-compose.cm-tools/yq/pipe
-# 	set -x && echo '{"foo":"bar"}' | cmd='.foo' make docker-compose.cm-tools/jq/pipe
+# 	$(call log, ${dim_cyan}Streaming commands to container\nTarget @ <svc>.shell.pipe)
+# 	echo uname -n -v | ${make} docker-compose/alpine.shell.pipe
+# 	$(call log, ${dim_cyan}Test streaming commands to container\nTarget @ <compose_file_stem><svc>.shell.pipe)
+# 	echo uname -n -v | ${make} docker-compose/alpine.shell.pipe
+# 	$(call log, ${dim_cyan}Test streaming data to container\nTarget @ <svc>.shell.pipe ${no_color})
+# 	echo 'foo: bar' | ${make} docker-compose.cm-tools/yq.pipe
+# 	set -x && echo '{"foo":"bar"}' | cmd='.foo' make docker-compose.cm-tools/jq.pipe
 
 # test.compose.services:
 # 	make io.print.div label="${cyan}${@}${no_ansi}"
@@ -122,8 +122,8 @@ test.main.bridge:
 
 test.dispatch.retvals:
 	$(call log, ${dim_cyan}Checking dispatch return codes:${no_color})
-	! (echo exit 1 | ${make} docker-compose/debian/shell/pipe 2>/dev/null)
-	echo exit  | ${make} docker-compose/debian/shell/pipe
+	! (echo exit 1 | ${make} docker-compose/debian.shell.pipe 2>/dev/null)
+	echo exit  | ${make} docker-compose/debian.shell.pipe
 
 # test.dispatch:
 # 	make io.print.div label="${cyan}${@}${no_ansi}"
@@ -172,7 +172,13 @@ test.flux.retry:
 	! interval=1 make flux.retry/3/flux.fail
 
 test.flux.apply:
-	make flux.apply.later/2/io.time.wait/1
+	${make} flux.apply/flux.echo,THUNK ${stream.obliviate}
+
+test.flux.starmap:
+	${make} ./compose.mk flux.starmap/flux.echo,flux.echo/bonk ${stream.obliviate}
+
+test.flux.apply.later:
+	${make} flux.apply.later/2/io.time.wait/1 ${stream.obliviate}
 
 test.flux.mux:
 	make flux.mux targets="io.time.wait,io.time.wait,io.time.wait/2" | jq .

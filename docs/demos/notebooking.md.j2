@@ -1,0 +1,97 @@
+{% import 'macros.j2' as macros -%}
+
+{{macros.img_link("escher-babel.png", mkdocs, "33%",align='left')}}
+
+## Notebooking & Ensembles
+<hr style="width:100%;border-bottom:3px solid black;">
+
+This example demonstrates describing, automating, and releasing a highly customized [jupyter lab](#) server and pipeline, which includes custom kernels and several notebooks.  
+{#
+It's an advanced example using "idiomatic" `compose.mk`, and it's ambitious so we won't explain every little thing.  Suggested prereqs to read are: [the matrioshka bridge idiom]
+#}
+One aspect of this demo actually **involves a server as well as a pipeline**, i.e. the jupyter lab front-end.  This isn't usually a focus for `compose.mk`, because at the point where you've got side-effects like port-forwarding, you're losing a lot of statelessness that makes complex automation practical.  Still, despite the involvement of a front-end, we'll see several unique ways that `compose.mk` still manages to keep things *fully-specified and completely reproducible*, and remains remarkably amenable to automation and pipelines.
+
+Like other demos, this one is *radically self-contained*, but also tackles a pretty complex use-case.  Thus we use a mixed style of external assets (like {{macros.repo_link('demos/data/jupyter/notebooks',github)}}) where that makes sense, and also freely embed containers/data where *that* makes sense.  The goal is to strike a balance between legibility and comprehension vs the hassle of project file-explosion.
+
+{#Other things that stand out about this demo:
+
+* This demo is pretty advanced, and we lean into "idiomatic" style for `compose.mk`.
+* This is another demonstration of the [matrioshka bridge pattern](/matrioshka/#matrioshka-bridge-pattern).
+#}
+
+
+Without further delay, let's get into it.
+
+### Goals
+<hr style="width:100%;border-bottom:3px solid black;">
+
+An overview of the basic goals for this demo:
+
+1. **Configuration:** We want Jupyter lab minimally preconfigured, mostly to demonstrate the capability.  See {{macros.repo_link('demos/data/jupyter/lab/settings/overrides.json',github)}}.  Including kernels and support tooling, the configuration surface for server-side jupyter is so large that beyond a simple `pip install`, it actually has the feel of a **distribution**, and the challenges of how to manage and encapsulate that are a pretty good fit for `compose.mk`.
+1. **Lifecycle Management:** As mentioned previously, we're going to need to daemonize the front-end, but we need to be smart about it.  One use-case is just letting users interact with notebooks and detached-daemonization is an option, but as potential kernel developers we might want that foregrounded to see logs.  Notebooks and kernels can run without the webserver being live via stuff like `jupyter console`, but we also might want automation *over* the webserver, for example with `nbclient` [^1].
+1. **Custom, containerized kernels:** Adding/removing jupyter kernels is hard and requires a handful of files in exactly the right spot to specify the behaviour, possibly with a lot of custom code.  We want to remove as much of that friction as possible at the same time as making the whole process more dynamic, basically allowing users to **expose arbitrary commands in arbitrary containers as jupyter kernels directly, and without custom code**.  
+
+In terms of interface, we want: 
+
+* A "tui mode" that covers the project lifecycle aspects with a few dedicated content-panes: 
+    * One for webserver-launch & log-tailing
+    * One for a utility shell that's ready for interactive debugging 
+    * One for an interactive console-based notebook runner, choosing from amongst available notebooks
+    * One for other messages / project status overview, like a list of available kernels, or automatically dispatching notebooks.
+* A serverless "pipeline mode" that's more directly amenable to automation, running all notebooks end to end.
+
+### Choosing a Use-Case 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+**In terms of specific use-case for our notebook project,** we'll try to roll out a toolkit for [formal methods](https://en.wikipedia.org/wiki/Formal_methods).  The choice here doesn't actually *matter* much, but it actually does kind of fit.  More academic stuff is often missing stuff like official docker containers, and it's more likely to end up with "projects" that have a significant barrier to entry, rather than "tools" or "pipelines".  Let's see if we can address some of that to end up with something that feels reproducible and self-contained.
+
+### The Plan 
+
+In pursuit of the goals we'll find that as usual, `compose.mk` turns out to be really good at stuff related to *mapping, dispatch, and interoperability*.  And we'll also leverage the [matrioshka bridge pattern](/matrioshka/#matrioshka-bridge-pattern) to great effect, effectively lifting `jupyter lab ...` invocations and abstracting the fact that they happen inside containers to create a domain-specific vocabulary.  
+
+More specifically, the plan to expose custom containerized tool chains as jupyter kernels, is a two step process: first we *map commands in containers to make-targets*, then we *map targets to kernels*.  Thanks to the [homoiconicity we've discussed elsewhere]({{mkdocs.site_relative_url}}/matrioshka#homoiconic), this actually accomplishes something more general than the mission we set out for.  As part of the deal you'll be getting a *container-to-kernel bridge*, but you'll also get a *command-in-container-to-kernel* bridge, and a *local-interpretter-to-kernel* bridge, etc.  
+
+{#
+More specifically though, you can think of this demo as a reference implementation for *extending compose.mk itself*, 
+and in pursuit of dynamic jupyter kernel we'll actually *extend compose.mk itself*, by turning any target 
+
+Minimal to produce something Part Jupyter kernel configs and support tooling as presented here are not only *custom* but also *dynamically extensible*.  
+#}
+
+### The Code
+<hr style="width:100%;border-bottom:3px solid black;">
+
+```Makefile 
+{{open('demos/notebooking.mk').read()}}
+```
+
+### Usage
+<hr style="width:100%;border-bottom:3px solid black;">
+
+```bash 
+$ ./compose.mk flux.stage.enter/BUILD
+
+╔═══════════════════════════════════════════════════════════╗
+║                           BUILD                           ║
+╚═══════════════════════════════════════════════════════════╝
+① ⇄ flux.stage // BUILD //  stack file @ .flux.stage.BUILD
+② Φ flux.stage.push // BUILD 
+③  ⇄ io.stack.push // stack@.flux.stage.BUILD ⋘⋘⋘
+  {"stage.entered":"Mon 24 Feb 2025 08:53:39 PM PST"}
+```
+
+### Discussion
+<hr style="width:100%;border-bottom:3px solid black;">
+
+
+{# 
+<hr style="width:95%;border-bottom:1px dashed black;">
+#}
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+{#
+[^1]: See also the docs for [Supervisors & Signals]({{mkdocs.site_relative_url}}/signals)
+[^2]: See the docs for [Supervisors & Signals]({{mkdocs.site_relative_url}}/signals)
+#}
+[^1]: https://github.com/jupyter/nbclient

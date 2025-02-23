@@ -5827,8 +5827,8 @@ footer span.commit code {
 .rst-content .toctree-wrapper ul li > *,
 .rst-content section ol li > *,
 .rst-content section ul li > * {
-  margin-top: 12px;
-  margin-bottom: 12px;
+  margin-top: 1px;
+  margin-bottom: 1px;
 }
 .rst-content .section ol li > :first-child,
 .rst-content .section ul li > :first-child,
@@ -5878,7 +5878,7 @@ footer span.commit code {
 .rst-content section ol li > ul,
 .rst-content section ul li > ol,
 .rst-content section ul li > ul {
-  margin-bottom: 12px;
+  margin-bottom: 1px;
 }
 .rst-content .section ol.simple li > *,
 .rst-content .section ol.simple li ol,

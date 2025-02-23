@@ -1,0 +1,17 @@
+.*
+.git
+.gitignore
+LICENSE
+VERSION
+README.md
+Changelog.md
+docker-compose.yml
+docs
+img
+build
+dist
+tmp
+*.egg-info
+.tmp.*
+.flux.*
+site

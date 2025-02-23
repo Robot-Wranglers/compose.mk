@@ -8,7 +8,7 @@ Set FontSize 10
 Set Width 1200
 Set Height 768
 Show 
-Type "./compose.mk loadf tests/docker-compose.yml"
+Type "./compose.mk loadf demos/data/docker-compose.yml"
 Enter
 Sleep 8s
 Screenshot img/loadf-1.png

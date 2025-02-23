@@ -4,7 +4,6 @@
 #
 #   USAGE: make -f demos/inlined-dockerfile.mk
 include compose.mk
-
 .DEFAULT_GOAL := demo.dockerfile
 
 # Minimal inlined dockerfile.  You can install anything 
@@ -15,27 +14,35 @@ FROM alpine
 RUN apk add --update --no-cache coreutils alpine-sdk bash procps-ng
 endef
 
-# Wrapper target that's using the container.
-# Here `docker.from.def` sets the container-build as a pre-
-# req, so that within the target body we can assume 
-# the base image already exists.
+# Top-level entrypoint.  The initial `docker.from.def` ensures that 
+# the container is built first, so all tests can assume the image exists.
 demo.dockerfile: docker.from.def/demo_dockerfile
-	# Working with the image directly, note the 'compose.mk' prefix.
+	$(call log.test.case, docker.from.def creates an image and image is available to docker)
 	docker image inspect compose.mk:demo_dockerfile > /dev/null
 	docker run -it --entrypoint sh compose.mk:demo_dockerfile -x -c "true" > /dev/null
 
-	# Working with compose.mk builtins omits prefix, 
-	# and can do dispatch targets to run inside the new image
+	$(call log.test.case, mk.docker.run omits image prefix and does target-dispatch)
 	img=demo_dockerfile ${make} mk.docker.run/self.demo.dockerfile
 
-	# Add the prefix explicitly, and you can use `docker.run` instead
+	$(call log.test.case, docker.run requires image prefix and does target-dispatch)
 	img=compose.mk:demo_dockerfile ${make} docker.run/self.demo.dockerfile
+
+	$(call log.test.case, docker.run.sh gives low-level access to container)
 	entrypoint=sh cmd='-c "ls"' img=compose.mk:demo_dockerfile make docker.run.sh 
 	
-	# Subsequent runs will use the cached image.  
-	# Pass 'force' to work around this.
+	$(call log.test.case, docker.from.def caches by default-- pass force=1 to override)
 	force=1 ${make} docker.from.def/demo_dockerfile
 
+	$(call log.test.case, docker.from.def silent by default-- pass quiet=0 to override)
+	quiet=0 force=1 ${make} docker.from.def/demo_dockerfile
+
+	$(call log.test.case, docker.lambda builds/runs a def in one step with no tag references)
+	entrypoint=sh cmd='-c "ls"' ${make} docker.lambda/demo_dockerfile
+	
+	$(call log.test.case, docker.lambda also works as a macro)
+	$(call docker.lambda, demo_dockerfile, sh -c ls)
+
+# Helper used for dispatch
 self.demo.dockerfile:
 	echo "Testing target from inside the inlined-container"
 	uname -a

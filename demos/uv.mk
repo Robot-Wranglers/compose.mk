@@ -1,9 +1,11 @@
 # demos/uv.mk: 
 #   Python code running in a container, with dependencies and no venv, using uv. No caching! 
-#   Note that this implicitly pulls not only dependencies but the python version is also lazy.
+#
+#   Note that this implicitly pulls not only dependencies but even the python version is lazy.
+#
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: make -f demos/elixir.mk
+#   USAGE: make -f demos/uv.mk
 
 include compose.mk
 .DEFAULT_GOAL := demo.uv
