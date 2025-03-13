@@ -1,6 +1,5 @@
 # https://github.com/actions/starter-workflows/blob/main/pages/hugo.yml
-name: Github Pages Deploy
-
+name: Docs Build/Deploy
 on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch: {}
@@ -23,6 +22,7 @@ defaults:
 jobs:
   # Build job
   build:
+    name: Docs Build
     runs-on: ubuntu-latest
     # env:
     #   HUGO_VERSION: 0.128.0
@@ -46,6 +46,7 @@ jobs:
 
   # Deployment job
   deploy:
+    name: Docs Deploy
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
