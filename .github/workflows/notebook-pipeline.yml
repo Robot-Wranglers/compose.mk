@@ -33,3 +33,7 @@ jobs:
         run: make clean init docker.system.prune
       - name: Test Notebook Pipeline
         run: make actions.notebook.pipeline
+      # https://til.simonwillison.net/github-actions/debug-tmate
+      - name: tmate debugging session if tests fail
+        if: failure() && github.event_name == 'workflow_dispatch'
+        uses: mxschmitt/action-tmate@v3

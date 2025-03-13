@@ -6,9 +6,9 @@ This section collects several demos of working with foreign languages.  Polyglot
 
 Polyglots come in a few basic types and this page tries to cover all the main categories, but there's an index of [more involved examples](#other-examples) at the end.  Here's the quick links:
 
-* [Local Interpretters, No Containers](#local-interpretters-no-containers)
-* [Containerized Interpretters](#containerized-interpretters)
-* [Custom Containerized Interpretters](#custom-containerized-interpretters)
+* [Local Interpretters, No Containers](#local-interpreters-no-containers)
+* [Containerized Interpretters](#containerized-interpreters)
+* [Custom Containerized Interpretters](#custom-containerized-interpreters)
 * [Exotic Targets & Pipes](#exotic-targets-and-pipes)
 * [Compiled Languages](#compiled-languages)
 * [Foreign Code as First Class](#foreign-code-as-first-class)
@@ -83,22 +83,22 @@ See also the [official docs](https://docs.julialang.org/en/v1/manual/calling-c-a
 ### Foreign Code as First Class
 <hr style="width:100%;border-bottom:3px solid black;">
 
-As seen in the [first elixir demo](#containerized-interpretters) there are already a few ways to actually invoke your polyglots depending on your appetite for abstraction, and some ways will seem more magical than others.
+As seen in the [first elixir demo](#containerized-interpreters) there are already a few ways to actually invoke your polyglots depending on your appetite for abstraction, and some ways will seem more magical than others.
 
 If you *like* magic, then you will be interested to know that it's possible to treat foreign code as basically a first class object.  The way this works is similar to how [`compose.import` treats containers as first class]({{mkdocs.site_relative_url}}/bridge).  
 
 First we import a code object using `compose.import.code_block`, and then several related targets are attached to the implied namespace.  In the simplest case, importing a code block just attaches a **preview method** to it, which is capable of showing syntax-highlighted code.  *(Under the hood, this uses a dockerized version of [pygments])*.
 
-A more typical use-case for `compose.import.code_block` provides *both* the code block's name and an interpretter handle that we want to *bind to it* which allows us to provide an additional **"run"** method.
+A more typical use-case for `compose.import.code_block` provides *both* the code block's name and an interpreter handle that we want to *bind to it* which allows us to provide an additional **"run"** method.
 
 ```Makefile
 {{open('demos/code-objects.mk','r').read().strip()}}
 ```
 -----------------------
 
-As seen above, sometimes this is slightly more work than the other methods, because we need to build a kind of "interpretter shim" and **must provide a unary target** which accepts a filename (that's what the `python.interpreter` target does above). ^[2]  There are equivalent and probably more explicit ways to write our parametric `python.interpreter`, but we opt for brevity and use the `${docker.curry.command}` idiom.
+As seen above, sometimes this is slightly more work than the other methods, because we need to build a kind of "interpreter shim" and **must provide a unary target** which accepts a filename (that's what the `python.interpreter` target does above). ^[2]  There are equivalent and probably more explicit ways to write our parametric `python.interpreter`, but we opt for brevity and use the `${docker.curry.command}` idiom.
 
-So why use this approach if it's needs a more explicit shim than other approaches?  Well, a small variation in this pattern is to use `compose.import.code`, which supports binding multiple chunks of code to the same interpretter.
+So why use this approach if it's needs a more explicit shim than other approaches?  Well, a small variation in this pattern is to use `compose.import.code`, which supports binding multiple chunks of code to the same interpreter.
 
 Below, you can see that `compose.import.code` is using the argument `[.]py`, which will pattern match against *all available block names* and bind each of them to `python.interpreter`.
 
@@ -135,5 +135,5 @@ This also means the **content is fairly static**, and not typically amenable to 
 <hr style="width:100%;border-bottom:3px solid black;">
 
 [^1]: http://web.archive.org/web/20200515180041/https://agdr.org/2020/05/14/Polyglot-Makefiles.html
-[^2]: You might think from the [elixir examples](#containerized-interpretters) that this can be abstracted away to use streams somehow, but we opt to avoid it because some interpretters require actual files.
+[^2]: You might think from the [elixir examples](#containerized-interpreters) that this can be abstracted away to use streams somehow, but we opt to avoid it because some interpreters require actual files.
 [^3]: Yeah, sorry, you might be out of luck if your language of choice actually uses `define` and `endef` keywords.  If you think you have a reasonable use-case, please do [create an issue describing it]({{github.repo_url}}/issues).

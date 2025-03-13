@@ -3,10 +3,6 @@
 # Project Automation
 #
 # Typical usage: `make clean build test`
-#
-# https://clarkgrubb.com/makefile-style-guide
-# https://gist.github.com/rueycheng/42e355d1480fd7a33ee81c866c7fdf78
-# https://www.gnu.org/software/make/manual/html_node/Quick-Reference.html
 ##
 SHELL := bash
 .SHELLFLAGS?=-euo pipefail -c
@@ -34,6 +30,7 @@ clean: flux.stage.clean
 	@# Cache-busting & removes temporary files used by build / tests 
 	rm -f tests/compose.mk
 	find . | grep .tmp | xargs rm 2>/dev/null|| true
+	mv demos/data/jupyter/kernels/kernel.* /tmp
 
 build normalize: # NOP
 
@@ -70,48 +67,65 @@ services:
 endef 
 $(eval $(call compose.import.string,  docs.builder.composefile,  TRUE))
 
-.mkdocs.build:; set -x && (make docs && mkdocs build --clean --verbose && tree site) ; find site docs|xargs chmod o+rw; ls site/index.html
-docs.build: docs.builder.build docs.builder.dispatch/.mkdocs.build
-mkdocs: mkdocs.build mkdocs.serve
-mkdocs.build build.mkdocs:; mkdocs build
-mkdocs.serve serve:; mkdocs serve --dev-addr 0.0.0.0:8000
+demo:
+	@#
+	@#
+	pattern='*.mk' dir=demos/ ${make} flux.select.file/mk.select
 
 docs: README.md docs.jinja #docs.mermaid
-README.md:
-	set -x && pynchon jinja render README.md.j2 -o README.md
+
+docs.build: docs.builder.build docs.builder.dispatch/.mkdocs.build
+docs.init:; pynchon --version
 docs.jinja:
 	@# Render all docs with jinja
 	find docs | grep .j2 | sort  | grep -v macros.j2 \
 	| xargs -I% sh -x -c "make docs.jinja/% || exit 255"
-
-docs.init:; pynchon --version 
-
-j/% jinja/% docs.jinja/%: docs.init
+docs.jinja/% j/% jinja/%: docs.init
 	@# Render the named docs twice (once to use includes, then to get the ToC)
 	$(call io.mktemp) && first=$${tmpf} \
 	&& set -x && pynchon jinja render ${*} -o $${tmpf} --print \
 	&& dest="`dirname ${*}`/`basename -s .j2 ${*}`" \
 	&& mv $${tmpf} $${dest}
-
 docs.mermaid docs.mmd:
 	@# Renders all diagrams for use with the documentation 
 	pynchon mermaid apply
 
+
+mkdocs: mkdocs.build mkdocs.serve
+mkdocs.build build.mkdocs:; mkdocs build
+.mkdocs.build:; set -x && (make docs && mkdocs build --clean --verbose && tree site) ; find site docs|xargs chmod o+rw; ls site/index.html
+mkdocs.serve serve:; mkdocs serve --dev-addr 0.0.0.0:8000
+
+
+README.md:
+	set -x && pynchon jinja render README.md.j2 -o README.md
+
 ## BEGIN: CI/CD related targets
 ##
 actions.docs: docs.build 
+	@# Entrypoint for docs-action
 actions.lint:; cmd='-color' ${make} docker.image.run/rhysd/actionlint:latest 
-actions.notebook.pipeline:; ${io.shell.isolated} script -q -e -c "bash --noprofile --norc -eo pipefail -x -c './demos/notebooking.mk tux.require lab.pipeline'"
-actions.demos:; script -q -e -c "bash --noprofile --norc -eo pipefail -x -c 'make demos'"
-actions.clean cicd.clean: clean.github.actions
-clean.github.actions:
-	@#
-	@#
-	gh run list --status failure --json databaseId \
-	| ${stream.peek} | jq -r '.[].databaseId' \
-	| xargs -n1 -I% sh -x -c "gh run delete %"
+	@# Helper for linting all action-yaml
 
-demo:
+actions.notebook.pipeline:
+	@# Entrypoint for pipeline-demo action 
+	${io.shell.isolated} script -q -e -c "\
+		bash --noprofile --norc -eo pipefail \
+			-x -c './demos/notebooking.mk tux.require lab.pipeline'"
+
+actions.demos:
+	@# Entrypoint for test-action
+	script -q -e -c "bash --noprofile --norc -eo pipefail -x -c 'make demos'"
+
+actions.clean cicd.clean clean.github.actions:
+	@# Cleans all action-runs that are cancelled or failed
 	@#
-	@#
-	pattern='*.mk' dir=demos/ ${make} flux.select.file/mk.select
+	${make} actions.list/failure gh.run.list/cancelled \
+	| ${stream.peek} | ${jq} -r '.[].databaseId' \
+	| ${make} flux.each/actions.run.delete
+
+actions.run.delete/%:; gh run delete ${*}
+	@# Helper for deleting an action
+
+actions.list/%:; gh run list --status ${*} --json databaseId
+	@# Helper for filtering action runs

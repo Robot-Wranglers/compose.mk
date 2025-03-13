@@ -7,10 +7,9 @@
 #   USAGE: make -f demos/julia.mk
 
 include compose.mk
-.DEFAULT_GOAL := demo.julia
+.DEFAULT_GOAL := __main__
 
 # First we pick an image and interpreter for the language kernel.
-# Here, iex can work too, but there are minor differences.
 julia.img=julia:1.10.9-alpine3.21
 julia.interpreter=julia 
 
@@ -75,7 +74,7 @@ println("Math operations on x = $x:")
 @printf "  sqrt(x) = %.6f\n" math_results.sqrt
 endef
 
-# Declare the code-block as a first class object, and bind it to an interpretter.
+# Declare the code-block as a first class object, and bind it to an interpreter.
 $(eval $(call compose.import.code_block, hello_world, julia.interpreter))
 
-demo.julia: hello_world.preview hello_world.run
+__main__: hello_world.preview hello_world.run

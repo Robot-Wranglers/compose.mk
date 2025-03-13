@@ -2,6 +2,7 @@
 jupyter:
   jupytext:
     formats: ipynb,md
+    notebook_metadata_filter: language_info
     text_representation:
       extension: .md
       format_name: markdown
@@ -9,11 +10,15 @@ jupyter:
       jupytext_version: 1.16.7
   kernelspec:
     display_name: lean4
-    language: ''
+    language: python
     name: kernel.lean4
+  language_info:
+    name: python
+    pygments_lexer: lean
 ---
 
 ## A Lean 4 Theorem
+
 ----------
 
 Law of the excluded middle in lean4.  

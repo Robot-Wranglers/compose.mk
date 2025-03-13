@@ -21,7 +21,7 @@ services:
   
   # https://github.com/Z3Prover/z3/discussions/5740
   # z3 official container does not include bindings
-  z3:
+  z3: &z3
     <<: *base
     hostname: z3
     image: compose.mk:z3
@@ -32,6 +32,13 @@ services:
         RUN apt-get update -qq && apt-get install -qq -y python3 python3-pip
         RUN pip3 install z3-solver==4.14.0.0 -q
   
+  z3_py:
+    <<: *z3
+    hostname: z3_py
+    image: compose.mk:z3_py
+    entrypoint: python
+    depends_on: ['z3']
+
   # no official container for alloy-lang, 
   # but this one can run headless and return JSON
   alloy:
@@ -70,3 +77,10 @@ services:
           printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' >> lakefile.toml
         RUN cd default && lake update && lake build
         RUN lean --version
+  
+  lean4_script:
+    <<: *lean4
+    hostname: lean4_script
+    image: compose.mk:lean4.script
+    entrypoint: ['lean','--run']
+    depends_on: ['lean4']

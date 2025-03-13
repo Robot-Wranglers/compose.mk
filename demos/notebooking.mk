@@ -14,30 +14,39 @@
 #
 #   USAGE: make -f demos/notebooking.mk lab.ui
 #   USAGE: make -f demos/notebooking.mk lab.pipeline
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 include compose.mk
+
+# Main entrypoint, just shows usage hints 
 .DEFAULT_GOAL := __main__
+__main__:; $(call log, ${red}Provide a target like 'lab.ui' or 'lab.pipeline' or use 'help' for help.)
+
+# Jupyter lab URL
 lab.url.base=http://localhost:9999
 lab.url=${lab.url.base}/lab/tree/notebooks
+
+# Configuration for TUI pane contents. 
+lab.tui_panes=lab.notebook.open/networkx-atlas.ipynb,lab.up
+
+# Constants to configure tmux pane geometry.
+lab.tui.geometry=c3f2,231x57,0,0[231x48,0,0,1,231x8,0,49{125x8,0,49,2,105x8,126,49,4}]
+
+# Jupyter constants relative to wd; lab constants 
 jupyter.root=demos/data/jupyter
 jupyter.notebook.root=${jupyter.root}/notebooks
 jupyter.kernels.root=${jupyter.root}/kernels
 
-__main__:; $(call log, ${red}Provide a target like 'lab.ui' or 'lab.pipeline' or use 'help' for help.)
-# Configuration for TUI pane contents. 
-lab.tui_panes=lab.notebook.open/networkx-atlas.ipynb,lab.up
-
 # A filter to pull b64 data data out of jupyter notebook outputs
 jq.img.filter='.cells[]|select(.outputs!=null).outputs[]|select(.output_type=="display_data").data["image/png"]'
-
-# This constants configures tmux pane geometry.
-lab.tui.geometry=c3f2,231x57,0,0[231x48,0,0,1,231x8,0,49{125x8,0,49,2,105x8,126,49,4}]
 
 # Autogenerate target scaffolding for each kernel container
 $(eval $(call compose.import, demos/data/jupyter/docker-compose.fmtk.yml, fmtk))
 
 # Autogenerate scaffolding for the jupyter-lab container.
 $(eval $(call compose.import, demos/data/jupyter/docker-compose.jupyter.yml, jupyter))
+
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 ## Use the service scaffolding to create language kernels.
 ## Kernel-targets must accept 1 argument in the form a filename,
@@ -47,17 +56,20 @@ $(eval $(call compose.import, demos/data/jupyter/docker-compose.jupyter.yml, jup
 kernel.alloy/%:; ${docker.curry.command}/fmtk/alloy
 kernel.lean4/%:; ${docker.curry.command}/fmtk/lean4
 kernel.z3/%:; ${docker.curry.command}/fmtk/z3
-kernel.z3_py/%:; entrypoint=python cmd="${*}" ${make} fmtk/z3
-kernel.lean4_script/%:; cmd="--run ${*}" ${make} fmtk/lean4
+kernel.z3_py/%:; ${docker.curry.command}/fmtk/z3_py
+kernel.lean4_script/%:; ${docker.curry.command}/fmtk/lean4_script
 
 # Dynamically filters available targets, returning ones above that match "kernel.*" 
 kernels.list: mk.targets.filter.parametric/kernel.
+
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 ## Generates kernel.json files for each of the "kernel.*" targets above.  
 ## This involves a template for jupyter kernelspec JSON, which is a starting place 
 ## for generating dynamic kernels.  This works by deferring most of the kernel 
 ## behaviour to a base class (i.e. BaseK), and basically adjusts environment 
 ## variables to configure kernel-names, kernel-commands, etc.. just in time.
+
 lab.gen.kernels: flux.starmap/.kernel.from.target,kernels.list
 .kernel.from.target/%:; cmd="${make} ${*}" ${make} .kernel.gen/${*}
 .kernel.gen/%:
@@ -77,6 +89,7 @@ lab.gen.kernels: flux.starmap/.kernel.from.target,kernels.list
 	> $${kfile} \
 	&& $(call log.target.part2, ${dim_ital}$${kfile})
 
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## A small bridge to the jupyter lab HTTP API.
 ## This isn't necessarily that useful since we have CLI access to 
 ## jupyter, but this shows that it's accessible and calls to curl 
@@ -103,9 +116,11 @@ lab.ui: lab.init tux.open.horizontal/${lab.tui_panes}
 	@# UI-mode.  Launches the jupyter server in a pane, and 
 	@# summarizes project status / offer debugging shells elsewhere
 
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## Top level command and control for the lab ensemble.
+
 lab.init: \
-	jupyter.stop jupyter.build.quiet fmtk.build.quiet \
+	tux.require jupyter.stop jupyter.build fmtk.build \
 	lab.notebooks.normalize lab.gen.kernels \
 	lab.serve.background lab.summary
 	@# Clean initialization.  This syncs updates but won't force rebuild
@@ -149,7 +164,7 @@ lab.notebooks:
 	(ls ${jupyter.notebook.root}/*.ipynb || true) \
 		| grep -v Untitled | grep -v Copy 
 
-lab.notebooks.normalize: lab.dispatch/self.notebooks.normalize
+lab.notebooks.normalize normalize: lab.dispatch/self.notebooks.normalize
 	@# Normalize / synchronize all notebook representations.
 
 lab.notebooks.preview: flux.starmap/lab.notebook.preview,lab.notebooks
@@ -167,9 +182,9 @@ lab.serve.background: lab.up.detach
 
 lab.summary: lab.wait lab.test 
 	@# Waits for jupyterlab to ready, then describes available kernels / notebooks
-	echo "Available notebooks:"
-	${make} lab.notebooks|${stream.indent}
-	echo "Markdown notebooks:"
+	$(call log.target,${dim_cyan}Available notebooks:)
+	${make} lab.notebooks | ${stream.indent}
+	$(call log.target,${dim_cyan}Markdown notebooks:)
 	ls ${jupyter.notebook.root}/*.md | ${stream.indent}
 	
 lab.test: lab.dispatch/self.kernelspec.list
@@ -185,6 +200,7 @@ lab.webpage.open: lab.wait
 	python3 -c"import webbrowser; webbrowser.open(\"${lab.url}\")" \
 		|| $(call log.target, ${red}could not open browser!)
 
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## Low level helpers, these need to run in the lab container.
 self.kernelspec.list:
 	@# Show the available kernels 
@@ -199,7 +215,8 @@ self.notebooks.normalize:
 	${make} self.notebook.normalize/${jupyter.notebook.root}/*.md
 self.notebook.normalize/%:
 	@# Runs the bidirectional sync from ipynb / notebooks-as-code markdown. 
-	jupytext --set-formats ipynb,md --update --sync ${*} | ${stream.as.log}
+	rm -f ${jupyter.notebook.root}/*.ipynb
+	jupytext --set-formats ipynb,md --show-changes --sync ${*} | ${stream.as.log}
 
 self.notebook.preview.in/%:
 	@# Show markdown from ipnyb, pre-execution.  

@@ -2,6 +2,7 @@
 jupyter:
   jupytext:
     formats: ipynb,md
+    notebook_metadata_filter: language_info
     text_representation:
       extension: .md
       format_name: markdown
@@ -9,14 +10,19 @@ jupyter:
       jupytext_version: 1.16.7
   kernelspec:
     display_name: alloy
-    language: ''
+    language: python
     name: kernel.alloy
+  language_info:
+    name: python
+    pygments_lexer: alloy
 ---
 
 ## Alloy Spec Demo
+
 ----------------------
-* knights puzzle: [https://www.hillelwayne.com/post/knights-knaves/](https://www.hillelwayne.com/post/knights-knaves/)
-* headless alloy analyzer that returns JSON: [docker-alloy-cli](https://github.com/elo-enterprises/docker-alloy-cli)
+
+* Knights puzzle: [https://www.hillelwayne.com/post/knights-knaves/](https://www.hillelwayne.com/post/knights-knaves/)
+* Headless alloy analyzer that returns JSON: [docker-alloy-cli](https://github.com/elo-enterprises/docker-alloy-cli)
 
 -------------------
 

@@ -2,6 +2,7 @@
 jupyter:
   jupytext:
     formats: ipynb,md
+    notebook_metadata_filter: language_info
     text_representation:
       extension: .md
       format_name: markdown
@@ -11,9 +12,19 @@ jupyter:
     display_name: Python 3 (ipykernel)
     language: python
     name: python3
+  language_info:
+    name: python
+    pygments_lexer: ipython3
 ---
 
-## A Python Script
+## Python NetworkX Demo
+
+-------------------
+
+See also:
+
+  * https://networkx.org/documentation/stable/auto_examples/graphviz_layout/plot_atlas.html
+
 -------------------
 
 
@@ -24,7 +35,6 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 GraphMatcher = nx.isomorphism.vf2userfunc.GraphMatcher
-
 
 def atlas6():
     """Return the atlas of all connected graphs with at most 6 nodes"""
@@ -37,7 +47,6 @@ def atlas6():
             if not GraphMatcher(U, G).subgraph_is_isomorphic():
                 U = nx.disjoint_union(U, G)
     return U
-
 
 G = atlas6()
 print(G)

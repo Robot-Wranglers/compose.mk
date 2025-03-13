@@ -1,7 +1,9 @@
 ---
 jupyter:
+  file_extension: .py
   jupytext:
     formats: ipynb,md
+    notebook_metadata_filter: pygments_lexer,nbconvert_exporter,file_extension,mimetype,language_info
     text_representation:
       extension: .md
       format_name: markdown
@@ -9,17 +11,22 @@ jupyter:
       jupytext_version: 1.16.7
   kernelspec:
     display_name: z3_py
-    language: ''
+    language: python
     name: kernel.z3_py
+  language_info:
+    name: python
+    pygments_lexer: ipython3
 ---
 
 ## Z3 Demo (with python bindings)
+
 -------------------
 
 Examples from:
 
 * [socrates @ z3 official](https://github.com/Z3Prover/z3/blob/master/examples/python/socrates.py)
 * [8 queens @ philzooks](https://github.com/philzook58/z3_tutorial/blob/master/Z3%20Tutorial.ipynb)
+
 -------------------
 
 
@@ -50,6 +57,7 @@ s.add(Not(Mortal(socrates)))
 print(s.check())
 ```
 
+--------------------------------
 
 ```python
 from z3 import *

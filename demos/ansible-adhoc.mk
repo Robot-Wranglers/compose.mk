@@ -12,6 +12,7 @@ include compose.mk
 
 export ANSIBLE_LOAD_CALLBACK_PLUGINS=true 
 export ANSIBLE_STDOUT_CALLBACK=json
+
 # Look, it's a container that has ansible & ansible has support for docker.
 # Could do this with a docker-compose file instead, for simplicity it's embedded.
 define Dockerfile.Ansible

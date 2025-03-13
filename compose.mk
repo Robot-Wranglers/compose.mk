@@ -372,9 +372,6 @@ export GLOW_VERSION?=v1.5.1
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-compose.build.quiet/%:
-	@# Like `compose.build/` but defaults to quiet.
-	quiet=1 label="Building ${*}" ${make} flux.timer/compose.build/${*}
 compose.build/%:
 	@# Builds all services for the given compose file.
 	@# This optionally runs for just the given service, otherwise on all services.
@@ -383,7 +380,7 @@ compose.build/%:
 	@#   ./compose.mk compose.build/<compose_file>
 	@#   svc=<svc_name> ./compose.mk compose.build/<compose_file>
 	@#
-	$(call log.docker, compose.build${no_ansi_dim} ${sep} ${green}${*} ${sep} $${svc:-all} ${no_ansi_dim})
+	$(call log.docker, compose.build ${sep} ${green}$(shell basename ${*}) ${sep} ${dim_ital}$${svc:-all services})
 	case $${quiet:0} in \
 		"") quiet='';; \
 		0) quiet='';; \
@@ -402,8 +399,8 @@ compose.clean/%:
 	@#   ./compose.mk compose.clean/<compose_file>
 	@#   svc=<svc_name> ./compose.mk compose.clean/<compose_file> 
 	@#
-	header="${GLYPH.DOCKER} compose.clean ${sep} " && $(trace_maybe) \
-	&& $(call log, $${header} ${dim}file=${*} ${sep} ${dim}svc=$${svc:-}) \
+	$(trace_maybe) \
+	&& $(call log.docker, compose.clean ${dim}file=${*} ${sep} ${dim_ital}$${svc:-all services}) \
 	&& ${docker.compose} -f ${*} \
 		--progress quiet down -t 1 \
 		--remove-orphans --rmi local $${svc:-}
@@ -1083,7 +1080,7 @@ io.gum.style.default:=--border double --foreground 2 --border-foreground 2
 io.gum.tty=export tty=1; $(call io.gum, ${1})
 io.file.select=header="Choose a file: (dir=$${dir:-.})"; choices=`ls $${dir:-.}/$${pattern:-} | ${stream.nl.to.space}` && ${io.get.choice}
 
-charm.glow:=docker run -i charmcli/glow:${GLOW_VERSION} -s dracula
+charm.glow:=docker run -q -i charmcli/glow:${GLOW_VERSION} -s dracula
 
 io.gum.choice/% io.gum.choose/%:
 	@# Interface to `gum choose`.
@@ -1567,6 +1564,12 @@ mk.help.search/%:
 			); ;; \
 	esac
 
+mk.interpret:
+	@#
+	tmp="$${MAKE_CLI#*mk.interpret}" \
+	&& tmp=`echo $${tmp} | ${stream.lstrip}` \
+	&& $(call mk.yield2, ${make} mk.include/$${tmp})
+
 mk.include/%:
 	@# Dynamic includes.
 	@# This is experimental stuff for reflection support.
@@ -1581,8 +1584,7 @@ mk.include/%:
 	@# USAGE: ( concrete )
 	@#   ./compose.mk mk.include/demos/no-include.mk foo:flux.ok mk.let/bar:foo bar
 	@#
-	header="${GLYPH_MK} mk.include ${sep} ${dim_cyan}${*} ${sep}" \
-	&& $(call mk.yield2, ${make} -f${*} $${MAKE_CLI#*mk.include/${*}})
+	$(call mk.yield2, ${make} -f${*} $${MAKE_CLI#*mk.include/${*}})
 mk.let/%:
 	@# Dynamic target assignment.
 	@# This is experimental stuff for reflection support.
@@ -1837,6 +1839,7 @@ mk.stat:
 
 mk.supervisor.interrupt mk.interrupt: mk.interrupt/SIGINT
 	@# The default interrupt.  This is shorthand for mk.interrupt/SIGINT
+
 mk.interrupt=${make} mk.interrupt
 ifeq (${CMK_SUPERVISOR},0)
 mk.supervisor.interrupt/% mk.interrupt/%:
@@ -2694,7 +2697,7 @@ flux.timer/%:
 	&& end_time=$$(date +%s%N) \
 	&& time_diff_ns=$$((end_time - start_time)) \
 	&& delta=$$(echo "scale=9; $$time_diff_ns / 1000000000" | bc) \
-	&& $(call log.noindent, ${GLYPH.FLUX} flux.timer ${sep} ${dim}$${label:-${*}} ${sep} ${yellow}$${delta}s)
+	&& $(call log.noindent, ${GLYPH.FLUX} flux.timer ${sep} ${dim}$${label:-${*}} ${yellow}$${delta}s)
 
 flux.timeout/%:
 	@# Runs the given target for the given number of seconds, then stops it with TERM.
@@ -4164,7 +4167,7 @@ $(eval __services__:=$(call compose.get_services, ${compose_file}))
 
 # Operations on the compose file itself
 # WARNING: these can not use '/' naming conventions as that conflicts with '<stem>/<svc>' !
-${compose_file_stem}.services:
+${compose_file_stem}.services $(target_namespace).services:
 	@# Outputs newline-delimited list of services for the ${compose_file} file.
 	@#
 	@# NB: This must remain suitable for use with xargs, etc
@@ -4193,7 +4196,9 @@ ${compose_file_stem}.build.quiet $(target_namespace).build.quiet:
 	@# WARNING: This is not actually safe for all legal compose files, because
 	@# compose handles run-ordering for defined services, but not build-ordering.
 	@#
-	$(trace_maybe) && ${make} compose.build.quiet/${compose_file}
+	$(call log.docker, ${bold_green}${target_namespace} ${sep} ${bold_cyan}build ${sep} ${dim_ital}$(shell echo $${svc:-all services}))
+	$(trace_maybe) \
+	&& quiet=1 label="build finished in" ${make} flux.timer/compose.build/${compose_file}
 
 ${compose_file_stem}.build.quiet/% ${compose_file_stem}.require/%:
 	@# Quiet build for the named service in the ${compose_file} file

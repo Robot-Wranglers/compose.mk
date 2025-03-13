@@ -20,9 +20,10 @@ Most use-cases for stand-alone mode will fall into one of these categories:
 
 ----------------
 
-Additionally, one of the major benefits of using `make` over plain bash scripting is that details for CLI entrypoints are handled automatically.  In fact, *make-targets always do double-duty as CLI entrypoints and as reusable tasks*, or in other words, **the "internal API" is automatically published as a CLI interface.**  
+{#Additionally, one of the major benefits of using `make` over plain bash scripting is that details for CLI entrypoints are handled automatically.  In fact, *make-targets always do double-duty as CLI entrypoints and as reusable tasks*, or in other words, **the "internal API" is automatically published as a CLI interface.**  
 
-Because of this basic duality, even the documentation for "programmatic" usage of `compose.mk` as a library tends to introduce or demonstrate concepts by using tool-mode first.  So, even if you're not interested in `compose.mk` as a library for scripting.. the [library docs]({{mkdocs.site_relative_url}}/standard-lib) and the [full API ]({{mkdocs.site_relative_url}}/api) both have many examples that are relevant for stand-alone mode.  Just search for `./compose.mk` to find them.
+Because of this basic duality, even the documentation for "programmatic" usage of `compose.mk` as a library tends to introduce or demonstrate concepts by using tool-mode first.  Even if you're not interested in `compose.mk` as a library for scripting.. the [library docs]({{mkdocs.site_relative_url}}/standard-lib) and the [full API ]({{mkdocs.site_relative_url}}/api) both have many examples that are relevant for stand-alone mode.  Just search for `./compose.mk` to find them.
+#}
 
 {#
 and the {{macros.api_link('compose.select',mkdocs)}} and {{macros.api_link('mk.select',mkdocs) }} targets
