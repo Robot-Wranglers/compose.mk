@@ -115,3 +115,4 @@ demo:
 	@#
 	pattern='*.mk' dir=demos/ ${make} flux.select.file/mk.select
 
+actions.lint:; docker run --rm -v $$(pwd):/workspace --workdir /workspace rhysd/actionlint:latest -color
