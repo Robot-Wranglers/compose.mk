@@ -11,8 +11,8 @@ Using [`compose.import`]({{mkdocs.site_relative_url}}/bridge) can be easily adap
 # Load 1st compose file under paralleogram namespace,
 # Load 2nd compose file under triangle namespace
 include compose.mk
-$(eval $(call compose.import, ▰, FALSE, my-compose-files/build-tools.yml))
-$(eval $(call compose.import, ▲, FALSE, my-compose-files/cluster-tools.yml))
+$(eval $(call compose.import.generic, ▰, FALSE, my-compose-files/build-tools.yml))
+$(eval $(call compose.import.generic, ▲, FALSE, my-compose-files/cluster-tools.yml))
 
 # Top-level "build" target that dispatches subtargets
 # "build-code" and "build-cluster" on different containers
@@ -25,4 +25,6 @@ build.code:
 
 There's lots of ways to use this.  And if your service names across 2 files do not collide, you are free to put everything under exactly the same namespace.  It's only syntax, but if you choose the conventions wisely then it will probably help you to think and to read whatever you're writing.
 
-Confused about what targets are available after using `compose.import`?  See the [`<compose_stem>.services`]({{mkdocs.site_relative_url}}/bridge/#compose_stemcmd) for list services, and check out the `make help` output.
+Confused about what targets are available after using `compose.import`?  
+
+See the [`<compose_stem>.services`]({{mkdocs.site_relative_url}}/bridge/#compose_stemcmd) for list services, and check out the `make help` output.

@@ -1,3 +1,4 @@
+#!/usr/bin/env -S make -f
 # demos/exotic-targets.mk: 
 #   Demos make-targets in foreign languages and shows them working with pipes.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
@@ -24,4 +25,4 @@ endef
 # Runs the script, passing data into the pipe
 demo.python.pipes:
 	echo '{"hello":"bash"}' \
-	| ${make} mk.def.dispatch/python3/python.script
+	| ${make} mk.def.dispatch/python3,python.script

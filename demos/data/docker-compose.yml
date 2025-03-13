@@ -1,0 +1,37 @@
+##
+# demos/data/docker-compose.yml: 
+#  Typical compose file that works with target dispatch.
+#  (For more discussion, see the installation docs)
+##
+services:
+  debian: &base
+    hostname: debian
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${IMG_DEBIAN_BASE:-debian:bookworm}
+        RUN apt-get update -qq && apt-get install -qq -y make procps 
+    entrypoint: bash
+    working_dir: /workspace
+    volumes:
+      - ${PWD}:/workspace
+      # optional, but required for docker-in-docker
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+
+  ubuntu: 
+    <<: *base
+    hostname: ubuntu
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${IMG_UBUNTU_BASE:-ubuntu:noble}
+        RUN apt-get update -qq && apt-get install -y -qq make procps
+  
+  alpine:
+    <<: *base
+    hostname: alpine
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${IMG_ALPINE_BASE:-alpine:3.21.2} 
+        RUN apk add -q --update --no-cache coreutils alpine-sdk bash procps-ng

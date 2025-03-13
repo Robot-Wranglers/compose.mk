@@ -1,16 +1,17 @@
+{% import 'macros.j2' as macros -%}
+
 ## Pipelining & Workflow Basics
 
+In other sections, referred to the [**`flux.*` target namespace**]({{mkdocs.site_relative_url}}/api#api-flux), and discussed how it [provides basic tooling for workflows]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).  
+
+This demo builds on those ideas and introduces `flux.pipeline` with some scripting to describe a miniature ETL. For this exercise we'll also use some of the idioms for [Structured IO]({{mkdocs.site_relative_url}}/standard-lib/#structured-input-output) and [Logging]({{mkdocs.site_relative_url}}/standard-lib/#logging-facilities) so that what we build is friendly reading for both people and machines.
 
 ### Miniature ETL
 <hr style="width:100%;border-bottom:3px solid black;">
 
-So we've seen that the [**`flux.*` target namespace**]({{mkdocs.site_relative_url}}/api#api-flux) provides basic tooling for workflows, and [looked at an example with try-except-finally]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).  
-
-Let's build on that idea and introduce `flux.pipeline` with some scripting to describe a miniature ETL.  For this exercise we'll also use [Structured IO]({{mkdocs.site_relative_url}}/standard-lib/#structured-input-output) and [Logging]({{mkdocs.site_relative_url}}/standard-lib/#logging-facilities) so that what we build is friendly reading for both people and machines.
-
 Consider the following Makefile for describing a miniature ETL:
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+-----------------------------------
 
 {# The rest of this section will walk through a few examples.  After the first one, we'll omit the boilerplate at the top. #}
 
@@ -18,42 +19,28 @@ Consider the following Makefile for describing a miniature ETL:
 {{open('demos/etl-json.mk','r').read().strip()}}
 ```
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+-----------------------------------
 
-So basically this works the way you'd expect, and we can execute the ETL end-to-end with `make etl`, or with error-handling using `make etl.safe`.  And as a bonus, developers retain the ability to execute individual pipeline components or cleanup piecewise, or individually.  
+So basically this works the way you'd expect, and we can execute the ETL end-to-end with `make etl`, or with error-handling using `make etl.safe`.  As a bonus, developers retain the ability to execute individual pipeline components or cleanup piecewise, or individually.  
 
-One benefit of `flux.pipeline` is getting previews of the results at different stages.  Running this example so far looks something like this:
+One benefit of `flux.pipeline` is getting previews of the results at different stages.  Running the example so far looks like this:
 
-```bash
+{{macros.img_link("etl-json.png", mkdocs, "90%")}}
 
-# Running the demo
-$ make -f demos/etl-json.mk etl.safe
+*( Despite appearances, this is actually pipe-safe: the final output of `{"stage":"loaded"}` is the only thing on stdout, the rest is stderr)*
 
-⇄ flux.try.except.finally // etl,etl.failed,etl.cleanup 
- 
- Φ flux.pipeline // extract,transform,load // extract stage 
- Φ flux.pipeline // extract,transform,load // result preview
- {"stage":"extracted"}
- 
- Φ flux.pipeline // extract,transform,load // transform stage 
- Φ flux.pipeline // extract,transform,load // result preview
- {"stage":"transformed"}
- 
- Φ flux.pipeline // extract,transform,load // load stage 
- {"stage":"loaded"}
-Cleaning up ETL!
-```
+For more information, see the API docs for {{macros.api_link('flux.pipeline/arg',mkdocs,arg='t1>,..<tn')}}.
 
-*( Despite appearances, this is actually pipe-safe: the final output of `{"stage":"loaded"}` is the only thing on stdout, and stderr is ANSI formatted :)*
-
-For more information, see the api docs for [`flux.pipeline`]({{mkdocs.site_relative_url}}/api/#fluxpipeline), Also related, the [Platform Lifecycle Demo]({{mkdocs.site_relative_url}}/demos/platform) shows flow control with [`flux.dmux`]({{mkdocs.site_relative_url}}/demos/platform).
-
-{# <hr style="width:95%;border-bottom:1px dashed black;"> #}
+Also related, the [Platform Lifecycle Demo]({{mkdocs.site_relative_url}}/demos/platform) shows flow control with {{macros.api_link('flux.pipe.fork/arg',mkdocs,arg='t1>,..,<tn')}}
 
 ### Extending the Pipeline
 <hr style="width:100%;border-bottom:3px solid black;">
 
-So yeah, any example passing around fake JSON looks tight and tidy, but.. it's really easy to extend this.  Let's sketch small changes that can actually turn this into an image pipeline, using docker idioms from `compose.mk` to leverage external tools.  As usual, `compose.mk` can setup a lot of functionality without much code, so it takes longer to explain than it does to build!
+Maybe any example passing around fake JSON looks tight and tidy, but.. it's really easy to extend this.  Let's sketch small changes that can actually turn this into an image pipeline, using docker idioms from `compose.mk` to leverage external tools.  
+
+{#
+As usual, `compose.mk` can setup a lot of functionality without much code, so it takes longer to explain than it does to build!
+#}
 
 ```Makefile
 {{open('demos/etl-img.mk','r').read().strip()}}
@@ -66,6 +53,6 @@ For more information, see the api docs for [`docker.run.image`]({{mkdocs.site_re
 
 {# <hr style="width:95%;border-bottom:1px dashed black;"> #}
 
-It's a neat party trick that `compose.mk` has some features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.  Really, `flux.*` is more similar in spirit to things like [declarative pipelines in Jenkins](https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline).
+It's a neat party trick that `compose.mk` has some features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.  Really, `flux.*` is more similar in spirit to things like [declarative pipelines in Jenkins](https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline).  See [workflow rationale docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-rationale)
 
 <hr style="width:100%;border-bottom:3px solid black;">

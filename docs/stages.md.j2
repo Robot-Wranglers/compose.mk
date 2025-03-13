@@ -1,0 +1,152 @@
+{% import 'macros.j2' as macros -%}
+
+
+## Stages & Stacks
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Stages **add support for persistent data via a named stack**, plus basic *`push/pop/peek`* operators.
+
+{{macros.img_link("escher-babel.png", mkdocs, "58%",align='center')}}
+
+Any task associated with `compose.mk` should be able to use a stack just by mentioning it, regardless of whether it is inside or outside of a container.  Stacks live on the filesystem usually at the project root, and are JSON-backed.  Ultimately the *push/pop/etc* operators are implemented with `jq` and `jb`, using local tools if available but falling back to docker for a portable implementation.  *(For more background, see the docs on [structured IO ]({{mkdocs.site_relative_url}}/standard-lib#structured-io) and [proxy wrappers]({{mkdocs.site_relative_url}}/tool-overview#tool-wrappers).)*
+
+Other than the datastructure itself, there are few restrictions or isolation guarantees about how that data is used, or where it's used from.  By default, **there are no isolation guarantees at the level of PIDs, parent PIDs, or container.**  However, isolation per `compose.mk` managed project is usually implicit, because **stages are uniquely determined by the stage name and the working directory when the stage is used.**
+
+Since access to the stage-stack "just works" from the docker host, a container, or a nested container, and works inside or outside the particular subshell for any existing make-target, this adds a lot of missing flexibility for "crosswise" communication that task-DAGs and pipelining would usually struggle with.
+
+### Stage Basics
+<hr style="width:100%;border-bottom:3px solid black;">
+
+At a high level, these are the rules for stages:
+
+* Once entered, a stage lives forever unless explicitly exited, 
+* The lifetime of a stage-stack is just the lifetime of the stage  
+* Stages may be re-entered from anywhere without an exit, and 
+* Entering and exiting stages leaves time-stamped events inside the stack
+* Any reference to a non-existent stage *enters the stage implicitly, creating the stage-stack*
+
+Stack-operations are logged by default to stderr, so it's easy for users or devs to keep track of the stack state.  Stages also automatically get a banner / visual divider on entry, helpful for making automation output more readable.
+
+**You can use stages via stand-alone mode or programmatically from script,** and either way it looks pretty similar.
+
+### Stages in Stand Alone Mode
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Creating a stack is just mentioning it.
+
+```bash 
+$ ./compose.mk flux.stage.enter/BUILD
+
+╔═══════════════════════════════════════════════════════════╗
+║                           BUILD                           ║
+╚═══════════════════════════════════════════════════════════╝
+① ⇄ flux.stage // BUILD //  stack file @ .flux.stage.BUILD
+② Φ flux.stage.push // BUILD 
+③  ⇄ io.stack.push // stack@.flux.stage.BUILD ⋘⋘⋘
+  {"stage.entered":"Mon 24 Feb 2025 08:53:39 PM PST"}
+```
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Push data in on pipes:
+
+```bash
+$ echo '{"data":789}' | ./compose.mk flux.stage.push/BUILD
+
+① Φ flux.stage.push // BUILD 
+② ⇄ io.stack.push // stack@.flux.stage.BUILD ⋘⋘⋘
+  {"data":789}
+```
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Popping data is pipe-safe JSON for downstream, but stderr is annotated for humans.
+
+```bash 
+$ ./compose.mk flux.stage.pop/BUILD
+① Φ flux.stage.pop // BUILD
+② ⇄ io.stack.pop // stack@.flux.stage.BUILD ⋙⋙⋙
+{
+  "data": 789
+}
+
+$ ./compose.mk flux.stage.pop/BUILD
+① Φ flux.stage.pop // BUILD
+② ⇄ io.stack.pop // stack@.flux.stage.BUILD ⋙⋙⋙
+{
+  "stage.entered": "Mon 24 Feb 2025 08:53:39 PM PST"
+}
+
+$ ./compose.mk flux.stage.exit/BUILD
+② Φ flux.stage.clean // BUILD //  removing stack file @  .flux.stage.BUILD
+```
+
+### Stage Idioms
+<hr style="width:100%;border-bottom:3px solid black;">
+
+If you're scripting with stages, the main difference is that `flux.stage.enter` and `flux.stage.exit` can be used like function decorators:
+
+```Makefile
+{{open('demos/stages-idiom.mk','r').read().strip()}}
+```
+
+In this case when `validate` succeeds, there stage file is cleaned like we'd expect, and if there's a crash then partial results can be inspected.  There are various ways to write this, like replacing calls to `./compose.mk` with `${make}` expansions, or using macros instead of targets, but the idea is the same.  
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+An alternative style is to use an implicit context manager.  The example below shows that, and overrides the banner-printing mechanism to use the (dockerized) `figlet` tool instead of using `gum`.
+
+{{macros.api_link('flux.stage.wrap',mkdocs,arg='target')}}:
+
+```Makefile
+{{open('demos/stage-wrapper.mk','r').read().strip()}}
+```
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Another source of usage hints about stages is the test-suite, so it's included below for reference.
+
+If you are scripting, note that using `${@}` as shorthand for "current target name" is a good thing to organize around, since it reduces typing and typos.  Another idea is to parse out a *prefix* from the current target name, thus ensuring that related targets all use the same stack.
+
+```Makefile
+{{open('demos/stages.mk','r').read().strip()}}
+```
+
+See the the implementation details below for quick links to the full API.
+
+### Support for Non-JSON Artifacts?
+<hr style="width:100%;border-bottom:3px solid black;">
+
+For non-JSON artifacts, output typically doesn't need to be *input* somewhere else in the same pipeline, and you can just dump the content on the filesystem anywhere you like, because by default all tool containers share the project directory.  So.. unless you want [build pipelines]({{mkdocs.site_relative_url}}/demos/workflows/) then there's little advantage if `compose.mk` gets in the middle.
+
+Plus, while jamming base64 binary data directly into the JSON isn't really recommended.. ipynb's do it all the time.  If you think you *do* have a use-case for something like this you might want to look at [packaging docs]({{mkdocs.site_relative_url}}/demos/packaging/), which can at least help with creating archives.
+
+### Stage API
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Stages are implemented using the `flux.stage.*` family of targets, and the lower level `io.stack` helpers.
+
+{{macros.api_link_many('flux.stage',mkdocs)}} {{macros.api_link_many('io.stack',mkdocs)}}
+
+### Why Stacks, though?
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Nothing prevents further downstream slicing with `jq`, so stacks as presented thus far can be easily changed or extended to do LIFO/FIFO, express k/v stores, etc.  Any changes along these lines can usually be completely expressed in jqlang, and should be pretty fast/atomic. [^1]
+
+**The point of stacks/stages is to have something small, fast, and light** that you use out of the box or build on top of.  Stage-stacks in `compose.mk` are a project-local datastructure that feels native, is basically dependency free, and is actually kind of scalable.  After all.. `jq` will be happy to chug through a very large pile of JSON indeed.  
+
+{#
+Eventually, the basic stack-operators might expand to include lightweight pattern matching and/or a simple tuple-space flavored interface. In the meantime though, you already got some new superpowers that might not be obvious:
+#}
+
+**Practically speaking, tools ike `terraform`, `helm`, `kubectl` and `ansible` all spit JSON,** and then one frequently needs the output for one as the input of another.  Without stages, `compose.mk` still makes that relatively easy, but pure pipelining means it's hard to reuse values, or you need to track a temp file, etc. 
+
+More philosophically, **native support for stacks gives `compose.mk` a new capability,** in terms of stuff like [programming](https://en.wikipedia.org/wiki/Tacit_programming) [paradigms](https://en.wikipedia.org/wiki/Stack-oriented_programming).  The stack is also a convenient way to communicate [across polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [across matrioshka layers]({{mkdocs.site_relative_url}}/matrioshka/#advanced-matrioshka-idioms).  Plus, for what it's worth, now you can pretty directly architect your automation in terms of [pushdown automata](https://en.wikipedia.org/wiki/Pushdown_automaton) or [queue machines](https://en.wikipedia.org/wiki/Queue_automaton) :)
+
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+{#
+[^2]: See the docs for [Supervisors & Signals]({{mkdocs.site_relative_url}}/signals)
+#}
+[^1]: Nope, this isn't perfectly thread safe.. but *(famous last words)* YAGNI

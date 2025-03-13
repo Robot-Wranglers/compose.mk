@@ -1,0 +1,25 @@
+{% import 'macros.j2' as macros -%}
+
+## Intro 
+
+This demo is really just a variation on [many other ones]({{mkdocs.site_relative_url}}/demos/matrioshka) that are using inlined data and container-definitions, but this case is an instance of [a custom containerized interpretter]({{mkdocs.site_relative_url}}/demos/polyglots/#custom-containerized-interpretters), and also demonstrates *custom interpretter invocations*.
+
+### Theorem Proving 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Realistically most people are not sitting around and wondering whether they can prove Euclid or Gödel[^1] by using some wild [matrioshka doll]({{mkdocs.site_relative_url}}/matrioshka) of a Makefile.  But then again, people do get up to all kinds of weird things. 🤔
+
+For the purposes of this demo, we'll use `compose.mk` to take the [Lean4 prover](https://leanprover-community.github.io) for a test drive, and for starters just prove the law of the excluded middle.
+
+It's fun, self-contained, and marginally practical, partly because more academic tools like lean frequently do not have official containers, and partly because this is part of a [larger demo about notebooking]({{mkdocs.site_relative_url}}/demos/notebooking).
+
+### Lean Demo
+<hr style="width:100%;border-bottom:3px solid black;">
+
+```Makefile
+{{open('demos/lean.mk','r').read().strip()}}
+```
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+[^1]: https://leanprover-community.github.io/100.html#6

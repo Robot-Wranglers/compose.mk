@@ -14,8 +14,11 @@ Jinja macros used in building docs (not make macros :)
 
 {%macro badge_from_val(val, label)%}<a href="env-vars.md"><img alt="{{label}}:{{val}}" src="https://img.shields.io/badge/{{url_quote((label and (label + ':')) + val)}}-blue"></a>{%- endmacro -%}
 
-{% macro img_link(fname, mkdocs, width="90%") -%}
-<p align="center"><a href="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"><img width="{{width}}" src="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"></a></p>
+{% macro img_link(fname, mkdocs, width="90%",align="center") -%}
+{%if align!='none'%}<p align="{{align}}">{%endif%}<a href="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"><img width="{{width}}" src="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"></a>{%if align!='none'%}</p>{%endif%}
+{%- endmacro -%}
+{% macro img_(fname, mkdocs, width="90%",align="center") -%}
+<a href="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"><img width="{{width}}" src="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"></a>
 {%- endmacro -%}
 
 {% macro search_link(fname, term, github={}) -%}
@@ -24,18 +27,22 @@ Jinja macros used in building docs (not make macros :)
 {{search_base}}
 {%- endmacro -%}
 
+{% macro repo_link(fpath,github={},name='',branch='master') -%}{%set name=name or fpath%}[{{name}}]({{github.repo_url}}/tree/{{branch}}/{{fpath}}){%- endmacro -%}
 
-
-{% macro api_link_many(target_fam,mkdocs) -%}
-{% set targets=bash('./compose.mk mk.namespace.filter/'+target_fam) %}
+{% macro api_link_many(target_fam,mkdocs,exclude='None') -%}
+{% set targets=bash('./compose.mk mk.namespace.filter/'+target_fam+'|sort') %}
 {% set targets=targets.split('\n') %}
-{%for target in targets %} {% set target=target.strip().replace('%','<arg>') %}{%if target%}
+{%for target in targets %} {% set target=target.strip().replace('%','<arg>') %}{%if target and not target.startswith(exclude)%}
 * {{api_link(target,mkdocs)}}{%endif%}{%endfor%}
 {%- endmacro -%}
 
 
-{% macro api_link(target,mkdocs) -%}
-[`{{target}}`]({{mkdocs.site_relative_url}}/api/#{{target.replace('-',''.replace('.','')).replace('<','').replace('>','').replace('/','').replace('.','') }})
+{% macro inlined_help(target, mkdocs, arg='') -%}{{api_link(target,mkdocs,arg=arg)}}
+{{bash('./compose.mk .mk.help.target/'+target)}}
+{%- endmacro -%}
+
+{% macro api_link(target, mkdocs,arg='') -%}{%set link=target.replace('-',''.replace('.','')).replace('<','').replace('>','').replace('/','').replace('.','')%}{%if arg%}{%set name=target+'/<'+arg+'>'%}{%set link=link+'arg'%}{%else%}{%set name=target%}{%endif%}
+[`{{name}}`]({{mkdocs.site_relative_url}}/api/#{{link}})
 {%- endmacro -%}
 
 {% macro parse_module_help(fname, namespace) -%}

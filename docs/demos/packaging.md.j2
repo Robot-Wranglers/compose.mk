@@ -1,29 +1,109 @@
 {% import 'macros.j2' as macros -%}
 
-## Demo: Self Extracting Executables
+## Self Extracting Executables
+<hr style="width:100%;border-bottom:3px solid black;">
+
+One of the strangest features of `compose.mk` is that it can **create self-extracting executable archives** from Makefiles (or anything else really) using a dockerized version of [makeself](https://makeself.io/). 
+
+{{macros.img_link("escher.jpg", mkdocs, "78%")}}
+
+In addition to offering [generic access to makeself](#makeself-reference), `compose.mk` also offers support for "compiling" a project Makefile plus any dependencies *(like data files, `compose.mk` itself, and any tool containers spec'd inside a `docker-compose.yml`)* **into a single executable file.**
+
+{#Self-extracting executable archives have lots of use-cases, but the most common is probably for bootstrapping installers. 
+#}
+
+This technique is really more like packaging or bundling than compilation, because there's no way to remove the dependency on `make` and of course we still need an interpreter after decompressing archives. But since `make` is nearly as ubiquitous as shell, this caveat is often safe to ignore. 
+
+Packaging *does* remove the explicit dependency on the rest of the stack represented by your project filesystem state though, **resulting in frozen "release" where you can set a custom entrypoint.**
+
+### Use-Cases & Motivation
+<hr style="width:100%;border-bottom:3px solid black;">
+
+There are two main reasons why native support for this is interesting:
+
+* First, `compose.mk` is both a [tool factory]({{mkdocs.site_relative_url}}/demos/ansible/) and [an application factory]({{mkdocs.site_relative_url}}/embedded-tui), and wanting to "package" your way into a frozen release comes up naturally.
+* Second, *project automation and pipelines* are also a big part of what `compose.mk` is used for, and compressing *that* down into a snapshotted "release" could be useful for stuff like *checkpointing/rollbacks*, or for topics in notebooking / reproducible research.
+
+More philosophically: the ability to reference, run, and script over potentially *lots* of possibly customized containers in an organized way using `docker-compose.yml` and `compose.mk` without *explicitly shipping either* feels like [a different way to build and release tools](#discussion).  
+
+ Put simply, [easy access to containers]({{mkdocs.site_relative_url}}/container-dispatch) [and multiple programming languages]({{mkdocs.site_relative_url}}/demos/polyglots) and [workflows]({{mkdocs.site_relative_url}}/demos/workflows) is usually stuff that we associate with microservices and distributed systems like Kubernetes, Jenkins or Airflow.  What happens if it is easy to design *undistributed* applications, tools, and pipelines with similar architectures?  
+
+Another point of view is that what we're really talking about is **the ability to export a project into a tool**.  Because let's be real: *No one wants to look at your project, because it's a mess of docs/examples/tests/support data, and they have to clone it, then understand how it's all organized before they can even try to use it.  Usually, even after a project is understood, it's not like you can *use* it directly, it must adapted or edited, or you go down a rabbit hole of dependencies.*
+
+{#
+### Discussion
+<hr style="width:100%;border-bottom:3px solid black;">
+Yet another angle on this is that, `compose.mk` is already a [very lazy tool](https://en.wikipedia.org/wiki/Lazy_evaluation), or if you consider `compose.mk` as a language with native support for containers, then it prefers [late-binding](https://en.wikipedia.org/wiki/Late_binding).  That's just a fancy way of saying that docker containers are only pulled when used but the implications for 
+
+#}
+ 
+### Usage
+<hr style="width:100%;border-bottom:3px solid black;">
+
+#### Make-target to Executable 
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+{#Beyond the direct access to `makeself` described above, `compose.mk` offers some .#}
+
+Shortcuts for packaging up make-targets use [`mk.pkg`]({{mkdocs.site_relative_url}}/api#mkpkg).
+
+For the first example, we'll spin-off an individual utility from `compose.mk` as a stand-alone executable.  Let's look at the [stream.img]({{mkdocs.site_relative_url}}/api#streamimg) target, which uses a dockerized version of the `chafa` tool for displaying images on console, comparable to `imgcat` or similar.  It takes no arguments, and works with streams.
+
+```bash
+$ bin=./stream.img ./compose.mk mk.pkg/stream.img
+$ cat img.png | ./stream.img
+```
+
+It works, and we use `chafa` without *having* chafa because containers don't build or pull before they are used.  And in fact.. now we can use `compose.mk` without *having* `compose.mk`.  
+
+
+#### TUI to Executable
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+While [`stream.img`]({{mkdocs.site_relative_url}}/api#streamimg) is just a small utility, the approach demonstrated above also works with "applications" implemented using `compose.mk`, i.e. [full blown TUIs]({{mkdocs.site_relative_url}}/embedded-tui).  As an example, how about exporting the [`tux.demo` target](#)?
+
+```bash 
+bin=./tux.demo ./compose.mk mk.pkg/tux.demo
+./tux.demo
+```
+
+#### Extension to Executable
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+In the examples so far, the `./compose.mk mk.pkg/<target>` examples only use *targets that are built-in*.  If you want to extend `compose.mk` with your own automation and export *that*, then you'll want to use `mk.pkg` from the extension instead.
+
+As an example, let's export the tools we built for the [Custom Automation APIs Demo]({{mkdocs.site_relative_url}}/demos/ansible).
+
+```bash 
+
+# create binary for the `ansible.adhoc.pipe` target
+$ bin=./ansible.adhoc archive=demos make -f demos/ansible-adhoc.mk mk.pkg/ansible.adhoc.pipe
+
+# confirm/inspect the generated executable
+$ file ./ansible.adhoc 
+./ansible.adhoc: POSIX shell script executable (binary data)
+
+# use ansible without having ansible
+$ echo msg=HelloWorld | module=debug ./ansible.adhoc
+{
+  "action": "debug",
+  "changed": false,
+  "msg": "HelloWorld"
+}
+```
+
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-One of the strangest features of `compose.mk` is that it can **create self-extracting executable archives** from Makefiles (or anything else really) using a dockerized version of [makeself](https://makeself.io/).
-
-Self-extracting executable archives have lots of use-cases, but our particular interest here is about "compiling" a project Makefile plus any dependencies (*like data files, `compose.mk` itself, and any tool containers spec'd inside a `docker-compose.yml`*)  down into a single executable file.
-
-Automation and pipelines are a big part of what `compose.mk` is used for, and **compressing those into a frozen "release"** like this is a definitely a weird idea, although it might have applications for notebooking / reproducible research.  
-
-If you consider the [embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui) capabilities though, you'll notice that `compose.mk` can also create things that feel more like apps, and there are [other examples of how you can use it to build tools]({{mkdocs.site_relative_url}}/demos/ansible).  
-
-Another point of view is that what we're really talking about is **the ability to turn a project into a tool**.  Let's be real: No one wants to look at your project, because it's a mess of docs/examples/tests/support data, and they have to understand how it's all organized before they can even try to use it.  Usually, even after a project is understood, it's not like you can *use* it directly, it must adapted or edited, or you go down a rabbit hole of dependencies.  
-
-Meanwhile, the ability to organize, reference, run, and script over potentially *lots* of possibly customized containers in an organized way using `docker-compose.yml` and `compose.mk` without *explicitly shipping either* feels like a different way to build/release tools.  Put simply, [easy access to containers](#) [and multiple programming languages](#) and [workflows](#) is usually stuff that we associate with microservices and distributed systems like Kubernetes, Jenkins or Airflow.  What happens if it is easy to design "undistributed" applications, tools, and pipelines with similar architectures?
-
-### Basic Packaging
-
+### Makeself Reference 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-For starters, `compose.mk` allows fairly direct access to `makeself` via the [`mk.self` target]({{mkdocs.site_relative_url}}/api#mkself).
+Direct access to `makeself` is via the [`mk.self` target]({{mkdocs.site_relative_url}}/api#mkself):
+
 
 ```bash 
 $ ./compose.mk help mk.self
+{{bash('make mk.help.target/mk.self')}}
 ```
 
 For those unfamiliar with `makeself`, this section is a quick tutorial, but you can use this to package up anything.  Here's an example of freezing the contents of a directory and an arbitrary script that *uses* that directory.  
@@ -56,9 +136,11 @@ $  ./archive.run
 ./demos/README.md
 ```
 
-That covers everything except for passing arguments, which can get tricky.  In the example above, the value used for `script` does not take arguments.  
+<hr style="width:95%;border-bottom:1px dashed black;">
 
-Handling arguments can be tricky.  Here's an example that takes *arguments in the form of a shell script*, which script will run inside the archive directory.
+Argument passing hasn't been demonstrated so far, and this can get tricky.
+
+Here's an example where the generated executable we want to build will *take arguments in the form of a shell script*, which script will run inside the archive directory.
 
 ```bash 
 $ archive=demos/ bin=archive.run script='bash -x -c' ./compose.mk mk.self 
@@ -77,44 +159,3 @@ $ ./archive.run -- 'pwd; find .'
 
 To pass arguments to `makeself` itself, you can put stuff before the ` -- `.  Mostly this isn't useful because `compose.mk` already uses `makeself` in such a way that `--quiet --noprogress` is implied for pipe-safety.  For debugging workflows though, check out `--keep` to preserve the uncompressed archive, and `--noexec` to disable the script execution.  See also the output of `./archive.run --help`, which provides help for `makeself` and **not** for whatever you've packaged with it.
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
-### Make-target to Executable 
-
-Beyond the direct access to `makeself` described above, `compose.mk` offers some shortcuts for packaging up make-targets using [`mk.pkg`]({{mkdocs.site_relative_url}}/api#mkpkg).
-
-For the first example, we'll spin-off an individual utility from `compose.mk` as a stand-alone executable.  Let's look at the [stream.img]({{mkdocs.site_relative_url}}/api#streamimg) target, which uses a dockerized version of the `chafa` tool for displaying images on console, comparable to `imgcat` or similar.  It takes no arguments, and works with streams.
-
-```bash
-$ bin=./stream.img ./compose.mk mk.pkg/stream.img
-$ cat img.png | ./stream.img
-```
-
-It works, and we use `chafa` without *having* chafa because containers don't build or pull before they are used.  In fact.. now we can use `compose.mk` without *having* `compose.mk`.  
-
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-### TUI to Executable
-
-While [`stream.img`]({{mkdocs.site_relative_url}}/api#streamimg) is just a small utility, the approach demonstrated above also works with "applications" implemented using `compose.mk`, i.e. [full blown TUIs]({{mkdocs.site_relative_url}}/embedded-tui).  As an example, how about exporting the [`tux.demo` target](#)?
-
-```bash 
-bin=./tux.demo ./compose.mk mk.pkg/tux.demo
-./tux.demo
-```
-<hr style="width:100%;border-bottom:3px solid black;">
-
-### Extension to Executable
-
-In the examples so far, the `./compose.mk mk.pkg/<target>` examples only use *targets that are built-in*.  If you want to extend `compose.mk` with your own automation and export *that*, then you'll want to use `mk.pkg` from the extension instead.
-
-As an example, let's export the tools we built for the [Custom Automation APIs Demo]({{mkdocs.site_relative_url}}/demos/ansible).
-
-```bash 
-$ bin=./ansible.adhoc archive=demos make -f demos/ansible-adhoc.mk mk.pkg/ansible.adhoc.pipe
-$ echo msg=HelloWorld | module=debug ./ansible.adhoc
-```
-
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-<hr style="width:100%;border-bottom:3px solid black;">

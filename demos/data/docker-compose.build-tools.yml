@@ -1,0 +1,10 @@
+##
+# demos/data/docker-compose.build-tools.yml:
+#   A compose file faking a suite of documentation tooling
+##
+services:
+  golang: 
+    image: ${IMG_GOLANG_BASE:-docker.io/golang:1.24-bookworm} 
+    working_dir: /workspace
+    volumes:
+      - ${PWD}:/workspace

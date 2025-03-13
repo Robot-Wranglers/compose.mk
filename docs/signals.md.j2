@@ -3,6 +3,11 @@
 ## Signals and Supervisors
 <hr style="width:100%;border-bottom:3px solid black;">
 
+
+Every direct invocation of `compose.mk` optionally gets a "supervisor" process that allows for enhanced use (abuse?) of POSIX signals. Amongst other use-cases, you can use this pattern to yield control to another process in the middle of target-processing, or to implement entrance/exit handlers for `make`, in `make`.
+
+{#{macros.img_link("escher-still-life.png", mkdocs, width="50%", align='center')}#}
+
 **Working with signals (or understanding them) is not required for most use-cases of `compose.mk`,** especially if you're using it as a library.   But [for some tool mode invocations]({{mkdocs.site_relative_url}}//tool-overview/#tool-wrappers), supervisors and signals might be involved implicitly.  Signals also enable certain experimental features, and in principle the supervisor can be extended with new entry/exit hooks.
 
 Power users will be interested to understand the caveats and limitations around this, and anyone looking to work deeply on `compose.mk` itself may need to grok the implementation.
@@ -23,7 +28,7 @@ The [`loadf` command](#loading-compose-files) is a typical example: the 2nd argu
 
 ```bash
 # Opens all shells for each service in the given file inside the TUI
-./compose.mk loadf tests/docker-compose.yml
+./compose.mk loadf demos/data/docker-compose.yml
 ```
  
 **Sometimes we want individual targets to essentially be able to consume the rest of the command line.**  In other words.. the filename is best understood as an argument to the first target, and not a target itself.  
@@ -62,3 +67,21 @@ Targets above are for low-level internal use, and even hacking directly on `comp
 ls:
 	$(call mk.yield2, ls $${MAKE_CLI#*ls})
 ```
+
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for MkDocs to fully render the page including ToC
+    setTimeout(function() {
+        const heading = document.getElementById('signals-and-supervisors');
+        const img = document.createElement('img');
+        img.style.height = '2em'; img.style.verticalAlign = 'middle';
+        img.src = '../img/makefile.png'; 
+        heading.insertBefore(img, heading.firstChild);
+        //img.style.marginRight = '10px';
+        //heading.appendChild(img);
+    }, 100); // Small delay to ensure ToC is already processed
+});
+</script>

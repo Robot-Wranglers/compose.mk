@@ -1,0 +1,23 @@
+{% import 'macros.j2' as macros -%}
+
+## Interoperability with Just
+<hr style="width:100%;border-bottom:3px solid black;">
+
+{{macros.img_link('escher-birds.jpg',mkdocs,'90%')}}
+
+{# <hr style="width:95%;border-bottom:1px dashed black;">} #}
+
+Given the feature sets of each, `compose.mk` isn't really a competitor to tools like `just`, but since the comparison will come up there might as well be a demo :)  ^[1]
+
+Actually the *specific* involvement of `just` and justfiles as used here is not that important.  What this demo really show-cases is the ability of `compose.mk` to embrace foreign tools, expose custom automation APIs on top of containers, etc.  If you want to see a similar demo with different base technology, check out the [ansible demo]({{mkdocs.site_relative_url}}/demos/custom-automation-apis).  This is a concrete example for the [matrioshki bridge pattern]({{mkdocs.site_relative_url}}/matrioshka/#matrioshka-bridge-pattern), so if you prefery theory *before* looking at applications, read those docs first.  Also related are the [many]({{mkdocs.site_relative_url}}/demos/matrioshka) [other]({{mkdocs.site_relative_url}}/demos/lean) demos that use inlined data and container-definitions.
+
+### Justfile Demo
+<hr style="width:100%;border-bottom:3px solid black;">
+
+```Makefile
+{{open('demos/just.mk','r').read().strip()}}
+```
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+^[1]: If you want more long-format discussion around this sort of thing, [there is lots in the design docs]({{mkdocs.site_relative_url}}/but-why)

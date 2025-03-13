@@ -1,28 +1,24 @@
+#!/usr/bin/env -S make -f
 # demos/container-dispatch.mk: 
 #   Demonstrates the container dispatch idiom.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
 #   USAGE: make -f demos/container-dispatch.mk
 
-# Squash the default noisy output, then override 
-# the default goal and include compose.mk primitives
-MAKEFLAGS=-sS --warn-undefined-variables
 include compose.mk
-
 .DEFAULT_GOAL := demo
 
-$(eval $(call compose.import, ▰, TRUE, tests/docker-compose.yml))
+# Import all the services in the compose file, including the 
+# "debian" container, into the root namespace
+$(eval $(call compose.import, demos/data/docker-compose.yml))
 
-# New target declaration that we can use to run stuff inside 
-# a `debian` container mentioned in the external compose file.  
-# The syntax/namespace conventions below are configured 
-# by the `compose.import` call we used above.
-demo: ▰/debian/self.demo
+# Basic dispatch style: 
+#   This runs the "self.demo" target inside the debian container
+demo: debian.dispatch/self.demo
 
-# Displays platform info to show where target is running.
-# Since this target is intended to be private, we will 
-# prefix "self" to indicate it's intended to be run on 
-# containers and not on the host.
+# Target that's actually used with dispatch.  This runs inside the container.
+# Using a prefix like `self` or `.` is just convention,  but it helps to indicate
+# this is considered "private", and not intended to be used from the top
 self.demo:
 	source /etc/os-release && printf "$${PRETTY_NAME}\n"
 	uname -n -v

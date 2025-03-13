@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "python",
+    "-c",
+    "import os; from basek import BaseK; from ipykernel.kernelapp import IPKernelApp; banner=os.environ.get('kernel_banner','kernel_banner'); name=os.environ.get('kernel_name','kernel_name'); IPKernelApp.launch_instance(kernel_class=type(name,(BaseK,),dict(banner=banner,)))",
+    "-f",
+    "{connection_file}"
+  ],
+  "env": {
+    "PYTHONPATH": "/usr/share/jupyter/kernels/basek"
+  }
+}

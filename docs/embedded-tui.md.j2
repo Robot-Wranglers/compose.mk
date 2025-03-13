@@ -4,13 +4,13 @@
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The TUI capabilities of `compose.mk` are best thought of as an **interface-builder rather than a specific interface.**  As usual and despite appearances, support for the TUI requires *no dependencies except for `make` and `docker`*.  It aims for low-config and sane defaults, so for high level usage it requires no configuration at all.  Under the hood, the TUI uses a dockerized version of [tmux](https://github.com/tmux/tmux) for core drawing and geometry.
+The TUI capabilities of `compose.mk` are best thought of as an **interface-builder rather than a specific interface.**  As usual and despite appearances, support for the TUI requires *no dependencies except for `make` and `docker`*.  It aims for low-config and sane defaults, so for high level usage it [requires no configuration at all]({{mkdocs.site_relative_url}}/zero-config-tuis).  Under the hood, the TUI uses a dockerized version of [tmux](https://github.com/tmux/tmux) for core drawing and geometry.
 
 There's a few ways to describe what the TUI actually *does*.  
 
 * One way to look at it is, the TUI is just a way of **mapping `make` targets into tmux panes**.   
 * But since [`compose.import`]({{mkdocs.site_relative_url}}/compose.mk) allows you to *map docker-compose services onto `make` targets*, yet another way to think of the TUI is that it allows you to **map containers onto tmux panes**.  
-* And if you're already using `compose.mk` to [build custom automation APIs]({{mkdocs.site_relative_url}}/demos/ansible/), you can map those onto tmux panes too.
+* And if you're already using `compose.mk` to [build custom]({{mkdocs.site_relative_url}}/demos/just/) [automation APIs]({{mkdocs.site_relative_url}}/demos/ansible/), you can map those onto tmux panes too.
 
 
 ### TUI Gallery
@@ -19,16 +19,16 @@ There's a few ways to describe what the TUI actually *does*.
 
 For the impatient, here's a small gallery that show-cases the type of stuff you can do with the TUI capabilities that `compose.mk` offers.  
 
-*( You can click of any of the demos to make it bigger. )*
+*( You can click any of the demos to make it bigger. )*
 
 <table align=center width=95%>
     <tr>
         <td>{{macros.img_link("loadf-1.gif", mkdocs, "200px")}}</td>
-        <td>{{macros.img_link("tui-4.gif", mkdocs, "200px")}}</td>
+        <td>{{macros.img_link("tui-extension-2.png", mkdocs, "220px")}}</td>
         <td>{{macros.img_link("tui-tte.gif", mkdocs, "200px")}}</td>
     </tr>
     <tr>
-        <td>{{macros.img_link("tui-2.gif", mkdocs, "200px")}}</td>
+        <td>{{macros.img_link("notebooking-ui.gif", mkdocs, "200px")}}</td>
         <td>{{macros.img_link("loadf-2.gif", mkdocs, "200px")}}</td>
         <td>{{macros.img_link("docker.commander.gif", mkdocs, "200px")}}</td>
     </tr>

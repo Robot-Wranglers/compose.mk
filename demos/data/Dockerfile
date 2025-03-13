@@ -1,6 +1,5 @@
 # FROM alpine
-# RUN apk add --update --no-cache coreutils alpine-sdk bash procps-ng
-FROM debian:bookworm
-RUN apt-get update
-RUN apt-get install -y make procps
-RUN echo Building container spec from inlined dockerfile
+# RUN apk add -q --update --no-cache coreutils alpine-sdk bash procps-ng
+FROM ${IMG_DEBIAN_BASE:-debian:bookworm}
+RUN apt-get update -qq && apt-get install -y make procps
+RUN echo Building container spec from external Dockerfile

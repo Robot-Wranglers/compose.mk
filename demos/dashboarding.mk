@@ -18,5 +18,5 @@ test:; echo testing
 # The "top" pane will run the test target in a loop forever, and the
 # "bottom" pane will run clean/build sequentially, then wait for user input.
 top: flux.loopf/test
-bottom: flux.apply/clean,build
+bottom: flux.and/clean,build
 demo.ui: tux.open.horizontal/top,bottom

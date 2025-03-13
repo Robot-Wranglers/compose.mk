@@ -1,3 +1,4 @@
+#!/usr/bin/env -S make -f
 # demos/etl-json.mk: 
 #   Described a JSON-backed ETL pipeline with `compose.mk`
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
@@ -5,7 +6,6 @@
 #   USAGE: make -f demos/etl-json.mk
 
 # Squash the default noisy output, include compose.mk primitives
-MAKEFLAGS=-sS --warn-undefined-variables
 .DEFAULT_GOAL := etl.safe
 include compose.mk
 

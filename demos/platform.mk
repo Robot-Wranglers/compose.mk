@@ -1,28 +1,38 @@
+#!/usr/bin/env -S make -f
 # demos/platform.mk: 
-#   Shows one way to organize platform lifecycle automation.
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#   Demonstrating a way to organize platform lifecycle automation with `compose.mk`.
+#   We use namespace-style dispatch here to run commands in docker-compose managed 
+#   containers, and use `compose.mk` workflows to to describe data-flow.
 #
-#   USAGE: make -f demos/platform.mk platform.setup
-#
-# Implementing a fake setup for platform bootstrap:
-#   1. Infrastructure is configured by the terraform container, 
-#   2. Application is configured by the ansible container,
-#   3. Assume both tasks emit json events (simulating terraform state output, etc)
-
+# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# See also: http://robot-wranglers.github.io/compose.mk/demos/platform
+# USAGE: make -f demos/platform.mk platform.setup
 
 include compose.mk
 .DEFAULT_GOAL := platform.setup
 
-# Import terraform/ansible targets from compose file services 
-$(eval $(call compose.import, ▰, TRUE, demos/docker-compose.platform.yml))
+# Import the platform compose file.
+# This generates target-scaffolding for terraform and ansible, 
+# and sets up syntactic sugar for target-dispatch under the "▰" namespace
+$(eval $(call compose.import, demos/data/docker-compose.platform.yml, ▰))
+
+# Implementing a fake setup for platform bootstrap:
+#   1. Infrastructure is configured by the terraform container, 
+#   2. Application is configured by the ansible container,
+#   3. Both tasks emit JSON events (simulating terraform state output, etc)
 
 # Map targets to containers.  A public, top-level target. 
 platform.setup: ▰/terraform/self.infra.setup ▰/ansible/self.app.setup
 
 # Simulate the setup tasks for app and infrastructure.
-# We use the `self.` prefix to indicate these targets are "private",
-# and that they should not run from the host.
+# Note usage of `jb` to emit JSON, and `self.` prefix to hint 
+# these targets are "private" / not intended to run from the host. 
 self.infra.setup:
-	echo '{"event":"doing things in terraform container", "log":"infra setup done", "metric":123}'
+	# pretending to do stuff with terraform..
+	${jb} log="infra setup done" metric=123 \
+		event="terraform container task" 
+
 self.app.setup:
-	echo '{"event":"doing things in ansible container", "log":"app setup done", "metric":123}'
+	# pretending to do stuff with ansible..
+	${jb} log="app setup done" metric=456 \
+		event="ansible container task"

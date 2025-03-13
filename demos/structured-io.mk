@@ -1,11 +1,10 @@
+#!/usr/bin/env -S make -f
 # demos/structured-io.mk: 
 #   Show output/input using JSON.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
-#
 #   USAGE: make -f demos/structured-io.mk
 
 include compose.mk
-
 .DEFAULT_GOAL := demo.json_io
 
 demo.json_io:
@@ -17,4 +16,4 @@ emit:
 	${jb} key=val
 
 consume:
-	cat /dev/stdin | ${jq} .key
+	${stream.stdin} | ${jq} .key

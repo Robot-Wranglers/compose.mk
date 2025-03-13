@@ -4,12 +4,13 @@ Require "make"
 Require "docker"
 Set Shell "bash"
 Set FontSize 17
-Set Width 1200
-Set Height 1400
+Set Width 1600
+Set Height 1250
 Set CursorBlink false
+Set PlaybackSpeed .9
 Show 
 Type "make -f demos/tui/extension-2.mk"
 Enter
-Sleep 30s
+Sleep 40s
 Screenshot img/tui-extension-2.png
 Output img/tui-extension-2.gif
