@@ -100,7 +100,7 @@ docs.mermaid docs.mmd:
 ## BEGIN: CI/CD related targets
 ##
 actions.docs: docs.build 
-actions.lint:; docker run --rm -v $$(pwd):/workspace --workdir /workspace rhysd/actionlint:latest -color
+actions.lint:; cmd='-color' ${make} docker.image.run/rhysd/actionlint:latest 
 actions.notebook.pipeline:; ${io.shell.isolated} script -q -e -c "bash --noprofile --norc -eo pipefail -x -c './demos/notebooking.mk tux.require lab.pipeline'"
 actions.demos:; script -q -e -c "bash --noprofile --norc -eo pipefail -x -c 'make demos'"
 actions.clean cicd.clean: clean.github.actions
@@ -115,5 +115,3 @@ demo:
 	@#
 	@#
 	pattern='*.mk' dir=demos/ ${make} flux.select.file/mk.select
-
-actions.lint:; docker run --rm -v $$(pwd):/workspace --workdir /workspace rhysd/actionlint:latest -color
