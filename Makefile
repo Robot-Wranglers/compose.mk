@@ -30,7 +30,6 @@ clean: flux.stage.clean
 	@# Cache-busting & removes temporary files used by build / tests 
 	rm -f tests/compose.mk
 	find . | grep .tmp | xargs rm 2>/dev/null|| true
-	mv demos/data/jupyter/kernels/kernel.* /tmp
 
 build normalize: # NOP
 
