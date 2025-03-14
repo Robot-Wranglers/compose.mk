@@ -3,7 +3,7 @@
 #   Demonstrates extending an inlined container.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: make -f demos/extend-inlined-dockerfile.mk
+#   USAGE: ./demos/extend-inlined-dockerfile.mk
 
 include demos/inlined-dockerfile.mk
 .DEFAULT_GOAL := demo.container.extension

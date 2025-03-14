@@ -21,7 +21,7 @@ Packaging *does* remove the explicit dependency on the rest of the stack represe
 
 There are two main reasons why native support for this is interesting:
 
-* First, `compose.mk` is both a [tool factory]({{mkdocs.site_relative_url}}/demos/ansible/) and [an application factory]({{mkdocs.site_relative_url}}/embedded-tui), and wanting to "package" your way into a frozen release comes up naturally.
+* First, `compose.mk` is both a [tool factory]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/) and [an application factory]({{mkdocs.site_relative_url}}/embedded-tui), and wanting to "package" your way into a frozen release comes up naturally.
 * Second, *project automation and pipelines* are also a big part of what `compose.mk` is used for, and compressing *that* down into a snapshotted "release" could be useful for stuff like *checkpointing/rollbacks*, or for topics in notebooking / reproducible research.
 
 More philosophically: the ability to reference, run, and script over potentially *lots* of possibly customized containers in an organized way using `docker-compose.yml` and `compose.mk` without *explicitly shipping either* feels like [a different way to build and release tools](#discussion).  
@@ -72,7 +72,7 @@ bin=./tux.demo ./compose.mk mk.pkg/tux.demo
 
 In the examples so far, the `./compose.mk mk.pkg/<target>` examples only use *targets that are built-in*.  If you want to extend `compose.mk` with your own automation and export *that*, then you'll want to use `mk.pkg` from the extension instead.
 
-As an example, let's export the tools we built for the [Custom Automation APIs Demo]({{mkdocs.site_relative_url}}/demos/ansible).
+As an example, let's export the tools we built for the [Custom Automation APIs Demo]({{mkdocs.site_relative_url}}/demos/custom-automation-apis).
 
 ```bash 
 
@@ -113,11 +113,11 @@ We only need to provide a space-separated list of stuff to archive, plus a name 
 ```bash 
 $ archive=docs/demos bin=archive.run script='sh -c "pwd; find ."' ./compose.mk mk.self
 
-① ≣ docker.from.def // Dockerfile.makeself 
-①  ≣ docker.from.def // tag=compose.mk:makeself .. cached 
-① ⇄ mk.self // Archive for docs/demos will be released as ./archive.run
-① ⇄ mk.self // Total files: 13
-① ⇄ mk.self // Entrypoint: sh -c "pwd; find ."
+≣ docker.from.def // Dockerfile.makeself 
+ ≣ docker.from.def // tag=compose.mk:makeself .. cached 
+⇄ mk.self // Archive for docs/demos will be released as ./archive.run
+⇄ mk.self // Total files: 13
+⇄ mk.self // Entrypoint: sh -c "pwd; find ."
 Header is 716 lines long
 About to compress 100 KB of data...
 Adding files to archive named "archive.run"...
@@ -158,4 +158,3 @@ $ ./archive.run -- 'pwd; find .'
 ``` 
 
 To pass arguments to `makeself` itself, you can put stuff before the ` -- `.  Mostly this isn't useful because `compose.mk` already uses `makeself` in such a way that `--quiet --noprogress` is implied for pipe-safety.  For debugging workflows though, check out `--keep` to preserve the uncompressed archive, and `--noexec` to disable the script execution.  See also the output of `./archive.run --help`, which provides help for `makeself` and **not** for whatever you've packaged with it.
-

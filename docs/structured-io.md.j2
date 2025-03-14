@@ -47,9 +47,10 @@ Since you could also say that this goes part of the way towards emulating "keywo
 
 From here you'll probably want to provide user-feedback and status messages **without** wrecking pipe-safety, so see also the section on [logging facilities](#logging-facilities).  For a look at structured IO in action, you also might like to check out [the workflow demos](#workflow-demos).
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+{##}
 
 #### Structured IO: Stream Types & Pipes
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 The `compose.mk::stream` module, aka the [`stream.*` target namespace]({{mkdocs.site_relative_url}}/api/#api-stream) is full of targets that can help to handle common tasks with streams.  
 
@@ -63,4 +64,3 @@ This isn't exhaustive, but you can see the section below for a few more samples.
 {{open('demos/stdlib-stream-io.mk','r').read().strip()}}
 ```
 
-<hr style="width:95%;border-bottom:1px dashed black;">

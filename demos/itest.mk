@@ -7,7 +7,7 @@
 #  This is integration'y because it actually uses external compose files
 #  and exercises the bridge / automation scaffolding generation.
 #
-#   USAGE: make -f demos/itest.mk
+#   USAGE: ./demos/itest.mk
 
 # Include compose.mk so we can use `compose.import` macro, and
 # otherwise exercise base-targets that are provided by the lib

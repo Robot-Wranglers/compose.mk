@@ -7,14 +7,22 @@ The flux module, aka the [**`flux.*` target namespace**]({{mkdocs.site_relative_
 
 What `flux.*` targets add is flow-control constructs and higher-level join / loop / map instructions over *other make targets*, taking inspiration from functional programming and threading libraries. Alternatively, one may think of flux as a programming language where all primitives are the objects that make understands (e.g. targets, defines, and variables). Since every target in make is a DAG, you might say that task-DAGs are also primitives. Since `compose.import` [maps containers onto targets](#), *containers are primitives too*. Since tux targets map targets onto TUI panes, *UI elements are also effectively primitives*.^[7]
 
-#### Workflow Rationale 
+#### Workflow Rationale 🤔
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-Internally, the flux module was started in support of the [the embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui), but it's also useful in general.  
+Internally, the flux module was started in support of the [the embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui), but it's also useful in general.  To some extent **you can refactor existing bash using flux primitives [without any project integration]({{mkdocs.site_relative_url}}/tool-overview)**, and the next section starts by introducing concepts from the CLI.  
 
-To some extent **you can refactor existing bash using flux primitives [without any project integration]({{mkdocs.site_relative_url}}/tool-overview)**, and the next section starts by introducing concepts from the CLI.  (For example: a quick a one-liner that previews all the images in project docs would be `ls docs/img/*png | ./compose.mk flux.each/io.img.preview`. To preview syntax-highlighted code instead, you could try `ls demos/*mk|./compose.mk flux.each/io.file.preview`.)
+As an example of this, here's a few quick one-liners: 
 
-**However, the main use-case for `flux` is scripting on top of it in your own projects.**  But why bother?  Well, by lifting flow-control and iteration out of *bash/make primitives* and up into `flux`, it tends to *completely eliminate a major source of errors, readability issues, and downright brutal syntax* to end up with **an elegant alternative that actually encourages good design**.  
+```bash 
+# terminal friendly preview for all the project images
+$ ls docs/img/*png | ./compose.mk flux.each/io.img.preview
+
+# terminal friendly preview for project source with syntax highlighting
+ls demos/*mk | ./compose.mk flux.each/io.file.preview
+```
+
+One-liners aren't really the point though, and **the main use-case for `flux` is scripting on top of it in your own projects**.  But why bother?  Well, by lifting flow-control and iteration out of *bash/make primitives* and up into `flux`, it tends to *completely eliminate a major source of errors, readability issues, and downright brutal syntax* to end up with **an elegant alternative that actually encourages good design**.  
 
 To illustrate, consider this snippet of [the mini-ETL demo]({{mkdocs.site_relative_url}}/demos/workflows) that uses flux:
 
@@ -28,7 +36,7 @@ etl: flux.pipeline/extract,transform,load
 etl.safe: flux.try.except.finally/etl,etl.failed,etl.cleanup
 ```
 
-See the demo for the full context, but let's notice how clean and declarative this is.  Individual targets like *extract/transform/load* cannot be *perfectly* flat like this, but if they do start to get complex, the sheer simplicy of `flux` syntax over make/bash idioms provides a healthy incentive to break things up, which in turn not only improves readability, but improves composability at the same time.  Meanwhile targets like `flux.each` and even `flux.apply` also show a bias towards functional-style, which tends encourage clean looping and heavy usage of streams.
+See the demo for the full context, but let's notice how clean and declarative this is.  Individual targets like *extract/transform/load* cannot be *perfectly* flat like this of course, and at some point you have to dip into bash. But when targets inevitably become complex, the sheer simplicy of `flux` syntax over make/bash idioms provides a healthy incentive to break things up, which in turn not only improves readability, but improves composability at the same time.  Meanwhile targets like `flux.each` and even `flux.apply` also show a bias towards functional-style, which tends encourage clean looping and heavy usage of streams.
 
 #### Workflow Basics
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -56,9 +64,9 @@ $ ./compose.mk flux.fail flux.ok
 make: *** [compose.mk:1677: flux.fail] Error 1
 ```
 
-Above, `flux.ok` and `flux.fail` are just make-targets that exit with success and failure.  These are roughly equivalent to `true` and `false` in bash, so obviously there are no arguments.  You can think of `flux.ok` and `flux.fail` as placeholder targets for ones that you'll provide yourself.  
+Above, `flux.ok` and `flux.fail` are just make-targets that exit with success and failure.  These are roughly equivalent to `true` and `false` in bash, so obviously there are no arguments (*aka nullary*).  You can think of `flux.ok` and `flux.fail` as placeholder targets for ones that you'll provide yourself.  
 
-For demonstration purposes, it's also useful to introduce `flux.echo`:
+For demonstration purposes, it's also useful to introduce `flux.echo` which accepts one argument. 
 
 ```bash
 # Introducing the `flux.echo` target:
@@ -109,8 +117,6 @@ $ echo $?
 ```
 
 You can perform similar tests for other flow-control, like `./compose.mk flux.if.then/flux.ok,flux.ok`, but you get the idea.
-
-The sections above hint at how `compose.mk` can use flux to avoid shell-scripting for conditionals 
 
 -----------------------------
 

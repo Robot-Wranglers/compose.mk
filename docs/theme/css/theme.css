@@ -6381,7 +6381,7 @@ a .rst-content tt {
 }
 .rst-content dl dt {
   font-weight: 700;
-  margin-bottom: 12px;
+  margin-bottom: 3px;
 }
 .rst-content dl ol,
 .rst-content dl p,
@@ -6390,8 +6390,8 @@ a .rst-content tt {
   margin-bottom: 12px;
 }
 .rst-content dl dd {
-  margin: 0 0 12px 24px;
-  line-height: 24px;
+  margin: 0 0 12px 21px;
+  line-height: 20px;
 }
 .rst-content dl dd > ol:last-child,
 .rst-content dl dd > p:last-child,

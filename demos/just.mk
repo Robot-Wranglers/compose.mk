@@ -3,7 +3,7 @@
 #   Demonstrates some interoperability with `just`.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: make -f demos/inlined-composefile.mk
+#   USAGE: ./demos/inlined-composefile.mk
 #
 
 include compose.mk

@@ -3,7 +3,7 @@
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #   See also: http://robot-wranglers.github.io/compose.mk/demos/lean
 #             http://robot-wranglers.github.io/compose.mk/demos/polyglots
-#   USAGE: make -f demos/lean.mk
+#   USAGE: ./demos/lean.mk
 #
 .DEFAULT_GOAL := demo.lean
 

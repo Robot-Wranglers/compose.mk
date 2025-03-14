@@ -7,6 +7,6 @@
     "{connection_file}"
   ],
   "env": {
-    "PYTHONPATH": "/usr/share/jupyter/kernels/basek"
+    "PYTHONPATH": "/usr/share/jupyter/kernel.base/"
   }
 }

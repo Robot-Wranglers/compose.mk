@@ -9,7 +9,7 @@
 # See the main docs: https://robot-wranglers.github.io/compose.mk/matrioshka
 # See also: https://robot-wranglers.github.io/compose.mk/stages
 #
-# USAGE: make -f demos/matrioshka.mk
+# USAGE: ./demos/matrioshka.mk
 
 
 include compose.mk

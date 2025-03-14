@@ -8,9 +8,9 @@
 </center>
 <hr style="width:100%;border-bottom:3px solid black;">
 {{macros.img_link("mat.png", mkdocs, "25%",align="left")}}
+{{macros.img_link("mat.png", mkdocs, "13%",align="left")}}
 #}
 
-{{macros.img_link("mat.png", mkdocs, "13%",align="left")}}
 
 ## Matrioshka Automata
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -30,7 +30,7 @@ Matrioshka language
 
 --------------
 
-For `compose.mk`, the "objects" are containers (*[and/or foreign code]({{mkdocs.site_relative_url}}/demos/polyglots#foreign-code-as-first-class)*) and the "rules" are tasks and task prerequisites.  First-class support for these as primitives turns out to be especially useful for things like [wrappers]({{mkdocs.site_relative_url}}/tool-overview#tool-wrappers), [tool-factories]({{mkdocs.site_relative_url}}/demos/ansible), and even [app-factories]({{mkdocs.site_relative_url}}/advanced-tuis) as seen in the rest of the site documentation.
+For `compose.mk`, the "objects" are containers (*[and/or foreign code]({{mkdocs.site_relative_url}}/demos/polyglots#foreign-code-as-first-class)*) and the "rules" are tasks and task prerequisites.  First-class support for these as primitives turns out to be especially useful for things like [wrappers]({{mkdocs.site_relative_url}}/tool-overview#tool-wrappers), [tool-factories]({{mkdocs.site_relative_url}}/demos/custom-automation-apis), and even [app-factories]({{mkdocs.site_relative_url}}/advanced-tuis) as seen in the rest of the site documentation.
 
 This page covers idioms and patterns for matrioshka-dolling, but it **also serves as an alternate to the [main landing page]({{mkdocs.site_relative_url}}/overview)** for people who prefer their overviews to focus *less on applications* and more on **theory, architecture, and patterns**.  If you want to take in some simple and concrete matrioshka demos before you continue reading, [see instead this index]({{mkdocs.site_relative_url}}/demos/matrioshka).
 
@@ -132,7 +132,7 @@ See the [design philosophy docs]({{mkdocs.site_relative_url}}/but-why) for a mor
 ### Matrioshka-Bridge Pattern
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The previous section on [idiom basics](#matrioshka-idiom-basics) links several demos that focus on inlining or "embedding" containers and data.  A more interesting topic is the kind of bridge-building projects that you can see in [the ansible demo]({{mkdocs.site_relative_url}}/demos/ansible) and the [the justfile demo]({{mkdocs.site_relative_url}}/demos/just).  
+The previous section on [idiom basics](#matrioshka-idiom-basics) links several demos that focus on inlining or "embedding" containers and data.  A more interesting topic is the kind of bridge-building projects that you can see in [the ansible demo]({{mkdocs.site_relative_url}}/demos/custom-automation-apis) and the [the justfile demo]({{mkdocs.site_relative_url}}/demos/just).  
 
 -------------------------------
 
@@ -148,7 +148,7 @@ Both of these demos are instances of a general pattern that goes like this:
 1. **Combine bridges at the level of `compose.mk`** to easily express ideas across systems.
 1. **Compose bridges or groups of bridges**, using `flux` for workflows, `tux` for TUIs, etc.
 
-**If you don't need to combine systems, you can actually stop after step 3,** and you have something like a "tool factory", where you can wrap the interface of something else and potentially change it. Summarizing the [ansible demo]({{mkdocs.site_relative_url}}/demos/ansible), we lifted ansible's whole [adhoc feature](https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html) up out of the container, making it available to the host that doesn't have ansible.  We also changed/exposed the interface, insisting on JSON, providing aliased entrypoints for common use-cases, etc.  By using [compose.mk's support for packaging/compilation]({{mkdocs.site_relative_url}}/demos/package) it's even more obvious that you can spin off this whole effort as a stand-alone tool, or several tools.  *This is an example of using the matrioshka-bridge pattern to create a tool factory*.  Since this example exposes ansible's full module collection.. one might even call it a *tool-factory factory* ;)
+**If you don't need to combine systems, you can actually stop after step 3,** and you have something like a "tool factory", where you can wrap the interface of something else and potentially change it. Summarizing the [ansible demo]({{mkdocs.site_relative_url}}/demos/custom-automation-apis), we lifted ansible's whole [adhoc feature](https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html) up out of the container, making it available to the host that doesn't have ansible.  We also changed/exposed the interface, insisting on JSON, providing aliased entrypoints for common use-cases, etc.  By using [compose.mk's support for packaging/compilation]({{mkdocs.site_relative_url}}/demos/package) it's even more obvious that you can spin off this whole effort as a stand-alone tool, or several tools.  *This is an example of using the matrioshka-bridge pattern to create a tool factory*.  Since this example exposes ansible's full module collection.. one might even call it a *tool-factory factory* ;)
 
 **By the time you get to step 4, the possibilities for composition are surprisingly powerful, expressive, and flexible**, in large part because the [homoiconicity](#homoiconic) we discussed earlier starts to pay off.  Summarizing [the justfile demo]({{mkdocs.site_relative_url}}/demos/just), embedding a justfile is incidental since we could easily work with an external one, but again the interesting part again is a bridge across layers.  We lift part of the `just` interface, then besides changing/exposing that interface, we actually wrap it and compose our way to new functionality.  As a result.. we end up with an interactive task selector in just one line.
 
@@ -201,3 +201,20 @@ The rest of this page is dedicated to general discussion of matrioshka design an
 
 [^1]: https://en.wikipedia.org/wiki/Here_document
 [^2]: Like say, https://github.com/gabrieldemarmiesse/python-on-whales
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for MkDocs to fully render the page including ToC
+    setTimeout(function() {
+        const heading = document.getElementById('matrioshka-automata');
+        const img = document.createElement('img');
+        img.style.height = '2em'; img.style.verticalAlign = 'bottom';
+        img.src = '../img/mat.png'; 
+        heading.insertBefore(img, heading.firstChild);
+        img.style.marginRight = '10px';
+        //img.style.marginLeft = '10px';
+        //heading.appendChild(img);
+    }, 100); // Small delay to ensure ToC is already processed
+});
+</script>

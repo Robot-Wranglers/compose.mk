@@ -4,7 +4,7 @@
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-One of the main features for `compose.mk` is a method for "importing" one [or more]({{mkdocs.site_relative_url}}/multiple-compose-files) docker compose files into your project Makefile.  This uses the `compose.import` macro to automatically generate related make-targets for each docker-compose service.  Sometimes this "importing" process is referred to as *automation scaffolding*, or we might refer to it as *the make/compose bridge* or simply *the bridge*.
+One of the main features for `compose.mk` is a method for "importing" one [or more]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) docker compose files into your project Makefile.  This uses the `compose.import` macro to automatically generate related make-targets for each docker-compose service.  Sometimes this "importing" process is referred to as *automation scaffolding*, or we might refer to it as *the make/compose bridge* or simply *the bridge*.
 
 Usually it's better to separate the details of automation / execution environment, but technically you can also [embed compose service definitions directly]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) and generate scaffolding from that too.
 
@@ -262,9 +262,9 @@ $ make docker-compose.services \
 
 So far, we've stuck to the simplest syntax for `$(call compose.import, docker-compose.yml)`, but there's a few ways to do this.  
 
-----------------------
 
 #### **Root + Namespace**
+----------------------
 
 Here's a variation that configures [syntactic sugar for dispatch namespaces]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch), by providing a 2nd argument to `compose.import`.
 
@@ -273,9 +273,9 @@ include compose.mk
 $(eval $(call compose.import, path/to/docker-compose.yml, my_namespace))
 ```
 
-----------------------
 
 #### **Namespace Only**
+----------------------
 
 Recall that `compose.import` as used above defaults to creating top level targets.  
 
@@ -286,9 +286,9 @@ include compose.mk
 $(eval $(call compose.import.as, my_namespace, path/to/docker-compose.yml))
 ```
 
-----------------------
 
 #### **Multiple Compose Files**
+----------------------
 
 The namespace-only style is perhaps the most useful for working with multiple compose files, and is an effective way to organize your tool containers into different "tool boxes" at the docker-compose level in case you want one for build tools, one for docs, etc.
 
@@ -318,9 +318,9 @@ Confused about what targets are available after using `compose.import`?
 See the [`<compose_stem>.services`](/compose.mk/bridge/#compose_stemcmd) for list services, and check out the `make help` output.
 #}
 
-----------------------
 
 #### **Inlined / Embedded / From-String** 
+----------------------
 
 So far, we've been working with files, but generating target-scaffolding can also work on strings, i.e. with [embedded compose files]({{mkdocs.site_relative_url}}/demos/matrioshka).  See that documentation for examples, but below you can find the basic usage.  Note that "namespace" is implied, because it always the same as the define-block's name.
 
@@ -338,9 +338,9 @@ $(eval $(call compose.import.string, embedded_services))
 
 ```
 
-----------------------
 
 #### **Generic Import**
+----------------------
 
 Finally, let's introduce `compose.import.generic`, which you probably don't need to use directly, but which all of the above are using under the hood.
 
@@ -348,14 +348,14 @@ Finally, let's introduce `compose.import.generic`, which you probably don't need
 include compose.mk
 $(eval $(call compose.import.generic, <namespace>, <bool_import_to_root>, <fname>))
 ```
-
+<br/>
 
 {#
 A related topic is [importing foreign code]({{mkdocs.site_relative_url}}/demos/polyglots/#foreign-code-as-first-class) as a first class object, 
 
 See also the docs for [container dispatch syntax/semantics]({{mkdocs.site_relative_url}}/container-dispatch/#dispatch-syntaxsemantics).
 
-**The 1st argument for `compose.import` is called `target_namespace`**.  You can swap the unicode for `▰` out, opting instead for different symbols, path-like prefixes, whatever.  If you're bringing in services from several compose files, one way to control syntax and namespacing is to use different symbols for different calls to `compose.import`.  (For a two-file example, see the [Multiple Compose Files]({{mkdocs.site_relative_url}}/multiple-compose-files) section.)
+**The 1st argument for `compose.import` is called `target_namespace`**.  You can swap the unicode for `▰` out, opting instead for different symbols, path-like prefixes, whatever.  If you're bringing in services from several compose files, one way to control syntax and namespacing is to use different symbols for different calls to `compose.import`.  (For a two-file example, see the [Multiple Compose Files]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) section.)
 
 **The 2nd argument for `compose.import` controls whether service names are available as top-level Makefile targets.**  The only value that means True is *`TRUE`*, because Make isn't big on bool types.  Regardless of the value here, service targets are always under `<compose_file_stem>/<compose_service_name>`. 
 
@@ -365,11 +365,11 @@ See also the docs for [container dispatch syntax/semantics]({{mkdocs.site_relati
 ### But Why? 🤔
 <hr style="width:100%;border-bottom:3px solid black;">
 
-At first glance, maybe you're thinking this looks like lots of magic to save a little bit of typing.
+At first glance, maybe you're thinking this looks like lots of magic to save a little bit of typing.  Sometimes this method of "importing" compose services as `make` targets is often just paving the way for [container dispatch]({{mkdocs.site_relative_url}}) later.
 
-This method of "importing" compose services as `make` targets is often just paving the way for [container dispatch]({{mkdocs.site_relative_url}}) later.  Even without dispatch though, "native support" for containers as primitives turns out to be really powerful, especially because you can use actions on those containers as prerequisites.  So far we've seen that scaffolded targets effectively create an API over tool containers, but what's not emphasized yet is just how composable that API really is.
+Even without dispatch though, native support for containers as primitives is useful, especially when you start to use **actions on those containers as prerequisite tasks**.  So far we've seen that scaffolded targets effectively create an API over tool containers, but what's not emphasized yet is just how composable that API really is.
 
-For examples that are starting to dig into this topic, you might want to peek at more advanced topics in [the TUI docs]({{mkdocs.site_relative_url}}/embedded-tui) or other tutorials.
+If you're unconvinced on this point, you might want to skip ahead to some more advanced stuff that is digging into this topic like [the TUI docs]({{mkdocs.site_relative_url}}/embedded-tui) or [other tutorials]({{mkdocs.site_relative_url}}/demos/notebooking).
 
 ### Import Macro Implementation
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -380,9 +380,9 @@ For the curious who are unfamiliar with esoteric `make`, let's unpack the incant
 $(eval $(call compose.import.generic, ▰, TRUE, docker-compose.yml))
 ```
 
-The [`eval`](https://www.gnu.org/software/make/manual/html_node/Eval-Function.html) / [`call`](https://www.gnu.org/software/make/manual/html_node/Call-Function.html) combination is how you can given `make` dynamic targets.  This is basically a code-generation step, where `compose.import` is a templated string, and then using `call` binds the values `( ▰, TRUE, docker-compose.yml)` as template parameters.  *Since the templated string happens to render to legal Makefile syntax*, the call to `eval` results in the declaration of new concrete targets.  
+The [`eval`](https://www.gnu.org/software/make/manual/html_node/Eval-Function.html) / [`call`](https://www.gnu.org/software/make/manual/html_node/Call-Function.html) combination is how you can give `make` dynamic targets.  This is basically a code-generation step, where `compose.import.generic` is basically a templated string, and then using `call` binds the values `( ▰, TRUE, docker-compose.yml)` as template parameters.  *Since the templated string happens to render to legal Makefile syntax*, the call to `eval` results in the declaration of new concrete targets.
 
-Metaprogramming in `make` like this is something that's guaranteed to inspire strong feelings of horror or of delight.  If you're *that* type of weirdo, you might like to [read more about the technique here](https://make.mad-scientist.net/the-eval-function/).
+Of course, understanding this isn't required to *use* it.. and metaprogramming in `make` like this is something that's always guaranteed to inspire strong feelings of horror or of delight.  If you're *that* type of weirdo, you might like to [read more about the technique here](https://make.mad-scientist.net/the-eval-function/).
 
 <hr style="width:100%;border-bottom:3px solid black;">
 <script>

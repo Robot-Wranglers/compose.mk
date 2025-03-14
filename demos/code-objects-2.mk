@@ -3,7 +3,7 @@
 #   Demonstrating first-class support for foreign code-blocks in `compose.mk`.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: make -f demos/code-objects-2.mk
+#   USAGE: ./demos/code-objects-2.mk
 
 include compose.mk
 .DEFAULT_GOAL := demo.python

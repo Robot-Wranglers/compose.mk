@@ -14,18 +14,17 @@ This example demonstrates how you can describe, automate, and release a highly c
 It's an advanced example using "idiomatic" `compose.mk`, and it's ambitious so we won't explain every little thing.  Suggested prereqs to read are: [the matrioshka bridge idiom]
 #}
 
-Before we get started, there's a few unusual things about this demo:
+More background about this demo:
 
 * This is an advanced example, leaning into pretty idiomatic [code style]({{mkdocs.site_relative_url}}/standard-lib) for `compose.mk` and looking less like classical `make`.
-* This example illustrates the [matrioshka bridge pattern]({{mkdocs.site_relative_url}}/matrioshka#matrioshka-bridge-pattern).  There are [other]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/) [examples]({{mkdocs.site_relative_url}}/demos/just) of this pattern, but this is one by far the most involved.  We need a few files for this demo use external resources rather than embedding everything, but at the end we'll also bundle everything up and produce an artifact for a self contained "release".
-* Unusually for `compose.mk`, this example **involves a server** as well as automation and pipelines, i.e. the jupyter lab front-end.  Typically where you've got side-effects like port-forwarding, you're losing a lot of statelessness that makes complex automation practical, but despite the involvement of a front-end, we'll see several unique ways that `compose.mk` still manages to keep things *fully-specified and completely reproducible*, and remains remarkably amenable to automation and pipelines.
+* This example illustrates the [matrioshka bridge pattern]({{mkdocs.site_relative_url}}/matrioshka#matrioshka-bridge-pattern).  There are [other]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/) [examples]({{mkdocs.site_relative_url}}/demos/just) of this pattern, but this is one by far the most involved.  
+* Unlike other demos, we need several external files for this demo, including notebooks, and can't lean on tricks with embedded resources. Rather than inlining we'll use files inside [demos/data/jupyter]({{macros.repo_link('demos/data/jupyter/notebooks',github)}}), but in the end we'll still [generate a frozen release](#project-as-tool) that's self-contained.  You can also browse the related containers/notebooks [at the bottom of this page](#appendix)
+* Also unlike other demos for `compose.mk`, this example **involves a server** as well as automation and pipelines, i.e. the jupyter lab front-end.  Side-effects like port-forwarding would usually mean that you're losing a lot of statelessness that makes complex automation practical, but despite the involvement of a webserver and interactive frontend here we'll see several unique ways that `compose.mk` still manages to keep things *fully-specified and completely reproducible*, and remains remarkably amenable to automation and pipelines.
 
 {#We're going to achieve deep integration with a completely foreign tool chain in a remarkably small amount of code.#}
-
 {#
 * As the *largest demo*, we definitely **won't** try to embed/inline all [the containers](#) or [the notebooks](#) that we'll use.
 {{macros.repo_link('demos/data/jupyter/notebooks',github)}}) where that makes sense, and also freely embed containers/data where *that* makes sense.  The goal is to strike a balance between legibility and comprehension vs the hassle of project file-explosion.  
-
 Other things that stand out about this demo:
 * This demo is pretty advanced, and we lean into "idiomatic" style for `compose.mk`.
 * This is another demonstration of the [matrioshka bridge pattern](/matrioshka/#matrioshka-bridge-pattern).
@@ -39,30 +38,43 @@ Without further delay, let's get into it.
 #### Basic Goals
 ---------------------
 
-* **Configuration:** We want Jupyter lab minimally preconfigured, mostly to demonstrate the capability.  See {{macros.repo_link('demos/data/jupyter/lab/settings/overrides.json',github)}}.  Including kernels and support tooling, the configuration surface for server-side jupyter is so large that beyond a simple `pip install`, it actually has the feel of a **distribution**, and the challenges of how to manage and encapsulate that are a pretty good fit for `compose.mk`.
-* **Lifecycle Management:** We need to daemonize the front-end, but we need to be smart about it.  One use-case is letting users interact with notebooks and detached-daemonization is an option, but as potential kernel developers we might want it foregrounded for logs.  Notebooks and kernels can run without the webserver being live via stuff like `jupyter console`, but we also might want automation *over* the webserver, for example with `nbclient` [^1].
-* **Custom, containerized kernels:** Adding/removing jupyter kernels is hard and requires a handful of files in exactly the right spot to specify the behaviour, possibly with a lot of custom code.  We want to remove as much of that friction as possible at the same time as making the whole process more dynamic, basically allowing users to **expose arbitrary commands in arbitrary containers as jupyter kernels directly, and without custom code**.  
+**Configuration:** 
+:  We want Jupyter lab minimally preconfigured, mostly to demonstrate the capability.  See {{macros.repo_link('demos/data/jupyter/lab/settings/overrides.json',github)}}.  Including kernels and support tooling, the configuration surface for server-side jupyter is so large that beyond a simple `pip install`, it actually has the feel of a **distribution**, and the challenges of how to manage and encapsulate that are a pretty good fit for `compose.mk`.
 
- 
+**Lifecycle Management:**
+:  We need to daemonize the front-end, but we need to be smart about it.  One use-case is letting users interact with notebooks and detached-daemonization is an option, but as potential kernel developers we might want it foregrounded for logs.  Notebooks and kernels can run without the webserver being live via stuff like `jupyter console`, but we also might want automation *over* the webserver, for example with `nbclient` [^1].
+
+**Custom, containerized kernels:**
+:  Adding/removing jupyter kernels is hard and requires a handful of files in exactly the right spot to specify the behaviour, possibly with a lot of custom code.  We want to remove as much of that friction as possible at the same time as making the whole process more dynamic, basically allowing users to **expose arbitrary commands in arbitrary containers as jupyter kernels directly, and without custom code**.  
+
 #### Interface Goals
 ---------------------
 
-* **A serverless "pipeline mode" that's more directly amenable to automation,** running all notebooks end to end.
-* **A CLI mode,** basically offering fine-grained lifecycle control and individual entrypoints for all the primitive actions that enable the above, i.e. verbs like *server.stop / server.start / notebook.run / notebook.preview*, etc.
-* **The standard jupyter web interface,** accessible as usual from the docker host and the browser of your choice.  We disable auth for brevity and convenience, so don't **leave this running on the internet!**.  Using your hosts browser is of course *useful*, but also involves an open port and port-forwarding.  
-* **A TUI mode with 2 dedicated content-panes**: One for webserver-launch & log-tailing, and one for viewing that webserver with [carbonyl](#), a full-featured browser that's console-friendly.
+**Standard Jupyter web interface:** 
+:  Accessible as usual from the docker host and the browser of your choice.  This of course involves port-forwarding, and we disable auth for brevity and convenience, so *don't leave this running on the internet!*
 
+**TUI Mode**: 
+:  Building on the [embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui), we'll expose 2 dedicated content-panes: one for webserver-launch & log-tailing, and one for viewing that webserver with a full-featured browser that's console-friendly^[4]
+
+**Pipeline mode:** 
+:  A serverless or completely network-sandboxed mode that's more directly amenable to automation, running all notebooks end to end.
+
+**CLI mode:** 
+:  Basically offering fine-grained lifecycle control and individual entrypoints for all the primitive actions that enable the above, i.e. verbs like *server.stop / server.start / notebook.run / notebook.preview*, etc.
 
 
 #### Notebook Goals
 ---------------------
 
-* **We insist on jupytext**.  Version-control for ipynb's can be annoying, e.g. with deltas that are just timestamp changes without output changes, and other stuff that makes diffs a pain.  Jupytext fixes this, and also lets us store [notebooks-as-code](#appendix-notebooks), thus solving the problem of editing notebooks *outside* of jupyter.  Since `jupytext` also supports bidirectional sync between raw .ipynb's and the markdown-equivalent, we will retain the ability to edit notebooks *inside* jupyter as well.
+**We insist on [jupytext](https://jupytext.readthedocs.io/en/latest/):**
+:  Because version-control for ipynb's can be annoying, e.g. with deltas that are just timestamp-changes without output-changes, and other stuff that makes diffs a pain.  Jupytext fixes this, and also lets us store [notebooks-as-markdown](#appendix-jupytext-notebooks), thus solving the problem of editing notebooks *outside* of jupyter.  Since `jupytext` also supports bidirectional sync between raw .ipynb's and the markdown-equivalent, we will retain the ability to edit notebooks *inside* jupyter as well.
 
 ### Choosing a Use-Case 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-**We still need a specific use-case for our notebook project,** so we'll try to roll out a toolkit for [formal methods](https://en.wikipedia.org/wiki/Formal_methods) (hereafter simply "*fmtk*").  The choice here doesn't actually *matter* much, but it does kind of fit.  Academic stuff might be more likely to be missing official docker containers, and reference material is more likely to end up with "projects" that have a significant barrier to entry, rather than shipping "tools" or "pipelines", whereas `compose.mk` hopes to get tools and pipelines basically for free.
+**We still need a specific use-case for our notebook project,** so we'll try to roll out a toolkit for [formal methods](https://en.wikipedia.org/wiki/Formal_methods) (hereafter simply "*fmtk*").  
+
+The choice here doesn't actually *matter* much, but it does kind of fit.  Academic stuff might be more likely to be [missing official](https://github.com/tlaplus/tlaplus/issues/683) [docker containers](https://github.com/Z3Prover/z3/discussions/5740), and reference material is more likely to end up with "projects" that have a significant barrier to entry, rather than shipping "tools" or "pipelines". Whereas with `compose.mk` we're hoping to get tools and pipelines basically for free!
 
 Ultimately, we want to expose kernels for the following tools:
 
@@ -77,22 +89,59 @@ For the official jupyter background docs about custom kernels see [here](https:/
 ### The Code
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The code below nails the all requirements in ~150 LoC, excluding comments, the [external container definitions](#appendix-containers), and the [external notebooks](#appendix-notebooks).  
+The code below satisfies all the requirements in ~150 LoC, excluding comments, the [external container definitions](#appendix-containers), and the [external notebooks](#appendix-jupytext-notebooks).  As mentioned earlier in [the goals](#goals), this involves port-forwarding, so even though the file-system is sandboxed **you probably don't want to leave it running!** ^[2]
 
-As mentioned in [the goals](#goals), this involves port-forwarding, so even though the file-system is sandboxed **you probably don't want to leave it running!**  However the TUI browser (as seen [at the top](#notebooks-ensembles)) turns out to be actually very usable even for complex interactive sites like jupyter. And since it can also share the network at the *docker layer*.. this raises the very interesting possibility of using `compose.mk` to make completely network-sandboxed interfaces to custom versions of services like jupyter, rundeck, argo.*
+This is well-commented, but there are definitely some prerequisites.  To really grok it, it's helpful to have understood the rest of the `compose.mk` tutorials, and already have pretty deep knowledge of `jupyter` and `make`.  So.. don't worry much if you can't understand parts of the implementation because unlike other tutorials, here we're mainly focused on the [delivering](#results-usage) [the goals](#goals).
 
 ```Makefile 
 {{open('demos/notebooking.mk').read()}}
 ```
 
-### Usage
+### Results & Usage
 <hr style="width:100%;border-bottom:3px solid black;">
 
-There are two main entrypoints: `lab.ui` and `lab.pipe`.  
+If you've got the `compose.mk` [repo checked out]({{mkdocs.site_relative_url}}/integration), you can interact with this demo directly as `./demos/notebooking.mk <target>`.  
 
-As seen at the top, the TUI mode shows split panes with server-logs, plus a TUI browser.
+The CLI surface is *very large* since it implicitly includes the entire [static API]({{mkdocs.site_relative_url}}/standard-lib) plus [scaffolded targets]({{mkdocs.site_relative_url}}/bridge) for the containers involved (see `./demos/notebooking.mk help`).  However most users will care only about a few project-level interactions.  
 
-Here's a few more screen shots and some with the (higher resolution) host browser =P
+Earlier we planned for a **TUI Mode**, a **Pipeline mode** and a **CLI mode**, so let's see how we did.
+
+-------------------------------
+
+**For CLI mode**, we planned for lots of granular lifecycle management tooling, and many of these kinds of entrypoints are pretty obvious glimpsing over the code.  Besides the scaffolded targets, there's a clear and coherent project-level vocabulary emerging. Here's a few highlights:
+
+* `./demos/notebooking.mk lab.init`: Bootstraps everything, building containers, generating kernels, etc.
+* `./demos/notebooking.mk lab.serve`: Start jupyter server in the foreground
+* `./demos/notebooking.mk lab.serve.background`: Start jupyter server in the background
+* `./demos/notebooking.mk lab.wui`: Attempts to open a webbrowser on the host which is pointed at the webserver.  (Requires python, assumes the webserver is started.)
+* `./demos/notebooking.mk lab.ps`: Show running containers
+* `./demos/notebooking.mk lab.summary`: Summarize available notebooks, kernels, etc 
+* `./demos/notebooking.mk lab.notebook.preview`: Summarize available notebooks, kernels, etc 
+
+-------------------------------
+
+**For TUI mode**, use `./demos/notebooking.mk lab.tui`.  We've already seen a preview since there's a [video at the top of the page](#notebooking-ensembles).  As planned this starts and tails the webserver in one pane, opening a TUI browser in another.  See also the docs [re: default keybindings]({{mkdocs.site_relative_url}}/embedded-tui/#default-keybindings)
+
+One thing that's pretty interesting is that the TUI browser (as seen [at the top](#notebooks-ensembles)) turns out to be surprisingly usable even for a complex interactive sites like jupyter.. [carbonyl](https://github.com/fathyb/carbonyl) is pretty awesome.  Since it's just another container and can also share the network at the *docker layer* instead of via port-forwarding as is done here.. this raises the very intriguing possibility of using `compose.mk` to **daemonize and visualize** completely network-sandboxed interfaces to custom versions of other "runner" services like jupyter, rundeck, argo.
+
+--------------------------------
+
+**Pipeline mode**, use `./demos/notebooking.mk lab.pipeline`.  This entrypoint runs [every notebook](#appendix-notebooks) for [every custom kernel](#appendix-containers) in series, and in a way that's noninteractive but has very friendly output that's easy to visually parse.   Before the pipeline starts, all kernel bootstrap and other the setup chores is taken care of automatically.  The end-result is something that's almost stateless, so it's very reproducible, but container layer-caching means it's still pretty easy to iterate on without rebuilding completely from scratch for every run.  
+
+Below you can see a (very large) screenshot with a complete dump of the pipeline output.  Note especially the syntax highlighting, the pre-execution synchronization with `jupytext`, and how there's even an low-res image-output preview near the middle.
+
+{{macros.img_link("notebooking-pipeline.png", mkdocs, "95%",align='center')}}
+
+<br>
+
+### Discussion
+<hr style="width:100%;border-bottom:3px solid black;">
+
+
+{# 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 <table><tr><td>
 {{macros.img_link("notebooking-ui.gif", mkdocs, "20%",align='center')}}
@@ -101,17 +150,8 @@ Here's a few more screen shots and some with the (higher resolution) host browse
 </td><td>
 {{macros.img_link("notebooking-ui.gif", mkdocs, "20%",align='center')}}
 </td></tr></table>
-
-### Discussion
-
-<hr style="width:100%;border-bottom:3px solid black;">
-
-
-{# 
-<hr style="width:95%;border-bottom:1px dashed black;">
 #}
 
-<hr style="width:100%;border-bottom:3px solid black;">
 
 {#
 [^1]: See also the docs for [Supervisors & Signals]({{mkdocs.site_relative_url}}/signals)
@@ -121,7 +161,7 @@ Here's a few more screen shots and some with the (higher resolution) host browse
 ### Appendix: Main Jupyter Container
 <hr style="width:100%;border-bottom:3px solid black;">
 
-**Via: {{macros.repo_link('demos/data/jupyter/docker-compose.fmtk.yml',github)}}**
+**Via: {{macros.repo_link('demos/data/jupyter/docker-compose.jupyter.yml', github)}}**
 
 ```yaml
 {{open('demos/data/jupyter/docker-compose.fmtk.yml').read()}}
@@ -130,42 +170,40 @@ Here's a few more screen shots and some with the (higher resolution) host browse
 ### Appendix: FMTK Containers
 <hr style="width:100%;border-bottom:3px solid black;">
 
-**Via: {{macros.repo_link('demos/data/jupyter/docker-compose.fmtk.yml',github)}}**
+Below you can see the definitions for all the containers involved the formal-methods toolkit.  TLA+ left as an exercise to the reader [but here's a hint](https://github.com/kevinsullivan/TLAPlusDocker/blob/main/.devcontainer/Dockerfile)^[3] =)
+
+**Via: {{macros.repo_link('demos/data/jupyter/docker-compose.fmtk.yml', github)}}**
 
 ```yaml
 {{open('demos/data/jupyter/docker-compose.fmtk.yml').read()}}
 ```
-
-{#
-#}
-
 ### Appendix: Jupyter Kernel Shims
 <hr style="width:100%;border-bottom:3px solid black;">
 
 We need a base kernel to extend, so this is a version of the official jupyter example that defers to the environment for most of it's configuration.  With this in place, we only need to override a few key values to use a `compose.mk` task (or anything else really).  See the usage of `.kernel.json.template` in the main code for more details.
 
-**Via: {{macros.repo_link('demos/data/jupyter/kernels/basek/basek.py',github)}}**
+**Via: {{macros.repo_link('demos/data/jupyter/kernel.base/basek.py', github)}}**
 
 ```python
-{{open('demos/data/jupyter/kernels/basek/basek.py').read()}}
+{{open('demos/data/jupyter/kernel.base/basek.py').read()}}
 ```
 
 ----------------------------
 
 And the template JSON used with overrides for each of the individual kernels:
 
-**Via: {{macros.repo_link('demos/data/jupyter/kernel.json.template',github)}}**
+**Via: {{macros.repo_link('demos/data/jupyter/kernel.base/kernel.json.template', github)}}**
 
 ```yaml
-{{open('demos/data/jupyter/kernel.json.template').read()}}
+{{open('demos/data/jupyter/kernel.base/kernel.json.template').read()}}
 ```
 
 ### Appendix: Jupytext Notebooks
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The notebooks being used to exercise the kernels are nothing very fancy, but since we [use jupytext](#) and notebooks-as-code instead of notebooks-as-JSON.. there is the benefit that we can render them below directly. 
+The notebooks being used to exercise the kernels are nothing very fancy, but since we [use jupytext](https://jupytext.readthedocs.io/en/latest/) and notebooks-as-code instead of notebooks-as-JSON.. there is the benefit that we can render them below directly. 
 
-You can also see all the individual notebooks at {{macros.repo_link('demos/data/jupyter/notebooks',github)}}
+You can also see all the individual notebooks at {{macros.repo_link('demos/data/jupyter/notebooks', github)}}
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
@@ -192,3 +230,6 @@ The bulk of the code is embedded containers for alloy / z3 / jupyter,
 
 <hr style="width:100%;border-bottom:3px solid black;">
 [^1]: https://github.com/jupyter/nbclient
+[^2]: Placeholder
+[^3]: Actually fleshing out the formal-methods toolkit with many more containers is tempting, but this demo is a limited-space proof of concept so that it can [actually run end-to-end in github actions](#action-pipeline).
+[^4]: AKA carbonyl, reusing the trick from [here]({{mkdocs.site_relative_url}}/advanced-tuis/#understanding-widgets)

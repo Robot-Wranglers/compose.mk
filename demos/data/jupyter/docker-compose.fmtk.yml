@@ -6,7 +6,7 @@ name: notebooking
 services:
   
   # Only used for inheritance, this collects common config.
-  lab.base: &base
+  abstract: &abstract
     image: hello-world
     stdin_open: false
     tty: false
@@ -18,11 +18,11 @@ services:
     volumes:
       - ${DOCKER_HOST_WORKSPACE:-${PWD}}:/lab
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-  
+
   # https://github.com/Z3Prover/z3/discussions/5740
   # z3 official container does not include bindings
   z3: &z3
-    <<: *base
+    <<: *abstract
     hostname: z3
     image: compose.mk:z3
     build:
@@ -34,15 +34,15 @@ services:
   
   z3_py:
     <<: *z3
+    depends_on: ['z3']
     hostname: z3_py
     image: compose.mk:z3_py
     entrypoint: python
-    depends_on: ['z3']
 
   # no official container for alloy-lang, 
   # but this one can run headless and return JSON
   alloy:
-    <<: *base
+    <<: *abstract
     hostname: alloy
     image: compose.mk:alloy 
     build:
@@ -55,7 +55,7 @@ services:
   
   # Reuse the lean container we built in `demos/lean.mk`
   lean4: &lean4
-    <<: *base
+    <<: *abstract
     hostname: lean4 
     image: compose.mk:lean4
     entrypoint: lean
@@ -80,7 +80,7 @@ services:
   
   lean4_script:
     <<: *lean4
+    depends_on: ['lean4']
     hostname: lean4_script
     image: compose.mk:lean4.script
     entrypoint: ['lean','--run']
-    depends_on: ['lean4']

@@ -6,6 +6,7 @@
 One goal for `compose.mk` is to enable program output that is clean, curated, and human-friendly on stderr, and machine-friendly on stdout.  There are a few features available in support of this.  In general `compose.mk` prefers make-targets over make-functions and macros, because targets are more reusable.[^2]  Logging is a special case though, and might use all 3.
 
 #### Log Functions 
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 First lets look at the **`log.*` functions** that are suitable for use from your project Makefile.  The following example demonstrates basic logging, logging with formatting, and trace-logging.  
 
@@ -21,7 +22,6 @@ A few other things that are worth mentioning:
 
 Tools for working with JSON are also discussed in more detail in the section on [Structured IO](#structured-io-basics).
 
-
 #### File and Stream Previews
 <hr style="width:95%;border-bottom:1px dashed black;">
 
@@ -30,7 +30,7 @@ Whether you're working on build processes, data-pipelines, or infrastructure dep
 ------------------------------------------
 
 ```Makefile
-{{open('demos/logging.mk','r').read().strip()}}
+{{open('tests/tool-wrappers.sh','r').read().strip()}}
 ```
 
 #### Visual Dividers

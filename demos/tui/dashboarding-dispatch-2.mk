@@ -3,7 +3,7 @@
 #   Expanding the dashboarding-dispatch.mk TUI demo to show a refactored example.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-# USAGE: make -f demos/tui/dashboarding-widgets.mk demo.ui
+# USAGE: ./demos/tui/dashboarding-widgets.mk demo.ui
 
 include demos/tui/dashboarding-dispatch.mk
 IMG_GOLANG_BASE?=docker.io/golang:1.24-bookworm

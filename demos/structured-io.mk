@@ -2,12 +2,12 @@
 # demos/structured-io.mk: 
 #   Show output/input using JSON.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
-#   USAGE: make -f demos/structured-io.mk
+#   USAGE: ./demos/structured-io.mk
 
 include compose.mk
-.DEFAULT_GOAL := demo.json_io
+.DEFAULT_GOAL := __main__
 
-demo.json_io:
+__main__:
 	${make} emit | ${make} consume
 
 # Emit/consume JSON with `compose.mk` macros.  

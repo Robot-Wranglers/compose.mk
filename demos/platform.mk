@@ -6,7 +6,7 @@
 #
 # This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 # See also: http://robot-wranglers.github.io/compose.mk/demos/platform
-# USAGE: make -f demos/platform.mk platform.setup
+# USAGE: ./demos/platform.mk platform.setup
 
 include compose.mk
 .DEFAULT_GOAL := platform.setup

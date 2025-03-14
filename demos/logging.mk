@@ -3,7 +3,7 @@
 #   Shows some of the compose.mk logging facilities.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: make -f demos/logging.mk
+#   USAGE: ./demos/logging.mk
 
 include compose.mk
 .DEFAULT_GOAL := all

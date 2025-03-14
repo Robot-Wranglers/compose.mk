@@ -4,7 +4,7 @@
 #   the first version, and adds a target-selector and a web browser.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.
 #
-#   USAGE: make -f demos/tui/extension-2.mk
+#   USAGE: ./demos/tui/extension-2.mk
 #   See the docs for more discussion: https://robot-wranglers.github.io/compose.mk/advanced-tuis
 
 # Pickup where the first extension left off 

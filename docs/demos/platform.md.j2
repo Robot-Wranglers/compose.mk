@@ -55,6 +55,7 @@ Not to belabor the point but let's watch how it blows up with just one more plat
 
 {{macros.img_link("example-platform-2.png", mkdocs, "90%")}}
 
+{#
 The stripped-down and combined automation that achieves this workflow is included below. It feels pretty organized and maintainable and excluding the container-definitions, this weighs in at only ~20 lines.
 
 ```Makefile 
@@ -79,8 +80,9 @@ self.metrics:
 self.events:
     cat /dev/stdin | jq .event
 ```
+#}
 
-So that illustrates [container dispatch](#) combined with the [flux.pipe.fork target]({{mkdocs.site_relative_url}}/api#fluxdmux).  There are many other `flux.*` targets ([see the API docs]({{mkdocs.site_relative_url}}/api#api-flux)).. see also the [Workflow Demo]({{mkdocs.site_relative_url}}/demos/ansible/).  
+So that illustrates [container dispatch](#) combined with the [flux.pipe.fork target]({{mkdocs.site_relative_url}}/api#fluxdmux).  There are many other `flux.*` targets ([see the API docs]({{mkdocs.site_relative_url}}/api#api-flux)).. see also the [Workflow Demo]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/).  
 
 ### Discussion 
 <hr style="width:100%;border-bottom:3px solid black;">

@@ -4,7 +4,7 @@
 #
 # This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 # See the docs for more discussion: https://robot-wranglers.github.io/compose.mk/stages
-# USAGE: make -f demos/stages.mk
+# USAGE: ./demos/stages.mk
 
 include compose.mk
 .DEFAULT_GOAL := demo.stage

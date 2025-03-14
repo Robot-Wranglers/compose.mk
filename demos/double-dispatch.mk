@@ -2,7 +2,7 @@
 #   Demonstrates the container dispatch idiom using "namespace" style invocation.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: make -f demos/double-dispatch.mk 
+#   USAGE: ./demos/double-dispatch.mk 
 
 
 include compose.mk

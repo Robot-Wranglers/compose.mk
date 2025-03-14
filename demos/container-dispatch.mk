@@ -3,7 +3,7 @@
 #   Demonstrates the container dispatch idiom.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: make -f demos/container-dispatch.mk
+#   USAGE: ./demos/container-dispatch.mk
 
 include compose.mk
 .DEFAULT_GOAL := demo

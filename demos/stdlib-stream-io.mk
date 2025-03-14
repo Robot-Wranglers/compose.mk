@@ -2,7 +2,7 @@
 # demos/stdlib-stream-io.mk: 
 #   Demonstrating a few macros for stream io.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
-#   USAGE: make -f demos/stdlib-stream-io.mk
+#   USAGE: ./demos/stdlib-stream-io.mk
 
 .DEFAULT_GOAL := demo.streams 
 include compose.mk 

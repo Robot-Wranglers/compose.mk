@@ -6,7 +6,7 @@
 #   exposing a new opinionated interface that is is versioned,
 #   slim, stateless, and defaults to JSON IO.
 #
-#   USAGE: make -f demos/ansible-adhoc.mk
+#   USAGE: ./demos/ansible-adhoc.mk
 include compose.mk
 .DEFAULT_GOAL := __main__
 

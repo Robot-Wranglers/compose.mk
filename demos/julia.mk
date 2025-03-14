@@ -1,10 +1,10 @@
 #!/usr/bin/env -S make -f
 # demos/julia.mk: 
-#   Demonstrating polyglots as first-class objects in `compose.mk`.
+#   Demonstrating polyglots as first-class objects in `compose.mk`, and compiled languages via FFI
 #
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #   See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
-#   USAGE: make -f demos/julia.mk
+#   USAGE: ./demos/julia.mk
 
 include compose.mk
 .DEFAULT_GOAL := __main__
@@ -13,9 +13,9 @@ include compose.mk
 julia.img=julia:1.10.9-alpine3.21
 julia.interpreter=julia 
 
-# Bind the docker image / entrypoint to a target, 
+# Binds the docker image / entrypoint to a target, 
 # then create a unary target for accepting a filename.
-julia:; ${make} docker.image.run/${julia.img},${julia.interpreter}
+julia:; ${docker.image.run}/${julia.img},${julia.interpreter}
 julia.interpreter/%:; ${docker.curry.command}/julia
 
 # Next we define some Julia code that uses `ccall` for access to C.
@@ -31,10 +31,7 @@ function get_system_time()
     return ccall(:time, Int64, (Ptr{Nothing},), C_NULL)
 end
 
-# Generate random numbers using C's rand() function
-# Seed the random number generator with current time
-# Allocate an array for random numbers
-# Fill with random numbers using C's rand()
+# Generate random numbers using rand() function and time as seed
 function c_random_array(size::Int)
     ccall(:srand, Nothing, (UInt32,), UInt32(get_system_time()))
     result = Vector{Int}(undef, size)
@@ -45,7 +42,6 @@ function c_random_array(size::Int)
 end
 
 # Call C's math library for complex calculations
-# Calculate various math operations using C functions
 # Use dlopen to explicitly load libm.so.6, closing after use
 function c_math_operations(x::Float64)
     libm = Libdl.dlopen("libm.so.6")
@@ -74,7 +70,8 @@ println("Math operations on x = $x:")
 @printf "  sqrt(x) = %.6f\n" math_results.sqrt
 endef
 
-# Declare the code-block as a first class object, and bind it to an interpreter.
+# Declare the above code-block as a first class object, and bind it to an interpreter.
 $(eval $(call compose.import.code_block, hello_world, julia.interpreter))
 
+# Use our new scaffolded targets for `preview` and `run`
 __main__: hello_world.preview hello_world.run

@@ -4,7 +4,7 @@
 #   Demos make-targets in foreign languages, without a container.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: make -f demos/local-interpreter.mk
+#   USAGE: ./demos/local-interpreter.mk
 
 include compose.mk
 .DEFAULT_GOAL := demo.python

@@ -2,7 +2,7 @@
 # demos/tui/dashboarding-dispatch.mk: 
 #   Expanding the dashboarding.mk TUI demo to include container dispatch.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
-# USAGE: make -f demos/tui/dashboarding-widgets.mk demo.ui
+# USAGE: ./demos/tui/dashboarding-widgets.mk demo.ui
 
 
 # Boilerplate

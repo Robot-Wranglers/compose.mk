@@ -16,7 +16,6 @@ services:
         RUN apt-get install -qq -y graphviz graphviz-dev 
         RUN pip install networkx==3.4.2 matplotlib==3.10.1 pygraphviz==1.14 --break-system-packages
         # NB: paths are relative to the docker-compose file!
-        COPY kernels/ /usr/share/jupyter/kernels/
         COPY lab/ /usr/local/share/jupyter/lab/
     command: >-
       lab --allow-root --no-browser 
@@ -29,5 +28,7 @@ services:
       workspace: /lab
     working_dir: /lab
     volumes:
+      - ./kernels/:/usr/share/jupyter/kernels/
+      - ./kernel.base/:/usr/share/jupyter/kernel.base/
       - ${DOCKER_HOST_WORKSPACE:-${PWD}}:/lab
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock

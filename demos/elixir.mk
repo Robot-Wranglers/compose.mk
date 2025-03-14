@@ -3,7 +3,7 @@
 #   Demonstrating polyglots using elixir.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #   See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
-#   USAGE: make -f demos/elixir.mk
+#   USAGE: ./demos/elixir.mk
 
 include compose.mk
 .DEFAULT_GOAL := demo.elixir

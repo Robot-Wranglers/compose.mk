@@ -3,7 +3,7 @@
 #   Shows some of the compose.mk logging capabilities.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: make -f demos/section-dividers.mk clean build test
+#   USAGE: ./demos/section-dividers.mk clean build test
 
 include compose.mk 
 

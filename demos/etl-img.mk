@@ -3,7 +3,7 @@
 #   Describes an image pipeline with `compose.mk`.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: make -f demos/etl-img.mk 
+#   USAGE: ./demos/etl-img.mk 
 
 include compose.mk
 .DEFAULT_GOAL := etl

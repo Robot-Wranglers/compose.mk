@@ -12,15 +12,15 @@
 #
 #   See the docs for more discussion: https://robot-wranglers.github.io/compose.mk/demos/notebooking
 #
-#   USAGE: make -f demos/notebooking.mk lab.ui
-#   USAGE: make -f demos/notebooking.mk lab.pipeline
+#   USAGE: ./demos/notebooking.mk lab.tui
+#   USAGE: ./demos/notebooking.mk lab.pipeline
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 include compose.mk
 
 # Main entrypoint, just shows usage hints 
 .DEFAULT_GOAL := __main__
-__main__:; $(call log, ${red}Provide a target like 'lab.ui' or 'lab.pipeline' or use 'help' for help.)
+__main__:; $(call log, ${red}Provide a target like 'lab.tui' or 'lab.pipeline' or use 'help' for help.)
 
 # Jupyter lab URL
 lab.url.base=http://localhost:9999
@@ -41,35 +41,55 @@ jupyter.kernels.root=${jupyter.root}/kernels
 jq.img.filter='.cells[]|select(.outputs!=null).outputs[]|select(.output_type=="display_data").data["image/png"]'
 
 # Autogenerate target scaffolding for each kernel container
-$(eval $(call compose.import, demos/data/jupyter/docker-compose.fmtk.yml, fmtk))
+$(eval $(call compose.import, ${jupyter.root}/docker-compose.fmtk.yml, fmtk))
 
 # Autogenerate scaffolding for the jupyter-lab container.
-$(eval $(call compose.import, demos/data/jupyter/docker-compose.jupyter.yml, jupyter))
+$(eval $(call compose.import, ${jupyter.root}/docker-compose.jupyter.yml, jupyter))
 
+## Next section uses the service scaffolding to create target-handles for language kernels
+## dynamically.  Although `compose.import` already created handles for all the containers involved, 
+## we want to plan for being able to import from other compose files, or use future targets as 
+## kernels directly.  This means we want carefully designed namespaces.  Another wrinkle is that 
+## kernel-invocation involves accepting a filename as argument.  Thus for each service, we map
+## a new target `kernel.<svc>/<fname>` --> `fmtk/<svc>.command/<fname>`.
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-## Use the service scaffolding to create language kernels.
-## Kernel-targets must accept 1 argument in the form a filename,
-## and then run on it.  Mostly this is a simple mapping, but 
-## depending on the container entrypoint/command setup, we may
-## have to massage the invocation.  See z3_py / lean4_script.
-kernel.alloy/%:; ${docker.curry.command}/fmtk/alloy
-kernel.lean4/%:; ${docker.curry.command}/fmtk/lean4
-kernel.z3/%:; ${docker.curry.command}/fmtk/z3
-kernel.z3_py/%:; ${docker.curry.command}/fmtk/z3_py
-kernel.lean4_script/%:; ${docker.curry.command}/fmtk/lean4_script
+# Maps compose-services to future kernels
+# Loop over the kernel list, and creating a target handle for each.
+kernel_services=$(call compose.services, ${jupyter.root}/docker-compose.fmtk.yml)
+kernel_target_names=$(foreach svc, ${kernel_services}, kernel.$(svc))
+$(foreach svc, ${kernel_services}, $(eval  kernel.$(svc)/%:; $${make} fmtk/$(svc).command/$${*}))
 
-# Dynamically filters available targets, returning ones above that match "kernel.*" 
-kernels.list: mk.targets.filter.parametric/kernel.
+kernels.list:
+	@# A target to list available kernels.  Importantly, this is kernels according 
+	@# to compose.mk, *not* jupyter, and it is how we bootstrap the jupyter kernels.
+	@#
+	@# Returns both the kernels that are directly mapped from compose-services 
+	@# as well as *any targets defined in this file* matching the "kernel.*" pattern.
+	@#
+	quiet=1 \
+	&& ( echo "${kernel_target_names}" \
+		&&  ${make} mk.targets.filter.parametric/kernel. \
+		|| true ) \
+	| ${stream.nl.to.space}
 
+kernel.echo/%:
+	@# Demonstrating a jupyter kernel that's *not* coming from the 
+	@# fmtk compose file.  This kernel simply echoes whatever code
+	@# is sent to it, but you can imagine it using yet another docker 
+	@# container that we don't need to customize, or imagine it activating
+	@# a specific python venv, or whatever.
+	@#
+	cat ${*}
+
+## Next section generates kernel.json files for each of the "kernel.*" targets above,
+## regardless of whether those targets are static or dynamic.  This step involves
+## a template for jupyter kernelspec JSON, which is our starting place for generating
+## dynamic kernels on the jupyter side.  This works by deferring most of the kernel 
+## behaviour to a base class (i.e. `BaseK`), and basically adjusts environment variables 
+## to configure kernel-names, kernel-commands, etc.. just in time.  See the appendix in 
+## the main docs for `basek.py` and kernel.json.template for more details.
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-
-## Generates kernel.json files for each of the "kernel.*" targets above.  
-## This involves a template for jupyter kernelspec JSON, which is a starting place 
-## for generating dynamic kernels.  This works by deferring most of the kernel 
-## behaviour to a base class (i.e. BaseK), and basically adjusts environment 
-## variables to configure kernel-names, kernel-commands, etc.. just in time.
-
 lab.gen.kernels: flux.starmap/.kernel.from.target,kernels.list
 .kernel.from.target/%:; cmd="${make} ${*}" ${make} .kernel.gen/${*}
 .kernel.gen/%:
@@ -79,7 +99,7 @@ lab.gen.kernels: flux.starmap/.kernel.from.target,kernels.list
 	&& touch $${kfile} \
 	&& disp_name="`echo ${*}|cut -d. -f2`" \
 	&& disp_name=$${display_name:-$${disp_name}} \
-	&& cat ${jupyter.root}/kernel.json.template \
+	&& cat ${jupyter.root}/kernel.base/kernel.json.template \
 	| ${jq} ".env.cmd = \"$${cmd}\"" \
 	| ${jq} ".env.kernel_name = \"$${disp_name}\"" \
 	| ${jq} ".display_name = \"$${disp_name}\"" \
@@ -89,11 +109,10 @@ lab.gen.kernels: flux.starmap/.kernel.from.target,kernels.list
 	> $${kfile} \
 	&& $(call log.target.part2, ${dim_ital}$${kfile})
 
+## Next section is a small bridge to the jupyter lab HTTP API.  This isn't necessarily 
+## that useful since we have CLI access to jupyter, but this shows that it's accessible 
+## and calls to `curl` could be replaced with `nbclient`, etc.
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## A small bridge to the jupyter lab HTTP API.
-## This isn't necessarily that useful since we have CLI access to 
-## jupyter, but this shows that it's accessible and calls to curl 
-## could be replaced with `nbclient`, etc.
 api.kernels:
 	@# Show kernel status, according to the web ui 
 	curl -s "${lab.url.base}/api/kernels" | ${jq} .
@@ -112,12 +131,13 @@ lab.pipeline: lab.init lab.notebooks.preview api.kernels lab.stop
 	@# Pipeline-mode interface.  
 
 export geometry=${lab.tui.geometry}
-lab.ui: lab.init tux.open.horizontal/${lab.tui_panes}
-	@# UI-mode.  Launches the jupyter server in a pane, and 
-	@# summarizes project status / offer debugging shells elsewhere
+lab.tui: lab.init tux.open.horizontal/${lab.tui_panes}
+	@# UI-mode.  By default this launches the jupyter server 
+	@# in one tmux pane for log viewing, then opens a 
+	@# TUI webbrowser (carbonyl) that's pointed at it 
 
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## Top level command and control for the lab ensemble.
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 lab.init: \
 	tux.require jupyter.stop jupyter.build fmtk.build \
@@ -127,6 +147,9 @@ lab.init: \
 	@# Besides background the jupyter lab server, it also synchronizes 
 	@# raw .ipynb with paired markdown equivalent using `jupytext`.
 
+lab.notebook.exec/%:
+	quiet=1 ${make} lab.dispatch/self.notebook.exec/${*}
+
 lab.notebook.preview/%:
 	@# Shows input and execution for a single notebook.
 	@# Console friendly, colored markdown rendering, and usable from the host.
@@ -134,8 +157,8 @@ lab.notebook.preview/%:
 	&& $(call log.target, ${dim_ital}$${bname} ${sep} ${no_ansi}( ${bold_under}input${no_ansi})) \
 	&& quiet=1 ${make} lab.dispatch/self.notebook.preview.in/${*} | ${stream.markdown} \
 	&& $(call log.target, ${dim_ital}$${bname} ${sep} ${no_ansi}( ${bold_under}output${no_ansi})) \
+	&& label="notebook finished in" ${make} flux.timer/lab.notebook.exec/${*} \
 	&& $(call io.mktemp) \
-	&& quiet=1 ${make} lab.dispatch/self.notebook.exec/${*} \
 	&& quiet=1 ${make} lab.dispatch/self.notebook.preview.out/${*} > $${tmpf} \
 	&& cat $${tmpf} | ${stream.markdown} \
 	&& cat $${tmpf} | grep '!\[png\]' \
@@ -155,7 +178,7 @@ lab.notebook.preview.images/%:
 
 lab.notebook.open/%:
 	@# Open the given notebook in the TUI browser.  
-	@# (This is used as a widget by `lab.ui`)
+	@# (This is used as a widget by `lab.tui`)
 	url="${lab.url.base}/notebooks/notebooks/${*}" ${make} tux.browser
 
 lab.notebooks:
@@ -182,9 +205,9 @@ lab.serve.background: lab.up.detach
 
 lab.summary: lab.wait lab.test 
 	@# Waits for jupyterlab to ready, then describes available kernels / notebooks
-	$(call log.target,${dim_cyan}Available notebooks:)
+	$(call log.target, ${dim_cyan}Available notebooks:)
 	${make} lab.notebooks | ${stream.indent}
-	$(call log.target,${dim_cyan}Markdown notebooks:)
+	$(call log.target, ${dim_cyan}Markdown notebooks:)
 	ls ${jupyter.notebook.root}/*.md | ${stream.indent}
 	
 lab.test: lab.dispatch/self.kernelspec.list
@@ -200,8 +223,8 @@ lab.webpage.open: lab.wait
 	python3 -c"import webbrowser; webbrowser.open(\"${lab.url}\")" \
 		|| $(call log.target, ${red}could not open browser!)
 
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## Low level helpers, these need to run in the lab container.
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 self.kernelspec.list:
 	@# Show the available kernels 
 	jupyter kernelspec list

@@ -10,8 +10,14 @@
 # show docker status
 ./compose.mk docker.stat
 
+./compose.mk docker.size.summary
+
+url="https://github.com/alpine-docker/git.git#1.0.38:." \
+    tag="alpine-git" ./compose.mk docker.from.url
+user=alpine-docker repo=git tag="1.0.38" ./compose.mk docker.from.github
+
 # build a Dockerfile to a tag
-tag=debian/buildd:bookworm  ./compose.mk docker.from.file/demos/data/Dockerfile
+tag=compose.mk:testing  ./compose.mk docker.from.file/demos/data/Dockerfile
 
 # run an image with a command
 img=debian/buildd:bookworm  entrypoint=sh cmd='-c ls' ./compose.mk docker.run.sh

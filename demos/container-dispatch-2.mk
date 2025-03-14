@@ -3,7 +3,7 @@
 #   Demonstrates the container dispatch idiom using "namespace" style invocation.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: make -f demos/container-dispatch-2.mk
+#   USAGE: ./demos/container-dispatch-2.mk
 
 include compose.mk
 .DEFAULT_GOAL := demo.namespaced_dispatch

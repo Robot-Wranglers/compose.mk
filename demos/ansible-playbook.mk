@@ -2,7 +2,7 @@
 # demos/ansible-playbook.mk: 
 #   Demonstrates passing embedded-data into an embedded-container.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
-#   USAGE: make -f demos/ansible-playbook.mk
+#   USAGE: ./demos/ansible-playbook.mk
 
 include compose.mk
 .DEFAULT_GOAL := demo.playbook
@@ -38,9 +38,9 @@ self.playbook_runner/%:
 	@# First we write the `Ansible.playbook` def above as a tmpfile, then call ansible, 
 	@# ensuring JSON oputput.
 	$(call io.mktemp) \
-	&& $(call log, ${GLYPH_IO} ${dim_green} Running playbook:) \
+	&& $(call log.io,  ${dim_green} Running playbook:) \
 	&& ${make} mk.def.read/${*} | ${stream.peek} > $${tmpf} \
 	&& ANSIBLE_STDOUT_CALLBACK=json \
 	ansible-playbook -i localhost, -c local $${tmpf} \
-	&& $(call log, ${GLYPH_IO} ${dim_green} Playbook finished.) 
+	&& $(call log.io,  ${dim_green} Playbook finished.) 
 	

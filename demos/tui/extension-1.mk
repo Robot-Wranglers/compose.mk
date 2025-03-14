@@ -3,7 +3,7 @@
 #   Minimal demo for extending the embedded TUI.  See docs for more discussion.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.
 #
-#   USAGE: make -f demos/tui/extension-1.mk
+#   USAGE: ./demos/tui/extension-1.mk
 
 include compose.mk
 

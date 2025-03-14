@@ -6,7 +6,7 @@
 #
 # This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 # See the main docs:  http://robot-wranglers.github.io/compose.mk/demos/platform/
-# USAGE: make -f demos/platform-lme.mk bootstrap
+# USAGE: ./demos/platform-lme.mk bootstrap
 
 # Import the contents of the last demo so we can elaborate on it here.
 include demos/platform.mk 

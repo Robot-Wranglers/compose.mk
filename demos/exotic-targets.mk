@@ -3,7 +3,7 @@
 #   Demos make-targets in foreign languages and shows them working with pipes.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: make -f demos/exotic-targets.mk
+#   USAGE: ./demos/exotic-targets.mk
 
 include compose.mk
 .DEFAULT_GOAL := demo.python.pipes
