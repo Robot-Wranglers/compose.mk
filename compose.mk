@@ -74,7 +74,7 @@ case ${CMK_SUPERVISOR:-1} in \
 		export MAKE_SUPER=$(exec sh -c 'echo "$PPID"'); \
 		[ "${trace}" == 1 ] && set -x || true;  \
 		trap "${_make_} mk.supervisor.trap/SIGINT; " SIGINT; \
-		${_make_} mk.supervisor.enter/${MAKE_SUPER} ${@} 2> >(sed '/^make.*:.*mk.interrupt\/SIGINT.*Killed/,/^make:.*Error.*/d' >/dev/stderr); \
+		${_make_} mk.supervisor.enter/${MAKE_SUPER} ${@:-mk.__main__} 2> >(sed '/^make.*:.*mk.interrupt\/SIGINT.*Killed/,/^make:.*Error.*/d' >/dev/stderr); \
 		st=$? ; ${_make_} mk.supervisor.exit/${st}; st=$?; ;; \
 esac \
 ; exit ${st}
@@ -95,7 +95,6 @@ SHELL:=bash
 MAKEFLAGS:=-s -S --warn-undefined-variables
 MAKEFLAGS+=--no-builtin-rules
 .DEFAULT_GOAL?=help
-
 .SUFFIXES:
 .INTERMEDIATE: .tmp.* .flux.*
 
@@ -134,9 +133,9 @@ dim_ital=${dim}${ital}
 dim_ital_cyan=${dim_ital}${cyan}
 no_ansi_dim=${no_ansi}${dim}
 cyan_flow_left=${bold_cyan}⋘${dim}⋘${no_ansi_dim}⋘${no_ansi}
-cyan_flow_right=${no_ansi_dim}⋙${dim}${cyan}⋙${no_ansi}${bold_cyan}⋙${no_ansi}
+cyan_flow_right=${no_ansi_dim}⋙${dim}${cyan}⋙${no_ansi}${bold_cyan}⋙${no_ansi} 
 green_flow_left=${bold_green}⋘${dim}⋘${no_ansi_dim}⋘${no_ansi}
-green_flow_right=${no_ansi_dim}⋙${dim_green}⋙${no_ansi}${green}⋙${bold_green}⋙
+green_flow_right=${no_ansi_dim}⋙${dim_green}⋙${no_ansi}${green}⋙${bold_green}⋙ 
 sep=${no_ansi}//
 
 # Glyphs used in log messages 📢 🤐
@@ -233,7 +232,7 @@ log.trace.part1=[ "${TRACE}" == "0" ] && true || $(call log.part1, ${1})
 log.trace.part2=[ "${TRACE}" == "0" ] && true || $(call log.part2, ${1})
 log.target.rerouting=$(call log.io,  ${@} ${sep}${dim} Invoked from top; rerouting to tool-container)
 log.trace.target.rerouting=( [ "${TRACE}" == "0" ] && true || $(call log.target.rerouting) )
-log.file.preview=$(call log.target, ${cyan_flow_left}) ; $(call io.file.preview, ${1})
+log.file.preview=$(call log.target, ${cyan_flow_left}) ; $(call io.preview.file, ${1})
 
 log.flux=$(call log, ${GLYPH.FLUX} ${1})
 log.docker=$(call log, ${GLYPH.DOCKER} ${1})
@@ -476,8 +475,8 @@ compose.loadf: tux.require
 	&& eval "$${LOADF}" > $${tmpf} \
 	&& chmod ugo+x $${tmpf} \
 	&& ( [ "$${TRACE}" == 1 ] \
-		 && ( ( style=monokai ${make} io.file.preview/$${fname} \
-		        && ${make} io.file.preview/$${tmpf} ) \
+		 && ( ( style=monokai ${make} io.preview.file/$${fname} \
+		        && ${make} io.preview.file/$${tmpf} ) \
 					2>&1 | ${stream.indent} ) \
 		 || true ) \
 	&& ( \
@@ -496,7 +495,7 @@ compose.loadf: tux.require
 	&& $(call log, $${header} ${dim}$${msg}) \
 	&& ${trace_maybe} \
 	&& $(call log.trace, $${header} Handing off to generated makefile) \
-	&& $(call mk.yield2, env -i HOME=${HOME} make ${MAKE_FLAGS} -f $${tmpf} $${words:-tux.open.service_shells/$${first}})
+	&& $(call mk.yield, env -i HOME=${HOME} make ${MAKE_FLAGS} -f $${tmpf} $${words:-tux.open.service_shells/$${first}})
 compose.select/%:
 	@# Interactively selects a container from the given docker compose file,
 	@# then drops into an interactive shell for that container.  
@@ -813,7 +812,6 @@ docker.image.dispatch/%:
 	@#  ./compose.mk docker.image.dispatch/<img>/<target>
 	tty=1 img=`printf "${*}"|cut -d/ -f1` ${make} docker.dispatch/`printf "${*}"|cut -d/ -f2-`
 
-docker.image.run=${make} docker.image.run
 
 docker.image.run/%:
 	@# Runs the named image, using the (optional) named entrypoint.
@@ -827,6 +825,7 @@ docker.image.run/%:
 	&& ${trace_maybe} \
 	&& entrypoint="`[ -z "$${entrypoint:-}" ] && echo "none" || echo "$${entrypoint}"`" \
 	${make} docker.run.sh
+docker.image.run=${make} docker.image.run
 
 docker.init:
 	@# Checks if docker is available, then displays version/context (no real setup)
@@ -1088,9 +1087,6 @@ io.figlet:
 	@# (This requires the embedded tui is built) 
 	echo "figlet -f$${font:-3d} $${label}" | ${make} tux.shell.pipe >/dev/stderr
 
-io.img.preview/%:; cat ${*} | ${make} stream.img
-
-io.markdown.preview/%:; cat ${*} | ${make} stream.markdown
 
 io.gum.docker=${trace_maybe} && docker run -it -e TERM=$${TERM:-xterm} --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nCOPY --from=charmcli/gum:${GUM_VERSION} /usr/local/bin/gum /usr/local/bin/gum\nRUN apk add --update --no-cache bash\n")`
 ifeq ($(shell which gum >/dev/null 2> /dev/null && echo 1|| echo 0),1) 
@@ -1111,9 +1107,9 @@ io.gum.style.div:=--border double --align center --width $${width:-$$(echo "x=$$
 io.gum.style.default:=--border double --foreground 2 --border-foreground 2
 io.gum.tty=export tty=1; $(call io.gum, ${1})
 io.file.select=header="Choose a file: (dir=$${dir:-.})"; choices=`ls $${dir:-.}/$${pattern:-} | ${stream.nl.to.space}` && ${io.get.choice}
-
-charm.glow:=docker run -q -i charmcli/glow:${GLOW_VERSION} -s dracula
-
+glow.style=dracula
+glow.docker:=docker run -q -i charmcli/glow:${GLOW_VERSION} -s ${glow.style}
+glow.run:=$(shell which glow >/dev/null 2>/dev/null && echo "`which glow` -s ${glow.style}" || echo "${glow.docker}")
 io.gum.choice/% io.gum.choose/%:
 	@# Interface to `gum choose`.
 	@# This uses gum if it is available, falling back to docker if necessary.
@@ -1225,32 +1221,8 @@ io.envp/% io.env.pretty/% .tux.widget.env/%:
 	@#
 	${make} io.env/${*} | ${make} stream.ini.pygmentize
 
-io.file.pygmentize/%:; fname="${*}" ${make} stream.pygmentize
-	@# Syntax highlighting for the given file.
-	@# Lexer will autodetected unless override is provided.
-	@# Style defaults to 'trac', which works best with dark backgrounds.
-	@#
-	@# USAGE:
-	@#   ./compose.mk io.file.pygmentize/<fname>
-	@#   lexer=.. ./compose.mk io.file.pygmentize/<fname>
-	@#   lexer=.. style=.. ./compose.mk io.file.pygmentize/<fname>
-	@#
-	@# REFS:
-	@# [1]: https://pygments.org/
-	@# [2]: https://pygments.org/styles/
-	@#
-
-io.file.preview=cat ${1} | ${stream.dim.indent.stderr}
-io.file.preview/% stream.pygmentize/%:
-	@# Outputs syntax-highlighting + line-numbers for the given filename to stderr.
-	@#
-	@# USAGE:
-	@#  ./compose.mk io.file.preview/<fname>
-	@#
-	header="io.file.preview${no_ansi}" \
-	&& $(call log.io, $${header} ${sep} ${dim}${bold}${*}) \
-	&& style=trac ${make} io.file.pygmentize/${*} \
-	| ${stream.nl.enum} | ${stream.indent.to.stderr}
+# Creates a file with the 2nd argument as a command, iff the file given by the first arg is stale.
+io.file.gen.maybe=test \( ! -f ${1} -o -n "%$$(find ${1} -mtime +0 -mmin +$${freshness:-2.7} 2>/dev/null)" \) && ${2} > ${1}
 
 io.help:; ${make} mk.namespace.filter/io.
 	@# Lists only the targets available under the 'io' namespace.
@@ -1264,6 +1236,43 @@ io.gum.div:
 	@#  ./compose.mk io.gum.div label=".."
 	@#
 	label=$${label:-${io.timestamp}} ${make} io.draw.banner
+
+io.preview.img/%:; cat ${*} | ${make} stream.img
+	@# Console-friendly image preview for the given file. See also: `stream.img`
+	@#
+	@# USAGE: 
+	@#   ./compose.mk io.preview.img/<path_to_img>
+io.preview.markdown/%:; cat ${*} | ${make} stream.markdown
+	@# Console-friendly markdown preview for the given file. See also `stream.markdown`
+	@#   
+	@#   
+
+io.preview.pygmentize/%:; fname="${*}" ${make} stream.pygmentize
+	@# Syntax highlighting for the given file.
+	@# Lexer will autodetected unless override is provided.
+	@# Style defaults to 'trac', which works best with dark backgrounds.
+	@#
+	@# USAGE:
+	@#   ./compose.mk io.preview.pygmentize/<fname>
+	@#   lexer=.. ./compose.mk io.preview.pygmentize/<fname>
+	@#   lexer=.. style=.. ./compose.mk io.preview.pygmentize/<fname>
+	@#
+	@# REFS:
+	@# [1]: https://pygments.org/
+	@# [2]: https://pygments.org/styles/
+	@#
+
+io.preview.file=cat ${1} | ${stream.dim.indent.stderr}
+io.preview.file/% stream.pygmentize/%:
+	@# Outputs syntax-highlighting + line-numbers for the given filename to stderr.
+	@#
+	@# USAGE:
+	@#  ./compose.mk io.preview.file/<fname>
+	@#
+	$(call log.io, io.preview.file ${sep} ${dim}${bold}${*}) \
+	&& style=trac ${make} io.preview.pygmentize/${*} \
+	| ${stream.nl.enum} | ${stream.indent.to.stderr}
+
 
 io.print.div=label=${@} ${make} io.print.div
 io.print.div:
@@ -1287,16 +1296,6 @@ io.print.div:
 		&& printf "${no_ansi_dim}${bold}${green}$${label}${no_ansi_dim}" \
 	    && printf "%*s${no_ansi}\n\n" "$${side_length}" | sed "s/ /$${filler}/g" \
 	; fi
-
-# io.print.div/%:
-# 	@# Prints a divider with a width of `term_width / <arg>`
-# 	@#
-# 	@# USAGE: (half-width labelled divider)
-# 	@#  label.. ./compose.mk io.print.div/<int>
-# 	@#
-# 	which tput ${stream.obliviate} \
-# 	&& (width=`echo \`tput cols\` / ${*} | bc 2>/dev/null || echo 45` ${make} io.print.div) \
-# 	|| (width=40 ${make} io.print.div)
 
 io.quiet.stderr/%:; cmd="${make} ${*}" make io.quiet.stderr.sh
 	@# Runs the given target, surpressing stderr output, except in case of error.
@@ -1384,7 +1383,8 @@ io.tail/%:
 	@#
 	$(trace_maybe) && touch ${*} && tail -f ${*} 2>/dev/null
 
-io.terminal.cols=$(shell which tput ${stream.obliviate} && echo `tput cols` || echo 45)
+io.terminal.cols=$(shell which tput >/dev/null 2>/dev/null && echo `tput cols` || echo 45)
+io.term.width:=${io.terminal.cols}
 # io.term.cols:; ${io.terminal.cols}
 io.time.wait/% io.wait/%:
 	@# Pauses for the given amount of seconds.
@@ -1399,6 +1399,22 @@ io.timestamp=`date '+%T'`
 
 io.wait io.time.wait: io.time.wait/1
 	@# Pauses for 1 second.
+
+io.browser/%:
+	@# Like `io.browser`, but accepts a variable-name as an argument.
+	@# Variable will be dereferenced and stored as 'url' before chaining.
+	url="`${make} mk.get/${*}`" ${make} io.browser
+
+io.browser:
+	@# Tries to open the given URL in a browser.
+	@# (This requires python on the host and can't run from docker)
+	@#
+	@# USAGE: 
+	@#  url="..." ./compose.mk io.browser
+	@#
+	$(call log.target, ${red}opening $${url})
+	python3 -c"import webbrowser; webbrowser.open(\"$${url}\")" \
+		|| $(call log.target, ${red}could not open browser!)
 
 io.with.color/%:
 	@# A context manager that paints the given target's output as the given color.
@@ -1446,6 +1462,24 @@ $(file < .tmp.$(strip ${1})) $(shell rm .tmp.$(strip ${1}))
 endef
 endef
 
+mk.__main__:
+	@# Runs the default goal, whatever it is.
+	@# We need this for use with the supervisor because 
+	@# usage of `mk.supervisor.enter/<pid>` is ALWAYS present,
+	@# and that overrides default that would run with an empty CLI.
+	case `echo ${MAKEFILE_LIST}|wc -w` in \
+		1) case `echo ${MAKEFILE_LIST}|xargs basename` in \
+				compose.mk) (\
+					$(call log.trace,empty invocation for compose.mk-- returning help) \
+					&& ${make} help);; \
+				*) ${make} `${make} mk.get/.DEFAULT_GOAL`;; \
+			esac ;; \
+		0) $(call log, ${red}error: library list is empty);; \
+		*) (\
+			$(call log.trace, multiple library files; looking for a default goal..) \
+			&& ${make} `${make} mk.get/.DEFAULT_GOAL`);; \
+	esac
+
 mk.def.dispatch/%:
 	@# Reads the given <def_name>, writes to a tmp-file,
 	@# then runs the given interpreter on the tmp file.
@@ -1462,7 +1496,7 @@ mk.def.dispatch/%:
 	&& export intr=`printf "${*}"|cut -d, -f1` \
 	&& export def_name=`printf "${*}" | cut -d, -f2-` \
 	&& ${mk.def.to.file}/$${def_name}/$${tmpf} \
-	&& [ -z $${preview:-} ] && true || ${make} io.file.preview/$${tmpf} \
+	&& [ -z $${preview:-} ] && true || ${make} io.preview.file/$${tmpf} \
 	&& header="mk.def.dispatch${no_ansi}" \
 	&& ([ $${TRACE} == 1 ] &&  printf "$${header} ${sep} ${dim}`pwd`${no_ansi} ${sep} ${dim}$${tmpf}${no_ansi}\n" > ${stderr} || true ) \
 	&& $(call log.mk, $${header} ${sep} ${cyan}[${no_ansi}${bold}$${intr}${no_ansi}${cyan}] ${sep} ${dim}$${tmpf}) \
@@ -1486,10 +1520,14 @@ mk.def.read=${make} mk.def.read
 
 mk.def.to.file=${make} mk.def.to.file
 mk.def.to.file/%:
-	@# Reads the given define/endef block from this makefile context, writing it to the given output file.
+	@# Reads the given define/endef block from this makefile context, 
+	@# writing it to the given output file. Also available as a macro.
 	@#
-	@# USAGE: 
+	@# USAGE: ( explicit filename for output )
 	@#   ./compose.mk mk.def.to.file/<def_name>/<fname>
+	@#
+	@# USAGE: ( use <def_name> as filename )
+	@#   ./compose.mk mk.def.to.file/<def_name>
 	@#
 	def_name=`printf "${*}" | cut -d/ -f1` \
 	&& out_file=`printf "${*}" | cut -d/ -f2-` \
@@ -1536,6 +1574,7 @@ log.mk=$(call log, ${GLYPH_MK} ${1})
 mk.help:
 	@# Lists only the targets available under the 'mk' namespace.
 	${make} mk.namespace.filter/mk.
+
 mk.help.module/%:
 	@# Shows help for the named module.
 	@#
@@ -1544,12 +1583,12 @@ mk.help.module/%:
 	@#
 	$(call io.mktemp) && export key="${*}" \
 	&& (${make} mk.parse.module.docs/${MAKEFILE} \
-		| ${jq.run} ".$${key}"  2>/dev/null | ${jq.run} -r '.[1:-1][]' 2>/dev/null  \
+		| ${jq} ".$${key}"  2>/dev/null | ${jq} -r '.[1:-1][]' 2>/dev/null  \
 	> $${tmpf}) \
 	; [ -z "`cat $${tmpf}`" ] && exit 0 \
 	|| ( \
-		$(call log.stdout, ${GLYPH_MK} mk.help.module ${sep} ${bold}$${key}) \
-		&& cat $${tmpf} | ${stream.glow} ) 
+		$(call log.mk, mk.help.module ${sep} ${bold}$${key}) \
+		&& cat $${tmpf} | ${stream.glow} >/dev/stderr ) 
 
 mk.help.block/%:
 	@# Shows the help-block matching the given pattern.
@@ -1561,32 +1600,52 @@ mk.help.block/%:
 	@#
 	pattern="${*}" ${make} mk.parse.block/${MAKEFILE} | ${stream.glow} 
 
-mk.help.target/%:; ${make} .mk.help.target/${*} | ${stream.glow}
-.mk.help.target/%:
+mk.help.target/%:
 	@# Shows help for the named target.
 	@#
 	@# USAGE:
 	@#   ./compose.mk mk.help.target/<target_name>
 	@#
-	$(call io.mktemp) && tmp1="$${tmpf}" \
+	tmp1=".tmp.$(shell echo `basename ${MAKEFILE}`.parsed.json)" \
+	&& $(call io.file.gen.maybe,$${tmp1},${make} mk.parse/${MAKEFILE}) \
 	&& $(call io.mktemp) && tmp2="$${tmpf}" \
 	&& export key="${*}" \
-	&& $(call log.mk, ${dim}mk.help.target ${sep} ${dim_cyan}${bold}$${key} ) \
-	&& ${make} mk.parse/${MAKEFILE} > $${tmp1} \
-	&& cat $${tmp1} | jq -r ".[\"$${key}\"].docs[]" 2>/dev/null >$${tmp2} \
+	&& $(call log.mk, ${no_ansi_dim}mk.help.target ${sep} ${dim_cyan}${bold}$${key} ) \
+	&& cat $${tmp1} | ${jq} -r ".[\"$${key}\"].docs[]" 2>/dev/null > $${tmp2} \
 	; case $$? in \
 		0) $(call log.trace, found it) ;; \
-		*) $(call log.trace, missed); cat $${tmp1} | jq -r ".[\"$${key}/%\"].docs[]" 2>/dev/null >$${tmp2};; \
+		*) $(call log.trace, missed); cat $${tmp1} | ${jq} -r ".[\"$${key}/%\"].docs[]" 2>/dev/null >$${tmp2};; \
+	esac \
+	; case "`cat $${tmp2} | ${stream.trim}`" in \
+		"") $(call log.mk,${cyan_flow_right} ${dim_ital}No help found.);; \
 	esac \
 	; case $$? in \
-		0) cat $${tmp2} ;; \
-		*) msg="Cannot find help for $${key}" && $(call log.mk, $${msg})&& printf "\n$${msg}\n";; \
-	esac
+		0) cat $${tmp2} | ${stream.glow} ;; \
+		*) $(call log.mk, ${cyan_flow_right} No such target was found.);; \
+	esac 
 
-help.local: 
-	${mk.targets.local}| grep -v '%'|grep -v '^self.' | sort | uniq | ${stream.peek} | xargs -I% bash -c "${make} mk.help.target/% || exit 255"
+help.local:
+	@# Renders help for all local targets, i.e. just the ones that do NOT come from includes.
+	@# Usually used from an included makefile, not with compose.mk itself. 
+	@#
+	$(call log.mk, ${no_ansi_dim}${@} ${sep} ${dim}Rendering help for${no_ansi} ${bold}${underline}${MAKEFILE}${no_ansi} ${dim_ital}(no includes)\n)
+	targets="`${mk.targets.local.public} | grep -v '%' | grep "$${filter:-.}"`" \
+	&& width=`echo|awk "{print int(.6*${io.term.width})}"` \
+	&& printf "$${targets}" | ${stream.fold} | ${stream.dim.indent.stderr} \
+	&& printf '\n' \
+	&& printf "$${targets}" \
+	| xargs -I% sh ${dash_x_maybe} -c "${make} mk.help.target/%"
+
+help.local.filter/%:; filter="${*}" ${make} help.local
+	@# Like `help.local`, but filters local targets first using the given pattern.
+	@# Usually used from an included makefile, not with compose.mk itself. 
+	@#
+	@# USAGE: 
+	@#   make help.local.filter/<pattern>
+
+
 mk.help.search/%:
-	@# Shows targets matching the given prefix.
+	@# Shows all targets matching the given prefix.
 	@#
 	@# USAGE:
 	@#   ./compose.mk mk.help.search/<pattern>
@@ -1595,25 +1654,41 @@ mk.help.search/%:
 	&& ${make} mk.parse.targets/${MAKEFILE} | grep "^${*}" \
 	| sed 's/\/%/\/<arg>/g' > $${tmpf} \
 	&& count="`cat $${tmpf}|wc -l`" \
-	&& header="${dim} ${no_ansi}${GLYPH_MK} mk.help.search ${sep}" \
 	&& max=5 \
 	&& case $${count} in \
 		1) exit 0; ;; \
 		*) ( \
-			$(call log, $${header} ${dim}pattern=${no_ansi}${bold}${*}) \
+			$(call log.mk, ${no_ansi_dim}mk.help.search ${sep} ${dim}pattern=${no_ansi}${bold}${*}) \
 			; cat $${tmpf} | head -$${max} \
-			| xargs -I% printf " ${dim_green}${GLYPH.tree_item} ${dim}${ital}%${no_ansi}\n" \
-			| ${stream.indent}  \
-			&& $(call log, $${header} ${dim}top ${no_ansi}$${max}${no_ansi_dim} of ${no_ansi}$${count}${no_ansi_dim} total )\
+			| xargs -I% printf "  ${dim_green}${GLYPH.tree_item} ${dim}${ital}%${no_ansi}\n" \
+			| ${stream.indent} >/dev/stderr \
+			&& $(call log.mk, ${no_ansi_dim}mk.help.search ${sep}${dim} top ${no_ansi}$${max}${no_ansi_dim}${comma} of ${no_ansi}$${count}${no_ansi_dim} total )\
 			); ;; \
 	esac
 
 mk.interpret:
+	@# This is similar to `mk.include`, and (simulates) changes to the `make` runtime.
+	@# It's mostly intended to be used as shebang, and essentially sets up `compose.mk` 
+	@# as an alternative to using `make` as an interpreter.  By opting in to this, 
+	@# extensions can inherit not only `compose.mk` code, but also the signals / supervisors. 
 	@#
-	tmp="$${MAKE_CLI#*mk.interpret}" \
+	@# See https://robot-wranglers.github.io/compose.mk/signals/ for more information.
+	@#
+	@# USAGE:
+	@#  ./compose.mk mk.interpret path/to/Makefile <target> .. <target> 
+	@#
+	${trace_maybe} && tmp="$${MAKE_CLI#*mk.interpret}" \
 	&& tmp=`echo $${tmp} | ${stream.lstrip}` \
-	&& $(call mk.yield2, ${make} mk.include/$${tmp})
-
+	&& fname="`echo $${tmp}| cut -d' ' -f1`" \
+	&& rest="`echo $${tmp}| cut -d' ' -f2- -s`" \
+	&& $(call log.mk, mk.interpret ${sep} ${bold}$${fname} ${sep} ${dim_ital}$${rest}) \
+	&& $(call io.mktemp) \
+	&& tmpf=.tmp.mk && ( cat ${CMK_SRC} | head -n -1 ; printf '\n\n\n' \
+		 && cat $${fname} | grep -v "^include ${CMK_SRC}" \
+		 && printf '\n\n\n' ; cat ${CMK_SRC} | tail -n1 ) \
+	> $${tmpf} \
+	&& $(call mk.yield,MAKEFILE=$${fname} bash $${tmpf} $${rest})
+	
 mk.include/%:
 	@# Dynamic includes.
 	@# This is experimental stuff for reflection support.
@@ -1628,7 +1703,8 @@ mk.include/%:
 	@# USAGE: ( concrete )
 	@#   ./compose.mk mk.include/demos/no-include.mk foo:flux.ok mk.let/bar:foo bar
 	@#
-	$(call mk.yield2, ${make} -f${*} $${MAKE_CLI#*mk.include/${*}})
+	$(call mk.yield, MAKEFILE=${*} ${make} -f${*} $${MAKE_CLI#*mk.include/${*}})
+
 mk.let/%:
 	@# Dynamic target assignment.
 	@# This is experimental stuff for reflection support.
@@ -1654,7 +1730,7 @@ mk.let/%:
 	&& printf "$${src}" >  $${tmpf} \
 	&& $(call log.part2, ${no_ansi_dim}$${tmpf}) \
 	&& cmd="make ${MAKE_FLAGS} $${MAKEFILE_LIST// / -f} -f $${tmpf} $${MAKE_CLI#*mk.let/${*}}" \
-	&& $(call mk.yield2, $${cmd} )
+	&& $(call mk.yield, $${cmd} )
 
 mk.namespace.list help.namespaces:
 	@# Returns only the top-level target namespaces
@@ -1777,7 +1853,8 @@ mk.select/%:
 	&& header="Choose a target:" && ${io.get.choice} \
 	&& env -i PATH=$${PATH} HOME=$${HOME} bash -x -c "make -f ${*} $${chosen}"
 
-mk.parse.shallow/%:
+mk.targets/% mk.parse.shallow/%:
+	@# Returns only local targets from the given file, ignoring includes.
 	@# Returns a newline-delimited list of targets inside the given Makefile.
 	@# Unlike `mk.parse`, this is "flat" and too naive to parse targets that come 
 	@# via includes.  Targets starting with "." are considered private, and 
@@ -1785,11 +1862,9 @@ mk.parse.shallow/%:
 	@#
 	cat ${*} | awk '/^define/ { in_define = 1 } /^endef/  { in_define = 0; next } !in_define { print }' \
 	| grep '^[^#[:space:]].*:' | grep -v ':=' | cut -d\\ -f1|cut -d\; -f1 \
-	| grep -v '.*[=].*[:]' | grep -v '^[.]' |grep -v '\$$' | cut -d\: -f1
+	| grep -v '.*[=].*[:]' | grep -v '^[.]' |grep -v '\$$' | cut -d\: -f1 | ${stream.space.to.nl}
 
 
-mk.parse.local: mk.parse.shallow/${MAKEFILE}
-	@# Output of `mk.parse.shallow/` for the current val of MAKEFILE.
 
 mk.parse.block/%:
 	@# Pulls out documentation blocks that match the given pattern.
@@ -1804,8 +1879,9 @@ mk.parse.block/%:
 	| ${jq.run} "to_entries | map(select(.key | test(\".*$${pattern}.*\"))) | first | .value" \
 	| ${jq.run} -r '.[1:-1][]'
 
-mk.parse.targets: mk.targets
-	@# Returns only local targets, ignoring includes
+mk.targets mk.parse.targets mk.targets.local mk.parse.local: mk.parse.shallow/${MAKEFILE}
+	@# Returns only local targets for the current Makefile, ignoring includes
+	@# Output of `mk.parse.shallow/` for the current val of MAKEFILE.
 
 mk.parse.targets/%:
 	@# Parses the given Makefile, returning target-names only. Simple, pipe-friendly output. 
@@ -1817,14 +1893,15 @@ mk.parse.targets/%:
 	@#
 	${make} mk.parse/${*} | ${jq.run} -r '.|keys[]'
 mk.parse.targets=${make} mk.parse.targets
-mk.targets.local=${mk.parse.targets}
+mk.targets.local=${mk.parse.targets} | sort | uniq
+mk.targets.local.public=${mk.targets.local}| grep -v '^self.' | grep -v '^[.]' | sort -V
 mk.parse.module.docs/%:
 	@# Parses the given Makefile, returning module-level documentation.
 	@#
 	@# USAGE:
 	@#  pattern=.. ./compose.mk mk.parse.module.docs/<makefile>
 	@#
-	${pynchon} parse --module-docs ${*} 2>/dev/null | jq .
+	${trace_maybe} && (${pynchon} parse --module-docs ${*} 2>/dev/null|| echo '{}') | ${jq} .
 
 
 define Dockerfile.makeself
@@ -1902,8 +1979,7 @@ mk.supervisor.pid:
 	@#
 	$(trace_maybe) \
 	&& case $${MAKE_SUPER:-} in \
-		"") ( \
-				header="${GLYPH_MK} mk.supervisor.pid ${sep} " \
+		"") (   header="${GLYPH_MK} mk.supervisor.pid ${sep} " \
 				&& $(call log, $${header} ${red}Supervisor not found) \
 				&& $(call log, $${header} ${no_ansi_dim}MAKE_SUPER is not set by any wrapper) \
 				&& $(call log, $${header} ${dim}No pid to handle signals could be found.) \
@@ -1922,7 +1998,7 @@ mk.supervisor.pid:
 mk.supervisor.interrupt/% mk.interrupt/%:
 	@# Sends the given signal to this process-tree's supervisor, then kills this process with SIGKILL.
 	@#
-	@# This is mostly used to short-circuit make's default command-line processing, 
+	@# This is mostly used to short-circuit make's default command-line processing
 	@# so that targets can be greedy about consuming the *whole* CLI, rather than 
 	@# having make try to interpret everything as additional targets.
 	@#
@@ -1931,7 +2007,7 @@ mk.supervisor.interrupt/% mk.interrupt/%:
 	@# is *always* an error that the user has to know they should ignore.
 	@#
 	@# To correct for exit status/error output, you'll have to have a supervisor. 
-	@# See the polyglot-wrapper at the top of this file for an example, and see 
+	@# See the polyglot-wrapper at the top of this file for more info, and see 
 	@# the 'mk.supervisor.*' namespace for handlers invoked by that supervisor.
 	@#
 	case $${CMK_SUPERVISOR} in \
@@ -1956,13 +2032,14 @@ mk.supervisor.enter/%:
 	@# the supervisor's pid; See instead 'mk.supervisor.pid'
 	@# 
 	$(eval export MAKE_SUPER:=${*}) \
-	$(call log.trace, ${GLYPH_MK} ${@} ${sep} ${red}started pid $${MAKE_SUPER}${no_ansi})
+	$(call log.trace, ${GLYPH_MK} ${@} ${sep} ${red}started pid ${no_ansi}$${MAKE_SUPER})
 	# $(call log.trace, ${GLYPH_MK} ${@} ${sep} ${red}handler @ `${make} mk.supervisor.pid`)
 
-define mk.yield2
+define mk.yield
 	header="${GLYPH_MK} mk.yield ${sep}${dim}" \
-	&& $(call log.trace, $${header} Yielding to:${dim_cyan} $(call strip, ${1})) \
-	&& ${1} \
+	&& yield_to="$(if $(filter undefined,$(origin 1)),true,$(1))" \
+	&& $(call log.trace, $${header} Yielding to:${dim_cyan} $(call strip, $${yield_to})) \
+	&& eval $${yield_to} \
 	; echo $$? > .tmp.mk.super.$${MAKE_SUPER} \
 	; ${mk.interrupt}
 endef
@@ -1974,9 +2051,10 @@ mk.supervisor.exit/%:
 	@#
 	header="${GLYPH_MK} mk.supervisor.exit ${sep}" \
 	&& $(call log.trace, $${header} ${red} status=${*} ${sep} ${bold}pid=$${MAKE_SUPER}) \
+	&& $(call log.trace, $${header} ${red} calling exit handlers: ${CMK_AT_EXIT_TARGETS}) \
 	&& ${make} ${CMK_AT_EXIT_TARGETS} \
 	&& if [ -f .tmp.mk.super.${MAKE_SUPER} ]; then \
-		( $(call log.trace, WARNING: execution was yielded from ${MAKE_SUPER}) \
+		( $(call log.trace, ${GLYPH_MK} ${yellow}WARNING: ${no_ansi_dim}execution was yielded from ${no_ansi}${MAKE_SUPER}${no_ansi_dim} (pidfile=${no_ansi}.tmp.mk.super.${MAKE_SUPER}${no_ansi_dim})) \
 			; trap "rm -f .tmp.mk.super.${MAKE_SUPER}" EXIT \
 			; exit `cat .tmp.mk.super.${MAKE_SUPER}`) \
 	else exit ${*}; \
@@ -1988,11 +2066,6 @@ mk.supervisor.trap/%:
 	header="${GLYPH_MK} mk.supervisor.trap ${sep}" \
 	&& $(call log.trace, $${header} ${red}${*} ${sep} ${dim}Supervisor trapped signal)
 
-mk.targets: mk.parse.local
-	@# Returns only local targets for the current Makefile, ignoring includes
-
-mk.targets/%:; ${make} mk.parse.shallow/${*}
-	@# Returns only local targets from the given file, ignoring includes
 
 mk.targets.simple/%:; ${make} mk.targets/${*} | grep -v '%$$'
 	@# Returns only local targets from the given file, 
@@ -2712,7 +2785,7 @@ flux.star/% flux.match/%:
 	matches="`${make} mk.namespace.filter/${*}|${stream.nl.to.space}`" \
 	&& count=`printf "$${matches}"|wc -w` \
 	&& $(call log.target, ${bold}$${count}${no_ansi_dim} matches for pattern ${dim_cyan}${*}) \
-	&& printf "$${matches}" | fold -s -w ${io.terminal.cols} | sed 's/ /, /g' | ${stream.dim.indent.stderr} \
+	&& printf "$${matches}" | ${stream.fold} | sed 's/ /, /g' | ${stream.dim.indent.stderr} \
 	&& printf "$${matches}" | ${make} flux.each/flux.apply
 
 flux.starmap/%:
@@ -2834,8 +2907,9 @@ stream.as.log=${stream.dim.indent.stderr}
 stream.stdin=cat /dev/stdin
 stream.obliviate=${all_devnull}
 stream.trim=awk 'NF {if (first) print ""; first=0; print} END {if (first) print ""}'| awk '{if (NR > 1) printf "%s\n", p; p = $$0} END {printf "%s", p}'
-
-stream.code:; ${stream.stdin}| ${make} io.file.preview//dev/stdin
+stream.fold=${stream.nl.to.space} | fold -s -w $${width:-${io.term.width}}
+stream.fold:; ${stream.fold}
+stream.code:; ${stream.stdin}| ${make} io.preview.file//dev/stdin
 
 stream.jb= ( ${jb.docker} `${stream.stdin}` )
 stream.jb:; ${stream.jb}
@@ -2845,11 +2919,10 @@ stream.jb:; ${stream.jb}
 	@#   $ echo foo=bar | ./compose.mk stream.jb
 	@#   {"foo":"bar"}
 
-stream.glow:=${charm.glow} ${stream.stdin} 
-stream.markdown:=${charm.glow} ${stream.stdin} 
+stream.glow:=${glow.run}
+stream.markdown:=${glow.run} 
 stream.glow stream.markdown:; ${stream.glow} 
 	@# Renders markdown from stdin to stdout.
-	@# See also: `charm.glow`
 
 stream.to.docker=${make} stream.to.docker
 stream.to.docker/%:
@@ -3148,7 +3221,7 @@ tux.pane/%:
 	@#
 	pane_id=`printf "${*}"|cut -d/ -f1` \
 	&& target=`printf "${*}"|cut -d/ -f2-` \
-	&& make tux.dispatch/tui/.tux.pane/${*}
+	&& ${make} tux.dispatch/tui/.tux.pane/${*}
 
 # Possible optimization: this command is *usually* but not 
 # always called from  `MAKELEVEL<3` and above that it is 
@@ -4010,7 +4083,7 @@ ${compose_file_stem}.command/%:
 	@# Passes the given command to the default entrypoint of the named service.
 	@#
 	@# USAGE:
-	@#   ./compose.mk ${compose_file_stem}.dispatch/<svc>/<command>
+	@#   ./compose.mk ${compose_file_stem}.command/<svc>/<command>
 	@#
 	cmd="$${*}" ${make} $${compose_file_stem}/`printf $${*}|cut -d/ -f1`
 
@@ -4398,11 +4471,12 @@ endef
 define compose.import.code
 $(eval defpat=$(strip ${1}))
 #$$(shell $(call log, import.code ${defpat}))
-$(eval __code_blocks__:=$(shell echo "$(.VARIABLES)"|${stream.space.to.nl}|grep ${defpat}))
+$(eval __code_blocks__:=$(shell echo "$(.VARIABLES)" | ${stream.space.to.nl} | grep ${defpat}))
 $(foreach \
  	codeblock, \
  	$(__code_blocks__), \
-	$(eval $(call compose.import.code_block, ${codeblock}, ${2})))
+	$(eval $(call compose.import.code_block, ${codeblock}, $(if $(filter undefined,$(origin 2)),"",$(2)))))
+	
 endef
 
 define compose.import.code_block
@@ -4429,7 +4503,7 @@ ${defname}.to.file:
 	@$$(eval export tmpf:=$$(shell TMPDIR=. mktemp))
 	CMK_INTERNAL=1 ${make} mk.def.read/${defname} > $${tmpf} \
 	&& echo $${tmpf}
-${defname}.preview: ${defname}.with.file/io.file.preview
+${defname}.preview: ${defname}.with.file/io.preview.file
 	@#
 	@#
 ${defname}.run/%:
@@ -4463,7 +4537,7 @@ help:
 	@#
 	$(call io.mktemp) \
 	&& case $${search:-} in \
-		"") export key=`echo "$${MAKE_CLI#*help}"|awk '{$$1=$$1;print}'` ;; \
+		"") export key=`echo "$${MAKE_CLI#* help}"|awk '{$$1=$$1;print}'` ;; \
 		*) export key="$${search}" ;;\
 	esac \
 	&& count=`echo "$${key}" |wc -w` \
@@ -4471,18 +4545,18 @@ help:
 	&& case $${count} in \
 		0) ( $(call _help_gen) > $${tmpf} \
 			&& count=`cat $${tmpf}|wc -l` && count="${yellow}$${count}${dim} items" \
-			&& $(call log, $${header} ${dim}Answering help for: ${no_ansi}${bold}top-level ${sep} $${count}) \
-			&&  cat $${tmpf} \
-			&& $(call log, $${header} ${dim}Answered help for: ${no_ansi}${bold}top-level ${sep} $${count}) \
+			&& cat $${tmpf} \
+			&& $(call log.docker, help ${sep} ${dim}Answered help for: ${no_ansi}${bold}top-level ${sep} $${count}) \
+			&& $(call log.docker, help ${sep} ${dim}Use ${no_ansi}help <topic>${no_ansi_dim} for more specific target / module help.) \
+			&& $(call log.docker, help ${sep} ${dim}Use ${no_ansi}help.local${no_ansi_dim} to get help for ${dim_ital}${MAKEFILE} without any included targets.) \
 		); ;; \
-		1) ( ( ${make} mk.help.module/$${key} | ${stream.trim}\
+		1) ( ( ${make} mk.help.module/$${key} \
 				; ${make} mk.help.target/$${key} \
 				; ${make} mk.help.search/$${key} \
 			) \
-			; ${make} mk.interrupt \
+			;  $(call mk.yield,true) \
 		); ;; \
-		*) ( $(call log.stdout, $${header} ${red}Not sure how to help with $${key} ($${count}) ${no_ansi}$${key}) \
-			; exit 77); ;; \
+		*) ( $(call log.docker, help ${sep} ${red}Not sure how to help with $${key} ($${count}) ${no_ansi}$${key}) ; ); ;; \
 	esac 
 
 # Code-gen shim for `loadf`
@@ -4520,7 +4594,7 @@ yq:
 	&& cmd=$${cmd:-$${after:-.}} \
 	&& dcmd="${yq.run.pipe} $${cmd}" \
 	&& ([ -p ${stdin} ] && dcmd="cat ${stdin} | $${dcmd}" || true) \
-	&&  $(call mk.yield2, $${dcmd})
+	&&  $(call mk.yield, $${dcmd})
 
 jq:
 	@# A wrapper for jq.  
@@ -4528,7 +4602,7 @@ jq:
 	&& cmd=$${cmd:-$${after:-.}} \
 	&& dcmd="${jq.run.pipe} $${cmd}" \
 	&& ([ -p ${stdin} ] && dcmd="cat ${stdin} | $${dcmd}" || true) \
-	&& $(call mk.yield2, $${dcmd})
+	&& $(call mk.yield, $${dcmd})
 
 jb jb.pipe:
 	@# An interface to `jb`[1] tool for building JSON from the command-line.

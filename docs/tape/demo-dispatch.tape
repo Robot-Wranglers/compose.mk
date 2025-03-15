@@ -10,7 +10,7 @@ Set TypingSpeed .21
 Set PlaybackSpeed 3.3
 Set CursorBlink false
 Show 
-Type "make -f demos/container-dispatch.mk"
+Type "./demos/container-dispatch.mk"
 Enter
 Sleep 15s
 Output img/demo-dispatch.gif 

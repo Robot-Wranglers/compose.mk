@@ -29,7 +29,7 @@ So you can see that while things like `vim` and `emacs` don't ship with the defa
 ### Understanding Widgets
 <hr style="width:100%;border-bottom:3px solid black;">
 
-We've seen [previously]({{mkdocs.site_relative_url}}/low-config-tuis/) that "widgets", i.e. TUI pane-content, are nothing very special.  Whether it's yazi or [your existing automation tasks]({{mkdocs.site_relative_url}}/low-config-tuis/), pane content declarations are ultimately just targets, [the same as everything else is]({{mkdocs.site_relative_url}}/matrioshka#homoiconic).
+We've seen [previously]({{mkdocs.site_relative_url}}/low-config-tuis/) that "widgets", i.e. TUI pane-content, are nothing very special.  Whether it's adding a file browser widget-from-container or just working with your [your existing automation tasks]({{mkdocs.site_relative_url}}/low-config-tuis/), pane content declarations are ultimately just targets [like everything else is]({{mkdocs.site_relative_url}}/matrioshka#homoiconic).
 
 In a TUI though, some targets are more useful than others, and typically you might want targets that loop, like we [saw before in the docs for low-config TUIs]({{mkdocs.site_relative_url}}/low-config-tuis).  Looping tricks with {{macros.api_link('flux.loopf',mkdocs)}} and friends can also "restore" pane content in case of crash, like say a hiccup in networking activity.
 

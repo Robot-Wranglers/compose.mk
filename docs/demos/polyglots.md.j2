@@ -36,11 +36,13 @@ There's actually a 4th basic approach that's the most magical, but we leave that
 
 
 ### Custom Containerized Interpretters
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr style="width:100%;border-bottom:3px solid black;">
 
-Using a custom container is not necessarily very different from the last section, so let's have some fun with it ;) See the external [Lean 4 demo]({{mkdocs.site_relative_url}}/demos/lean) for a more involved example.
+Using a custom container is not necessarily very different from the last section, so let's have some fun with it ;) 
 
-Besides handling the challenge of a custom container, this also demonstrates handling an additional complication that's pretty common, i.e. where the interpreter invocation must *also* be customized.  (In this case because lean has a `--script` mode, roughly akin to `elixir` vs `exs` or similar.)
+See the external [Lean 4 demo]({{mkdocs.site_relative_url}}/demos/lean) for a more involved example.
+
+Besides handling the challenge of a custom container, this also demonstrates handling an additional complication that's pretty common, i.e. where the interpreter invocation must *also* be customized.  *(In this case because lean has a `--script` mode, roughly akin to `elixir` vs `exs` or similar.)*
 
 ### Exotic Targets & Pipes
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -54,7 +56,7 @@ This might be important for passing data to other languages, and by combining [s
 ```
 
 ### Containerized Script+Deps with UV
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Another variation on {{macros.api_link('docker.run.def',mkdocs,arg='def_block_name')}} usage, but here's a different flavor.  Using [uv](https://docs.astral.sh/uv/), we defer to a python script itself for deciding both the requirements *and* the runtime version.  
 
@@ -113,7 +115,9 @@ Below, you can see that `compose.import.code` is using the argument `[.]py`, whi
 ### Other Examples
 <hr style="width:100%;border-bottom:3px solid black;">
 
-That's it for the basic taxonomy of different polyglots.  For more involved examples that are concrete and closer to real life, you might like to check out these other demos:
+That's it for the basic taxonomy of different polyglots.
+
+For more involved examples that are concrete and closer to real life, you might like to check out these other demos:
 
 * [Inlined Theorems in Lean4]({{mkdocs.site_relative_url}}/demos/lean)
 * [Inlined Justfiles]({{mkdocs.site_relative_url}}/demos/just)

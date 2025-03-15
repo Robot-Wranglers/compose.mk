@@ -10,7 +10,7 @@
 # USAGE: ./demos/uv.mk
 
 include compose.mk
-.DEFAULT_GOAL := demo.uv
+.DEFAULT_GOAL := __main__
 
 # Pick an image and a interpreter for the language kernel
 # https://docs.astral.sh/uv/guides/integration/docker/
@@ -32,7 +32,7 @@ print(r.status_code)
 endef
 
 ## Now run the code in the container, classic style invocation.
-demo.uv:
+__main__:
 	img=${uv.img} \
 	entrypoint=${uv.interpreter} \
 	cmd="run --script" \

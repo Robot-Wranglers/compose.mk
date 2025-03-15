@@ -17,7 +17,7 @@ $ chmod ugo+x compose.mk
 $ ./compose.mk ...
 ```
 
-If you have `make` and `docker`, that's all the setup you'll need for [stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview) tool usage, and while it's not recommended, you can always copy it to a bin folder if you want.  Read on for details about tighter integration with projects.
+If you have `make` and `docker`, that's all the setup you'll need for [stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview) tool usage.  While it's not really recommended, you can always copy it to a bin folder too if you want.  Read on for details about tighter integration with projects.
 
 ### Project Integration
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -37,7 +37,7 @@ include compose.mk
 
 # If you brought tool containers, you'll want to import them.
 # Call the bridge-building macro to get targets for each service.
-$(eval $(call compose.import.generic, ▰, TRUE, docker-compose.yml))
+$(eval $(call compose.import, docker-compose.yml))
 
 # At this point, dynamic targets are defined for the services
 # defined in the external compose config and are ready to use.
@@ -103,6 +103,8 @@ $ git clone {{github.repo_url}}
 # build the tool containers & check them
 $ make clean build test
 ```
+
+<br/>
 
 ### Forks & Versioning
 <hr style="width:100%;border-bottom:3px solid black;">

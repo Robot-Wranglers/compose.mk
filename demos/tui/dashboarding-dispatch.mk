@@ -4,13 +4,11 @@
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 # USAGE: ./demos/tui/dashboarding-widgets.mk demo.ui
 
-
-# Boilerplate
 include compose.mk 
-.DEFAULT_GOAL := all 
+.DEFAULT_GOAL := __main__ 
+__main__: clean build test
 
 # Fake targets for classic clean/build/test
-all: clean build test
 clean:; which gofmt; echo cleaning 
 build:; which go; go version
 test:; echo testing

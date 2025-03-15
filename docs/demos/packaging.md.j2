@@ -37,11 +37,9 @@ Yet another angle on this is that, `compose.mk` is already a [very lazy tool](ht
 
 #}
  
-### Usage
+### Usage: Make-target to Executable 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-#### Make-target to Executable 
-<hr style="width:95%;border-bottom:1px dashed black;">
 
 {#Beyond the direct access to `makeself` described above, `compose.mk` offers some .#}
 
@@ -57,8 +55,8 @@ $ cat img.png | ./stream.img
 It works, and we use `chafa` without *having* chafa because containers don't build or pull before they are used.  And in fact.. now we can use `compose.mk` without *having* `compose.mk`.  
 
 
-#### TUI to Executable
-<hr style="width:95%;border-bottom:1px dashed black;">
+### Usage: TUI to Executable
+<hr style="width:100%;border-bottom:3px solid black;">
 
 While [`stream.img`]({{mkdocs.site_relative_url}}/api#streamimg) is just a small utility, the approach demonstrated above also works with "applications" implemented using `compose.mk`, i.e. [full blown TUIs]({{mkdocs.site_relative_url}}/embedded-tui).  As an example, how about exporting the [`tux.demo` target](#)?
 
@@ -67,8 +65,8 @@ bin=./tux.demo ./compose.mk mk.pkg/tux.demo
 ./tux.demo
 ```
 
-#### Extension to Executable
-<hr style="width:95%;border-bottom:1px dashed black;">
+### Usage: Extension to Executable
+<hr style="width:100%;border-bottom:3px solid black;">
 
 In the examples so far, the `./compose.mk mk.pkg/<target>` examples only use *targets that are built-in*.  If you want to extend `compose.mk` with your own automation and export *that*, then you'll want to use `mk.pkg` from the extension instead.
 
@@ -77,7 +75,7 @@ As an example, let's export the tools we built for the [Custom Automation APIs D
 ```bash 
 
 # create binary for the `ansible.adhoc.pipe` target
-$ bin=./ansible.adhoc archive=demos make -f demos/ansible-adhoc.mk mk.pkg/ansible.adhoc.pipe
+$ bin=./ansible.adhoc archive=demos ./demos/ansible-adhoc.mk mk.pkg/ansible.adhoc.pipe
 
 # confirm/inspect the generated executable
 $ file ./ansible.adhoc 
@@ -92,14 +90,10 @@ $ echo msg=HelloWorld | module=debug ./ansible.adhoc
 }
 ```
 
-
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ### Makeself Reference 
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Direct access to `makeself` is via the [`mk.self` target]({{mkdocs.site_relative_url}}/api#mkself):
-
 
 ```bash 
 $ ./compose.mk help mk.self
@@ -136,7 +130,7 @@ $  ./archive.run
 ./demos/README.md
 ```
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+-----------------------------
 
 Argument passing hasn't been demonstrated so far, and this can get tricky.
 

@@ -2,19 +2,13 @@
 # demos/notebooking.mk: 
 #   Demonstrates building a highly customized and self-contained console application,
 #   where all the application components bootstrap themselves on demand.
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   This defines/embeds two containers, one for the lean4 theorem prover[1] and one for alloylang[2].
-#
-#   Since there's no official docker images available, we have to provision containers from 
-#   scratch, but using the ideas from `demos/matrioshka.mk`, we will build them in-situ and 
-#   defer to `make` itself for the provisioning details.
-#
-#   See the docs for more discussion: https://robot-wranglers.github.io/compose.mk/demos/notebooking
+# This demo ships with the `compose.mk` repository and runs as part of the test-suite.
+# See the main docs: https://robot-wranglers.github.io/compose.mk/demos/notebooking
 #
 #   USAGE: ./demos/notebooking.mk lab.tui
 #   USAGE: ./demos/notebooking.mk lab.pipeline
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 include compose.mk
 
@@ -46,13 +40,14 @@ $(eval $(call compose.import, ${jupyter.root}/docker-compose.fmtk.yml, fmtk))
 # Autogenerate scaffolding for the jupyter-lab container.
 $(eval $(call compose.import, ${jupyter.root}/docker-compose.jupyter.yml, jupyter))
 
-## Next section uses the service scaffolding to create target-handles for language kernels
-## dynamically.  Although `compose.import` already created handles for all the containers involved, 
-## we want to plan for being able to import from other compose files, or use future targets as 
-## kernels directly.  This means we want carefully designed namespaces.  Another wrinkle is that 
-## kernel-invocation involves accepting a filename as argument.  Thus for each service, we map
+## Next section uses the service scaffolding to create target-handles for language 
+## kernels dynamically.  Although `compose.import` already created handles for all 
+## the containers involved, we want to plan for being able to import from other 
+## compose files, or use future targets as kernels directly.  This means we want 
+## carefully designed namespaces.  Another wrinkle is that kernel-invocation 
+## involves accepting a filename as argument.  Thus for each service, we map
 ## a new target `kernel.<svc>/<fname>` --> `fmtk/<svc>.command/<fname>`.
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # Maps compose-services to future kernels
 # Loop over the kernel list, and creating a target handle for each.
@@ -85,11 +80,11 @@ kernel.echo/%:
 ## Next section generates kernel.json files for each of the "kernel.*" targets above,
 ## regardless of whether those targets are static or dynamic.  This step involves
 ## a template for jupyter kernelspec JSON, which is our starting place for generating
-## dynamic kernels on the jupyter side.  This works by deferring most of the kernel 
-## behaviour to a base class (i.e. `BaseK`), and basically adjusts environment variables 
-## to configure kernel-names, kernel-commands, etc.. just in time.  See the appendix in 
-## the main docs for `basek.py` and kernel.json.template for more details.
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+## dynamic kernels on the jupyter side.  This works by deferring most of the kernel
+## behaviour to a base class (i.e. `BaseK`), and basically adjusts environment
+## variables to configure kernel-names, kernel-commands, etc.. just in time.
+## For more details, see the appendix with support code/notebooks in the main docs.
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 lab.gen.kernels: flux.starmap/.kernel.from.target,kernels.list
 .kernel.from.target/%:; cmd="${make} ${*}" ${make} .kernel.gen/${*}
 .kernel.gen/%:
@@ -112,7 +107,8 @@ lab.gen.kernels: flux.starmap/.kernel.from.target,kernels.list
 ## Next section is a small bridge to the jupyter lab HTTP API.  This isn't necessarily 
 ## that useful since we have CLI access to jupyter, but this shows that it's accessible 
 ## and calls to `curl` could be replaced with `nbclient`, etc.
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
 api.kernels:
 	@# Show kernel status, according to the web ui 
 	curl -s "${lab.url.base}/api/kernels" | ${jq} .
@@ -132,12 +128,12 @@ lab.pipeline: lab.init lab.notebooks.preview api.kernels lab.stop
 
 export geometry=${lab.tui.geometry}
 lab.tui: lab.init tux.open.horizontal/${lab.tui_panes}
-	@# UI-mode.  By default this launches the jupyter server 
+	@# UI-mode.  By default this launches jupyter web
 	@# in one tmux pane for log viewing, then opens a 
 	@# TUI webbrowser (carbonyl) that's pointed at it 
 
 ## Top level command and control for the lab ensemble.
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 lab.init: \
 	tux.require jupyter.stop jupyter.build fmtk.build \
@@ -198,10 +194,10 @@ lab.running:; strict=1 ${make} lab.ps
 	@# Succeeds only if the lab is currently running.
 
 lab.serve: lab.stop lab.serve.background lab.logs
-	@# Blocking jupyter lab server
+	@# Blocking jupyter lab webserver
 
 lab.serve.background: lab.up.detach
-	@# Non-blocking jupyter lab server
+	@# Non-blocking jupyter lab webserver
 
 lab.summary: lab.wait lab.test 
 	@# Waits for jupyterlab to ready, then describes available kernels / notebooks
@@ -216,15 +212,12 @@ lab.test: lab.dispatch/self.kernelspec.list
 lab.wait: flux.loop.until/lab.running
 	@# Waits for the jupyter lab service to become ready
 
-lab.webpage.open: lab.wait
+lab.webpage.open: lab.wait io.browser/lab.url
 	@# Attempts to open a browser pointed at jupyter lab.
 	@# (This requires python on the host and can't run from docker)
-	$(call log.target, ${red}opening ${lab.url})
-	python3 -c"import webbrowser; webbrowser.open(\"${lab.url}\")" \
-		|| $(call log.target, ${red}could not open browser!)
 
 ## Low level helpers, these need to run in the lab container.
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 self.kernelspec.list:
 	@# Show the available kernels 
 	jupyter kernelspec list
@@ -234,10 +227,11 @@ self.notebook.exec/%:
 	jupyter execute ${*} --inplace
 
 self.notebooks.normalize:
+	@# Didirectional sync from ipynb / notebooks-as-code markdown for each notebook.  
 	$(call log.target, Pairing and syncing all markdown notebooks with ipynbs)
 	${make} self.notebook.normalize/${jupyter.notebook.root}/*.md
 self.notebook.normalize/%:
-	@# Runs the bidirectional sync from ipynb / notebooks-as-code markdown. 
+	@# Normalizes the given notebook
 	rm -f ${jupyter.notebook.root}/*.ipynb
 	jupytext --set-formats ipynb,md --show-changes --sync ${*} | ${stream.as.log}
 

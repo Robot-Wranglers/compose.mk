@@ -8,12 +8,12 @@
 #   USAGE: ./demos/stages.mk
 
 include compose.mk
-.DEFAULT_GOAL := demo.stage.wrapper
+.DEFAULT_GOAL := __main__
 
 # Override the default target used to print the entry-banner
 export banner_target?=io.figlet
 
-demo.stage.wrapper: flux.stage.wrap/INIT/project.scan,project.analyze
+__main__: flux.stage.wrap/INIT/project.scan,project.analyze
 
 project.scan:
 	echo '["results"]' | ./compose.mk flux.stage.push/VALIDATION

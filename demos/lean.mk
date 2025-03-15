@@ -5,7 +5,7 @@
 #             http://robot-wranglers.github.io/compose.mk/demos/polyglots
 #   USAGE: ./demos/lean.mk
 #
-.DEFAULT_GOAL := demo.lean
+.DEFAULT_GOAL := __main__
 
 include compose.mk
 
@@ -55,7 +55,7 @@ endef
 
 # Default entrypoint.  
 # Ensure the container is built, then test a script and a theorem
-demo.lean: lean.init \
+__main__: lean.init \
 	lean.run.script/Code.lean.script \
 	lean.run.theorem/Code.lean.theorem
 
@@ -82,6 +82,7 @@ lean.run.theorem/%:
 self.run.script/%:
 	$(call log.file.preview,${*})
 	source ~/.profile && set -x && lean --run ${*}
+
 self.run.file/%:
 	$(call log.file.preview,${*})
 	source ~/.profile && set -x && lean ${*}

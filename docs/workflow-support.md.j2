@@ -16,10 +16,10 @@ As an example of this, here's a few quick one-liners:
 
 ```bash 
 # terminal friendly preview for all the project images
-$ ls docs/img/*png | ./compose.mk flux.each/io.img.preview
+$ ls docs/img/*png | ./compose.mk flux.each/io.preview.img
 
 # terminal friendly preview for project source with syntax highlighting
-ls demos/*mk | ./compose.mk flux.each/io.file.preview
+ls demos/*mk | ./compose.mk flux.each/io.preview.file
 ```
 
 One-liners aren't really the point though, and **the main use-case for `flux` is scripting on top of it in your own projects**.  But why bother?  Well, by lifting flow-control and iteration out of *bash/make primitives* and up into `flux`, it tends to *completely eliminate a major source of errors, readability issues, and downright brutal syntax* to end up with **an elegant alternative that actually encourages good design**.  

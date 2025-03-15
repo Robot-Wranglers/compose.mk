@@ -7,7 +7,7 @@
 #   USAGE: ./demos/inlined-composefile.mk
 
 include compose.mk
-.DEFAULT_GOAL := demo.inline
+.DEFAULT_GOAL := __main__
 
 # Look it's an embedded compose file.  This defines services `alice` & `bob`
 define inlined.composefile 
@@ -40,7 +40,7 @@ endef
 $(eval $(call compose.import.string, inlined.composefile,  TRUE))
 
 # Top level entrypoint, run the other individual demos.
-demo.inline: demo.dispatch demo.compose.verbs
+__main__: demo.dispatch demo.compose.verbs
 
 # Dispatch examples: run a task inside alice-container and bob-container.
 # Note that docker build is implicit, on-demand, and cached unless forced.

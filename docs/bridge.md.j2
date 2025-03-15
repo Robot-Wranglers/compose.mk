@@ -348,6 +348,7 @@ Finally, let's introduce `compose.import.generic`, which you probably don't need
 include compose.mk
 $(eval $(call compose.import.generic, <namespace>, <bool_import_to_root>, <fname>))
 ```
+
 <br/>
 
 {#
@@ -365,7 +366,7 @@ See also the docs for [container dispatch syntax/semantics]({{mkdocs.site_relati
 ### But Why? 🤔
 <hr style="width:100%;border-bottom:3px solid black;">
 
-At first glance, maybe you're thinking this looks like lots of magic to save a little bit of typing.  Sometimes this method of "importing" compose services as `make` targets is often just paving the way for [container dispatch]({{mkdocs.site_relative_url}}) later.
+At first glance, maybe you're thinking this looks like lots of magic to save a little bit of typing.  It's true that this method of "importing" compose services as `make` targets is often just paving the way for [container dispatch]({{mkdocs.site_relative_url}}) later.
 
 Even without dispatch though, native support for containers as primitives is useful, especially when you start to use **actions on those containers as prerequisite tasks**.  So far we've seen that scaffolded targets effectively create an API over tool containers, but what's not emphasized yet is just how composable that API really is.
 

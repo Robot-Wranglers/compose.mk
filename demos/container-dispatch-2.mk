@@ -6,7 +6,7 @@
 #   USAGE: ./demos/container-dispatch-2.mk
 
 include compose.mk
-.DEFAULT_GOAL := demo.namespaced_dispatch
+.DEFAULT_GOAL := __main__
 
 # Import the whole compose file (including "debian" container)
 $(eval $(call compose.import, demos/data/docker-compose.yml, ▰))
@@ -17,7 +17,7 @@ $(eval $(call compose.import, demos/data/docker-compose.yml, ▰))
 #   a more explicit "absolute path" to dispatch.  To avoid 
 #   collisions, you can use this to structure calls to 
 #   multiple containers in multiple files.
-demo.namespaced_dispatch: ▰/debian/self.demo
+__main__: ▰/debian/self.demo
 
 self.demo:
 	source /etc/os-release && printf "$${PRETTY_NAME}\n"

@@ -5,7 +5,7 @@
 #
 #   USAGE: ./demos/inlined-dockerfile.mk
 include compose.mk
-.DEFAULT_GOAL := demo.dockerfile
+.DEFAULT_GOAL := __main__
 
 # Minimal inlined dockerfile.  You can install anything 
 # or nothing here, but let's have the minimal stuff 
@@ -18,7 +18,7 @@ endef
 # Top-level entrypoint.  
 # 1st prereq `Dockerfile.build` ensures that 
 # the container is built, then we run all the tests.
-demo.dockerfile: Dockerfile.build/demo_dockerfile flux.star/test
+__main__: Dockerfile.build/demo_dockerfile flux.star/test
 
 test.1.image_created_and_available:
 	$(call log.test_case, image is created and available to docker)

@@ -13,7 +13,7 @@ Sometimes it's useful to declare **inlined containers and data** alongside the s
 
 This page is an index of related concrete examples that introduce idioms for embedding containers and data.  If you're more interested in motivations, theory, and patterns, then you might prefer to start [here]({{mkdocs.site_relative_url}}/matrioshka).
 
-**Basic Examples** are all on this page.  Quick links: [Inlined docker files](#inlined-docker-files), [Extending inline docker files](#extending-inlined-docker-files), [Inlined compose files](#inlined-compose-files), [Passing inlined data structures](#passing-inlined-data-structures)
+**Basic Examples** are all on this page.  Quick links: [Inlined docker files](#inlined-dockerfiles), [Extending inline docker files](#extending-inlined-dockerfiles), [Inlined compose files](#inlined-compose-files), [Passing inlined data structures](#passing-inlined-data-structures)
 
 **Intermediate Examples** are bigger external pages.  Quick links:  The [Theorem Proving demo]({{mkdocs.site_relative_url}}/demos/lean) embeds a lean4 runtime, theorem, and code.  The [Custom Automation API demo]({{mkdocs.site_relative_url}}/demos/custom-automation-apis) wraps an Ansible runtime, then customizes it and exposes a different interface.  And the [Justfile demo]({{mkdocs.site_relative_url}}/demos/just) wraps a just-runner and a just-file, then customizes it and exposes a different interface
 
@@ -34,7 +34,7 @@ The rest of this page is dedicated to general discussion of matrioshka design an
 ```Makefile
 {{open('demos/inlined-composefile.mk','r').read().strip()}}
 ```
-{% include "demos/inlined-docker-files.md.j2"%}
+{% include "demos/inlined-dockerfiles.md.j2"%}
 
 ### Extending Inlined Docker Files 
 <hr style="width:100%;border-bottom:3px solid black;">

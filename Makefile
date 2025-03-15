@@ -81,6 +81,13 @@ docs.jinja:
 	| xargs -I% sh -x -c "make docs.jinja/% || exit 255"
 docs.jinja/% j/% jinja/%: docs.init
 	@# Render the named docs twice (once to use includes, then to get the ToC)
+	case ${*} in \
+		*.md.j2) ${make} .docs.jinja/${*};; \
+		*.md) ${make} .docs.jinja/${*}.j2;; \
+		*) ${make} .docs.jinja/${*}.md.j2;; \
+	esac
+.docs.jinja/%:
+	ls ${*} ${stream.obliviate} || ($(call log,${red} no such file ${*}); exit 39)
 	$(call io.mktemp) && first=$${tmpf} \
 	&& set -x && pynchon jinja render ${*} -o $${tmpf} --print \
 	&& dest="`dirname ${*}`/`basename -s .j2 ${*}`" \

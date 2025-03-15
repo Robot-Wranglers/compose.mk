@@ -6,17 +6,18 @@
 #   USAGE: ./demos/container-dispatch-2.mk
 
 include compose.mk
-.DEFAULT_GOAL := demo.namespaced_dispatch
+.DEFAULT_GOAL := __main__
 
 $(eval $(call compose.import.as, ▰, demos/data/docker-compose.build-tools.yml))
 $(eval $(call compose.import.as, 🜹, demos/data/docker-compose.docs-tools.yml))
 
-demo.namespaced_dispatch: build docs 
-docs: 🜹/latex/self.docs.gen
-build: ▰/golang/self.code.gen
+__main__: build docs 
 
+build: ▰/golang/self.code.gen
+self.code.gen:
+	echo "pretending to do stuff with golang"
+
+docs: 🜹/latex/self.docs.gen
 self.docs.gen:
 	echo "pretending to do stuff with LaTeX"
 
-self.code.gen:
-	echo "pretending to do stuff with golang"

@@ -7,12 +7,12 @@
 # USAGE: ./demos/stages.mk
 
 include compose.mk
-.DEFAULT_GOAL := demo.stage
+.DEFAULT_GOAL := __main__
 
 # disable gum usage by overriding the default target for printing banners
 export banner_target?=io.print.div
 
-demo.stage: flux.star/test.stage
+__main__: flux.star/test.stage
 
 test.stage.basic:
 	@# Note that ${@} is shorthand for "current target name"-- 

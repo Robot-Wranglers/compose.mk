@@ -40,9 +40,9 @@ $ ./compose.mk flux.stage.enter/BUILD
 ╔═══════════════════════════════════════════════════════════╗
 ║                           BUILD                           ║
 ╚═══════════════════════════════════════════════════════════╝
-① ⇄ flux.stage // BUILD //  stack file @ .flux.stage.BUILD
-② Φ flux.stage.push // BUILD 
-③  ⇄ io.stack.push // stack@.flux.stage.BUILD ⋘⋘⋘
+⇄ flux.stage // BUILD //  stack file @ .flux.stage.BUILD
+Φ flux.stage.push // BUILD 
+⇄ io.stack.push // stack@.flux.stage.BUILD ⋘⋘⋘
   {"stage.entered":"Mon 24 Feb 2025 08:53:39 PM PST"}
 ```
 
@@ -53,8 +53,8 @@ Push data in on pipes:
 ```bash
 $ echo '{"data":789}' | ./compose.mk flux.stage.push/BUILD
 
-① Φ flux.stage.push // BUILD 
-② ⇄ io.stack.push // stack@.flux.stage.BUILD ⋘⋘⋘
+Φ flux.stage.push // BUILD 
+⇄ io.stack.push // stack@.flux.stage.BUILD ⋘⋘⋘
   {"data":789}
 ```
 
@@ -64,21 +64,21 @@ Popping data is pipe-safe JSON for downstream, but stderr is annotated for human
 
 ```bash 
 $ ./compose.mk flux.stage.pop/BUILD
-① Φ flux.stage.pop // BUILD
-② ⇄ io.stack.pop // stack@.flux.stage.BUILD ⋙⋙⋙
+Φ flux.stage.pop // BUILD
+⇄ io.stack.pop // stack@.flux.stage.BUILD ⋙⋙⋙
 {
   "data": 789
 }
 
 $ ./compose.mk flux.stage.pop/BUILD
-① Φ flux.stage.pop // BUILD
-② ⇄ io.stack.pop // stack@.flux.stage.BUILD ⋙⋙⋙
+Φ flux.stage.pop // BUILD
+⇄ io.stack.pop // stack@.flux.stage.BUILD ⋙⋙⋙
 {
   "stage.entered": "Mon 24 Feb 2025 08:53:39 PM PST"
 }
 
 $ ./compose.mk flux.stage.exit/BUILD
-② Φ flux.stage.clean // BUILD //  removing stack file @  .flux.stage.BUILD
+Φ flux.stage.clean // BUILD //  removing stack file @  .flux.stage.BUILD
 ```
 
 ### Stage Idioms

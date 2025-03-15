@@ -55,17 +55,19 @@ Similar to "private" targets with a `self.*` naming convention, using a blocky u
 1. *Sugar for* [`<svc_name>.dispatch/<dispatch_target>`]({{mkdocs.site_relative_url}}/bridge/#svc_namedispatch) *should be shortened* (not longer than the syntax it's replacing)
 1. *Sugar should be visually very easy to parse*, and blocky unicode symbols qualify while also making it very clear this is a specific new kind of idiom.
 
-This convention also has a more subtle property that it's *hard to use from the command line*, but *easy to use from file that already has several such instances*, and **sometimes this is a feature**.  If your targets *that actually run inside containers* are frequently used from the top-level, that's a good indication that it's actually **a project-level verb that's important enough to deserve an aliased entrypoint**.
+This convention also has a more subtle property that it's *hard to use from the command line*, but *easy to use from file that already has several such instances*, and **sometimes this is a feature**.  
+
+If your targets *that actually run inside containers* are frequently used from the top-level.. that's a good indication that it's actually **a project-level verb that's important enough to deserve an aliased entrypoint**.
 
 --------------------------------
 
-Putting it together, imagine that your project uses so *many* tool containers that it becomes useful to separate them into different "tool boxes" by using different compose files:
+Putting it together, imagine that your project uses so many tool containers that it becomes useful to separate them into different "tool boxes" by using different compose files.  By using `compose.import.as`, we can import to a namespace *without* cluttering the root.
 
 ```Makefile
 {{open('demos/container-dispatch-3.mk','r').read().strip()}}
 ```
 
-This way of arranging things makes it clear that there are a few distinct toolboxes at play, and that while you can always call things like `self.docs.gen` directly for testing, your host isn't actually guaranteed to have all the tools involved.
+This way of arranging things makes it clear that there are a few distinct toolboxes at play, and that while you can always call things like `self.docs.gen` directly for testing, the syntax helps make it clear that your host isn't actually guaranteed to have all the tools involved.
 
 ### One-to-Many Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -84,7 +86,7 @@ Meanwhile, the equivalent-but-expanded pure bash version below is getting clutte
 
 ```bash
 # clean, simple invocation with compose.mk
-$ make demo.double.dispatch 
+$ ./demos/double-dispatch.mk
 
 # verbose, fragile alternative
 $ docker compose -f docker-compose.yml \
@@ -98,9 +100,7 @@ $ docker compose -f docker-compose.yml \
 ### Other Kinds of Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
 
-So far we've just looked at using dispatch for [imported tool containers]({{mkdocs.site_relative_url}}/bridge) that come from docker compose files.  
-
-Target dispatch also works with [stock-images]({{mkdocs.site_relative_url}}/raw-docker), [inlined containers]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile), or [inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files).
+So far we've just looked at using dispatch for [imported tool containers]({{mkdocs.site_relative_url}}/bridge) that come from docker compose files.  Target dispatch also works with [stock-images]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-tasks-in-containers), [inlined containers]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile), [inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files),.
 
 ---------------------------
 

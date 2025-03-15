@@ -10,7 +10,7 @@ include compose.mk
 
 
 # A more complex python script, testing comments, indention, & using pipes
-define python.script
+define python_script
 # python script
 import sys, json
 input = json.loads(sys.stdin.read())
@@ -25,4 +25,4 @@ endef
 # Runs the script, passing data into the pipe
 demo.python.pipes:
 	echo '{"hello":"bash"}' \
-	| ${make} mk.def.dispatch/python3,python.script
+	| ${make} mk.def.dispatch/python3,python_script

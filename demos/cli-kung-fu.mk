@@ -10,5 +10,5 @@ include compose.mk
 
 # Top-level / public entrypoint.
 demo.fu: 
-	ls README.md | ${make} flux.each/io.markdown.preview 
+	ls README.md | ${make} flux.each/io.preview.markdown 
 	
