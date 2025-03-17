@@ -21,7 +21,7 @@ endef
 demo.container.extension: Dockerfile.build/demo_dockerfile Dockerfile.build/demo.extend.container
 	$(call log.test_case, Working with the image directly, note the 'compose.mk' prefix)
 	docker image inspect compose.mk:demo.extend.container > /dev/null
-	docker run -it --entrypoint sh compose.mk:demo.extend.container -x -c "true" > /dev/null
+	docker run --entrypoint sh compose.mk:demo.extend.container -x -c "true" > /dev/null
 	
 	$(call log.test_case, Working with compose.mk builtins omits prefix \
 		and can dispatch targets to run inside the new image)

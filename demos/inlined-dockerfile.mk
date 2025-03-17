@@ -23,7 +23,7 @@ __main__: Dockerfile.build/demo_dockerfile flux.star/test
 test.1.image_created_and_available:
 	$(call log.test_case, image is created and available to docker)
 	docker image inspect compose.mk:demo_dockerfile > /dev/null
-	docker run -it --entrypoint sh compose.mk:demo_dockerfile -x -c "true" > /dev/null
+	docker run --entrypoint sh compose.mk:demo_dockerfile -x -c "true" > /dev/null
 
 test.2.mk.docker.dispatch:
 	$(call log.test_case, mk.docker.dispatch omits image prefix and does target-dispatch)

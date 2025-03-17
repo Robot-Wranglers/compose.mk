@@ -352,8 +352,10 @@ yq=${yq.run}
 # Default base versions for a few important containers, allowing for override from environment
 export DEBIAN_CONTAINER_VERSION?=debian:bookworm
 export ALPINE_VERSION?=3.21.2
-export GUM_VERSION?=v0.15.2
-export GLOW_VERSION?=v1.5.1
+# GUM_VERSION?=v0.15.2
+GUM_VERSION?=v0.9.0
+GLOW_VERSION?=v1.5.1
+GLOW_STYLE?=dracula
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## END: data
@@ -496,6 +498,7 @@ compose.loadf: tux.require
 	&& ${trace_maybe} \
 	&& $(call log.trace, $${header} Handing off to generated makefile) \
 	&& $(call mk.yield, env -i HOME=${HOME} make ${MAKE_FLAGS} -f $${tmpf} $${words:-tux.open.service_shells/$${first}})
+
 compose.select/%:
 	@# Interactively selects a container from the given docker compose file,
 	@# then drops into an interactive shell for that container.  
@@ -507,7 +510,7 @@ compose.select/%:
 	@#
 	choices="`${make} compose.services/${*}|${stream.nl.to.space}`" \
 	&& header="Choose a container:" && ${io.get.choice} \
-	&& set -x && ${io.shell.isolated}  ${CMK_EXEC} loadf ${*} $${chosen}.shell
+	&& set -x && ${io.shell.isolated} ${CMK_EXEC} loadf ${*} $${chosen}.shell
 
 compose.services/%:
 	@# Lists services available for the given compose file.
@@ -538,7 +541,11 @@ compose.validate/%:
 ##
 ## The docker.* targets cover a few helpers for working with docker. 
 ##
-## This interface is deliberately minimal, focusing on verbs like 'stop' and 'stat' more than verbs like 'build' and 'run'. That's because containers that are managed by docker compose are preferred, but some ability to work with inlined Dockerfiles for simple use-cases is supported. See stream.pygmentize for an example.
+## This interface is deliberately minimal, focusing on verbs like 'stop' and 
+## 'stat' more than verbs like 'build' and 'run'. That's because containers that
+# are managed by docker compose are preferred, but some ability to work with 
+# inlined Dockerfiles for simple use-cases is supported. See 
+## stream.pygmentize for an example.
 ##
 ## DOCS:
 ##   * `[1]`: https://robot-wranglers.github.io/compose.mk/api#api-docker
@@ -593,14 +600,14 @@ docker.tags.by.repo/%:; $(call docker.tags.by.repo,${*})
 	@# This helps to separate system images from compose.mk images.
 	@# This target is also available as a function.
 	@# See 'docker.images' for more details.
-	
-docker.build.maybe/%:
-	@# Builds quietly, iff and only if the named image is not cached.
-	@#
-	@# USAGE:
-	@#   ./compose.mk docker.build.maybe/<name>
-	@#
-	${docker.images} | grep -w "${*}" || ${make} docker.build/${*}
+
+# docker.build.maybe/%:
+# 	@# Builds quietly, iff and only if the named image is not cached.
+# 	@#
+# 	@# USAGE:
+# 	@#   ./compose.mk docker.build.maybe/<name>
+# 	@#
+# 	${docker.images} | grep -w "${*}" || ${make} docker.build/${*}
 
 docker.build/%:
 	@# Standard noisy docker build for the given filename.
@@ -955,7 +962,7 @@ docker.run.sh:
 			) \
 		|| true ) \
 	&& extra_env=`[ -z $${env:-} ] && true || ${make} .docker.proxy.env/$${env}` \
-	&& tty=`[ -z $${tty:-} ] && true || echo "-t"` \
+	&& tty=`[ -z $${tty:-} ] && echo \`[ -t 0 ] && echo "-t"|| true\` || echo "-t"` \
 	&& cmd_args="\
 		--rm -i $${tty} $${extra_env} \
 		-e TERM="$${TERM}" \
@@ -1062,8 +1069,6 @@ docker.volume.panic:; docker volume prune -f
 ## output leverages  charmbracelet utilities like gum[1] and glow[2].  Generally we 
 ## use tools directly if they are available, falling back to utilities in containers.
 ##
-## See also `io.print.*` and `stream.pygmentize` for simpler versions of some features.
-##
 ## DOCS:
 ##  * [0] https://robot-wranglers.github.io/compose.mk/api#api-io
 ##  * [1] https://github.com/charmbracelet/gum
@@ -1073,6 +1078,7 @@ docker.volume.panic:; docker volume prune -f
 
 log.file.contents=([ "$${quiet:-0}" == "1" ] || printf "`printf "${1}"|${stream.lstrip}` ${dim}`cat ${2}`${no_ansi}\n" > /dev/stderr) 
 log.maybe=([ "$${quiet:-0}" == "1" ] || $(call log, ${1}))
+CMK_EXEC=`dirname ${CMK_SRC}`/`basename ${CMK_SRC}`
 
 # This is a hack because charmcli/gum is distroless, but the spinner needs to use "sleep", etc
 # io.gum.alt.dumb=docker run -it -e TERM=dumb --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nRUN apk add -q --update --no-cache bash\nCOPY --from=charmcli/gum:${GUM_VERSION} /usr/local/bin/gum /usr/local/bin/gum")`
@@ -1087,8 +1093,9 @@ io.figlet:
 	@# (This requires the embedded tui is built) 
 	echo "figlet -f$${font:-3d} $${label}" | ${make} tux.shell.pipe >/dev/stderr
 
-
-io.gum.docker=${trace_maybe} && docker run -it -e TERM=$${TERM:-xterm} --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nCOPY --from=charmcli/gum:${GUM_VERSION} /usr/local/bin/gum /usr/local/bin/gum\nRUN apk add --update --no-cache bash\n")`
+# docker run $(if [ -t 0 ]; then echo "-it"; else echo "-i"; fi) my-image:latest
+io.file.select=header="Choose a file: (dir=$${dir:-.})"; choices=`ls $${dir:-.}/$${pattern:-} | ${stream.nl.to.space}` && ${io.get.choice}
+io.gum.docker=${trace_maybe} && docker run $$(if [ -t 0 ]; then echo "-it"; else echo "-i"; fi) -e TERM=$${TERM:-xterm} --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nCOPY --from=charmcli/gum:${GUM_VERSION} /usr/local/bin/gum /usr/local/bin/gum\nRUN apk add --update --no-cache bash\n")`
 ifeq ($(shell which gum >/dev/null 2> /dev/null && echo 1|| echo 0),1) 
 io.gum.run:=`which gum`
 #io.get.choice=chosen=$$(${io.gum.run} choose --header=\"$${header:-Choose:}\" $${choices})
@@ -1098,7 +1105,6 @@ io.gum.run:=${io.gum.docker}
 io.get.choice=$(call io.mktemp) && ${io.script.run} "${io.gum.run} choose --header=\"$${header:-Choose:}\" _ $${choices}" $${tmpf} && chosen=`cat $${tmpf} |col |tail -n-3|head -1|awk -F"006l" '{print $$2}'`
 endif
 io.script.run=script -qefc --return --command
-CMK_EXEC=`dirname ${CMK_SRC}`/`basename ${CMK_SRC}`
 io.gum=(which gum >/dev/null && ( ${1} ) \
 	|| (entrypoint=gum cmd="${1}" quiet=0 \
 		img=charmcli/${GUM_VERSION} ${make} docker.run.sh)) > /dev/stderr
@@ -1106,10 +1112,15 @@ io.gum.style=label="${1}" ${make} io.gum.style
 io.gum.style.div:=--border double --align center --width $${width:-$$(echo "x=$$(tput cols 2>/dev/null ||echo 45) - 5;if (x < 0) x=-x; default=30; if (default>x) default else x" | bc)}
 io.gum.style.default:=--border double --foreground 2 --border-foreground 2
 io.gum.tty=export tty=1; $(call io.gum, ${1})
-io.file.select=header="Choose a file: (dir=$${dir:-.})"; choices=`ls $${dir:-.}/$${pattern:-} | ${stream.nl.to.space}` && ${io.get.choice}
-glow.style=dracula
-glow.docker:=docker run -q -i charmcli/glow:${GLOW_VERSION} -s ${glow.style}
-glow.run:=$(shell which glow >/dev/null 2>/dev/null && echo "`which glow` -s ${glow.style}" || echo "${glow.docker}")
+
+glow.docker:=docker run -q -i charmcli/glow:${GLOW_VERSION} -s ${GLOW_STYLE}
+
+# WARNING: newer glow is broken with pipes & ptys.. 
+# so we force docker rather than defaulting to a host tool 
+# see https://github.com/charmbracelet/glow/issues/654
+# glow.run:=$(shell which glow >/dev/null 2>/dev/null && echo "`which glow` -s ${GLOW_STYLE}" || echo "${glow.docker}")
+glow.run:=${glow.docker}
+
 io.gum.choice/% io.gum.choose/%:
 	@# Interface to `gum choose`.
 	@# This uses gum if it is available, falling back to docker if necessary.
@@ -1263,7 +1274,7 @@ io.preview.pygmentize/%:; fname="${*}" ${make} stream.pygmentize
 	@#
 
 io.preview.file=cat ${1} | ${stream.dim.indent.stderr}
-io.preview.file/% stream.pygmentize/%:
+io.preview.file/%:
 	@# Outputs syntax-highlighting + line-numbers for the given filename to stderr.
 	@#
 	@# USAGE:
@@ -1331,6 +1342,14 @@ io.quiet.stderr.sh:
 		;; \
 	esac
 
+ifeq (${OS_NAME},Darwin)
+# https://www.unix.com/man_page/osx/1/script/
+io.script=script-not-defined-yet
+else 
+# https://www.unix.com/man_page/linux/1/script/
+io.script=script -qec "${1}"
+endif
+
 io.selector=choices=`${make} ${1} | ${stream.nl.to.space}` && ${io.get.choice} && ${make} ${2}/$${chosen}
 io.selector/%: 
 	@#
@@ -1383,7 +1402,7 @@ io.tail/%:
 	@#
 	$(trace_maybe) && touch ${*} && tail -f ${*} 2>/dev/null
 
-io.terminal.cols=$(shell which tput >/dev/null 2>/dev/null && echo `tput cols` || echo 45)
+io.terminal.cols=$(shell which tput >/dev/null 2>/dev/null && echo `tput cols 2> /dev/null` || echo 45)
 io.term.width:=${io.terminal.cols}
 # io.term.cols:; ${io.terminal.cols}
 io.time.wait/% io.wait/%:
@@ -1786,7 +1805,7 @@ mk.pkg/%:
 	@# USAGE:
 	@#  archive="file1 file2 dir1" make -f ... mk.pkg/<target_name>
 	@#
-	label=${*} script=make \
+	label=$${label:-${*}} bin=$${bin:-${*}} script=make \
 	script_args="${MAKE_FLAGS} -f ${MAKEFILE} ${*}" \
 	${make} mk.pkg
 
@@ -1840,7 +1859,7 @@ mk.run/%:
 	@#
 	${io.shell.isolated} make -f ${*} 
 
-io.shell.isolated=env -i PATH=$${PATH} HOME=$${HOME}
+io.shell.isolated=env -i TERM=$${TERM} COLORTERM=$${COLORTERM} PATH=$${PATH} HOME=$${HOME}
 
 mk.select mk.select.local: mk.select/${MAKEFILE}
 	@# Interactive target selection / runner for the local Makefile
@@ -2278,7 +2297,7 @@ flux.each/%:
 	@#
 	@#  printf 'one\ntwo' | ./compose.mk stream.nl.flux.each/<target>
 	@#
-	${stream.stdin} | ${stream.space.to.nl} | xargs -I% sh ${dash_x_maybe} -c "${io.script.run} \"${make} ${*}/%||exit 255\""
+	${stream.stdin} | ${stream.space.to.nl} | xargs -I% sh ${dash_x_maybe} -c "${make} ${*}/%||exit 255"
 
 flux.fail:
 	@# Alias for 'exit 1', which is POSIX failure.
@@ -2767,7 +2786,6 @@ flux.stage.wrap/%:
 		&& ( \
 			export target="flux.and/$${target}" && ${make} flux.stage.wrap  ) \
 		|| (${make} flux.stage.wrap ) 
-
 flux.stage.wrap:
 	@# Like `flux.stage.wrap/<stage>/<target>`, but taking args from env
 	@#
@@ -2806,7 +2824,6 @@ flux.starmap/%:
 
 flux.timer/%:
 	@# Emits run time for the given make-target in seconds.
-	@# Pipe safe if you wanted runtime, but target stdout is sent to stderr.
 	@#
 	@# USAGE:
 	@#   ./compose.mk flux.timer/<target_to_run>
@@ -3047,8 +3064,6 @@ stream.json.object.append stream.json.append:
 	cat ${stdin} | jq ". + {\"$${key}\": \"$${val}\"}"
 
 define Dockerfile.stream.pygmentize
-#FROM ${IMG_PYTHON_BASE:-python:3.11-slim-bookworm}
-#RUN pip3 install --break-system-packages pygments
 FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
 RUN apk add -q --update py3-pygments
 endef
@@ -3236,7 +3251,7 @@ tux.require: ${CMK_COMPOSE_FILE} compose.validate.quiet/${CMK_COMPOSE_FILE}
 	@# in `TUI_SVC_BUILD_ORDER` needs to be visited, and even that is slow.
 	@# 
 	case $${force:-0} in \
-		1) set -x && docker rmi -f compose.mk:tux;; \
+		1) $(call log.target, ${red}purging the embedded TUI base); set -x && docker rmi -f compose.mk:tux;; \
 	esac \
 	&& header="${GLYPH_TUI} tux.require ${sep}" \
  	&& $(call log.trace, $${header} ${dim}Ensuring TUI containers are ready: "${TUI_SVC_BUILD_ORDER}") \
@@ -3257,7 +3272,7 @@ tux.require: ${CMK_COMPOSE_FILE} compose.validate.quiet/${CMK_COMPOSE_FILE}
 		)
 
 tux.open/%: tux.require
-	@# Opens the comma-separated targets in tmux panes.
+	@# Opens the given comma-separated targets in tmux panes.
 	@# This requires at least two targets, and defaults to a spiral layout.
 	@#
 	@# USAGE:
@@ -4250,7 +4265,7 @@ ${target_namespace}/$(compose_service_name)/%:
 	#
 	@$$(eval export pipe:=$(shell \
 		if [ -p ${stdin} ]; then echo "yes"; else echo ""; fi))
-	pipe=$${pipe} entrypoint=make cmd="${MAKE_FLAGS} -f ${MAKEFILE} $${*}" \
+		pipe=$${pipe} entrypoint=make cmd="${MAKE_FLAGS} -f ${MAKEFILE} $${*}" \
 		make -f ${MAKEFILE} ${compose_file_stem}/$(compose_service_name)
 endef
 
@@ -4422,7 +4437,7 @@ ${compose_file_stem}/%:
 		if [ -z "$${env:-}" ]; then echo "-e _=_"; else \
 		printf "$${env:-}" | sed 's/,/\n/g' | xargs -I% echo --env %='☂$$$${%}☂'; fi))
 	@$$(eval export base:=docker compose -f ${compose_file} \
-		run --rm --remove-orphans --quiet-pull \
+		run -T --rm --remove-orphans --quiet-pull \
 		$$(subst ☂,\",$${extra_env}) \
 		--env CMK_INTERNAL=1 \
 		--env TRACE=$${TRACE} \

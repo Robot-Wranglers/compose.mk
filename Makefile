@@ -37,13 +37,14 @@ build normalize: # NOP
 test: integration-test tui-test demo-test smoke-test 
 
 smoke-test stest:
-	ls tests/*.sh | xargs -I% -n1 script -q -e -c "env -i PATH=$${PATH} HOME=$${HOME} bash -x %||exit 255"
+	ls tests/*.sh | xargs -I% ${io.shell.isolated} sh -x -c "./%||exit 255"
 
 demos demos.test demo-test test.demos:
-	ls demos/*mk | xargs -I% -n1 script -q -e -c "env -i PATH=$${PATH} HOME=$${HOME} bash -x -c \"make -f %\"||exit 255"
-
+	ls demos/*mk | xargs -I% ${io.shell.isolated} sh -x -c "./%||exit 255"
+bonk:
+	ls demos/container-dispatch.mk | xargs -I% ${io.shell.isolated} sh -x -c "trace=1 ./%||exit 255"
 ttest/%:; make test-suite/tui/${*}
-tui-test:
+
 itest integration-test: make -f demos/itest.mk
 
 ## BEGIN: Documentation related targets
@@ -72,7 +73,6 @@ demo:
 	pattern='*.mk' dir=demos/ ${make} flux.select.file/mk.select
 
 docs: README.md docs.jinja #docs.mermaid
-
 docs.build: docs.builder.build docs.builder.dispatch/.mkdocs.build
 docs.init:; pynchon --version
 docs.jinja:
@@ -121,7 +121,7 @@ actions.notebook.pipeline:
 
 actions.demos:
 	@# Entrypoint for test-action
-	script -q -e -c "bash --noprofile --norc -eo pipefail -x -c 'make demos'"
+	${io.shell.isolated} script -q -e -c "bash --noprofile --norc -eo pipefail -x -c 'make demos'"
 
 actions.clean cicd.clean clean.github.actions:
 	@# Cleans all action-runs that are cancelled or failed

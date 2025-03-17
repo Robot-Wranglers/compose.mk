@@ -10,6 +10,7 @@
 This example demonstrates how you can describe, automate, and release a highly customized [jupyter lab](https://docs.jupyter.org/en/latest/) server and pipeline, which includes custom kernels and several notebooks.
 
 {{macros.img_link("notebooking-ui.gif", mkdocs, "95%",align='left')}}
+
 {#
 It's an advanced example using "idiomatic" `compose.mk`, and it's ambitious so we won't explain every little thing.  Suggested prereqs to read are: [the matrioshka bridge idiom]
 #}
@@ -103,13 +104,11 @@ This is well-commented, but there are definitely some prerequisites.  To really 
 
 If you've got the `compose.mk` [repo checked out]({{mkdocs.site_relative_url}}/integration), you can interact with this demo directly as `./demos/notebooking.mk <target>`.  
 
--------------------------------
-
-The CLI surface is *very large* since it implicitly includes the entire [static API]({{mkdocs.site_relative_url}}/standard-lib) plus [scaffolded targets]({{mkdocs.site_relative_url}}/bridge) for the containers involved (see `./demos/notebooking.mk help`).  Try `./demos/notebooking.mk help` for the full list of commands.
+The CLI surface is *very large* since it implicitly includes the entire [static API]({{mkdocs.site_relative_url}}/standard-lib) plus [scaffolded targets]({{mkdocs.site_relative_url}}/bridge) for the containers involved (see `./demos/notebooking.mk help`).  Try `./demos/notebooking.mk help` for the full list of commands.  The full
 
 However.. most users will care only about a few project-level interactions.  Help is [built in]({{mkdocs.site_relative_url}}/cli-help), so to render markdown for all the local automation sans includes, use `./demos/notebooking.mk help.local`
 
--------------------------------
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 {#Earlier we planned for a **TUI Mode**, a **Pipeline mode** and a **CLI mode**, so let's see how we did.#}
 
@@ -123,46 +122,60 @@ Here's a few highlights:
 * `./demos/notebooking.mk lab.wui`: Attempts to open a webbrowser on the host which is pointed at the webserver.  (Requires python, assumes the webserver is started.)
 * `./demos/notebooking.mk lab.ps`: Show running containers
 * `./demos/notebooking.mk lab.summary`: Summarize available notebooks, kernels, etc 
-* `./demos/notebooking.mk lab.notebook.preview`: Summarize available notebooks, kernels, etc 
+* `./demos/notebooking.mk lab.notebook.preview`: Show input/exec/output for a single notebook
 
--------------------------------
+<hr style="width:95%;border-bottom:1px dashed black;">
 
-**For TUI mode**, use `./demos/notebooking.mk lab.tui`.  We've already seen a preview since there's a [video at the top of the page](#notebooking-ensembles).  As planned this starts and tails the webserver in one pane, opening a TUI browser in another.  See also the docs [re: default keybindings]({{mkdocs.site_relative_url}}/embedded-tui/#default-keybindings)
+**For TUI mode**, use `./demos/notebooking.mk lab.tui`.  We've already seen a preview since there's a [video at the top of the page](#notebooking-ensembles).  As planned this starts and tails the webserver in one pane, opening a TUI browser in another.  For other usage and customization details see also the [general TUI docs]({{mkdocs.site_relative_url}}/embedded-tui) and [default keybindings info]({{mkdocs.site_relative_url}}/embedded-tui/#default-keybindings).
 
-One thing that's pretty interesting is that the TUI browser (as seen [at the top](#notebooks-ensembles)) turns out to be surprisingly usable even for a complex interactive sites like jupyter.. thanks [carbonyl](https://github.com/fathyb/carbonyl).  
+One thing that's pretty interesting is that the TUI browser (as seen [at the top](#notebooks-ensembles)) turns out to be surprisingly usable even for a complex interactive sites like jupyter.. thanks [carbonyl](https://github.com/fathyb/carbonyl)! 
 
 Since the carbonyl browser is just another container and can also share the network at the *docker layer* instead of via port-forwarding as is done here.. this raises the very intriguing possibility of using `compose.mk` to **daemonize and visualize** completely network-sandboxed interfaces to custom versions of other "runner" services like jupyter, rundeck, argo.
 
---------------------------------
+<hr style="width:95%;border-bottom:1px dashed black;">
 
-**For Pipeline mode**, use `./demos/notebooking.mk lab.pipeline`.  This entrypoint runs [every notebook](#appendix-notebooks) for [every custom kernel](#appendix-containers) in series, and in a way that's noninteractive but has very friendly output that's easy to visually parse.   Before the pipeline starts, all kernel bootstrap and other the setup chores is taken care of automatically.  The end-result is something that's almost stateless, so it's very reproducible, but container layer-caching also means it's pretty easy to iterate on without rebuilding completely from scratch for every run.  
+**For Pipeline mode**, use `./demos/notebooking.mk lab.pipeline`.  This entrypoint runs [every notebook](#appendix-notebooks) for [every custom kernel](#appendix-containers) in series, and in a way that's noninteractive but has very friendly console output that's easy to visually parse.   Before the pipeline starts, all kernel-bootstrap and other setup chores are taken care of automatically.  The end-result is something that's *almost* stateless, so it's very reproducible, but container layer-caching also means it's pretty easy to iterate on without rebuilding completely from scratch for every run.
 
-Below you can see a (very large) screenshot with a complete dump of the pipeline output.  Note especially that we're not just rendering pretty markdown, but that the obscure languages in the codeblocks are also syntax highlighted.  Notice also the pre-execution notebook synchronization with `jupytext`, and how there's even an low-res image-output preview near the middle.
+Below you can see a (very large) screenshot with a complete dump of the pipeline output.  Note especially that we're not just rendering pretty markdown, but that even the more obscure languages in the codeblocks are also syntax highlighted.  Notice also the pre-execution notebook synchronization with `jupytext`, so that version control isn't tracking a bunch of ipynb's with wiggling timestamp data.  And as a bonus there's even (very low-res) image-output preview near the middle too.. this won't be a replacement for actually interactive flows, but it at least helps to figure out at a glance whether things have changed.
 
 {{macros.img_link("notebooking-pipeline.png", mkdocs, "95%",align='center')}}
 
-<br>
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+**For packaging,** a "frozen release" type of format was promised at the top and hasn't yet been delivered.  If you're interested in the details of how this works [see the main docs for it here]({{mkdocs.site_relative_url}}/demos/packaging).  All we need to do is use {{macros.api_link('mk.pkg/arg',mkdocs,arg='target')}}, and ensure that the `demos/` folder is archived.
+
+```bash 
+$ archive=demos ./demos/notebooking.mk mk.pkg/lab.pipeline
+```
+
+And that's it.. now `./lab.pipeline` runs as you see above, pretty much anywhere.  This is the whole project bundled into an executable archive, so now it's not dependent on working-directories or git clones, and it's easy to distribute.  Initial execution pulls lots of containers, but those exist *outside* the archive and are naturally cached between runs.  And plus.. now you can more easily hide the whole involvement of a weird tool like `compose.mk` ;), but everyone can still easily unarchive the distribution again using `./lab.pipeline --noexec --keep --target lab.unarchived`.
+
+Packaging is very practical here considering the external dependencies *(`compose.mk` itself, plus the [notebooks](#appendix-notebooks), plus containers for [jupyter](appendix-main-jupyter-container) and [fmtk](#appendix-fmtk-containers))*, but again it will **not** package up 10gb of containerized stuff like lean+mathlib.  *(A feature, not a bug!)*  
+
+So to be clear.. despite packaging and using versioned containers/libs/etc, there are plenty of ways that pipeline output is *still not reproducible* if wild changes happen upstream.  What packaging really aims to fix is the typical tedious "bootstrap instructions" that distinguish "projects" from ready-to-go-pipelines, and prevent your "prototypes" from automatically being reusable tools.
+
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 ### Discussion
 <hr style="width:100%;border-bottom:3px solid black;">
 
+Well now that all this exists, *what is it?*  In some ways, it's easier to say what it is not:
+
+1. Obviously a TUI jupyter client cannot compete with IDE's like VSCode or fancy third-party vendors.
+1. Obviously a compose-backed webserver cannot compete with a k8s jupyter deployment.
+
+On the other hand.. this whole problem space is a pecular combination of code, extensions, environments, and infrastructure.  If you're interested in **reproducibility**, then it's not like the code is the final word.  And if you're interested in **collaboration**, then it turns out that it's kind of hard to simply "share" things like an IDE with a bunch of custom setup, or a kubernetes cluster with a custom deployment.  A for-profit relationship with a vendor will easily get you access to an environment and handy starter-containers, but that also kind of immediately puts a fence around the work, and shelf-life on it too.  While handing off a dockerhub reference for a custom container is pretty easy, that's a lot of work to commit to for mere prototyping, especially if that's outside of your interest or expertise.
+
+Earlier the jupyter setup was compared to a "distribution", and that's really what it is, especially after you start adding default notebooks.. plus having hacker-friendly just-in-time kernels means you need a just-in-time distribution.  Separating the code from the runtime and distributing just the notebooks works great.. until the runtime itself is custom or esoteric.
+
+In the end **the main features for this demo are the packaging, the dynamic kernels, and the approach to pipelining.**  There's an aspect of this that's related to "local first" development, but it also frees you up to run jupyter outside of jupyter, and maybe avoid using a vendor by treating this whole pipeline as a single step in another platform like airflow / argo.
+
+This is just a demo and not a real project, but if you're thinking it's not production ready.. of course you can ship the flexible [base kernel shim](#appendix-jupyter-kernel-shims) to pypi, and the kind of additional automation that ships the [fmtk containers](#appendix-fmtk-containers) to dockerhub is practically a one-liner with `compose.mk`.  Doing both of those things just reduces the support code though, and won't answer the majority of [the goals](#goals)!  *(If you're a jupyter expert and know a *better way* to get custom kernels in a dynamic way, please do [create an issue describing it]({{github.repo_url}}/issues) so this demo can be slimmed and hardened.)*
+
 
 {# 
 <hr style="width:100%;border-bottom:3px solid black;">
-
 <hr style="width:95%;border-bottom:1px dashed black;">
-
-<table><tr><td>
-{{macros.img_link("notebooking-ui.gif", mkdocs, "20%",align='center')}}
-</td><td>
-{{macros.img_link("notebooking-ui.gif", mkdocs, "20%",align='center')}}
-</td><td>
-{{macros.img_link("notebooking-ui.gif", mkdocs, "20%",align='center')}}
-</td></tr></table>
-#}
-
-
-{#
 [^1]: See also the docs for [Supervisors & Signals]({{mkdocs.site_relative_url}}/signals)
 [^2]: See the docs for [Supervisors & Signals]({{mkdocs.site_relative_url}}/signals)
 #}

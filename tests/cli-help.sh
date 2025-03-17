@@ -14,7 +14,7 @@
 ./compose.mk help docker
 
 # this won't fail even though target doesn't exist (falls back to search)
-./compose.mk help doesnt.exit
+./compose.mk help doesnt.fail
 
 # All of the demos get `help.local` just by using `include compose.mk`
 ./demos/container-dispatch.mk help.local

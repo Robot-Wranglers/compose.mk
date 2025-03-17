@@ -139,7 +139,7 @@ test.flux.finally:
 	# demo of using finally/always functionality in a pipeline.  touches a tmpfile 
 	# somewhere in the middle of a failing pipeline without getting to the cleanup 
 	# task, and it should be cleaned up anyway.
-	bash -i -c "(make \
+	bash -i -c "(${make} \
 		flux.finally/.file.cleanup \
 		.file.touch flux.fail file-cleanup || true)"
 	# NB: cannot assert this from here because cleanup only runs when the *test process* exits

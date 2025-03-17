@@ -1,3 +1,4 @@
+#!/usr/bin/env -S make -f
 # demos/dashboarding.mk: 
 #   A very basic demo for getting started with custom TUIs.  See the main docs for discussion.
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
