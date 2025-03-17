@@ -3063,6 +3063,15 @@ stream.json.object.append stream.json.append:
 	@#
 	cat ${stdin} | jq ". + {\"$${key}\": \"$${val}\"}"
 
+define Dockerfile.viu
+FROM rust:slim-bookworm
+RUN cargo install viu
+ENTRYPOINT ["/usr/local/cargo/bin/viu"]
+endef
+stream.viu: Dockerfile.build/viu
+	cmd="-t -b -w$${width:-${io.terminal.cols}} -" \
+		${make} docker.image.run/compose.mk:viu
+
 define Dockerfile.stream.pygmentize
 FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
 RUN apk add -q --update py3-pygments
