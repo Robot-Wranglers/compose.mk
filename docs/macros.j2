@@ -29,7 +29,7 @@ Jinja macros used in building docs (not make macros :)
 
 {% macro repo_link(fpath,github={},name='',branch='master') -%}{%set name=name or fpath%}[{{name}}]({{github.repo_url}}/tree/{{branch}}/{{fpath}}){%- endmacro -%}
 
-{% macro api_link_many(target_fam,mkdocs,exclude='None') -%}
+{% macro api_link_many(target_fam, mkdocs, exclude='None') -%}
 {% set targets=bash('./compose.mk mk.namespace.filter/'+target_fam+'|sort') %}
 {% set targets=targets.split('\n') %}
 {%for target in targets %} {% set target=target.strip().replace('%','<arg>') %}{%if target and not target.startswith(exclude)%}

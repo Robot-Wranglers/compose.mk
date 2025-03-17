@@ -38,11 +38,9 @@ $ ./compose.mk jb foo=bar
 ### Inheritance & Interpreters
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Projects that are extending `compose.mk` might be interested in *actually inheriting* the capabilities for signals and supervisors.
+Projects that are extending `compose.mk` might be interested in *inheriting* the capabilities for signals and supervisors.  The simplest reason you might want to do this is just for the sake of bringing [compose.mk-style CLI help]({{mkdocs.site_relative_url}}) to your own project, i.e. targets that actually support positional arguments, but [the advanced examples](#advanced-examples) on this page hint at other possibilities.
 
-The simplest reason you might want to do this is just for the sake of bringing [compose.mk-style CLI help]({{mkdocs.site_relative_url}}) to your own project, i.e. targets that actually support positional arguments, but [the advanced examples](#advanced-examples) on this page hint at other possibilities.
-
-For [technical reasons](#implementation) though, there's no way to inherit signal capabilities by simply using `include compose.mk` from your project Makefiles.  Fortunately, there is a work-around if you're willing to **setup `compose.mk` itself as your interpreter**.  
+For [technical reasons](#implementation), there's unfortunately no way to inherit signal capabilities by simply using `include compose.mk` from your project Makefiles.  There is however a work-around if you're willing to **setup `compose.mk` itself as your interpreter**.
 
 This pattern is an advanced topic, and while using it is *surprisingly stable and portable*, the semantics of it are strange enough that the whole thing *should probably be considered experimental.*
 
@@ -72,7 +70,7 @@ If you're only interested in proxy for **positional arguments** then this won't 
 #### More Generic Option Proxy
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-The end of the last section hints at a basic problem with convenient but naive option-proxy.  What if we want `ls --help` to work, or to put it another way: **how can we stop make from eating our argv** ?
+The end of the last section hints at a basic problem with convenient but naive option-proxy.  What if we want `ls --help` to work, or to put it another way: **how can we stop make from eating our argv?**
 
 The solution for this is to use the *end of options* hint, aka '<main_cmd> -- <other_stuff>'[^1], which `compose.mk` has some built-in support for using the `MAKE_CLI_EXTRA` variable.[^2]
 
@@ -80,7 +78,7 @@ The solution for this is to use the *end of options* hint, aka '<main_cmd> -- <o
 {{open('demos/interpreter-2.mk').read()}}
 ```
 
-As you can see above, this does require that we sacrifice the convenience of a really direct invocation.  But now `./demos/interpreter.mk ls -- --help` actually returns help for `ls` instead of help for `make`.  
+As seen above, this does require that we sacrifice the convenience of a really direct invocation.  But now `./demos/interpreter.mk ls -- --help` actually returns help for `ls` instead of help for `make`.  
 
 This works much more reliably for options compared with the last approach, **but still has known issues**.  To see this, try passing optional args with and without `=`, i.e. `./demos/interpreter.mk ls -- --width=45` will break whereas `./demos/interpreter.mk ls -- --width 45` does not. [^3] 
 
@@ -95,7 +93,7 @@ The example below demonstrates an embedded python-script that we'll run inside a
 {{open('demos/interpreter-3.mk').read()}}
 ```
 
-Above, we used `$(call mk.yield)` with no arguments, which is equivalent to `$(call mk.yield, true)`, or in other words just stopping CLI parsing and exiting immediately. This is often sufficient and has the correct exit status, because if the line before it should fail, execution will stop anyway.
+Above we use `$(call mk.yield)` with no arguments, which is equivalent to `$(call mk.yield, true)`, i.e. just stopping CLI parsing and exiting immediately. This is often sufficient and has the correct exit status, because if the line before it should fail, execution will stop anyway.
 
 ### Implementation
 <hr style="width:100%;border-bottom:3px solid black;">

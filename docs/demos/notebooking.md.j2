@@ -142,7 +142,7 @@ Below you can see a (very large) screenshot with a complete dump of the pipeline
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-**For packaging,** a "frozen release" type of format was promised at the top and hasn't yet been delivered.  If you're interested in the details of how this works [see the main docs for it here]({{mkdocs.site_relative_url}}/demos/packaging).  All we need to do is use {{macros.api_link('mk.pkg/arg',mkdocs,arg='target')}}, and ensure that the `demos/` folder is archived.
+**For packaging,** a "frozen release" type of format was promised at the top and hasn't yet been delivered.  If you're interested in the details of how this works [see the main docs for it here]({{mkdocs.site_relative_url}}/demos/packaging), but all we need to do is use {{macros.api_link('mk.pkg',mkdocs,arg='target')}}, and ensure that the `demos/` folder is archived.
 
 ```bash 
 $ archive=demos ./demos/notebooking.mk mk.pkg/lab.pipeline
@@ -166,7 +166,7 @@ Well now that all this exists, *what is it?*  In some ways, it's easier to say w
 
 On the other hand.. this whole problem space is a pecular combination of code, extensions, environments, and infrastructure.  If you're interested in **reproducibility**, then it's not like the code is the final word.  And if you're interested in **collaboration**, then it turns out that it's kind of hard to simply "share" things like an IDE with a bunch of custom setup, or a kubernetes cluster with a custom deployment.  A for-profit relationship with a vendor will easily get you access to an environment and handy starter-containers, but that also kind of immediately puts a fence around the work, and shelf-life on it too.  While handing off a dockerhub reference for a custom container is pretty easy, that's a lot of work to commit to for mere prototyping, especially if that's outside of your interest or expertise.
 
-Earlier the jupyter setup was compared to a "distribution", and that's really what it is, especially after you start adding default notebooks.. plus having hacker-friendly just-in-time kernels means you need a just-in-time distribution.  Separating the code from the runtime and distributing just the notebooks works great.. until the runtime itself is custom or esoteric.
+Earlier the jupyter setup was compared to a "distribution", and that's really what it is, especially after you start adding default notebooks.  And having hacker-friendly just-in-time kernels means you need a just-in-time distribution.  Separating the code from the runtime and distributing just the notebooks works great.. until the runtime itself is custom or esoteric.
 
 In the end **the main features for this demo are the packaging, the dynamic kernels, and the approach to pipelining.**  There's an aspect of this that's related to "local first" development, but it also frees you up to run jupyter outside of jupyter, and maybe avoid using a vendor by treating this whole pipeline as a single step in another platform like airflow / argo.
 

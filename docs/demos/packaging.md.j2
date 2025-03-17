@@ -37,7 +37,7 @@ Yet another angle on this is that, `compose.mk` is already a [very lazy tool](ht
 
 #}
  
-### Usage: Make-target to Executable 
+### Example: Make-target to Executable 
 <hr style="width:100%;border-bottom:3px solid black;">
 
 
@@ -55,7 +55,7 @@ $ cat img.png | ./stream.img
 It works, and we use `chafa` without *having* chafa because containers don't build or pull before they are used.  And in fact.. now we can use `compose.mk` without *having* `compose.mk`.  
 
 
-### Usage: TUI to Executable
+### Example: TUI to Executable
 <hr style="width:100%;border-bottom:3px solid black;">
 
 While [`stream.img`]({{mkdocs.site_relative_url}}/api#streamimg) is just a small utility, the approach demonstrated above also works with "applications" implemented using `compose.mk`, i.e. [full blown TUIs]({{mkdocs.site_relative_url}}/embedded-tui).  As an example, how about exporting the [`tux.demo` target](#)?
@@ -65,7 +65,9 @@ bin=./tux.demo ./compose.mk mk.pkg/tux.demo
 ./tux.demo
 ```
 
-### Usage: Extension to Executable
+<br/>
+
+### Example: Extension to Executable
 <hr style="width:100%;border-bottom:3px solid black;">
 
 In the examples so far, the `./compose.mk mk.pkg/<target>` examples only use *targets that are built-in*.  If you want to extend `compose.mk` with your own automation and export *that*, then you'll want to use `mk.pkg` from the extension instead.
@@ -89,16 +91,14 @@ $ echo msg=HelloWorld | module=debug ./ansible.adhoc
   "msg": "HelloWorld"
 }
 ```
+<br/>
 
 ### Makeself Reference 
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Direct access to `makeself` is via the [`mk.self` target]({{mkdocs.site_relative_url}}/api#mkself):
 
-```bash 
-$ ./compose.mk help mk.self
-{{bash('make mk.help.target/mk.self')}}
-```
+{#{bash('make .mk.help.target/mk.self')}#}
 
 For those unfamiliar with `makeself`, this section is a quick tutorial, but you can use this to package up anything.  Here's an example of freezing the contents of a directory and an arbitrary script that *uses* that directory.  
 
@@ -130,7 +130,10 @@ $  ./archive.run
 ./demos/README.md
 ```
 
------------------------------
+<br/>
+
+### Argument Passing 
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Argument passing hasn't been demonstrated so far, and this can get tricky.
 

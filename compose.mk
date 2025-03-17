@@ -270,6 +270,7 @@ define _compose_quiet
 	>&2 \
 	| grep -vE '.*Network.*(Creating|Created)' >&2 )
 endef
+docker.run.base:=docker run --rm -i 
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## END: Colors, Logging, and Makefile-related Boilerplate
@@ -287,6 +288,7 @@ endef
 ## | COMPOSE_IGNORE_ORPHANS | *Honored by 'docker compose', this helps to quiet output*        |
 ## | DOCKER_HOST_WORKSPACE  | *Needs override for correctly working with DIND volumes*         |
 ## | TRACE:                 | Increase verbosity (more detailed than verbose)                  |
+## | GITHUB_ACTIONS:        | 1 if running inside github actions, 0 otherwise                  |
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 export COMPOSE_IGNORE_ORPHANS?=True
@@ -308,6 +310,7 @@ ifeq ($(findstring compose.mk, ${MAKE_CLI}),)
 export CMK_LIB=1
 export CMK_STANDALONE=0
 endif
+GITHUB_ACTIONS=$(shell [ "$${GITHUB_ACTIONS}" = "true" ] && echo 1 || echo 0)
 
 ${CMK_COMPOSE_FILE}:
 	(ls ${CMK_COMPOSE_FILE} 2>/dev/null >/dev/null || verbose=0 ${make} mk.def.to.file/FILE.TUX_COMPOSE/${CMK_COMPOSE_FILE})
@@ -320,22 +323,13 @@ export CMK_INTERNAL=0
 endif
 export CMK_EXTRA_REPO?=.
 
-docker.images=($(call docker.tags.by.repo,compose.mk) ; $(call docker.tags.by.repo,${CMK_EXTRA_REPO})) | sort | uniq
-compose.require:
-	docker info --format json|${jq} -e '.ClientInfo.Plugins[]|select(.Name=="compose")' 
-docker.compose:=$(shell docker compose >/dev/null 2>/dev/null && echo docker compose || echo echo DOCKER-COMPOSE-MISSING;) 
 
-docker.containers.all:=docker ps --format json
-docker.run.base:=docker run --rm -i 
-
-# NB: exit status does not work without grep..
-docker.images.filter=docker images --filter reference=${1} --format "{{.Repository}}:{{.Tag}}"|grep ${1}
 
 # External tool used for parsing Makefile metadata
-PYNCHON_CLI_VERSION=baf56b7
+PYNCHON_VERSION?=a817d58
 pynchon=$(trace_maybe) && ${pynchon.run}
 # pynchon.run=python -m pynchon.util.makefile
-pynchon.docker=${docker.run.base} -v `pwd`:/workspace -w/workspace --entrypoint python robotwranglers/pynchon:$${PYNCHON_VERSION:-baf56b7} 
+pynchon.docker=${docker.run.base} -v `pwd`:/workspace -w/workspace --entrypoint python robotwranglers/pynchon:${PYNCHON_VERSION} 
 pynchon.run:=$(shell which pynchon >/dev/null 2>/dev/null && echo python || echo "${pynchon.docker}") -m pynchon.util.makefile
 # Macros for use with jq/yq/jb, using local tools if available and falling back to dockerized versions
 jq.docker=${docker.run.base} -e key=$${key:-} -v $${DOCKER_HOST_WORKSPACE:-$${PWD}}:/workspace -w/workspace ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}
@@ -391,17 +385,15 @@ compose.build/%:
 	&& $(trace_maybe) \
 	&& ${docker.compose} $${COMPOSE_EXTRA_ARGS} -f ${*} build $${quiet} $${svc:-}
 
-# A macro to return space-separated names for all of the 
-# non-abstract services in the given compose file.
-compose.services=$(shell \
-	( ${docker.compose} $${COMPOSE_EXTRA_ARGS:-} -f ${1} config --services | grep -v abstract || true ) \
-	2>/dev/null | ${stream.nl.to.space})
-
 compose.services/%:; $(call compose.services,${*})
-	@# Returns a space-separated names of each service defined by the given composefile.
+	@# Returns space-delimited names for each non-abstract service defined by the given composefile.
 	@# Also available as a macro.
+	@#
 	@# USAGE:
 	@#   ./compose.mk compose.services/demos/data/docker-compose.yml
+compose.services=$(shell \
+	( ${docker.compose} $${COMPOSE_EXTRA_ARGS:-} -f ${1} config --services \
+		| grep -v abstract || true ) 2>/dev/null | ${stream.nl.to.space})
 
 compose.clean/%:
 	@# Runs `docker compose down` for the given compose file, 
@@ -442,7 +434,6 @@ compose.get.stem/%:
 	@#
 	basename -s .yml `basename -s .yaml ${*}`
 
-
 compose.kernel:
 	@# Executes the input data on stdin as a kind of "script" that runs inside the current make-context.
 	@# This basically allows you to treat targets as an instruction-set without any kind of 'make ... ' preamble.
@@ -454,7 +445,6 @@ compose.kernel:
 	instructions="`${stream.stdin} | ${stream.nl.to.space}`" \
 	&& printf "$${instructions}" | ${stream.as.log} \
 	&& set -x && ${make} $${instructions}
-
 
 compose.loadf: tux.require
 	@# Loads the given file,
@@ -518,7 +508,6 @@ compose.services/%:
 	@# If 'compose.import' has been called, use '<compose_stem>.services' directly.
 	@#
 	${docker.compose} $${COMPOSE_EXTRA_ARGS} -f ${*} config --services | sort
-compose.validate.quiet/%:; ${make} compose.validate/${*} >/dev/null 2>/dev/null
 
 compose.validate/%:
 	@# Validates the given compose file (i.e. asks docker compose to parse it)
@@ -534,6 +523,13 @@ compose.validate/%:
 		0) $(call log.part2, ok) && exit 0; ;; \
 		*) $(call log.part2, failed) && exit 1; ;; \
 	esac
+
+compose.validate.quiet/%:; ${make} compose.validate/${*} >/dev/null 2>/dev/null
+	@# Like `compose.validate`, but silent.
+
+compose.require:
+	@# Asserts that docker compose is available.
+	docker info --format json | ${jq} -e '.ClientInfo.Plugins[]|select(.Name=="compose")'
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## END: compose.* targets
@@ -553,8 +549,9 @@ compose.validate/%:
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-docker.image.sizes docker.size.summary:; docker images --format '{{.Repository}} {{.Tag}} {{.Size}}'
+docker.image.sizes docker.size.summary:
 	@# Shows disk-size summaries for all images 
+	docker images --format '{{.Repository}} {{.Tag}} {{.Size}}'
 
 docker.clean:
 	@# This refers to "local" images.  Cleans all images from 'compose.mk' repository,
@@ -579,6 +576,8 @@ docker.clean:
 #   my-target/%:; ${docker.image.curry.command}/<img>,<entrypoint>
 docker.curry.command=cmd="${*}" ${make} flux.apply
 docker.image.curry.command=cmd="${*}" ${make} docker.image.run
+docker.compose:=$(shell docker compose >/dev/null 2>/dev/null && echo docker compose || echo echo DOCKER-COMPOSE-MISSING;) 
+docker.containers.all:=docker ps --format json
 
 docker.images:; $(call docker.images)
 	@# Returns only affiliated images from 'compose.mk' repository, 
@@ -598,16 +597,8 @@ docker.tags.by.repo=((${docker.images.all} | ${jq.run} -r ".|select(.Repository=
 docker.tags.by.repo/%:; $(call docker.tags.by.repo,${*})
 	@# Filters all docker images by the given repository.
 	@# This helps to separate system images from compose.mk images.
-	@# This target is also available as a function.
+	@# Also available as a function.
 	@# See 'docker.images' for more details.
-
-# docker.build.maybe/%:
-# 	@# Builds quietly, iff and only if the named image is not cached.
-# 	@#
-# 	@# USAGE:
-# 	@#   ./compose.mk docker.build.maybe/<name>
-# 	@#
-# 	${docker.images} | grep -w "${*}" || ${make} docker.build/${*}
 
 docker.build/%:
 	@# Standard noisy docker build for the given filename.
@@ -619,7 +610,6 @@ docker.build/%:
 	@#   tag=<tag_to_use> ./compose.mk docker.build/<name>
 	@#
 	label='build finished.' ${make} flux.timer/.docker.build/${*}
-
 .docker.build/%:
 	case ${*} in \
 		-) true;; \
@@ -629,12 +619,6 @@ docker.build/%:
 	&& quiet=$${quiet:-1} \
 	&& quiet=`[ -z "$${quiet:-}" ] && true || echo "-q"` \
 	&& docker build $${quiet} $${build_args} -t $${tag} $${docker_args:-} ${*}
-
-# docker.build.quiet/%:; quiet=1 ${make} docker.build/${*}
-# 	@# Builds the given Dockerfile quietly, tagging it with 'tag'.
-# 	@#
-# 	@# USAGE:
-# 	@#  tag=<tag_to_use> ./compose.mk docker.build.quiet/<name>
 
 docker.context:; docker context inspect
 	@# Returns all of the available docker context. JSON output, pipe-friendly.
@@ -701,15 +685,15 @@ docker.lambda/%:
 		-w /workspace --rm $${sha} $${cmd}
 
 docker.logs/%:
-	@#
-	@#
+	@# Tails logs for the given container ID.
+	@# This is non-blocking.
 	@#
 	$(call log.docker, docker.logs ${sep} tailing logs for ${*})
 	docker logs ${*}
 
 docker.logs.follow/%:
-	@#
-	@#
+	@# Tails logs for the given container ID.
+	@# This is blocking, and never exits.
 	@#
 	$(call log.docker, docker.logs.follow ${sep} reattaching to ${*})
 	docker logs --follow  ${*} 
@@ -718,9 +702,7 @@ docker.logs.follow/:
 	$(call log.docker, docker.logs.follow ${sep} ${yellow}No container ID to get logs from.)
 
 docker.def.run/%:
-	@# Builds, then runs the docker-container represented by the given define
-	@#
-	@# USAGE:
+	@# Builds, then runs the docker-container represented by the given define-block
 	@#
 	${make} docker.from.def/${*} docker.dispatch/${*}
 
@@ -769,7 +751,6 @@ Dockerfile.from.fs/% docker.from.file/%:
 	&& $(trace_maybe) \
 	&& cat ${*} | ${stream.peek} | docker build -t $${tag} -
 
-
 docker.from.github:
 	@# Helper that constructs an appropriate url, then chains to `docker.from.url`.
 	@#
@@ -811,14 +792,19 @@ docker.help: mk.namespace.filter/docker.
 	@# Lists only the targets available under the 'docker' namespace.
 	@#
 
+docker.images=($(call docker.tags.by.repo,compose.mk) ; $(call docker.tags.by.repo,${CMK_EXTRA_REPO})) | sort | uniq
+
 docker.image.dispatch/%:
 	@# Similar to `docker.dispatch/<arg>`, but accepts both the image
 	@# and the target as arguments instead of using environment variables.
 	@#
 	@# USAGE:
 	@#  ./compose.mk docker.image.dispatch/<img>/<target>
-	tty=1 img=`printf "${*}"|cut -d/ -f1` ${make} docker.dispatch/`printf "${*}"|cut -d/ -f2-`
+	tty=1 img=`printf "${*}" | cut -d/ -f1` ${make} docker.dispatch/`printf "${*}" | cut -d/ -f2-`
 
+
+# NB: exit status does not work without grep..
+docker.images.filter=docker images --filter reference=${1} --format "{{.Repository}}:{{.Tag}}"|grep ${1}
 
 docker.image.run/%:
 	@# Runs the named image, using the (optional) named entrypoint.
@@ -858,7 +844,10 @@ docker.commander:
 	@# Automation also ensures that lazydocker always starts with the "statistics" tab open.
 	@#
 	$(call log.docker, ${@} ${sep} ${no_ansi_dim}Opening commander TUI for docker)
-	geometry="${GEO_DOCKER}" ${make} tux.open/.tux.widget.lazydocker,flux.loopf/flux.wrap/docker.stat:.tux.widget.ctop,.tux.widget.img.rotate
+	tui_spec="flux.wrap/docker.stat:.tux.widget.ctop" \
+	&& tui_spec="flux.loopf/$${tui_spec},.tux.widget.img.rotate" \
+	&& tui_spec=".tux.widget.lazydocker,$${tui_spec}" \
+	&& geometry="${GEO_DOCKER}" ${make} tux.open/$${tui_spec}
 
 docker.network.panic:; docker network prune -f
 	@# Runs 'docker network prune' for the entire system.
@@ -1095,6 +1084,8 @@ io.figlet:
 
 # docker run $(if [ -t 0 ]; then echo "-it"; else echo "-i"; fi) my-image:latest
 io.file.select=header="Choose a file: (dir=$${dir:-.})"; choices=`ls $${dir:-.}/$${pattern:-} | ${stream.nl.to.space}` && ${io.get.choice}
+
+io.get.url=$(call io.mktemp) && curl -sL $${url} > $${tmpf}
 io.gum.docker=${trace_maybe} && docker run $$(if [ -t 0 ]; then echo "-it"; else echo "-i"; fi) -e TERM=$${TERM:-xterm} --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nCOPY --from=charmcli/gum:${GUM_VERSION} /usr/local/bin/gum /usr/local/bin/gum\nRUN apk add --update --no-cache bash\n")`
 ifeq ($(shell which gum >/dev/null 2> /dev/null && echo 1|| echo 0),1) 
 io.gum.run:=`which gum`
@@ -1350,13 +1341,16 @@ else
 io.script=script -qec "${1}"
 endif
 
-io.selector=choices=`${make} ${1} | ${stream.nl.to.space}` && ${io.get.choice} && ${make} ${2}/$${chosen}
 io.selector/%: 
+	@# Uses the given targets to generate and then handle choices.
+	@# The 1st argument should be a nullary target; the 2nd must be unary.
 	@#
 	@# USAGE: 
-	@#
+	@#   ./compose.mk io.selector/<choice_generator>,<choice_handler>
 	@#
 	$(call io.selector, $(shell echo ${*}|cut -d, -f1),$(shell echo ${*}|cut -d, -f2-))
+io.selector=choices=`${make} ${1} | ${stream.nl.to.space}` && ${io.get.choice} && ${make} ${2}/$${chosen}
+
 io.stack/%:; $(call io.stack, ${*})
 	@# Returns all the data in the named stack-file 
 	@#
@@ -1379,6 +1373,7 @@ io.stack.pop/%:
 io.stack.pop=(${io.stack} | ${jq.run} '.[-1]'; ${io.stack} | ${jq.run} '.[1:]' > ${1}.tmp && mv ${1}.tmp ${1})
 
 io.stack.require=( ls ${1} >/dev/null 2>/dev/null || echo '[]' > ${1})
+
 io.stack.push/%:
 	@# Pushes new JSON data onto the named stack-file
 	@#
@@ -1392,7 +1387,6 @@ io.stack.push/%:
 	&& ${jq} -n --slurpfile obj $${tmpf} --slurpfile stack ${*} '$$stack[0]+$$obj' > ${*}.tmp
 	mv -f ${*}.tmp ${*}
 
-
 io.tail/%:
 	@# Tails the named file, creating it first if necessary.
 	@# This is always blocking and won't throw an error even if the file does not exist.
@@ -1403,7 +1397,9 @@ io.tail/%:
 	$(trace_maybe) && touch ${*} && tail -f ${*} 2>/dev/null
 
 io.terminal.cols=$(shell which tput >/dev/null 2>/dev/null && echo `tput cols 2> /dev/null` || echo 45)
+
 io.term.width:=${io.terminal.cols}
+
 # io.term.cols:; ${io.terminal.cols}
 io.time.wait/% io.wait/%:
 	@# Pauses for the given amount of seconds.
@@ -1422,11 +1418,13 @@ io.wait io.time.wait: io.time.wait/1
 io.browser/%:
 	@# Like `io.browser`, but accepts a variable-name as an argument.
 	@# Variable will be dereferenced and stored as 'url' before chaining.
+	@# NB: This requires python on the host and can't run from docker.
+	@#
 	url="`${make} mk.get/${*}`" ${make} io.browser
 
 io.browser:
 	@# Tries to open the given URL in a browser.
-	@# (This requires python on the host and can't run from docker)
+	@# NB: This requires python on the host and can't run from docker.
 	@#
 	@# USAGE: 
 	@#  url="..." ./compose.mk io.browser
@@ -1524,6 +1522,7 @@ mk.def.dispatch/%:
 	&& src="$${intr} $${tmpf}" \
 	&& [ -p ${stdin} ] && cat ${stdin} | eval $${src} || eval $${src}
 
+mk.def.read=${make} mk.def.read
 mk.def.read/%:
 	@# Reads the named define/endef block from this makefile, emitting it to stdout.
 	@#
@@ -1535,7 +1534,6 @@ mk.def.read/%:
 	@#
 	$(eval def_name=${*})
 	$(info $(value ${def_name}))
-mk.def.read=${make} mk.def.read
 
 mk.def.to.file=${make} mk.def.to.file
 mk.def.to.file/%:
@@ -1566,7 +1564,7 @@ mk.ifndef/%:; $(call mk.ifndef,${*})
 	@# Flips the assertion for 'mk.ifdef'.
 
 mk.docker.dispatch/%:; img="compose.mk:$${img}" ${make} docker.dispatch/${*}
-	@# Like `docker.run`, but insists that image is "local" or 
+	@# Like `docker.run` but insists that image is "local" or 
 	@# internally managed by compose.mk, i.e. using the 
 	@# "compose.mk:" prefix
  
@@ -1590,9 +1588,8 @@ mk.get/%:; $(info ${${*}})
 log.mk=$(call log, ${GLYPH_MK} ${1})
 
 
-mk.help:
+mk.help: mk.namespace.filter/mk.
 	@# Lists only the targets available under the 'mk' namespace.
-	${make} mk.namespace.filter/mk.
 
 mk.help.module/%:
 	@# Shows help for the named module.
@@ -1620,11 +1617,14 @@ mk.help.block/%:
 	pattern="${*}" ${make} mk.parse.block/${MAKEFILE} | ${stream.glow} 
 
 mk.help.target/%:
-	@# Shows help for the named target.
+	@# Shows rendered help for the named target.
 	@#
 	@# USAGE:
 	@#   ./compose.mk mk.help.target/<target_name>
 	@#
+	${make} .mk.help.target/${*} | ${stream.glow}
+.mk.help.target/%:
+	@# Shows raw help for the named target.
 	tmp1=".tmp.$(shell echo `basename ${MAKEFILE}`.parsed.json)" \
 	&& $(call io.file.gen.maybe,$${tmp1},${make} mk.parse/${MAKEFILE}) \
 	&& $(call io.mktemp) && tmp2="$${tmpf}" \
@@ -1639,7 +1639,7 @@ mk.help.target/%:
 		"") $(call log.mk,${cyan_flow_right} ${dim_ital}No help found.);; \
 	esac \
 	; case $$? in \
-		0) cat $${tmp2} | ${stream.glow} ;; \
+		0) cat $${tmp2} ;; \
 		*) $(call log.mk, ${cyan_flow_right} No such target was found.);; \
 	esac 
 
@@ -1762,9 +1762,17 @@ mk.namespace.list help.namespaces:
 	&& $(call log, ${no_ansi}${GLYPH_MK} help.namespaces ${sep} ${dim}count=${no_ansi}$${count} )
 
 mk.targets.filter/%:
+	@# Lists all targets in the given namespace, filtering them by the given pattern.
+	@# Simple, pipe-friendly output.  
+	@# WARNING:  Callers must anticipate parametric targets with percent-signs, i.e. "foo.bar/%"
+	@#
+	@# USAGE:
+	@#   ./compose.mk mk.targets.filter/<namespace>
+	@#
 	${trace_maybe} \
 	&& pattern="${*}" && pattern="$${pattern//./[.]}" \
 	&& ${make} mk.targets | grep -v ^all$$ | grep ^$${pattern}
+
 mk.namespace.filter/%:
 	@# Lists all targets in the given namespace, filtering them by the given pattern.
 	@# Simple, pipe-friendly output.  
@@ -1910,17 +1918,18 @@ mk.parse.targets/%:
 	@# USAGE: 
 	@#   ./compose.mk mk.parse.targets/<file>
 	@#
-	${make} mk.parse/${*} | ${jq.run} -r '.|keys[]'
+	${make} mk.parse/${*} | ${jq.run} -r '. | keys[]'
 mk.parse.targets=${make} mk.parse.targets
 mk.targets.local=${mk.parse.targets} | sort | uniq
-mk.targets.local.public=${mk.targets.local}| grep -v '^self.' | grep -v '^[.]' | sort -V
+mk.targets.local.public=${mk.targets.local} | grep -v '^self.' | grep -v '^[.]' | sort -V
+
 mk.parse.module.docs/%:
 	@# Parses the given Makefile, returning module-level documentation.
 	@#
 	@# USAGE:
 	@#  pattern=.. ./compose.mk mk.parse.module.docs/<makefile>
 	@#
-	${trace_maybe} && (${pynchon} parse --module-docs ${*} 2>/dev/null|| echo '{}') | ${jq} .
+	${trace_maybe} && (${pynchon} parse --module-docs ${*} 2>/dev/null || echo '{}') | ${jq} .
 
 
 define Dockerfile.makeself
@@ -2167,13 +2176,15 @@ flux.echo/%:
 	echo "${*}"
 
 flux.wrap/%:
-	@# Performs an 'and' operation with the named colon-delimited targets.
-	@# This is equivalent to the default behaviour of `make t1 t2 .. tN`.
-	@# This is mostly used as a wrapper in case targets are unary, and is the
-	@# same as `flux.and` except that it accepts commas or colon-delimited args
+	@# Same as `flux.and` except that it accepts commas or colon-delimited args.
+	@# This performs an 'and' operation with the named targets, equivalent to the
+	@# default behaviour of `make t1 t2 .. tN`.  Mostly used as a wrapper in case
+	@# targets are unary
 	@#
 	${make}	flux.and/`echo ${*} | sed 's/:/,/g'`
 
+# WARNING: refactoring for xargs/flux.each here introduces 
+#          subtle errors w.r.t "docker run -it".
 flux.and/%:
 	@# Performs an 'and' operation with the named comma-delimited targets.
 	@# This is equivalent to the default behaviour of `make t1 t2 .. tN`.
@@ -2186,9 +2197,11 @@ flux.and/%:
 	@#
 	@# See also 'flux.or'.
 	@#
-	echo "${*}" \
+	$(call io.mktemp) \
+	&& echo "${*}" \
 	| ${stream.comma.to.nl} \
-	| xargs -I% sh ${dash_x_maybe} -c "${make} %||exit 255"
+	| xargs -I% echo "${make} %" > $${tmpf} \
+	&& bash ${dash_x_maybe} $${tmpf}
 
 flux.apply/%:
 	@# Applies the given target to the given argument, comma-delimited.
@@ -3029,8 +3042,16 @@ stream.echo:; cat ${stdin}
 	@# EXAMPLE:
 	@#   $ echo hello-world | ./compose.mk stream.echo
 
-stream.chafa=${stream.img}
+
+# Run image previews differently for best results in github actions. 
+# See also: https://github.com/hpjansson/chafa/issues/260
+ifeq (${GITHUB_ACTIONS},1)
+stream.img=${stream.stdin} | docker run -i --entrypoint chafa compose.mk:tux --view-size 130x -c full --fg-only --invert --symbols dot,quad,braille,diagonal /dev/stdin
+else
 stream.img=${stream.stdin} | docker run -i --entrypoint chafa compose.mk:tux --center on /dev/stdin
+endif
+
+stream.chafa=${stream.img}
 stream.img stream.chafa stream.img.preview: tux.require
 	@# Given an image file on stdin, this shows a preview on the console. 
 	@# Under the hood, this works using a dockerized version of `chafa`.
@@ -3042,7 +3063,7 @@ stream.img stream.chafa stream.img.preview: tux.require
 
 stream.indent=( cat ${stdin} | sed 's/^/  /' )
 stream.indent:; ${stream.indent}
-	@# Indents input stream
+	@# Indents the input stream.  Also available as a macro.
 
 stream.json.array.append:
 	@# Appends <val> to input array
@@ -3051,7 +3072,7 @@ stream.json.array.append:
 	@#   echo "[]" | val=1 ./compose.mk stream.json.array.append | val=2 make stream.json.array.append
 	@#   [1,2]
 	@#
-	cat ${stdin} | jq "[.[],\"$${val}\"]"
+	cat ${stdin} | ${jq} "[.[],\"$${val}\"]"
 
 stream.json.object.append stream.json.append:
 	@# Appends the given key/val to the input object.
@@ -3061,7 +3082,7 @@ stream.json.object.append stream.json.append:
 	@#	 echo {} | key=foo val=bar ./compose.mk stream.json.object.append
 	@#   {"foo":"bar"}
 	@#
-	cat ${stdin} | jq ". + {\"$${key}\": \"$${val}\"}"
+	cat ${stdin} | ${jq} ". + {\"$${key}\": \"$${val}\"}"
 
 define Dockerfile.stream.pygmentize
 FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
@@ -3127,7 +3148,7 @@ stream.nl.to.json.array:
 	@#
 	src=`\
 		cat ${stdin} \
-		| xargs -I% printf "| val=\"%\" make stream.json.array.append "\
+		| xargs -I% printf "| val=\"%\" ${make} stream.json.array.append "\
 	` \
 	&& src="echo '[]' $${src} | jq -c ." \
 	&& tmp=`eval $${src}` \
@@ -3183,7 +3204,7 @@ stream.yaml.pygmentize=lexer=yaml ${make} stream.pygmentize
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 
-CARBONYL_IMG?=fathyb/carbonyl
+IMG_CARBONYL?=fathyb/carbonyl
 ICON_DOCKER:=https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/97_Docker_logo_logos-512.png
 # Geometry constants, used by the different commander-layouts
 GEO_DOCKER="868d,97x40,0,0[97x30,0,0,1,97x9,0,31{63x9,0,31,2,33x9,64,31,4}]"
@@ -3216,7 +3237,7 @@ tux.browser:
 	@#
 	${trace_maybe} && tty=1 entrypoint=/carbonyl/carbonyl \
 	cmd="--no-sandbox --disable-dev-shm-usage --user-data-dir=/carbonyl/data $${url}" \
-	net=host ${make} docker.image.run/${CARBONYL_IMG}
+	net=host ${make} docker.image.run/${IMG_CARBONYL}
 
 tui.demo tux.demo:
 	@# Demonstrates the TUI.  This opens a 4-pane layout and blasts them with tte[1].
@@ -3362,7 +3383,7 @@ tux.dispatch.sh:; ${tux.dispatch.sh}
 	@#   cmd=... ./compose.mk tux.dispatch.sh
 	@#
 	
-tux.help:; ${make}  mk.namespace.filter/tux.
+tux.help:; ${make} mk.namespace.filter/tux.
 	@# Lists only the targets available under the 'tux' namespace.
 
 tux.mux/%:
@@ -3460,7 +3481,7 @@ tux.pane/%:
 	@# USAGE:
 	@#   ./compose.mk tux.pane/1/<target_name>
 	@#
-	make tux.dispatch/.tux.pane/${*}
+	${make} tux.dispatch/.tux.pane/${*}
 
 tux.panic:
 	@#
@@ -3536,7 +3557,7 @@ tux.shell.pipe: tux.require
 	@# Typically this is used internally during TUI bootstrap, but you can call this to
 	@# rexecute the main setup for things like default key-bindings and look & feel.
 	@#
-	$(call log.tux, ${@} ${sep} ${dim}Initializing TUI make ${MAKE_FLAGS} // $${MAKEFILE_LIST// / -f})
+	$(call log.tux, ${@} ${sep} ${dim}Initializing TUI)
 	$(trace_maybe) \
 	&& ${make} .tux.init.panes .tux.init.bind_keys .tux.theme || exit 1
 	tmux set -g pane-border-style fg=green \
@@ -3644,13 +3665,13 @@ endef
 	&& $${setter} @powerline-color-grey-5 colour243 \
 	&& $${setter} @powerline-color-grey-6 colour245
 
-.tux.layout.vertical:
+.tux.layout.vertical:; tmux select-layout even-horizontal
 	@# Alias for the vertical layout.
 	@# See '.tux.dwindle' docs for more info
-	tmux select-layout even-horizontal
-.tux.layout.horizontal .tux.layout.h:
+	
+.tux.layout.horizontal .tux.layout.h:; tmux select-layout even-vertical
 	@# Alias for the horizontal layout.
-	tmux select-layout even-vertical
+	
 .tux.layout.spiral: .tux.dwindle/s
 	@# Alias for the dwindle spiral layout.
 	@# See '.tux.dwindle' docs for more info
@@ -3702,13 +3723,9 @@ endef
 				*) $(call log.part2, ${red}error setting geometry); ;; \
 			esac );; \
 	esac 
-# ${GLYPH_TUI} ${@} ${sep} ${red}Error setting geometry:${no_ansi_dim}\n `printf "$${geometry}"|fmt -w 20|${stream.indent}`)
 
-
-.tux.msg:
+.tux.msg:; tmux display-message "$${msg:-?}"
 	@# Flashes a message on the tmux UI.
-	@#
-	tmux display-message "$${msg:-?}"
 
 .tux.pane.focus/%:
 	@# Focuses the given pane.  This always assumes we're using the first tmux window.
@@ -3718,6 +3735,7 @@ endef
 	@#
 	$(call log.tux, ${@} ${sep} ${dim}Focusing pane ${*})
 	tmux select-pane -t 0.${*} || true
+
 .tux.pane/%:
 	@# Dispatches the given make-target to the tmux pane with the given id.
 	@#
@@ -3812,7 +3830,6 @@ endef
 			&& sleep $${delta:-0.2}; \
 		done; \
 	done
-io.get.url=$(call io.mktemp) && curl -sL $${url} > $${tmpf}
 
 .tux.widget.img.rotate:
 	display_target=.tux.img.rotate ${make} .tux.widget.img
@@ -3843,37 +3860,32 @@ io.get.url=$(call io.mktemp) && curl -sL $${url} > $${tmpf}
 
 .tux.img.rotate/%:
 	$(call log, ${@})
-	$(call io.mktemp) \
-	&& entrypoint=python3 img=robotwranglers/imgrot \
-	cmd="/opt/imgrot/imgrot.py ${*} --range 360 --stream" \
-	${make} docker.run.sh > $${tmpf} \
-	&& chafa --duration inf --speed .5 \
-	--clear --center on $${tmpf}
+	cmd="${*} --range 360 --display" \
+	${make} docker.image.run/robotwranglers/imgrot
 
-.tux.img.display/%:
-	@# Displays the named file using chafa, and centering it in the available terminal width.
-	@#
-	@# USAGE:
-	@#  ./compose.mk .tux.img.display/<fname>
-	@#
-	chafa --clear --center on ${*}
+# .tux.img.display/%:
+# 	@# Displays the named file using chafa, and centering it in the available terminal width.
+# 	@#
+# 	@# USAGE:
+# 	@#  ./compose.mk .tux.img.display/<fname>
+# 	@#
+# 	chafa --clear --center on ${*}
+# .tux.widget.img.var/%:
+# 	@# Unpacks an image URL from the given make/shell variable name, then displays it as TUI widget.
+# 	@#
+# 	@# The variable of course needs to exist and should actually point at an image.
+# 	@# Besides supporting proper URLs, this works with file-paths.  See '.tux.widget.img'
+# 	@#
+# 	@# USAGE:
+# 	@#  ./compose.mk .tux.widget.img.var/<var_name>
+# 	@#
+# 	url="$${${*}:-${${*}}}" make .tux.widget.img
 
-.tux.widget.img.var/%:
-	@# Unpacks an image URL from the given make/shell variable name, then displays it as TUI widget.
-	@#
-	@# The variable of course needs to exist and should actually point at an image.
-	@# Besides supporting proper URLs, this works with file-paths.  See '.tux.widget.img'
-	@#
-	@# USAGE:
-	@#  ./compose.mk .tux.widget.img.var/<var_name>
-	@#
-	url="$${${*}:-${${*}}}" make .tux.widget.img
-
-.tux.widget.lazydocker: .tux.widget.lazydocker/0
 
 # https://github.com/moncho/dry
-.tux.widget.ctop:; sleep 2; ${make} docker.start.tty/moncho/dry
+.tux.widget.ctop: io.wait/2 docker.start.tty/moncho/dry
 
+.tux.widget.lazydocker: .tux.widget.lazydocker/0
 .tux.widget.lazydocker/%:
 	@# Starts lazydocker in the TUI, then switches to the "statistics" tab.
 	@#

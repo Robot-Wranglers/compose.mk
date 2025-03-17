@@ -5,7 +5,7 @@
 #   USAGE: ./demos/ansible-playbook.mk
 
 include compose.mk
-.DEFAULT_GOAL := demo.playbook
+.DEFAULT_GOAL := __main__
 
 
 # Look, it's a container that has Ansible.
@@ -27,7 +27,7 @@ endef
 
 # Top-level entrypoint for the playbook demo.
 # The prerequisite `Dockerfile.build/Ansible` ensures the image is ready.
-demo.playbook: Dockerfile.build/Ansible
+__main__: Dockerfile.build/Ansible
 	@# The next line specifies the target to run inside the container
 	img=compose.mk:Ansible ${make} docker.dispatch/self.playbook_runner/Ansible.playbook
 

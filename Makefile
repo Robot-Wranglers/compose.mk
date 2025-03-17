@@ -33,14 +33,13 @@ clean: flux.stage.clean
 
 build normalize: # NOP
 
-
 test: integration-test tui-test demo-test smoke-test 
 
 smoke-test stest:
-	ls tests/*.sh | xargs -I% ${io.shell.isolated} sh -x -c "./%||exit 255"
+	ls tests/*.sh | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 
 demos demos.test demo-test test.demos:
-	ls demos/*mk | xargs -I% ${io.shell.isolated} sh -x -c "./%||exit 255"
+	ls demos/*mk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 bonk:
 	ls demos/container-dispatch.mk | xargs -I% ${io.shell.isolated} sh -x -c "trace=1 ./%||exit 255"
 ttest/%:; make test-suite/tui/${*}
@@ -57,7 +56,7 @@ services:
       context: .
       dockerfile_inline: |
         FROM python:3.9.21-bookworm
-        RUN pip3 install --break-system-packages pynchon==2024.7.20.14.38 mkdocs==1.5.3 mkdocs-autolinks-plugin==0.7.1 mkdocs-autorefs==1.0.1 mkdocs-material==9.5.3 mkdocs-material-extensions==1.3.1 mkdocstrings==0.25.2
+        RUN pip3 install --break-system-packages pynchon==2025.3.20.17.28 mkdocs==1.5.3 mkdocs-autolinks-plugin==0.7.1 mkdocs-autorefs==1.0.1 mkdocs-material==9.5.3 mkdocs-material-extensions==1.3.1 mkdocstrings==0.25.2
         RUN apt-get update && apt-get install -y tree jq
     entrypoint: bash
     working_dir: /workspace
@@ -68,8 +67,7 @@ endef
 $(eval $(call compose.import.string,  docs.builder.composefile,  TRUE))
 
 demo:
-	@#
-	@#
+	@# Interactive selector for which demo to run.
 	pattern='*.mk' dir=demos/ ${make} flux.select.file/mk.select
 
 docs: README.md docs.jinja #docs.mermaid
@@ -99,9 +97,10 @@ docs.mermaid docs.mmd:
 
 mkdocs: mkdocs.build mkdocs.serve
 mkdocs.build build.mkdocs:; mkdocs build
-.mkdocs.build:; set -x && (make docs && mkdocs build --clean --verbose && tree site) ; find site docs|xargs chmod o+rw; ls site/index.html
+.mkdocs.build:
+	set -x && (make docs && mkdocs build --clean --verbose && tree site) \
+	; find site docs|xargs chmod o+rw; ls site/index.html
 mkdocs.serve serve:; mkdocs serve --dev-addr 0.0.0.0:8000
-
 
 README.md:
 	set -x && pynchon jinja render README.md.j2 -o README.md
@@ -129,6 +128,11 @@ actions.clean cicd.clean clean.github.actions:
 	${make} actions.list/failure actions.list/cancelled \
 	| ${stream.peek} | ${jq} -r '.[].databaseId' \
 	| ${make} flux.each/actions.run.delete
+
+actions.clean.img.test:
+	gh run list --workflow=img-test.yml --json databaseId,createdAt \
+	| jq '.[] | select(.createdAt | fromdateiso8601 < now - (60*60*10)) | .databaseId' \
+	| xargs -I{} gh run delete {}
 
 actions.clean.old:
 	gh run list --limit 1000 --json databaseId,createdAt \

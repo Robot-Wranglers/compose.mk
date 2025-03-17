@@ -4,7 +4,7 @@
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-One of the main features for `compose.mk` is a method for "importing" one [or more]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) docker compose files into your project Makefile.  This uses the `compose.import` macro to automatically generate related make-targets for each docker-compose service.  Sometimes this "importing" process is referred to as *automation scaffolding*, or we might refer to it as *the make/compose bridge* or simply *the bridge*.
+One of the main features for `compose.mk` is a method for "importing" one [or more]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) docker compose files into your project Makefile, using the `compose.import` macro to automatically generate related make-targets for each docker-compose service.  Sometimes this "importing" process is referred to as *automation scaffolding*, or we might refer to it as *the make/compose bridge* or simply *the bridge*.
 
 Usually it's better to separate the details of automation / execution environment, but technically you can also [embed compose service definitions directly]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) and generate scaffolding from that too.
 

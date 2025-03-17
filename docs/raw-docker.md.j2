@@ -52,7 +52,7 @@ As mentioned in [the installation docs]({{mkdocs.site_relative_url}}/integration
 ### Other Docker Utilities
 <hr style="width:100%;border-bottom:3px solid black;">
 
-As we've seen elsewhere on this page, most of the use-cases for raw docker support are related to scripting with `compose.mk`.  Sometimes though the raw docker support has more of a stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview) vibe. For usage hints along those lines, see the test cases below.
+As we've seen elsewhere on this page, most of the use-cases for raw docker support are related to scripting with `compose.mk`.  Sometimes though the raw docker support has more of a [stand-alone / tool mode]({{mkdocs.site_relative_url}}/tool-overview) vibe. For usage hints along those lines, see the test cases below.
 
 ```Makefile
 {{open('tests/docker-utils.sh','r').read().strip()}}
@@ -68,8 +68,6 @@ As we've seen elsewhere on this page, most of the use-cases for raw docker suppo
 {{macros.inlined_help('docker.stat',mkdocs)}}
 ---------------------------------------------------
 #}
-
-{#<hr style="width:95%;border-bottom:1px dashed black;">#}
 
 ### Full Docker API 
 <hr style="width:100%;border-bottom:3px solid black;">
