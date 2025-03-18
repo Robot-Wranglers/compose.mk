@@ -58,7 +58,7 @@ jobs:
           #cat docs/img/networkx.png | width=120 ./compose.mk stream.viu
           viu docs/img/networkx.png
           echo 2 
-          chafa -c full --symbols all docs/img/networkx.png
+          chafa -c 16 --symbols all docs/img/networkx.png
           echo 3 
           chafa -c none --fg-only --symbols braille,diagonal docs/img/networkx.png
           echo 3.5
@@ -72,9 +72,9 @@ jobs:
           echo 6 
           chafa -c none --fg-only --symbols dot,quad,diagonal docs/img/networkx.png
           echo 7 
-          chafa -c none -c full --symbols dot,quad,braille,diagonal docs/img/networkx.png
+          chafa -c none -c full --invert --symbols dot,quad,braille,diagonal docs/img/networkx.png
           echo 8 
-          chafa -c none --invert --symbols block,dot,quad,diagonal docs/img/networkx.png
+          chafa -c none --invert --symbols block,dot,quad,diagonal,space docs/img/networkx.png
 
 # chafa --invert -c 16 --invert --symbols all-space-inverted --fill none docs/img/icon.png 
 # chafa -c 2 --color-space din99d --symbols all-ascii-space-extra --fill none docs/img/icon.png
