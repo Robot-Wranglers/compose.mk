@@ -58,19 +58,23 @@ jobs:
           #cat docs/img/networkx.png | width=120 ./compose.mk stream.viu
           viu docs/img/networkx.png
           echo 2 
-          chafa -c full --symbols  docs/img/networkx.png
+          chafa -c full --symbols all docs/img/networkx.png
           echo 3 
-          chafa -c none --fg-only --symbols braille docs/img/networkx.png
+          chafa -c none --fg-only --symbols braille,diagonal docs/img/networkx.png
+          echo 3.5
+          chafa -c none --invert --fg-only --symbols block,braille,diagonal,technical,ascii docs/img/networkx.png
+          echo 3.7
+          chafa -c full --invert --fg-only --symbols block,braille,diagonal,technical,ascii docs/img/networkx.png
           echo 4 
-          chafa -c full --fg-only --symbols block docs/img/networkx.png
+          chafa -c full --fg-only --symbols block,diagonal docs/img/networkx.png
           echo 5 
-          chafa -c none --symbols block,dot,quad,braille docs/img/networkx.png
+          chafa -c none --symbols block,dot,quad,braille,diagonal docs/img/networkx.png
           echo 6 
-          chafa -c none --fg-only --symbols dot,quad docs/img/networkx.png
+          chafa -c none --fg-only --symbols dot,quad,diagonal docs/img/networkx.png
           echo 7 
-          chafa -c none -c full --symbols dot,quad,braille docs/img/networkx.png
+          chafa -c none -c full --symbols dot,quad,braille,diagonal docs/img/networkx.png
           echo 8 
-          chafa -c none --invert --symbols block,dot,quad docs/img/networkx.png
+          chafa -c none --invert --symbols block,dot,quad,diagonal docs/img/networkx.png
 
 # chafa --invert -c 16 --invert --symbols all-space-inverted --fill none docs/img/icon.png 
 # chafa -c 2 --color-space din99d --symbols all-ascii-space-extra --fill none docs/img/icon.png
