@@ -132,7 +132,7 @@ actions.clean cicd.clean clean.github.actions:
 
 actions.clean.img.test:
 	gh run list --workflow=img-test.yml --json databaseId,createdAt \
-	| jq '.[] | select(.createdAt | fromdateiso8601 < now - (60*60*24*1)) | .databaseId' \
+	| jq '.[] | select(.createdAt | fromdateiso8601 < now - (60*60*10)) | .databaseId' \
 	| xargs -I{} gh run delete {}
 
 actions.clean.old:
