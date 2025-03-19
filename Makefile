@@ -130,6 +130,11 @@ actions.clean cicd.clean clean.github.actions:
 	| ${stream.peek} | ${jq} -r '.[].databaseId' \
 	| ${make} flux.each/actions.run.delete
 
+action.clean.img.test:
+	gh run list --workflow=img-test.yml --json databaseId,createdAt \
+	| jq '.[] | select(.createdAt | fromdateiso8601 < now - (60*60*24*2)) | .databaseId' \
+	| xargs -I{} gh run delete {}
+
 actions.clean.old:
 	gh run list --limit 1000 --json databaseId,createdAt \
 	| jq '.[] | select(.createdAt | fromdateiso8601 < now - (60*60*24*7)) | .databaseId' \
