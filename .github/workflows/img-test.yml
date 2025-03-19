@@ -59,17 +59,17 @@ jobs:
           echo 2 
           chafa -c 2 --symbols all docs/img/networkx.png
           echo 3 
-          chafa --zoom -c none --fg-only --symbols braille,diagonal docs/img/networkx.png
+          chafa --scale max -c none --fg-only --symbols braille,diagonal docs/img/networkx.png
           echo 3.5
-          chafa -c none --fg-only --symbols block,braille,diagonal,technical,ascii docs/img/networkx.png
+          chafa -c none --view-size 200x --fg-only --symbols block,braille,diagonal,technical,ascii docs/img/networkx.png
           echo 3.7
           chafa -c full --invert --fg-only --symbols block,braille,diagonal,technical,ascii docs/img/networkx.png
           echo 4 
-          chafa -c full --fg-only --symbols block,diagonal docs/img/networkx.png
+          chafa -c full --view-size 150x --fg-only --symbols block,diagonal docs/img/networkx.png
           echo 4.5
           chafa -c full --fg-only --symbols block,diagonal,braille,space docs/img/networkx.png
           echo 5 
-          chafa -c none -fg-only --symbols block,dot,quad,braille,diagonal docs/img/networkx.png
+          chafa -c none --fg-only --symbols block,dot,quad,braille,diagonal docs/img/networkx.png
           echo 6 
           chafa -c none --fg-only --invert --symbols dot,quad,diagonal,space docs/img/networkx.png
           echo 7 
