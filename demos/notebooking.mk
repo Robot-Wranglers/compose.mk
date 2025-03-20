@@ -32,7 +32,9 @@ jupyter.notebook.root=${jupyter.root}/notebooks
 jupyter.kernels.root=${jupyter.root}/kernels
 
 # A filter to pull b64 data data out of jupyter notebook outputs
-jq.img.filter='.cells[]|select(.outputs!=null).outputs[]|select(.output_type=="display_data").data["image/png"]'
+#jq.img.filter='.cells[]|select(.outputs!=null).outputs[]|select(.output_type=="display_data").data["image/png"]'
+jq.img.filter=[.cells[]|select(.outputs!=null).outputs[]|select(.output_type==\"display_data\")]
+jq.imgcount.filter="${jq.img.filter}|length"
 
 # Autogenerate target scaffolding for each kernel container
 $(eval $(call compose.import, ${jupyter.root}/docker-compose.fmtk.yml, fmtk))
@@ -150,6 +152,7 @@ lab.notebook.preview/%:
 	@# Shows input and execution for a single notebook.
 	@# Console friendly, colored markdown rendering, and usable from the host.
 	bname=`basename ${*}` \
+	&& label="`basename -s.ipynb ${*}`" ${make} io.draw.banner \
 	&& $(call log.target, ${dim_ital}$${bname} ${sep} ${no_ansi}( ${bold_under}input${no_ansi})) \
 	&& quiet=1 ${make} lab.dispatch/self.notebook.preview.in/${*} | ${stream.markdown} \
 	&& $(call log.target, ${dim_ital}$${bname} ${sep} ${no_ansi}( ${bold_under}output${no_ansi})) \
@@ -157,20 +160,29 @@ lab.notebook.preview/%:
 	&& $(call io.mktemp) \
 	&& quiet=1 ${make} lab.dispatch/self.notebook.preview.out/${*} > $${tmpf} \
 	&& cat $${tmpf} | ${stream.markdown} \
-	&& cat $${tmpf} | grep '!\[png\]' \
-	  && ($(call log.target, detected image. attempting preview..) \
+	&& cat $${tmpf} | grep '!\[png\]' > /dev/null\
+	  && ($(call log.target, Detected image(s). Attempting preview..) \
 	      && ${make} lab.notebook.preview.images/${*} \
 	      || $(call log.target, preview failed.  multiple images or incompatible file types)) \
 	  || true
 
+lab.notebook.imgcount/%:; cat ${*} | ${jq} -r ${jq.imgcount.filter}
+	@# Returns an integer for the number of images found in the given notebook
+	
+lab.notebook.preview.img/%:
+	$(call log.target, ${dim_cyan}Image #${bold}${cyan}$${i}\n)
+	cat ${*} | ${jq} -r "${jq.img.filter}[$${i}].data[\"image/png\"]" \
+	| base64 -d | ${stream.img}
+	printf '\n'>/dev/stderr
 lab.notebook.preview.images/%:
 	@# Try to yank the images from notebook output.
 	@# This is naive, but we try to extract them anyway 
 	@# for a low-resolution console preview that can 
 	@# give a hint what changed.  Unfortunately glow 
 	@# doesn't render markdown images, but we can 
-	cat ${*} | ${jq} -r ${jq.img.filter} \
-		| base64 -d | ${stream.img}
+	# cat ${*} | ${jq} -r ${jq.img.filter}[$${i}] | base64 -d | ${stream.img}
+	count=`${make} lab.notebook.imgcount/${*}` \
+	&& for i in `seq 0 $$(($${count}-1))`; do export i=$$i; ${make} lab.notebook.preview.img/${*}; done
 
 lab.notebook.open/%:
 	@# Open the given notebook in the TUI browser.  
@@ -220,7 +232,8 @@ lab.webpage.open: lab.wait io.browser/lab.url
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 self.kernelspec.list:
 	@# Show the available kernels 
-	jupyter kernelspec list
+	$(call log.target, ${dim_cyan}Available Kernels:)
+	jupyter kernelspec list | sed '1d'
 
 self.notebook.exec/%:
 	@# Actually run a notebook, updating it in-place.
@@ -238,8 +251,15 @@ self.notebook.normalize/%:
 self.notebook.preview.in/%:
 	@# Show markdown from ipnyb, pre-execution.  
 	@# (We exclude the output because it might change)
-	jupyter nbconvert --to $${format:-markdown} --log-level WARN \
-		--stdout --MarkdownExporter.exclude_output=True ${*}
+	lines=$$(wc -l < `dirname ${*}`/`basename -s.ipynb ${*}`.md) \
+	&& $(call log.target, notebook has $${lines} lines) \
+	&& [ "$${lines}" -lt 90 ] \
+	&& (\
+		jupyter nbconvert --to $${format:-markdown} --log-level WARN \
+			--stdout --MarkdownExporter.exclude_output=True ${*} ) \
+	|| echo "*Notebook is too large; skipping input-preview*"
+
+
 self.notebook.preview.out/%:
 	@# Shows markdown from ipynb, post-execution.  
 	@# (We exclude the input and labels to just show output.)

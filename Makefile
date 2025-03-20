@@ -39,7 +39,7 @@ smoke-test stest:
 	ls tests/*.sh | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 
 demos demos.test demo-test test.demos:
-	ls demos/*mk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
+	set -x && ls demos/*mk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 bonk:
 	ls demos/container-dispatch.mk | xargs -I% ${io.shell.isolated} sh -x -c "trace=1 ./%||exit 255"
 ttest/%:; make test-suite/tui/${*}
@@ -111,12 +111,6 @@ actions.docs: docs.build
 	@# Entrypoint for docs-action
 actions.lint:; cmd='-color' ${make} docker.image.run/rhysd/actionlint:latest 
 	@# Helper for linting all action-yaml
-
-actions.notebook.pipeline:
-	@# Entrypoint for pipeline-demo action 
-	${io.shell.isolated} script -q -e -c "\
-		bash --noprofile --norc -eo pipefail \
-			-x -c './demos/notebooking.mk tux.require lab.pipeline'"
 
 actions.demos:
 	@# Entrypoint for test-action

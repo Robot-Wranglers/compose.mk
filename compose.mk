@@ -212,7 +212,8 @@ dash_x_maybe:=`[ $${TRACE} == 1 ] && echo -x || true`
 
 trace_maybe=[ "${TRACE}" == 1 ] && set -x || true 
 log.prefix.makelevel.glyph=${dim}$(call GLYPH.NUM, ${MAKELEVEL})${no_ansi}
-log.prefix.makelevel.indent=$(foreach x,$(shell seq 1 $(MAKELEVEL)),)
+# log.prefix.makelevel.indent=$(foreach x,$(shell seq 1 $(MAKELEVEL)),)
+log.prefix.makelevel.indent=
 log.prefix.makelevel=${log.prefix.makelevel.glyph} ${log.prefix.makelevel.indent}
 log.prefix.loop.inner=${log.prefix.makelevel}${bold}${dim_green}${GLYPH.tree_item}${no_ansi}
 log.stdout=printf "${log.prefix.makelevel} `echo "$(strip $(or $(1),))"| ${stream.lstrip}`${no_ansi}\n"
@@ -310,7 +311,6 @@ ifeq ($(findstring compose.mk, ${MAKE_CLI}),)
 export CMK_LIB=1
 export CMK_STANDALONE=0
 endif
-GITHUB_ACTIONS=$(shell [ "$${GITHUB_ACTIONS}" = "true" ] && echo 1 || echo 0)
 
 ${CMK_COMPOSE_FILE}:
 	(ls ${CMK_COMPOSE_FILE} 2>/dev/null >/dev/null || verbose=0 ${make} mk.def.to.file/FILE.TUX_COMPOSE/${CMK_COMPOSE_FILE})
@@ -322,8 +322,9 @@ export workspace?=$(shell echo ${DOCKER_HOST_WORKSPACE})
 export CMK_INTERNAL=0
 endif
 export CMK_EXTRA_REPO?=.
+export GITHUB_ACTIONS?=false
 
-
+docker.env.standard=-e DOCKER_HOST_WORKSPACE=$${DOCKER_HOST_WORKSPACE:-$${PWD}} -e TERM=$${TERM:-xterm} -e GITHUB_ACTIONS=${GITHUB_ACTIONS} -e TRACE=$${TRACE}
 
 # External tool used for parsing Makefile metadata
 PYNCHON_VERSION?=a817d58
@@ -667,7 +668,6 @@ docker.def.start/% docker.start.def/%:
 	@# (This is like docker.run.def but assumes default entrypoint)
 	@#
 	${make} docker.from.def/${*} docker.start/compose.mk:${*}
-
 docker.lambda/%:
 	@# Similar to `docker.def.run`, but eschews usage of tags 
 	@# and rebuilds implicitly on every single invocation. 
@@ -679,7 +679,7 @@ docker.lambda/%:
 	&& cmd=`if [ -z "$${cmd:-}" ]; then echo ""; else echo "$${cmd:-true}"; fi` \
 	&& sha=`docker build -q - <<< $$(${make} mk.def.read/Dockerfile.${*})` \
 	&& docker run -i $${entrypoint} \
-		-e DOCKER_HOST_WORKSPACE=$${DOCKER_HOST_WORKSPACE:-$${PWD}} \
+		${docker.env.standard} \
 		-v $${workspace:-$${PWD}}:/workspace \
 		-v $${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock \
 		-w /workspace --rm $${sha} $${cmd}
@@ -925,7 +925,6 @@ docker.run.def:
 			img=$${img} ${make} docker.run.sh) \
 	${stderr_stdout_indent}
 
-
 docker.run.sh:
 	@# Runs the given command inside the named container.
 	@#
@@ -954,9 +953,8 @@ docker.run.sh:
 	&& tty=`[ -z $${tty:-} ] && echo \`[ -t 0 ] && echo "-t"|| true\` || echo "-t"` \
 	&& cmd_args="\
 		--rm -i $${tty} $${extra_env} \
-		-e TERM="$${TERM}" \
 		-e CMK_INTERNAL=1 \
-		-e DOCKER_HOST_WORKSPACE=$${DOCKER_HOST_WORKSPACE:-$${PWD}} \
+		${docker.env.standard} \
 		-v $${workspace:-$${PWD}}:/workspace \
 		-v $${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock \
 		-w /workspace \
@@ -987,7 +985,6 @@ docker.start/%:; img="${*}" entrypoint=none ${make} docker.run.sh
 
 docker.start.tty/%:; tty=1 ${make} docker.start/${*}
 
-
 docker.socket:; ${make} docker.context/current | ${jq.run} -r .Endpoints.docker.Host
 	@# Returns the docker socket in use for the current docker context.
 	@# No arguments & pipe-friendly.
@@ -1005,7 +1002,7 @@ docker.stat:
 	@#
 	$(call io.mktemp) && \
 	${make} docker.context/current > $${tmpf} \
-	&& printf "${GLYPH.DOCKER} docker.stat${no_ansi_dim}:\n" > ${stderr} \
+	&& $(call log.docker, ${@}) \
 	&& ${make} docker.init  \
 	&& echo {} \
 		| ${make} stream.json.object.append key=version \
@@ -1029,7 +1026,7 @@ docker.stop:
 	export cid=`[ -z "$${id:-}" ] && docker ps --filter name=$${name} --format json | ${jq.run} -r .ID || echo $${id}` \
 	&& case "$${cid:-}" in \
 		"") \
-			$(call log, ${dim}${GLYPH.DOCKER} docker.stop${no_ansi} ${sep} ${yellow}No containers found); ;; \
+			$(call log.docker, ${@} ${sep} ${yellow}No containers found); ;; \
 		*) \
 			set -x && docker stop -t $${timeout:-1} $${cid} > ${devnull}; ;; \
 	esac
@@ -1042,7 +1039,7 @@ docker.stop.all:
 	@#
 	ids=`docker ps -q | tr '\n' ' '` \
 	&& count=`printf "$${ids:-}" | wc -w` \
-	&& $(call log.docker, docker.stop.all${no_ansi_dim} ${sep} ${dim}(${dim_green}$${count}${no_ansi_dim} containers total)) \
+	&& $(call log.docker, docker.stop.all ${sep} ${dim}(${dim_green}$${count}${no_ansi_dim} containers total)) \
 	&& [ -z "$${ids}" ] && true || (set -x && docker stop -t $${timeout:-1} $${ids})
 
 
@@ -3045,11 +3042,7 @@ stream.echo:; cat ${stdin}
 
 # Run image previews differently for best results in github actions. 
 # See also: https://github.com/hpjansson/chafa/issues/260
-ifeq (${GITHUB_ACTIONS},1)
-stream.img=${stream.stdin} | docker run -i --entrypoint chafa compose.mk:tux --view-size 130x -c full --fg-only --invert --symbols dot,quad,braille,diagonal /dev/stdin
-else
-stream.img=${stream.stdin} | docker run -i --entrypoint chafa compose.mk:tux --center on /dev/stdin
-endif
+stream.img=${stream.stdin} | docker run -i --entrypoint chafa compose.mk:tux `[ "$${GITHUB_ACTIONS:-false}" = "true" ] && echo "--size 110x -c full --fg-only --invert --symbols dot,quad,braille,diagonal" || echo "--center on"` /dev/stdin
 
 stream.chafa=${stream.img}
 stream.img stream.chafa stream.img.preview: tux.require
@@ -3434,6 +3427,7 @@ tux.mux.detach/%:
 	&& $(call log.tux, $${header} Enter main loop for TUI) \
 	&& ${docker.compose} -f ${TUI_COMPOSE_FILE} \
 		$${COMPOSE_EXTRA_ARGS} run --rm --remove-orphans \
+		${docker.env.standard} \
 		-e TUI_TMUX_SOCKET="${TUI_TMUX_SOCKET}" \
 		-e TUI_TMUX_SESSION_NAME="${TUI_TMUX_SESSION_NAME}" \
 		-e TUI_INIT_CALLBACK="$${TUI_INIT_CALLBACK}" \
@@ -3858,10 +3852,11 @@ endef
 	esac \
 	&& interval=$${interval:-10} ${make} flux.loopf/$${display_target:-.tux.img.display}/$${fname}
 
+IMG_IMGROT?=robotwranglers/imgrot:07abe6a
 .tux.img.rotate/%:
 	$(call log, ${@})
-	cmd="${*} --range 360 --display" \
-	${make} docker.image.run/robotwranglers/imgrot
+	cmd="${*} --range 360 --center --display" \
+	${make} docker.image.run/${IMG_IMGROT}
 
 # .tux.img.display/%:
 # 	@# Displays the named file using chafa, and centering it in the available terminal width.
@@ -3929,7 +3924,6 @@ define FILE.TUX_COMPOSE
 # and then adding your own stuff.
 #
 services:
-  # https://github.com/efrecon/docker-images/tree/master/chafa
   dind_base: &dind_base
     tty: true
     build:
@@ -3940,9 +3934,9 @@ services:
         RUN groupadd --gid ${DOCKER_GID:-1000} ${DOCKER_UGNAME:-root}||true
         RUN useradd --uid ${DOCKER_UID:-1000} --gid ${DOCKER_GID:-1000} --shell /bin/bash --create-home ${DOCKER_UGNAME:-root} || true
         RUN echo "${DOCKER_UGNAME:-root} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-        RUN apt-get update && apt-get install -y curl uuid-runtime git bsdextrautils
-        RUN curl -fsSL https://get.docker.com -o get-docker.sh && bash get-docker.sh
+        RUN apt-get update -qq && apt-get install -qq -y curl uuid-runtime git bsdextrautils
         RUN yes|apt-get install -y sudo
+        RUN curl -fsSL https://get.docker.com -o get-docker.sh && bash get-docker.sh
         RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
         RUN adduser ${DOCKER_UGNAME:-root} sudo
         USER ${DOCKER_UGNAME:-root}
@@ -3989,16 +3983,14 @@ services:
         FROM compose.mk:dind_base
         COPY --from=gum /usr/local/bin/gum /usr/bin
         USER root
-        RUN apt-get update && apt-get install -y python3-pip wget tmux libevent-dev build-essential yacc ncurses-dev bsdextrautils
+        RUN apt-get update -qq && apt-get install -qq -y python3-pip wget tmux libevent-dev build-essential yacc ncurses-dev bsdextrautils jq yq bc ack-grep tree pv chafa figlet jp2a nano
         RUN wget https://github.com/tmux/tmux/releases/download/${TMUX_CLI_VERSION:-3.4}/tmux-${TMUX_CLI_VERSION:-3.4}.tar.gz
-        RUN apt-get install -y jq yq bc ack-grep tree pv
         RUN pip3 install tmuxp --break-system-packages
         RUN tar -zxvf tmux-${TMUX_CLI_VERSION:-3.4}.tar.gz
         RUN cd tmux-${TMUX_CLI_VERSION:-3.4} && ./configure && make && mv ./tmux `which tmux`
         RUN mkdir -p /home/${DOCKER_UGNAME:-root}
         RUN curl -sL https://raw.githubusercontent.com/sunaku/home/master/bin/tmux-layout-dwindle > /usr/bin/tmux-layout-dwindle
         RUN chmod ugo+x /usr/bin/tmux-layout-dwindle
-        RUN apt-get install -y chafa figlet jp2a wkhtmltopdf nano
         RUN cd /usr/share/figlet; wget https://raw.githubusercontent.com/xero/figlet-fonts/refs/heads/master/3d.flf
         RUN cd /usr/share/figlet; wget https://raw.githubusercontent.com/xero/figlet-fonts/refs/heads/master/Roman.flf
         RUN wget https://github.com/jesseduffield/lazydocker/releases/download/v${LAZY_DOCKER_CLI_VERSION:-0.23.1}/lazydocker_${LAZY_DOCKER_CLI_VERSION:-0.23.1}_Linux_x86_64.tar.gz
@@ -4452,7 +4444,7 @@ ${compose_file_stem}/%:
 		run -T --rm --remove-orphans --quiet-pull \
 		$$(subst ☂,\",$${extra_env}) \
 		--env CMK_INTERNAL=1 \
-		--env TRACE=$${TRACE} \
+		-e TERM="$${TERM}" -e GITHUB_ACTIONS=${GITHUB_ACTIONS} -e TRACE=$${TRACE} \
 		--env verbose=$${verbose} \
 		 $${pipe} $${user} $${entrypoint} $${svc_name} $${cmd})
 	@$$(eval export stdin_tempf:=$$(shell mktemp))
