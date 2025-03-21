@@ -70,7 +70,7 @@ demo:
 	@# Interactive selector for which demo to run.
 	pattern='*.mk' dir=demos/ ${make} flux.select.file/mk.select
 
-docs: README.md docs.jinja #docs.mermaid
+docs: docs.jinja #docs.mermaid
 docs.build: docs.builder.build docs.builder.dispatch/.mkdocs.build
 docs.init:; pynchon --version
 docs.jinja:

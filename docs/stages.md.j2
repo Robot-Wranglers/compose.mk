@@ -135,12 +135,12 @@ If you think you *do* have a use-case for something like this you might want to 
 
 Stages are implemented using the `flux.stage.*` family of targets, and the lower level `io.stack` helpers.
 
-{{macros.api_link_many('flux.stage',mkdocs)}} {{macros.api_link_many('io.stack',mkdocs)}}
+{{macros.api_link_many('flux.stage', mkdocs)}} {{macros.api_link_many('io.stack', mkdocs)}}
 
 ### Why Stacks, though?
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Nothing prevents further downstream slicing with `jq`, so stacks as presented thus far can be easily changed or extended to do LIFO/FIFO, express k/v stores, etc.  Any changes along these lines can usually be completely expressed in jqlang, and should be fairly fast/atomic. [^1]
+Nothing prevents further downstream slicing with `jq`, so stacks as presented thus far can be easily changed or extended to do LIFO/FIFO, express KV stores, etc.  Any changes along these lines can usually be completely expressed in jqlang, and should be fairly fast/atomic. [^1]
 
 **The point of stacks/stages is to have something small, fast, and light** that you use out of the box or build on top of.  Stage-stacks in `compose.mk` are a project-local datastructure that feels native, is basically dependency free, and is actually kind of scalable.  After all.. `jq` will be happy to chug through a very large pile of JSON indeed.  
 
@@ -150,7 +150,7 @@ Eventually, the basic stack-operators might expand to include lightweight patter
 
 **Practically speaking, tools ike `terraform`, `helm`, `kubectl` and `ansible` all spit JSON,** and then one frequently needs the output for one as the input of another.  Without stages, `compose.mk` still makes that relatively easy, but pure pipelining means it's hard to reuse values, or you need to track a temp file, etc. 
 
-More philosophically, **native support for stacks gives `compose.mk` a new capability,** in terms of stuff like [programming](https://en.wikipedia.org/wiki/Tacit_programming) [paradigms](https://en.wikipedia.org/wiki/Stack-oriented_programming).  The stack is also a convenient way to communicate [across polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [across matrioshka layers]({{mkdocs.site_relative_url}}/matrioshka/#advanced-matrioshka-idioms).  Plus, for what it's worth, now you can pretty directly architect your automation in terms of [pushdown automata](https://en.wikipedia.org/wiki/Pushdown_automaton) or [queue machines](https://en.wikipedia.org/wiki/Queue_automaton) :)
+More philosophically, native support for stacks gives `compose.mk` a new capability, in terms of stuff like [programming](https://en.wikipedia.org/wiki/Tacit_programming) [paradigms](https://en.wikipedia.org/wiki/Stack-oriented_programming).  The stack is also a convenient way to communicate [between polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [across matrioshka layers]({{mkdocs.site_relative_url}}/matrioshka/#advanced-matrioshka-idioms).  And, for what it's worth, now you can pretty directly architect your automation in terms of [pushdown automata](https://en.wikipedia.org/wiki/Pushdown_automaton) or [queue machines](https://en.wikipedia.org/wiki/Queue_automaton) :)
 
 
 <hr style="width:100%;border-bottom:3px solid black;">
