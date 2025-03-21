@@ -252,7 +252,7 @@ self.notebook.preview.in/%:
 	@# Show markdown from ipnyb, pre-execution.  
 	@# (We exclude the output because it might change)
 	lines=$$(wc -l < `dirname ${*}`/`basename -s.ipynb ${*}`.md) \
-	&& $(call log.target, notebook has $${lines} lines) \
+	&& $(call log.target, Notebook has $${lines} lines) \
 	&& [ "$${lines}" -lt 90 ] \
 	&& (\
 		jupyter nbconvert --to $${format:-markdown} --log-level WARN \
