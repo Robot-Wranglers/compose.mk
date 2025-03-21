@@ -1931,7 +1931,7 @@ mk.parse.module.docs/%:
 	@# USAGE:
 	@#  pattern=.. ./compose.mk mk.parse.module.docs/<makefile>
 	@#
-	${trace_maybe} && (${pynchon} parse --module-docs ${*} 2>/dev/null || echo '{}') | ${jq} .
+	${trace_maybe} && (${pynchon} parse --module-docs ${*} 2>/dev/null || echo '{}') | ${jq} . || true
 
 
 define Dockerfile.makeself
