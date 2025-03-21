@@ -14,25 +14,30 @@ include compose.mk
 
 # Main entrypoint, just shows usage hints 
 .DEFAULT_GOAL := __main__
-__main__:; $(call log, ${red}Provide a target like 'lab.tui' or 'lab.pipeline' or use 'help' for help.)
+__main__:
+	$(call log, ${red}Provide a target like 'lab.tui' or 'lab.pipeline' or use 'help' for help.)
 
 # Jupyter lab URL
 lab.url.base=http://localhost:9999
 lab.url=${lab.url.base}/lab/tree/notebooks
 
 # Configuration for TUI pane contents. 
-lab.tui_panes=lab.notebook.open/networkx-atlas.ipynb,lab.up
+lab.tui.panes=lab.notebook.open/networkx-atlas.ipynb,lab.up
 
 # Constants to configure tmux pane geometry.
 lab.tui.geometry=c3f2,231x57,0,0[231x48,0,0,1,231x8,0,49{125x8,0,49,2,105x8,126,49,4}]
+export geometry?=${lab.tui.geometry}
 
 # Jupyter constants relative to wd; lab constants 
 jupyter.root=demos/data/jupyter
 jupyter.notebook.root=${jupyter.root}/notebooks
 jupyter.kernels.root=${jupyter.root}/kernels
 
-# A filter to pull b64 data data out of jupyter notebook outputs
-jq.img.filter='.cells[]|select(.outputs!=null).outputs[]|select(.output_type=="display_data").data["image/png"]'
+# Filters for jq to pull b64 image data out of jupyter notebook outputs, etc
+jq.img.filter=[ .cells[] \
+	| select(.outputs!=null).outputs[] \
+	| select(.output_type=="display_data") ]
+jq.imgcount.filter=${jq.img.filter} | length
 
 # Autogenerate target scaffolding for each kernel container
 $(eval $(call compose.import, ${jupyter.root}/docker-compose.fmtk.yml, fmtk))
@@ -44,9 +49,9 @@ $(eval $(call compose.import, ${jupyter.root}/docker-compose.jupyter.yml, jupyte
 ## kernels dynamically.  Although `compose.import` already created handles for all 
 ## the containers involved, we want to plan for being able to import from other 
 ## compose files, or use future targets as kernels directly.  This means we want 
-## carefully designed namespaces.  Another wrinkle is that kernel-invocation 
-## involves accepting a filename as argument.  Thus for each service, we map
-## a new target `kernel.<svc>/<fname>` --> `fmtk/<svc>.command/<fname>`.
+## carefully designed namespaces.  Kernel-invocation also involves accepting a 
+## filename as argument.  Thus for each service, we map a new convenience target 
+## to an existing scaffold: `kernel.<svc>/<fname>` --> `fmtk/<svc>.command/<fname>`
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # Maps compose-services to future kernels
@@ -64,8 +69,7 @@ kernels.list:
 	@#
 	quiet=1 \
 	&& ( echo "${kernel_target_names}" \
-		&&  ${make} mk.targets.filter.parametric/kernel. \
-		|| true ) \
+		&&  ${make} mk.targets.filter.parametric/kernel. ) \
 	| ${stream.nl.to.space}
 
 kernel.echo/%:
@@ -85,6 +89,7 @@ kernel.echo/%:
 ## variables to configure kernel-names, kernel-commands, etc.. just in time.
 ## For more details, see the appendix with support code/notebooks in the main docs.
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
 lab.gen.kernels: flux.starmap/.kernel.from.target,kernels.list
 .kernel.from.target/%:; cmd="${make} ${*}" ${make} .kernel.gen/${*}
 .kernel.gen/%:
@@ -105,8 +110,8 @@ lab.gen.kernels: flux.starmap/.kernel.from.target,kernels.list
 	&& $(call log.target.part2, ${dim_ital}$${kfile})
 
 ## Next section is a small bridge to the jupyter lab HTTP API.  This isn't necessarily 
-## that useful since we have CLI access to jupyter, but this shows that it's accessible 
-## and calls to `curl` could be replaced with `nbclient`, etc.
+## that useful since we have CLI access to jupyter.. but it shows it's accessible 
+## and that calls to `curl` could be replaced with `nbclient`, etc.
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 api.kernels:
@@ -123,11 +128,12 @@ api.sessions:
 	curl -s "${lab.url.base}/api/sessions" | ${jq} .
 
 ## Top-level interfaces for the lab.
-lab.pipeline: lab.init lab.notebooks.preview api.kernels lab.stop
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+lab.pipeline: lab.init flux.stage.wrap/PREVIEW/lab.notebooks.preview api.kernels lab.stop
 	@# Pipeline-mode interface.  
 
-export geometry=${lab.tui.geometry}
-lab.tui: lab.init tux.open.horizontal/${lab.tui_panes}
+lab.tui: lab.init tux.open.horizontal/${lab.tui.panes}
 	@# UI-mode.  By default this launches jupyter web
 	@# in one tmux pane for log viewing, then opens a 
 	@# TUI webbrowser (carbonyl) that's pointed at it 
@@ -136,9 +142,11 @@ lab.tui: lab.init tux.open.horizontal/${lab.tui_panes}
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 lab.init: \
-	tux.require jupyter.stop jupyter.build fmtk.build \
-	lab.notebooks.normalize lab.gen.kernels \
-	lab.serve.background lab.summary
+	flux.stage.enter/INIT \
+		tux.require jupyter.stop jupyter.build fmtk.build \
+		lab.notebooks.normalize lab.gen.kernels \
+		lab.serve.background lab.summary \
+	flux.stage.exit/INIT
 	@# Clean initialization.  This syncs updates but won't force rebuild
 	@# Besides background the jupyter lab server, it also synchronizes 
 	@# raw .ipynb with paired markdown equivalent using `jupytext`.
@@ -150,6 +158,7 @@ lab.notebook.preview/%:
 	@# Shows input and execution for a single notebook.
 	@# Console friendly, colored markdown rendering, and usable from the host.
 	bname=`basename ${*}` \
+	&& label="`basename -s.ipynb ${*}`" ${make} io.draw.banner \
 	&& $(call log.target, ${dim_ital}$${bname} ${sep} ${no_ansi}( ${bold_under}input${no_ansi})) \
 	&& quiet=1 ${make} lab.dispatch/self.notebook.preview.in/${*} | ${stream.markdown} \
 	&& $(call log.target, ${dim_ital}$${bname} ${sep} ${no_ansi}( ${bold_under}output${no_ansi})) \
@@ -157,11 +166,22 @@ lab.notebook.preview/%:
 	&& $(call io.mktemp) \
 	&& quiet=1 ${make} lab.dispatch/self.notebook.preview.out/${*} > $${tmpf} \
 	&& cat $${tmpf} | ${stream.markdown} \
-	&& cat $${tmpf} | grep '!\[png\]' \
-	  && ($(call log.target, detected image. attempting preview..) \
+	&& cat $${tmpf} | grep '!\[png\]' > /dev/null\
+	  && ($(call log.target, Detected image(s). Attempting preview..) \
 	      && ${make} lab.notebook.preview.images/${*} \
 	      || $(call log.target, preview failed.  multiple images or incompatible file types)) \
 	  || true
+
+lab.notebook.imgcount/%:; cat ${*} | ${jq} -r '${jq.imgcount.filter}'
+	@# Returns an integer for the number of images found in the given notebook
+	
+lab.notebook.preview.img/%:
+	$(call log.target, ${dim_cyan}Image #${bold}${cyan}$${i}\n)
+	$(eval index=$(shell echo $${index}))
+	cat ${*} \
+		| ${jq} -r '${jq.img.filter}[${index}].data["image/png"]' \
+		| base64 -d | ${stream.img}
+	printf '\n' > /dev/stderr
 
 lab.notebook.preview.images/%:
 	@# Try to yank the images from notebook output.
@@ -169,8 +189,10 @@ lab.notebook.preview.images/%:
 	@# for a low-resolution console preview that can 
 	@# give a hint what changed.  Unfortunately glow 
 	@# doesn't render markdown images, but we can 
-	cat ${*} | ${jq} -r ${jq.img.filter} \
-		| base64 -d | ${stream.img}
+	count=`${make} lab.notebook.imgcount/${*}` \
+	&& for i in `seq 0 $$(($${count} - 1))`; \
+		do index=$$i ${make} lab.notebook.preview.img/${*}; \
+	done
 
 lab.notebook.open/%:
 	@# Open the given notebook in the TUI browser.  
@@ -218,9 +240,11 @@ lab.webpage.open: lab.wait io.browser/lab.url
 
 ## Low level helpers, these need to run in the lab container.
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
 self.kernelspec.list:
 	@# Show the available kernels 
-	jupyter kernelspec list
+	$(call log.target, ${dim_cyan}Available Kernels:)
+	jupyter kernelspec list | sed '1d'
 
 self.notebook.exec/%:
 	@# Actually run a notebook, updating it in-place.
@@ -237,9 +261,20 @@ self.notebook.normalize/%:
 
 self.notebook.preview.in/%:
 	@# Show markdown from ipnyb, pre-execution.  
-	@# (We exclude the output because it might change)
-	jupyter nbconvert --to $${format:-markdown} --log-level WARN \
-		--stdout --MarkdownExporter.exclude_output=True ${*}
+	@# This excludes the output because it might change, 
+	@# and also excludes code-cells when they are too large.
+	lines=$$(wc -l < `dirname ${*}`/`basename -s.ipynb ${*}`.md) \
+	&& $(call log.target, Notebook has $${lines} lines) \
+	&& [ "$${lines}" -lt 90 ] \
+	&& (\
+		jupyter nbconvert --to $${format:-markdown} --log-level WARN \
+			--stdout --MarkdownExporter.exclude_output=True ${*} ) \
+	|| (\
+		echo "*Notebook is too large; skipping input-preview*"\
+		&& jupyter nbconvert --to $${format:-markdown} --log-level WARN \
+			--stdout --MarkdownExporter.exclude_code_cell=True \
+			--MarkdownExporter.exclude_output=True ${*} )
+
 self.notebook.preview.out/%:
 	@# Shows markdown from ipynb, post-execution.  
 	@# (We exclude the input and labels to just show output.)

@@ -3,11 +3,11 @@
 ## Raw Docker Support
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Usually it's a good idea to separate task-definitions from the containers they run, and [using the docker compose support]({{mkdocs.site_relative_url}}/bridge) is the recommended way to arrange things.  
+Usually it's a good idea to separate task-definitions from the containers runtime, and [using the docker compose support]({{mkdocs.site_relative_url}}/bridge) is really the recommended way to arrange things.
 
 However.. `compose.mk` sometimes needs more direct and low-level access to docker primitives for internal use, and this functionality is exposed for external use as well.  
 
-**Note that functionality here is *use-case driven*** and so the [`docker.*` target api]({{mkdocs.site_relative_url}}/api/#api-docker) interface is not intended to be 1:1 with the docker CLI.  Using the docker CLI directly is still [idiomatic compose.mk](#), so we're not looking to replace it.  Instead, the offerings here are all building on top of it or making the common interactions somewhat smoother.
+**Note that functionality here is *use-case driven*** and so the [`docker.*` target api]({{mkdocs.site_relative_url}}/api/#api-docker) interface is not intended to be 1:1 with the docker CLI.  Using the docker CLI directly is still [idiomatic compose.mk]({{mkdocs.site_relative_url}}/standard-lib), so we're not looking to replace it.  Instead, the offerings here are all building on top of it or making common interactions somewhat smoother.
 
 {#**For use-cases related to cleaning and refactoring bash-script or Makefiles that are already using the docker CLI,** there are various utility functions that are available as part of the [`docker.*` namespace of the API]({{mkdocs.site_relative_url}}/api/#api-docker).#}
 
@@ -52,7 +52,7 @@ As mentioned in [the installation docs]({{mkdocs.site_relative_url}}/integration
 ### Other Docker Utilities
 <hr style="width:100%;border-bottom:3px solid black;">
 
-As we've seen elsewhere on this page, most of the use-cases for raw docker support are related to scripting with `compose.mk`.  Sometimes though the raw docker support has more of a stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview) vibe. For usage hints along those lines, see the test cases below.
+As we've seen elsewhere on this page, most of the use-cases for raw docker support are related to scripting with `compose.mk`.  Sometimes though the raw docker support has more of a [stand-alone / tool mode]({{mkdocs.site_relative_url}}/tool-overview) vibe. For usage hints along those lines, see the test cases below.
 
 ```Makefile
 {{open('tests/docker-utils.sh','r').read().strip()}}
@@ -69,15 +69,20 @@ As we've seen elsewhere on this page, most of the use-cases for raw docker suppo
 ---------------------------------------------------
 #}
 
-{#<hr style="width:95%;border-bottom:1px dashed black;">#}
-
 ### Full Docker API 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Shortcuts for the relevant sections of the API are below:
+Below, you can find quick links for the [docker]({{mkdocs.site_relative_url}}/api/#api-docker) / [Dockerfile]({{mkdocs.site_relative_url}}/api/#api-dockerfile) / [mk.docker]({{mkdocs.site_relative_url}}/api/#api-mkdocker) sections of the main API.
+
 
 {{macros.api_link_many('docker', mkdocs, exclude='docker-compose')}}
+
+--------------
+
 {{macros.api_link_many('Dockerfile', mkdocs)}}
+
+------------------
+
 {{macros.api_link_many('mk.docker', mkdocs)}}
 
 <hr style="width:100%;border-bottom:3px solid black;">

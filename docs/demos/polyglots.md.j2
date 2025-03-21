@@ -4,16 +4,18 @@
 
 This section collects several demos of working with foreign languages.  Polyglots in `compose.mk` are roughly comparable to [justfile shebang recipes](https://github.com/casey/just?tab=readme-ov-file#shebang-recipes). Because `compose.mk` also adds native support for docker, [including inlined Dockerfiles]({{mkdocs.site_relative_url}}/raw-docker), you can easily super-charge polyglots with *arbitrary containerized interpreters*, with or without customizing stock images. 
 
-Polyglots come in a few basic types and this page tries to cover all the main categories, but there's an index of [more involved examples](#other-examples) at the end.  Here's the quick links:
+Polyglots come in a few basic types and this page tries to cover all the main categories, but there's an index of [more involved examples](#other-polyglot-examples) at the end.  Here's the quick links:
 
-* [Local Interpretters, No Containers](#local-interpreters-no-containers)
-* [Containerized Interpretters](#containerized-interpreters)
-* [Custom Containerized Interpretters](#custom-containerized-interpreters)
+* [Local Interpreters, No Containers](#local-interpreters-no-containers)
+* [Containerized Interpreters](#containerized-interpreters)
+* [Custom Containerized Interpreters](#custom-containerized-interpreters)
 * [Exotic Targets & Pipes](#exotic-targets-and-pipes)
 * [Compiled Languages](#compiled-languages)
 * [Foreign Code as First Class](#foreign-code-as-first-class)
 
-### Local Interpretters, No Containers
+For topics related to communication *between* polyglots, see the [section for pipes](#exotic-targets-and-pipes) or the [stages documentation]({{mkdocs.site_relative_url}}/stages).  For topics related to yielding control to polyglots, see the [signals and supervisors docs]({{mkdocs.site_relative_url}}/signals/#advanced-examples).
+
+### Local Interpreters, No Containers
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Simple polyglots where you want to *assume the interpreter is already available* are easy to express with {{macros.api_link('mk.def.dispatch', mkdocs, arg='interpreter>,<def_block_name')}}.
@@ -21,7 +23,7 @@ Simple polyglots where you want to *assume the interpreter is already available*
 ```Makefile
 {{open('demos/local-interpreter.mk','r').read().strip()}}
 ```
-### Containerized Interpretters 
+### Containerized Interpreters 
 <hr style="width:100%;border-bottom:3px solid black;">
 
 When there's a stock image available for a container and no customization needed, there are few equivalent idioms that you can choose from, depending on your taste.  To illustrate, here's a simple target in elixer and 3 ways to run it.
@@ -30,19 +32,19 @@ When there's a stock image available for a container and no customization needed
 {{open('demos/elixir.mk','r').read().strip()}}
 ```
 
-So, there's various ways to write this depending on whether you prefer targets or macros, etc.  Helpers as seen in `demo.elixir1` and `demo.elixir2` are just abstracting away the "happens in a container" part, and the "create/clean a temp file" part ^[2]. In `demo.elixir3`, you can see a more explicit version that might be useful for clarity, but note that this leaves temp files around after errors.
+As seen above, there are various ways to write this depending on whether you prefer targets or macros, etc.  Behind the scenes both `demo.elixir1` and `demo.elixir2` are just abstracting away the boring details of "*happens in a container*" and "*create/clean a temp file*" [^2].  
 
-There's actually a 4th basic approach that's the most magical, but we leave that discussion for [a later section](#foreign-code-as-first-class).
+In `demo.elixir3`, you can see a more explicit version that might be useful for clarity, but note that this leaves temp files around after errors.
+
+There's also a 4th basic approach that's the most magical, but we leave that discussion for [a later section](#foreign-code-as-first-class).
 
 
-### Custom Containerized Interpretters
+### Custom Containerized Interpreters
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Using a custom container is not necessarily very different from the last section, so let's have some fun with it ;) 
+This case is not necessarily very different from the last section or [the other embedded container tutorials]({{mkdocs.site_relative_url}}/demos/matrioshka/) so let's have some fun with it.  See the [Lean 4 demo]({{mkdocs.site_relative_url}}/demos/lean) for a more involved example.
 
-See the external [Lean 4 demo]({{mkdocs.site_relative_url}}/demos/lean) for a more involved example.
-
-Besides handling the challenge of a custom container, this also demonstrates handling an additional complication that's pretty common, i.e. where the interpreter invocation must *also* be customized.  *(In this case because lean has a `--script` mode, roughly akin to `elixir` vs `exs` or similar.)*
+Besides handling the challenge of a custom container, that demo also shows handling an additional complication that's pretty common, i.e. where the interpreter invocation must *also* be customized.  *(In this case because lean has a `--script` mode, roughly akin to `elixir` vs `exs` or similar.)*
 
 ### Exotic Targets & Pipes
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -87,32 +89,40 @@ See also the [official docs](https://docs.julialang.org/en/v1/manual/calling-c-a
 
 As seen in the [first elixir demo](#containerized-interpreters) there are already a few ways to actually invoke your polyglots depending on your appetite for abstraction, and some ways will seem more magical than others.
 
-If you *like* magic, then you will be interested to know that it's possible to treat foreign code as basically a first class object.  The way this works is similar to how [`compose.import` treats containers as first class]({{mkdocs.site_relative_url}}/bridge).  
+If you *like* magic, then you will be interested to know that it's possible to treat foreign code as basically a first class object.  The way this works is similar to how [`compose.import` treats containers as first class]({{mkdocs.site_relative_url}}/bridge).
 
-First we import a code object using `compose.import.code_block`, and then several related targets are attached to the implied namespace.  In the simplest case, importing a code block just attaches a **preview method** to it, which is capable of showing syntax-highlighted code.  *(Under the hood, this uses a dockerized version of [pygments])*.
+First we import a code object using `compose.import.code_block`, and then several related targets are attached to the implied namespace.  In the simplest case, importing a code block just attaches a **`preview` target** to it, which is capable of showing syntax-highlighted code.  *(Under the hood, this uses a dockerized version of [pygments](https://pygments.org/))*.
+
+#### Bind Blocks to Interpreters
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 A more typical use-case for `compose.import.code_block` provides *both* the code block's name and an interpreter handle that we want to *bind to it* which allows us to provide an additional **"run"** method.
 
 ```Makefile
 {{open('demos/code-objects.mk','r').read().strip()}}
 ```
------------------------
 
-As seen above, sometimes this is slightly more work than the other methods, because we need to build a kind of "interpreter shim" and **must provide a unary target** which accepts a filename (that's what the `python.interpreter` target does above). ^[2]  There are equivalent and probably more explicit ways to write our parametric `python.interpreter`, but we opt for brevity and use the `${docker.curry.command}` idiom.
+As seen above, sometimes this is slightly *more* work than the other methods, because we need to build a kind of "interpreter shim" and **must provide a unary target** which accepts a filename (that's what the `python.interpreter` target does above). ^[2]  There are equivalent and probably more explicit ways to write our parametric `python.interpreter`, but we opt for brevity and use the `${docker.curry.command}` idiom.
 
-So why use this approach if it's needs a more explicit shim than other approaches?  Well, a small variation in this pattern is to use `compose.import.code`, which supports binding multiple chunks of code to the same interpreter.
+#### Binding Multiple Blocks in One Shot
+<hr style="width:95%;border-bottom:1px dashed black;">
 
-Below, you can see that `compose.import.code` is using the argument `[.]py`, which will pattern match against *all available block names* and bind each of them to `python.interpreter`.
+Why use this approach if it's needs a more shimming than other approaches?  Well, a small variation in this pattern is to use `compose.import.code`, which supports binding multiple chunks of code to the same interpreter.
+
+Below, you can see that `compose.import.code` is using the argument `[.]py`, which will pattern match against *all available define-block names* and bind each of them to `python.interpreter`.
 
 ```Makefile
 {{open('demos/code-objects-2.mk','r').read().strip()}}
 ```
 
-----------------
+#### First Class Caveats 
+<hr style="width:95%;border-bottom:1px dashed black;">
 
-**Now for the main caveats with first-class code support.**  First, as with importing containers, you need to keep your namespacing in mind or you'll be pretty likely to have issues with collisions and shadowing.  Unlike with containers, `compose.mk` doesn't provide a lot of import-statement variations for different scenarios here, but the way to handle this is **just by using strong naming conventions**.  Second, using `eval` like this is definitely not an optimized code-path in `compose.mk` yet, and so **this approach is currently slower than other techniques on this page**.  The cost for that is a delay in startup though, so many types of blocking or compute-heavy use-cases won't suffer much.
+**Now for the main caveats with first-class code support.**  First, as with importing containers, you need to keep your namespacing in mind or you'll be pretty likely to have issues with collisions and shadowing.  
 
-### Other Examples
+Whereas tool containers have several [import-statement variations]({{mkdocs.site_relative_url}}/bridge/#other-import-statements), importing code objects doesn't support different namespacing scenarios.  The way to handle this is **just by using strong naming conventions**.  Second, using `eval` like this is definitely not an optimized code-path in `compose.mk` yet, and so **this approach is currently slower than other techniques on this page**.  The cost for that is a delay in startup though, so many types of blocking or compute-heavy use-cases won't suffer much.
+
+### Other Polyglot Examples
 <hr style="width:100%;border-bottom:3px solid black;">
 
 That's it for the basic taxonomy of different polyglots.
@@ -122,6 +132,8 @@ For more involved examples that are concrete and closer to real life, you might 
 * [Inlined Theorems in Lean4]({{mkdocs.site_relative_url}}/demos/lean)
 * [Inlined Justfiles]({{mkdocs.site_relative_url}}/demos/just)
 * [Inlined Ansible]({{mkdocs.site_relative_url}}/demos/matrioshka#passing-inlined-data-structures)
+
+Although it isn't exactly a polyglot, the [Notebooking Demo]({{mkdocs.site_relative_url}}/demos/notebooking) is somewhat related since it involves support for several languages.
 
 #### Implementation Details 
 <hr style="width:100%;border-bottom:3px solid black;">

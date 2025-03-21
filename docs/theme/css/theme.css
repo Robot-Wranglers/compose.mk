@@ -53,7 +53,8 @@ body {
 }
 a:active,
 a:hover {
-  outline: 0;
+  outline: 4;
+  text-decoration:underline;
 }
 abbr[title] {
   border-bottom: 1px dotted;

@@ -5,22 +5,10 @@ on:
   workflow_call: {}
   push:
     branches: [ "main" ]
-    paths-ignore:
-      - '**.md'
-      - '**.md.j2'
-      - '**.mmd'
-      - '**.png'
-      - '**.svg'
-      - '**.gif'
+    paths-ignore:  ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
   pull_request:
     branches: [ "main" ]
-    paths-ignore:
-      - '**.md'
-      - '**.md.j2'
-      - '**.mmd'
-      - '**.png'
-      - '**.svg'
-      - '**.gif'
+    paths-ignore:  ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
 permissions:
   contents: read
 jobs:
@@ -30,10 +18,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Initialize
-        run: make clean init docker.system.prune
-      - name: Test Notebook Pipeline
-        run: make actions.notebook.pipeline
+        run: make clean init
+      - name: Run Notebook Pipeline
+        run: ./demos/notebooking.mk tux.require lab.pipeline
+        env:
+          COLUMNS: 150
       # https://til.simonwillison.net/github-actions/debug-tmate
-      - name: tmate debugging session if tests fail
-        if: failure() && github.event_name == 'workflow_dispatch'
-        uses: mxschmitt/action-tmate@v3
+      # - name: tmate debugging session if tests fail
+      #   if: failure() && github.event_name == 'workflow_dispatch'
+      #   uses: mxschmitt/action-tmate@v3

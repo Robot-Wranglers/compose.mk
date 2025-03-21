@@ -1,6 +1,5 @@
 {% import 'macros.j2' as macros -%}
 
-
 ## Stages & Stacks
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -32,7 +31,7 @@ Stack-operations are logged by default to stderr, so it's easy for users or devs
 ### Stages in Stand Alone Mode
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Creating a stack is just mentioning it.
+**Creating a stack** is just mentioning it.
 
 ```bash 
 $ ./compose.mk flux.stage.enter/BUILD
@@ -48,7 +47,7 @@ $ ./compose.mk flux.stage.enter/BUILD
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-Push data in on pipes:
+**Pushing data** works with pipes:
 
 ```bash
 $ echo '{"data":789}' | ./compose.mk flux.stage.push/BUILD
@@ -58,9 +57,15 @@ $ echo '{"data":789}' | ./compose.mk flux.stage.push/BUILD
   {"data":789}
 ```
 
+You can also use the builtin wrapper for `jb` like this:
+
+```bash 
+$ ./compose.mk jb foo=bar | ./compose.mk flux.stage.push/BUILD
+```
+
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-Popping data is pipe-safe JSON for downstream, but stderr is annotated for humans.
+**Popping data** is pipe-safe JSON for downstream, but stderr is annotated for humans.
 
 ```bash 
 $ ./compose.mk flux.stage.pop/BUILD
@@ -81,6 +86,8 @@ $ ./compose.mk flux.stage.exit/BUILD
 Φ flux.stage.clean // BUILD //  removing stack file @  .flux.stage.BUILD
 ```
 
+<br/>
+
 ### Stage Idioms
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -94,7 +101,7 @@ In this case when `validate` succeeds, there stage file is cleaned like we'd exp
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-An alternative style is to use an implicit context manager.  The example below shows that, and overrides the banner-printing mechanism to use the (dockerized) `figlet` tool instead of using `gum`.
+**Using an implicit context manager** is an alternative style.  The example below shows that, plus overriding the banner-printing mechanism to use the (dockerized) `figlet` tool instead of using `gum`.
 
 {{macros.api_link('flux.stage.wrap',mkdocs,arg='target')}}:
 
@@ -117,21 +124,23 @@ See the the implementation details below for quick links to the full API.
 ### Support for Non-JSON Artifacts?
 <hr style="width:100%;border-bottom:3px solid black;">
 
-For non-JSON artifacts, output typically doesn't need to be *input* somewhere else in the same pipeline, and you can just dump the content on the filesystem anywhere you like, because by default all tool containers share the project directory.  So.. unless you want [build pipelines]({{mkdocs.site_relative_url}}/demos/workflows/) then there's little advantage if `compose.mk` gets in the middle.
+For non-JSON artifacts, output typically doesn't need to be *input* somewhere else in the same pipeline, and you can just dump the content on the filesystem anywhere you like as usual because [tool containers share the project directory]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults).  
 
-Plus, while jamming base64 binary data directly into the JSON isn't really recommended.. ipynb's do it all the time.  If you think you *do* have a use-case for something like this you might want to look at [packaging docs]({{mkdocs.site_relative_url}}/demos/packaging/), which can at least help with creating archives.
+So.. unless you want [build pipelines]({{mkdocs.site_relative_url}}/demos/workflows/) then there's little advantage if `compose.mk` gets in the middle.  Plus, while jamming base64 binary data directly into the JSON isn't really recommended.. ipynb's do it all the time! :) 
+
+If you think you *do* have a use-case for something like this you might want to [look at the packaging docs]({{mkdocs.site_relative_url}}/demos/packaging/), which can at least help with creating archives.
 
 ### Stage API
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Stages are implemented using the `flux.stage.*` family of targets, and the lower level `io.stack` helpers.
 
-{{macros.api_link_many('flux.stage',mkdocs)}} {{macros.api_link_many('io.stack',mkdocs)}}
+{{macros.api_link_many('flux.stage', mkdocs)}} {{macros.api_link_many('io.stack', mkdocs)}}
 
 ### Why Stacks, though?
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Nothing prevents further downstream slicing with `jq`, so stacks as presented thus far can be easily changed or extended to do LIFO/FIFO, express k/v stores, etc.  Any changes along these lines can usually be completely expressed in jqlang, and should be pretty fast/atomic. [^1]
+Nothing prevents further downstream slicing with `jq`, so stacks as presented thus far can be easily changed or extended to do LIFO/FIFO, express KV stores, etc.  Any changes along these lines can usually be completely expressed in jqlang, and should be fairly fast/atomic. [^1]
 
 **The point of stacks/stages is to have something small, fast, and light** that you use out of the box or build on top of.  Stage-stacks in `compose.mk` are a project-local datastructure that feels native, is basically dependency free, and is actually kind of scalable.  After all.. `jq` will be happy to chug through a very large pile of JSON indeed.  
 
@@ -141,7 +150,7 @@ Eventually, the basic stack-operators might expand to include lightweight patter
 
 **Practically speaking, tools ike `terraform`, `helm`, `kubectl` and `ansible` all spit JSON,** and then one frequently needs the output for one as the input of another.  Without stages, `compose.mk` still makes that relatively easy, but pure pipelining means it's hard to reuse values, or you need to track a temp file, etc. 
 
-More philosophically, **native support for stacks gives `compose.mk` a new capability,** in terms of stuff like [programming](https://en.wikipedia.org/wiki/Tacit_programming) [paradigms](https://en.wikipedia.org/wiki/Stack-oriented_programming).  The stack is also a convenient way to communicate [across polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [across matrioshka layers]({{mkdocs.site_relative_url}}/matrioshka/#advanced-matrioshka-idioms).  Plus, for what it's worth, now you can pretty directly architect your automation in terms of [pushdown automata](https://en.wikipedia.org/wiki/Pushdown_automaton) or [queue machines](https://en.wikipedia.org/wiki/Queue_automaton) :)
+More philosophically, native support for stacks gives `compose.mk` a new capability, in terms of stuff like [programming](https://en.wikipedia.org/wiki/Tacit_programming) [paradigms](https://en.wikipedia.org/wiki/Stack-oriented_programming).  The stack is also a convenient way to communicate [between polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [across matrioshka layers]({{mkdocs.site_relative_url}}/matrioshka/#advanced-matrioshka-idioms).  And, for what it's worth, now you can pretty directly architect your automation in terms of [pushdown automata](https://en.wikipedia.org/wiki/Pushdown_automaton) or [queue machines](https://en.wikipedia.org/wiki/Queue_automaton) :)
 
 
 <hr style="width:100%;border-bottom:3px solid black;">

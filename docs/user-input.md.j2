@@ -23,7 +23,7 @@ One of the simplest ways you can get started scripting with user-input is to use
 What does this do? 
 
 1. First we setup the file-selector, telling it we want a file in a directory that matches a pattern.  
-1. The selector collects user input, then passes it to to the downstream target, in this case {{macros.api_link('mk.select/arg', mkdocs,arg='Makefile')}}.  
+1. The selector collects user input, then passes it to to the downstream target, in this case {{macros.api_link('mk.select', mkdocs,arg='Makefile')}}.  
 
 Since `mk.select` accepts Makefile-paths as input and then **opens a target chooser**, the example above shows *layered* user-input being used as a runner, i.e. generating and running a call like `make -f <chosen_Makefile> <chosen_target>`.  In other words `make demo` becomes a demo chooser/runner in one line.
 
@@ -40,7 +40,7 @@ Quick links to the related API are found below.
 #### User Input Idioms 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-If you want to select something besides a file, a make target, etc, it is usually best to use {{macros.api_link('io.selector/arg', mkdocs,arg='choice_generator,choice_handler')}}, then define your own simple targets for the generator and handler.
+If you want to select something besides a file, a make target, etc, it is usually best to use {{macros.api_link('io.selector', mkdocs,arg='choice_generator>,<choice_handler')}}, then define your own simple targets for the generator and handler.
 
 Using a dispatch'y approach like the ones mentioned above is tidy and usually good enough, but lower-level access is also possible.  
 

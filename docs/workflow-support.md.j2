@@ -122,7 +122,7 @@ You can perform similar tests for other flow-control, like `./compose.mk flux.if
 
 ##### **Iteration, Pipelining, & Looping:**
 
-Introducing {{macros.api_link('flux.each/arg',mkdocs,arg='target')}} using `flux.echo`:
+Introducing {{macros.api_link('flux.each',mkdocs,arg='target')}} using `flux.echo`:
 
 ```bash 
 $ printf 'one\ntwo' | ./compose.mk flux.each/flux.echo
@@ -131,7 +131,7 @@ one
 two
 ```
 
-Introducing {{macros.api_link('flux.and/arg',mkdocs,arg='t1>,<t2>,..<tn')}} and {{macros.api_link('flux.or/arg',mkdocs,arg='t1>,<t2>,..<tn')}}:
+Introducing {{macros.api_link('flux.and',mkdocs,arg='t1>,<t2>,..<tn')}} and {{macros.api_link('flux.or',mkdocs,arg='t1>,<t2>,..<tn')}}:
 
 ```bash
 $./compose.mk flux.and/flux.ok,flux.ok
@@ -146,7 +146,7 @@ make[1]: *** [compose.mk:2131: flux.fail] Error 1
 Φ   flux.ok //  succeeding as requested!
 ```
 
-Introducing {{macros.api_link('flux.loop.until/arg',mkdocs,arg='test_target')}}:
+Introducing {{macros.api_link('flux.loop.until',mkdocs,arg='test_target')}}:
 
 ```bash
 # Runs forever 

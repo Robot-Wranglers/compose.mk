@@ -1,64 +1,58 @@
 {% import 'macros.j2' as macros -%}
 
-**Meet `compose.mk`, tool / library /framework for makefile-based automation, scripting, and lightweight orchestration.**  Native support for docker, docker-compose, workflow primitives, TUI elements, and more.  
-{#{macros.img_link("loadf-2.gif", mkdocs, "90%")}#}
+**Meet compose.mk, a tool / library /framework for makefile-based automation, scripting, and lightweight orchestration.**  Native support for docker, docker-compose, workflow primitives, TUI elements, and more.  Other superpowers include the ability to incorporate foreign tools and foreign code as first-class objects, which offers some unique capabilities for quickly assembling console applications, systems prototyping, and component-oriented design experiments in general.
+
 {{macros.img_link("docker.commander.gif", mkdocs, "90%")}}
 
 ## Introduction
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{#<strong>`compose.mk` extends `make` to add native support for docker, workflows, TUI elements, and more.</strong>#}
+{#
+https://stackoverflow.com/questions/245192/what-are-first-class-objects
+#}
 
-There are lots of ways to use `compose.mk`, particularly stuff in the automation/orchestration space like CI/CD.  Ultimately though whether `compose.mk` is a tool, a library, or a framework depends on how you decide to use it.  
+Whether `compose.mk` is a tool, a library, or a framework depends on how you decide to use it.
 
-* **For programmatic usage,** you can think of `compose.mk` as an attempt to provide a "[standard library]({{mkdocs.site_relative_url}}/standard-lib)" that extends vanilla `make`.  Besides advanced stuff like container support and [workflows]({{mkdocs.site_relative_url}}/demos/workflows), it offers basic stuff like [clean, colored logging]({{mkdocs.site_relative_url}}/standard-lib#logging-facilities), and [structured IO]({{mkdocs.site_relative_url}}/standard-lib#structured-io).
+* **For programmatic usage,** you can think of `compose.mk` as an attempt to provide a "[standard library]({{mkdocs.site_relative_url}}/standard-lib)" that extends vanilla `make`.  Besides advanced stuff like container support and [workflows]({{mkdocs.site_relative_url}}/demos/workflows), it also offers basic stuff like [clean, colored logging]({{mkdocs.site_relative_url}}/standard-lib#logging-facilities), and [structured IO]({{mkdocs.site_relative_url}}/standard-lib#structured-io).
 
-* **As a framework,** you can [combine `compose.mk` with docker-compose file(s)]({{mkdocs.site_relative_url}}/bridge) or [inlined container descriptions]({{mkdocs.site_relative_url}}/raw-docker), and very quickly expose [powerful, domain-specific automation APIs]({{mkdocs.site_relative_url}}/demos/custom-automation-apis) in your project Makefile to orchestrate tasks that might involve multiple containers.  [Dispatching make-targets *inside* these containers]({{mkdocs.site_relative_url}}/container-dispatch) turns out to be an especially powerful technique, and is supported for most containers.
+* **As a framework,** you can combine `compose.mk` [with docker-compose file(s)]({{mkdocs.site_relative_url}}/bridge) or [inlined container descriptions]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile), and very quickly expose [powerful, domain-specific automation APIs]({{mkdocs.site_relative_url}}/demos/custom-automation-apis) in your project Makefile to orchestrate tasks that might involve multiple containers.  [Dispatching make-targets *inside* these containers]({{mkdocs.site_relative_url}}/container-dispatch) turns out to be an especially powerful technique, and is supported for most containers.
 
 * **As a stand-alone tool,** `compose.mk` requires no project-level integration, and still does [lots of practical stuff]({{mkdocs.site_relative_url}}/tool-overview) with *no dependencies beyond `make` and `docker`*.  Because `make` targets always do double-duty as CLI entrypoints and as reusable task units, the "internal API" is automatically published as a CLI interface.
 
 ### Not the Makefiles of Your Ancestors 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{#
-**Working with `compose.mk` makes `make` hit different.**  The demo above shows an example of combining docker support with TUI elements, using 3 different containers as "widgets". *(Under the hood, `tmux` is used as a geometry manager, but since it's also dockerized, it won't become a host dependency.)*
-#}
-
 **Working with `compose.mk` makes `make` hit different.**  
 
 The demo above shows an example of combining docker support with TUI elements, using 3 different containers as "widgets". *(Under the hood, `tmux` is used as a geometry manager, but since it's also dockerized, it won't become a host dependency.)*
 
--------------------------------
-
+{#
 As another improvement over classical `make`, note that help not only *works,* it goes beyond simply listing available targets, and actually parses and displays documentation per target and per target-namespace. *(Under the hood, a dockerized version of [charmbracelete/glow](https://github.com/charmbracelet/glow) renders markdown.)*.
 
-{#{macros.img_link("tui-5.gif", mkdocs, "90%")}#}
 {{macros.img_link("cli-help.gif", mkdocs, "90%")}}
 
-Capabilities like [working with TUIs](({{mkdocs.site_relative_url}}/embedded-tui)), [online help]({{mkdocs.site_relative_url}}/cli-help) and [interactivity]({{mkdocs.site_relative_url}}/selector) all show a major break with traditional use-cases for `make` and create some attention-grabbing demos.  But things like dashboarding and console application development are only a few of the places where `compose.mk` shines.  <u><strong>Average use-cases will probably look more like automation,</u></strong> and related super powers include glue code, tool factories, & tool wrappers.
+#}
+
+Capabilities like [interactivity]({{mkdocs.site_relative_url}}/selector), [online help]({{mkdocs.site_relative_url}}/cli-help), and [working with TUIs](({{mkdocs.site_relative_url}}/embedded-tui)) all show a major break with traditional use-cases for `make` and create some attention-grabbing demos.  But things like dashboarding and console application development are only a few of the places where `compose.mk` shines, and <strong>average use-cases will probably look more like automation</strong>.  Related super powers include things like [glue code]({{mkdocs.site_relative_url}}/demos/notebooking), [tool factories]({{mkdocs.site_relative_url}}/demos/custom-automation-apis), & [tool wrappers]({{mkdocs.site_relative_url}}/demos/just).
 
 -------------------------------
 
-There's a lot of hate for `make` (especially for "creative" usage of it!), but you'll quickly find that these are not the Makefile's of your ancestors.  
+There's a lot of hate for `make` (especially for "creative" usage of it!), but you'll quickly find that these are not the Makefile's of your ancestors.  While `compose.mk` remains completely backwards compatible with classic `make`, it also *extends it, generalizes it, and adds brand new kinds of idioms and patterns*.
 
-While `compose.mk` remains completely backwards compatible with classic `make`, it also *extends it, generalizes it, and adds brand new kinds of idioms and patterns*.
-
-Taken together, the native facilities for [working with containers]({{mkdocs.site_relative_url}}/bridge) and [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) in `compose.mk` actually suggest that it's best thought of as a **new kind of meta-language** that makes it easier to [aggressively]({{mkdocs.site_relative_url}}/advanced-tuis/#understanding-widgets) [reuse]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/#hijacking-ansible) [existing]({{mkdocs.site_relative_url}}//demos/just/) [tools]({{mkdocs.site_relative_url}}/demos/polyglots) and [think of them in terms of ensembles]({{mkdocs.site_relative_url}}/demos/notebooking).  If you're interested in that sort of thing and prefer your overviews to focus more on theory, patterns, and paradigms.. the [matrioshka automata docs]({{mkdocs.site_relative_url}}/matrioshka) serve as an alternate landing page.
+Taken together, the native facilities for [working with containers]({{mkdocs.site_relative_url}}/bridge) and [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) actually suggest that `compose.mk` is  best thought of as a **new kind of meta-language** that makes it easier to [aggressively]({{mkdocs.site_relative_url}}/advanced-tuis/#understanding-widgets) [reuse]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/#hijacking-ansible) [existing]({{mkdocs.site_relative_url}}//demos/just/) [tools,]({{mkdocs.site_relative_url}}/demos/polyglots) and to think of them [in terms of ensembles]({{mkdocs.site_relative_url}}/demos/notebooking).  If you're interested in that sort of thing and prefer your overviews to focus more on theory, patterns, and paradigms.. the [matrioshka automata docs]({{mkdocs.site_relative_url}}/matrioshka) serve as an alternate landing page.
 
 ### Features & Design Goals
 <hr style="width:100%;border-bottom:3px solid black;">
 
 * **Radically minimal,** in terms of dependencies and conceptual overhead. Out of the box, `make` is expressive but has relatively few core concepts, it's ubiquitous, and it's fast. Building on this, `compose.mk` adds just enough extra concepts to get *a lot* of extra power and flexibility.
 * **Seamless and simple idioms for working with containers in a way that's platform agnostic.** Code that automates tasks in project management should not be locked inside Jenkinsfiles or Github Actions.  Using `compose.mk` tends to [help projects to decouple and run elsewhere]({{mkdocs.site_relative_url}}/container-dispatch), but afterwards running from CI/CD still works.
-* **Generic and easy to extend foundation.**  A major focus for `compose.mk` is what might be summarized as *mapping, dispatch, and interoperability*.  For example you can [map docker containers to `make` targets]({{mkdocs.site_relative_url}}/bridge), or targets to containers, or [map containers/targets into `tmux` panes]({{mkdocs.site_relative_url}}/embedded-tui).  This makes it easy to quickly put together domain-specific toolkits, regardless of whether that domain happens to be wrangling development tools, documentation tools, or infracode tools.
+* **Generic and easy to extend foundation.**  A major focus for `compose.mk` is what might be summarized as *mapping, dispatch, and interoperability*.  For example you can [map docker containers to `make` targets]({{mkdocs.site_relative_url}}/bridge), or [targets to containers]({{mkdocs.site_relative_url}}/container-dispatch), or [map containers/targets into `tmux` panes]({{mkdocs.site_relative_url}}/embedded-tui).  This makes it easy to quickly put together domain-specific toolkits, regardless of whether that domain happens to be wrangling development tools, documentation tools, or infracode tools.
 * **Clean & carefully curated output** that is [logged to appropriate streams]({{mkdocs.site_relative_url}}/standard-lib/#logging-facilities), aiming to be readable and human-friendly on stderr, while still [remaining machine-friendly for downstream processing]({{mkdocs.site_relative_url}}/standard-lib/#structured-input-output) on stdout.
 * **Basic workflow support is also available.**  Tasks and DAGs are built-ins for `make` naturally, and `compose.mk` adds support for other primitives, [like parallel tasks and task retries]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).
 * **Hacker friendly.** The single-file approach used with `compose.mk` makes it easy to embed alongside existing projects.  The project itself uses [the unlicense](https://unlicense.org/), and the goal is for the base API to eventually become completely frozen.  Rip out the parts you don't need, contribute upstream if you can, but if you don't want to track upstream or if your customizations become too specific to your project, no need to ever look back.
 
-
 ### Choose Your Path
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 This is all pretty abstract though, and it's time to choose your own adventure:
@@ -73,3 +67,4 @@ This is all pretty abstract though, and it's time to choose your own adventure:
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
+{#[^1]: Ok, *no significant host dependencies* would be more accurate.  Under the hood, we need things like `bash` and `awk`, but everything else is containerized, #}

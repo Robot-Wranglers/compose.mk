@@ -15,9 +15,7 @@
 ## Matrioshka Automata
 <hr style="width:100%;border-bottom:3px solid black;">
 
-You might already be aware that `compose.mk` offers a [standard library for working with `make`]({{mkdocs.site_relative_url}}/standard-lib), a sort of stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview), and [a TUI framework]({{mkdocs.site_relative_url}}/embedded-tui), but now you've reached the page that will finally reveal the shocking secret truth. 
-
-It was all an elaborate scam to setup this one big reveal: 
+You might already be aware that `compose.mk` offers a [standard library for working with `make`]({{mkdocs.site_relative_url}}/standard-lib), a sort of stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview), and [a TUI framework]({{mkdocs.site_relative_url}}/embedded-tui), but now you've reached the page that will finally reveal the shocking secret truth. It was all an elaborate scam to setup this one big reveal: 
 
 <center>
 **compose.mk is actually a programming language!** 😮
@@ -32,9 +30,9 @@ Matrioshka language
 
 --------------
 
-For `compose.mk`, the "objects" are containers and/or [foreign code]({{mkdocs.site_relative_url}}/demos/polyglots#foreign-code-as-first-class)*) and the "rules" are tasks and task prerequisites.  First-class support for these as primitives turns out to be especially useful for things like [wrappers]({{mkdocs.site_relative_url}}/tool-overview#tool-wrappers), [tool-factories]({{mkdocs.site_relative_url}}/demos/ansible), and even [app-factories]({{mkdocs.site_relative_url}}/advanced-tuis) as seen in the rest of the site documentation.
+For `compose.mk`, the "objects" are containers and/or [foreign code]({{mkdocs.site_relative_url}}/demos/polyglots#foreign-code-as-first-class) and the "rules" are tasks and task-groupings.  First-class support for these as primitives turns out to be especially useful for things like [wrappers]({{mkdocs.site_relative_url}}/tool-overview#tool-wrappers), [tool-factories]({{mkdocs.site_relative_url}}/demos/ansible), and even [app-factories]({{mkdocs.site_relative_url}}/advanced-tuis) as seen in the rest of the site documentation.
 
-This page covers idioms and patterns for matrioshka-dolling, but it **also serves as an alternate to the [main landing page]({{mkdocs.site_relative_url}}/overview)** for people who prefer their overviews to focus *less on applications* and more on **theory, architecture, and patterns**.  If you want to take in a few simple and concrete matrioshka demos before you continue reading, [see instead this index of demos]({{mkdocs.site_relative_url}}/demos/matrioshka).
+This page covers idioms and patterns for matrioshka-dolling, but it **also serves as an alternate to the [main landing page]({{mkdocs.site_relative_url}}/overview)** for people who prefer their overviews to focus less on applications and more on **theory, architecture, and patterns**.  If you want to take in a few simple and concrete matrioshka demos before you continue reading, [see instead this index of demos]({{mkdocs.site_relative_url}}/demos/matrioshka).
 
 ### Language Overview
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -43,7 +41,7 @@ You can skip directly to [specifics about the matrioshka idiom](#matrioshka-idio
 
 * Inherits macros, declarative style, and basic [DAGs](https://en.wikipedia.org/wiki/Directed_acyclic_graph) from `make`
 * Inherits [tacit programming](https://en.wikipedia.org/wiki/Tacit_programming) from the unix shell
-* Supports [reflective programming](https://en.wikipedia.org/wiki/Reflective_programming) via e.g. [mk.*]({{mkdocs.site_relative_url}}/standard-lib/#reflection), {{macros.api_link('flux.star/arg',mkdocs,arg='pattern')}}
+* Supports [reflective programming](https://en.wikipedia.org/wiki/Reflective_programming) via e.g. [mk.*]({{mkdocs.site_relative_url}}/standard-lib/#reflection), {{macros.api_link('flux.star',mkdocs, arg='pattern')}}
 * Supports [extensible programming](https://en.wikipedia.org/wiki/Extensible_programming)
     * via container support generally, but also 
     * via [dynamically assigning syntax]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch)
@@ -74,7 +72,7 @@ We'll go into why it matters in further detail later, but for now let's introduc
 
 As a simple example of "targets all the way down" consider this:
 
-* {{macros.api_link('flux.wrap/arg',mkdocs,arg='targets')}} is a n-ary target that accepts nullary targets as arguments.
+* {{macros.api_link('flux.wrap',mkdocs,arg='targets')}} is a n-ary target that accepts nullary targets as arguments.
 * Meanwhile {{macros.api_link('flux.ok',mkdocs)}} is a nullary target.
 * But invocation, like say `flux.wrap/flux.ok,flux.ok`, is itself also a (nullary) target.
 

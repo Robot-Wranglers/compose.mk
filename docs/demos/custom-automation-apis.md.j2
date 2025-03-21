@@ -54,7 +54,7 @@ Not exactly *beautiful* to read, but the implementation is small and the result 
 
 As mentioned above, `make ansible.adhoc/ping` works as expected to call the [ping module](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/ping_module.html), and to call the [docker_host_info](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_host_info_module.html) module with arguments, we can write `echo images=yes | make ansible.adhoc.args/docker_host_info`.  The argument-passing is somewhat awkward for *people*, but it supports JSON, so this is already fairly usable from/for other automation. For common use-cases, you just make a more friendly alias, as is done with `list_images` above. 
 
-As an aside, the eagle-eyed reader will have noticed that `docker_host_info` actually returns data, i.e. it is using the **host docker socket**, because under the hood, {{macros.api_link("docker.dispatch/arg",mkdocs,arg='target')}} [shares the socket and the working directory automatically]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults).  So effectively the ansible container can orchestrate tasks on the host in many respects, even though the host doesn't have ansible.
+As an aside, the eagle-eyed reader will have noticed that `docker_host_info` actually returns data, i.e. it is using the **host docker socket**, because under the hood, {{macros.api_link("docker.dispatch",mkdocs,arg='target')}} [shares the socket and the working directory automatically]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults).  So effectively the ansible container can orchestrate tasks on the host in many respects, even though the host doesn't have ansible.
 
 
 ### Discussion

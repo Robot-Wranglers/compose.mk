@@ -1,36 +1,26 @@
 # See also: https://docs.github.com/en/actions
 name: Project Demos
 on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch: {}
   workflow_call: {}
   push:
     branches: [ "main" ]
-    paths-ignore:
-      - '**.md'
-      - '**.md.j2'
-      - '**.mmd'
-      - '**.png'
-      - '**.svg'
-      - '**.gif'
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
   pull_request:
     branches: [ "main" ]
-    paths-ignore:
-      - '**.md'
-      - '**.md.j2'
-      - '**.mmd'
-      - '**.png'
-      - '**.svg'
-      - '**.gif'
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
 permissions:
   contents: read
 jobs:
   test:
-    name: Build / Test
+    name: Demos
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Initialize
         run: make clean init
-      - name: Test Demos
+      - name: Run Demos
         run: make actions.demos
         # GitHub Actions runs without a TTY device. This is a workaround to get one,
         # based on https://github.com/actions/runner/issues/241#issuecomment-842566950.

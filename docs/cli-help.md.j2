@@ -60,6 +60,8 @@ $ make help.local
 $ make mk.help.target/my-target
 ```
 
+<br/>
+
 ### Full Integration
 --------------------------------------------------
 
@@ -92,10 +94,7 @@ Now `./demos/cli-help-shebang.mk help my-target` works as expected.  An approach
 If the "search=" trick above won't work for you, see the next section for hints about lower-level access to target-help, target listing, and module/namespace help.
 #}
 
-<hr style="width:100%;border-bottom:3px solid black;">
-
 ## Implementation Details
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 The implementation for help uses the `mk.help.*` family of targets, and if you want to customize help or error messages they might be useful.  
