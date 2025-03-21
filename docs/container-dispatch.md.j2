@@ -7,7 +7,7 @@ Having [imported services with `compose.import`]({{mkdocs.site_relative_url}}/br
 
 {{macros.img_link("escher-reptiles.jpg", mkdocs, width="70%", align='center')}}
 
-Later in this page, we'll get into more details about [how/when container dispatch is useful](#but-why), and a [typical setup with `docker-compose.yml` that supports it](#compose-file-boilerplate).  But for now, let's start with what the idiom looks like and how it's used.
+Later in this page, we'll get into more details about [how/when container dispatch is useful](#but-why), and a [typical setup](#compose-file-boilerplate)  with `docker-compose.yml` that supports it.  For now, let's start with what the idiom looks like and how it's used.
 
 ### Dispatch Basics
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -19,6 +19,8 @@ To illustrate the idea, consider the following project Makefile:
 ```Makefile
 {{open('demos/container-dispatch.mk','r').read().strip()}}
 ```
+
+---------------
 
 Calling the top-level `demo` target looks something like this:
 

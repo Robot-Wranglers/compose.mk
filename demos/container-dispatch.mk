@@ -6,14 +6,12 @@
 #   USAGE: ./demos/container-dispatch.mk
 
 include compose.mk
-.DEFAULT_GOAL := __main__
 
-# Import all the services in the compose file, including the 
-# "debian" container, into the root namespace
+# Import all the services in the compose file, 
+# including the "debian" container, into the root namespace
 $(eval $(call compose.import, demos/data/docker-compose.yml))
 
-# Basic dispatch style: 
-#   This runs the "self.demo" target inside the debian container
+# Basic dispatch style: Run `self.demo` target in the debian container
 __main__: debian.dispatch/self.demo
 
 # Target that's actually used with dispatch.  This runs inside the container.

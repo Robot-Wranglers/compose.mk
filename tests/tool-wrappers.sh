@@ -10,6 +10,12 @@ cat docs/img/icon.png | ./compose.mk stream.chafa
 # Use `stream.chafa` to preview an image on the console with chafa (alternate)
 cat docs/img/icon.png | ./compose.mk stream.img.preview
 
+# preview image without streams
+./compose.mk io.preview.img/docs/img/icon.png
+
+# preview multiple images
+find docs/img/icon.png | ./compose.mk flux.each/io.preview.img
+
 # Use `stream.glow` to preview markdown
 cat README.md | ./compose.mk stream.glow
 
@@ -33,3 +39,4 @@ cat Makefile | lexer=Makefile ./compose.mk stream.pygmentize
 
 # pull data from yaml with yq
 echo 'one: two' | ./compose.mk yq .one
+

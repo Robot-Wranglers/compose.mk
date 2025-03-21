@@ -24,7 +24,7 @@ jupyter:
     version: 3.11.2
 ---
 
-## Python NetworkX Demo
+## Demo: Python & NetworkX
 
 -------------------
 

@@ -1,0 +1,14 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+# cmk_dialect ::: [["⏩️","${stream.stdin} | ${jq} -r"],["⏪️","${jb}"],["this.","${make} "]] :::
+#
+# demos/cmk/user-dialect.cmk: 
+#   Demonstrating user-defined extensions for the CMK -> Makefile compiler.
+#
+emit: 
+	⏪️ key=val
+
+consume:
+	⏩️ .key
+
+__main__:
+	this.emit | this.consume

@@ -7,7 +7,6 @@
 #   USAGE: ./demos/julia.mk
 
 include compose.mk
-.DEFAULT_GOAL := __main__
 
 # First we pick an image and interpreter for the language kernel.
 julia.img=julia:1.10.9-alpine3.21
@@ -71,7 +70,7 @@ println("Math operations on x = $x:")
 endef
 
 # Declare the above code-block as a first class object, and bind it to an interpreter.
-$(eval $(call compose.import.code_block, hello_world, julia.interpreter))
+$(eval $(call compose.import.code, hello_world, julia.interpreter))
 
 # Use our new scaffolded targets for `preview` and `run`
 __main__: hello_world.preview hello_world.run

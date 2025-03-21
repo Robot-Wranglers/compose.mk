@@ -18,6 +18,8 @@ Consider the following Makefile:
 {{open('demos/tui/extension-1.mk','r').read().strip()}}
 ```
 
+-----------------------------
+
 Running this opens a split-screen console with both panes showing file browsers.  
 
 {{macros.img_link("tui-extension-1.png", mkdocs, "350px")}}
@@ -29,15 +31,20 @@ So you can see that while things like `vim` and `emacs` don't ship with the defa
 ### Understanding Widgets
 <hr style="width:100%;border-bottom:3px solid black;">
 
-We've seen [previously]({{mkdocs.site_relative_url}}/low-config-tuis/) that "widgets", i.e. TUI pane-content, are nothing very special.  Whether it's adding a file browser widget-from-container or just working with your [your existing automation tasks]({{mkdocs.site_relative_url}}/low-config-tuis/), pane content declarations are ultimately just targets [like everything else is]({{mkdocs.site_relative_url}}/matrioshka#homoiconic).
+We've seen [previously]({{mkdocs.site_relative_url}}/low-config-tuis/) that "widgets", i.e. TUI pane-content, are nothing very special.  Whether it's adding a file browser widget-from-container or just working with your [your existing automation tasks]({{mkdocs.site_relative_url}}/low-config-tuis/), pane content declarations are ultimately just targets [like everything else is]({{mkdocs.site_relative_url}}/language#homoiconic).
 
-In a TUI though, some targets are more useful than others, and typically you might want targets that loop, like we [saw before in the docs for low-config TUIs]({{mkdocs.site_relative_url}}/low-config-tuis).  Looping tricks with {{macros.api_link('flux.loopf',mkdocs)}} and friends can also "restore" pane content in case of crash, like say a hiccup in networking activity.
+In a TUI though, some targets are more useful than others, and typically you might want targets that loop, like we [saw before in the docs for low-config TUIs]({{mkdocs.site_relative_url}}/low-config-tuis).  Looping tricks with {{macros.api_link('flux.loopf', mkdocs,arg='<target>')}} and friends can also restore pane content in case of crash, like say a hiccup in networking activity.
+
+------------
 
 For this example we'll add a console-friendly, full-featured webbrowser, using [carbonyl](https://github.com/fathyb/carbonyl).
 
 {{macros.img_link("tui-extension-2.png", mkdocs, "80%")}}
 
 --------------------------------------------
+
+The code for the above looks like this:
+
 ```Makefile
 {{open('demos/tui/extension-2.mk','r').read().strip()}}
 ```
@@ -50,35 +57,47 @@ The browser container defaults to using the host network, and the [notebooking d
 ### Custom Geometry & Dynamic Panes
 <hr style="width:100%;border-bottom:3px solid black;">
 
-You can setup a custom layout by just exporting a magic value for the "*geometry*" variable.  This variable is respected by targets such as {{macros.api_link('tux.open',mkdocs, arg='targets')}} and ultimately acted on by `tmux`.   And of course, if you're already knowledgeable about scripting with `tmux`, then you can use it directly and `compose.mk` will try to stay out of the way.
+You can setup a custom layout by just exporting a magic value for the "*geometry*" variable.  This variable is respected by targets such as {{macros.api_link('tux.open',mkdocs, arg='targets')}} and ultimately acted on by `tmux`. [^1]
 
 But the easiest way to get started with custom geometries is to do something like this:
 
 1. Setup your TUI initially to use the built-in spiral/horizontal/vertical layout that's closest to what you want.
 1. Start your app and manually rearrange the pane sizes to suit.  There's a few ways to do that, but you probably want `Alt` + arrows keys to resize existing panes. (See also the [tmux docs](#) and the [compose.mk keybindings overview](#/embedded-tui/#default-keybindings))
-1. Add new panes using the 'New Pane' button at the bottom fo the TUI, or 
+1. Add new panes using the 'New Pane' button at the bottom of the TUI, or 
 1. Add new panes by right clicking an existing pane and choosing split-horizontal or split-vertical
 
-Once your geometry is how you like it, run `make .tux.geo.get > .tmp.geo` from inside the TUI.  Exit the TUI, copy the magic string from the file, and add a line like `export geometry=...` inside your code.  Note that this preserves *relative geometry* for the *number of panes that you are using* at the time of the snapshot.  If you added panes in the TUI, you need to adjust your code to launch and populate the same number of panes!  If you want specific contents in specific panes, just adjust the order of the arguments for `tux.open/`.
+Once your geometry is how you like it, run `./compose.mk .tux.geo.get > .tmp.geo` from inside the TUI.  Exit the TUI, copy the magic string from the file, and add a line like `export geometry=...` inside your code.  Note that this preserves *relative geometry* for the *number of panes that you are using* at the time of the snapshot.  If you added panes in the TUI, you need to adjust your code to launch and populate the same number of panes!  If you want specific contents in specific panes, just adjust the order of the arguments for `tux.open/`.
 
 ### Environment Variables
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{bash('pattern="TUI Environment" ./compose.mk mk.parse.block/compose.mk')}}
+{#{bash('pattern="TUI Environment" ./compose.mk mk.parse.block/compose.mk')}#}
 
-Here's a list of environment variables related to the TUI, as generated by the `./compose.mk io.env/TUI` command.  
+Here's a list of environment variables related to the TUI, as generated by the `./compose.mk io.env/TUI` command.
 
 ```ini 
 {{bash("./compose.mk io.env/TUI")}}
 ```
 
+<br/>
+
 {#As a reminder, **all widgets run *in* the TUI container, not on the docker host**, even though we can frequently ignore this!  Thus, we don't know for sure what tooling is available on the host, and thus some widgets should be considered a ["private" section of the API](#).  
 {#
-Some widgets can run anywhere though, and those targets may be considered "public".  See for example {{macros.api_link('tux.widget.ticket',mkdocs)}}.
-
+Some widgets can run anywhere though, and those targets may be considered "public".  See for example 
 ```bash
 # Rotates a string across the display, marquee style.
 text=mytext ./compose.mk tux.widget.ticker
 ```
 #}
+### Base Container
 <hr style="width:100%;border-bottom:3px solid black;">
+
+To keep `compose.mk` itself self-contained, the base container for the TUI is actually inlined, and it is unpacked and built only on demand. For the exact specification, see [the source]({{jinja.vars.pynchon_repo_url}}/tree/master/compose.mk) and look for `${TUI_COMPOSE_FILE}`.
+
+Note that the base container is required for a few use-cases that are not, strictly speaking, the TUI.  (For example {{macros.api_link('io.figlet',mkdocs)}}.)
+
+To ensure the TUI container is built before trying to use it, use {{macros.api_link('tux.require',mkdocs)}} as a prerequisite target.  The TUI container is cached by default after the initial build, but you can force purge/rebuild by using `force=1 ./compose.mk tux.require`.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+[^1]: For that matter, if you're already knowledgeable about scripting with `tmux`, then you can use it directly and `compose.mk` will try to stay out of the way.. see also the env-var for `TUI_TMUX_SOCKET`.

@@ -1,0 +1,33 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+# demos/cmk/inlined-composefile.cmk: 
+#   CMK-lang translation of demos/inlined-composefile.mk
+# USAGE: ./demos/cmk/inlined-composefile.cmk
+
+⋘ inlined.services
+services:
+  alice: &base
+    hostname: alice
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
+        RUN apt-get update -qq && apt-get install -qq -y make procps
+    entrypoint: bash
+    working_dir: /workspace
+    volumes:
+      - ${PWD}:/workspace
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+  bob:
+    <<: *base
+    hostname: bob
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM alpine:3.21.2
+        RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
+⋙
+
+__main__: alice.dispatch/self.internal_task bob.dispatch/self.internal_task
+
+self.internal_task:; echo "Running inside `hostname`"
+

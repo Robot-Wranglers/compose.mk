@@ -32,23 +32,24 @@ Whether you're working on build processes, data-pipelines, or infrastructure dep
 ```Makefile
 {{open('tests/tool-wrappers.sh','r').read().strip()}}
 ```
+<br/>
 
 #### Visual Dividers
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-**Visually separating stages with some kind of output divider** is something that is nice to have to for otherwise messy output.  Here's an example of several different ways of using `io.print.div` to get labeled or timestamped dividers that are shown between clean/build/test stages.  
+**Visually separating stages with some kind of output divider** is something that is nice to have to for otherwise messy output.  Here's an example of several different ways of using `io.print.banner` to get labeled or timestamped dividers that are shown between clean/build/test stages.  
 
 ```Makefile
 {{open('demos/section-dividers.mk','r').read().strip()}}
 ```
 
-In the `build` task above, you can see one way to call `io.print.div` explicitly, which uses `${make}` as shorthand for "*the right way to call `make` recursively*".  As an equivalent, you can always use an invocation like `./compose.mk io.print.divider` instead, and this works from anywhere.  Inspecting usage from the command line:
+In the `build` task above, you can see one way to call `io.print.banner` explicitly, which uses `${make}` as shorthand for "*the right way to call `make` recursively*".  As an equivalent, you can always use an invocation like `./compose.mk io.print.bannerider` instead, and this works from anywhere.  Inspecting usage from the command line:
 
 {{macros.img_link("demo-io.gif", mkdocs, "90%")}}
 
 -----------------------------------
 
-Even though [`io.print.div`]({{mkdocs.site_relative_url}}/api/#ioprintdiv) detects terminal width, it isn't fancy otherwise.  A related utility is `io.gum.style`, which can print dividers with [charmbracelet/gum](https://github.com/charmbracelet/gum).  *If you have a local copy of `gum` then it is used, otherwise, we fall back to docker.*
+Even though [`io.print.banner`]({{mkdocs.site_relative_url}}/api/#ioprintdiv) detects terminal width, it isn't fancy otherwise.  A related utility is `io.gum.style`, which can print dividers with [charmbracelet/gum](https://github.com/charmbracelet/gum).  *If you have a local copy of `gum` then it is used, otherwise, we fall back to docker.*
 
 {{macros.img_link("demo-gum.gif", mkdocs, "90%")}}
 

@@ -38,10 +38,6 @@ Also related, the [Platform Lifecycle Demo]({{mkdocs.site_relative_url}}/demos/p
 
 Maybe any example passing around fake JSON looks tight and tidy, but.. it's really easy to extend this.  Let's sketch small changes that can actually turn this into an image pipeline, using docker idioms from `compose.mk` to leverage external tools.  
 
-{#
-As usual, `compose.mk` can setup a lot of functionality without much code, so it takes longer to explain than it does to build!
-#}
-
 ```Makefile
 {{open('demos/etl-img.mk','r').read().strip()}}
 ```
@@ -53,6 +49,8 @@ For more information, see the api docs for [`docker.run.image`]({{mkdocs.site_re
 
 {# <hr style="width:95%;border-bottom:1px dashed black;"> #}
 
-It's a neat party trick that `compose.mk` has some features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.  Really, `flux.*` is more similar in spirit to things like [declarative pipelines in Jenkins](https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline).  See [workflow rationale docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-rationale)
+It's a neat party trick that `compose.mk` has some features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.  Actually `flux.*` is more similar in spirit to things like declarative pipelines in Jenkins[^1].  For other related documentation, see also the [workflow rationale docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-rationale) and the [Platform Lifecycle Demo]({{mkdocs.site_relative_url}}/demos/platform).
 
 <hr style="width:100%;border-bottom:3px solid black;">
+
+[^1]: https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline

@@ -6,7 +6,6 @@
 #   USAGE: ./demos/container-dispatch-2.mk
 
 include compose.mk
-.DEFAULT_GOAL := __main__
 
 # Import the whole compose file (including "debian" container)
 $(eval $(call compose.import, demos/data/docker-compose.yml, ▰))

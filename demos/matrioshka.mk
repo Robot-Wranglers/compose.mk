@@ -25,7 +25,7 @@ services:
       context: .
       dockerfile_inline: |
         FROM docker:dind
-        RUN apk add -q --update --update --no-cache coreutils alpine-sdk bash procps-ng
+        RUN apk add -q --update --update --no-cache coreutils build-base bash procps-ng
         COPY . /app
         RUN cd /app && make -f ${MAKEFILE} ${BUILD_TARGET}
     working_dir: /workspace

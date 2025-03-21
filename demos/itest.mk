@@ -68,7 +68,7 @@ demo.double.dispatch: ▰/debian/self.demo ▰/alpine/self.demo
 # 	cmd='sleep 2' label='testing gum spinner inside container' make io.gum.spin
 
 test.import.root:
-# make io.print.div label="${bold_cyan}${@}${no_ansi}"
+# make io.print.banner label="${bold_cyan}${@}${no_ansi}"
 # $(call log, ${dim_cyan}Test import-to-root argument for compose.import)
 # # test that the 4th argument for
 # # import-to-root-namespace is honored
@@ -78,21 +78,21 @@ test.import.root:
 
 test.main.bridge:
 	$(call log.test_case, main bridge)
-	make io.print.div label="${cyan}${@}${no_ansi}"
+	make io.print.banner label="${cyan}${@}${no_ansi}"
 	$(call log.test_case, Test service enumeration\nTarget @ <compose_file>.services)
 	${make} docker-compose.services
 	$(call log.test_case, Test detection\nTarget @ <compose_file>.get_shell)
 	${make} docker-compose/alpine.get_shell
 
 # test.multiple.compose.files:
-# 	make io.print.div label="${cyan}${@}${no_ansi}"
+# 	make io.print.banner label="${cyan}${@}${no_ansi}"
 # 	$(call log, ${dim_cyan}Test services enumeration, 2nd file\nTarget @ <compose_file>/<svc>.services)
 # 	${make} docker-compose.services
 # 	$(call log, ${dim_cyan}Test Streaming commands, 2nd file\nTarget @ <compose_file>/<svc>.pipe)
 # 	echo uname -n -v | ${make} docker-compose/debian.pipe \
 
 # test.compose.pipes:
-# 	make io.print.div label="${cyan}${@}${no_ansi}"
+# 	make io.print.banner label="${cyan}${@}${no_ansi}"
 # 	$(call log, ${dim_cyan}Streaming commands to container\nTarget @ <svc>.shell.pipe)
 # 	echo uname -n -v | ${make} docker-compose/alpine.shell.pipe
 # 	$(call log, ${dim_cyan}Test streaming commands to container\nTarget @ <compose_file_stem><svc>.shell.pipe)
@@ -102,7 +102,7 @@ test.main.bridge:
 # 	set -x && echo '{"foo":"bar"}' | cmd='.foo' make docker-compose.cm-tools/jq.pipe
 
 # test.compose.services:
-# 	make io.print.div label="${cyan}${@}${no_ansi}"
+# 	make io.print.banner label="${cyan}${@}${no_ansi}"
 # 	$(call log, ${dim_cyan}Test main entrypoints Target @ <compose_file>/<svc> ${no_color})
 # 	${make} docker-compose.cm-tools/yq cmd='--version'
 # 	${make} docker-compose.cm-tools/jq cmd='--version'
@@ -113,7 +113,7 @@ test.dispatch.retvals:
 	echo exit  | ${make} docker-compose/debian.shell.pipe
 
 # test.dispatch:
-# 	make io.print.div label="${cyan}${@}${no_ansi}"
+# 	make io.print.banner label="${cyan}${@}${no_ansi}"
 # 	$(call log, ${dim_cyan}Dispatch using private base target:${no_color})
 # 	echo uname | pipe=yes ${make} ▰/debian
 # 	$(call log, ${dim_cyan}Dispatch using debian container:${no_color})

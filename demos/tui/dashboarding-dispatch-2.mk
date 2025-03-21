@@ -10,4 +10,4 @@ IMG_GOLANG_BASE?=docker.io/golang:1.24-bookworm
 bottom: golang.dispatch/chain
 chain: flux.and/clean,build,io.bash
 golang.dispatch/%:
-	${make} docker.image.dispatch/${IMG_GOLANG_BASE}/${*}
+	${docker.image.dispatch}/${IMG_GOLANG_BASE}/${*}

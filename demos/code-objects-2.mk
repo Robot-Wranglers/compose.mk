@@ -1,22 +1,15 @@
 #!/usr/bin/env -S make -f
 # demos/code-objects-2.mk: 
 #   Demonstrating first-class support for foreign code-blocks in `compose.mk`.
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: ./demos/code-objects-2.mk
+# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# USAGE: ./demos/code-objects-2.mk
 
 include compose.mk
-.DEFAULT_GOAL := __main__
 
 # First we pick an image and interpreter for the language kernel.
-# Here, iex can work too, but there are minor differences.
-python.img=$${IMG_PYTHON_BASE:-python:3.11-slim-bookworm}
+python.img=python:3.11-slim-bookworm
 python.interpreter=python 
-
-# Bind the docker image / entrypoint to a target and
-# Create a unary target for an python interpreter, accepting a filename.
-python:; ${docker.image.run}/${python.img},${python.interpreter}
-python.interpreter/%:; ${docker.curry.command}/python
 
 # Now define several chunks of python code
 define hello_world_1.py 
@@ -27,8 +20,9 @@ define hello_world_2.py
 print('hello world 2')
 endef
 
-# Import the code-block, creating additional target scaffolding for it.
-$(eval $(call compose.import.code, [.]py, python.interpreter))
+# Bind multiple code-blocks, creating additional target scaffolding for each
+$(eval $(call polyglots.bind.container, \
+	[.]py, ${python.img}, ${python.interpreter}))
 
 # With the new target-scaffolding in place, now we can use it.
 # First we preview the code with syntax highlighting, 

@@ -14,7 +14,7 @@ __main__: Dockerfile.build/demo_dockerfile flux.star/test
 # but let's have the minimal stuff that's required for using target dispatch.
 define Dockerfile.demo_dockerfile
 FROM alpine
-RUN apk add -q --update --no-cache coreutils alpine-sdk bash procps-ng
+RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
 endef
 
 test.1.image_created_and_available:

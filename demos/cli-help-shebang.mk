@@ -6,9 +6,8 @@
 # USAGE:  demos/cli-help-shebang.mk
 
 include compose.mk 
-.DEFAULT_GOAL=__main__
 
-__main__:
+__main__: # no-op
 
 my-target:
 	@# Comment line one

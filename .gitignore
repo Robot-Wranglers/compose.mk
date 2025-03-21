@@ -65,3 +65,6 @@ scratch/
 wip/
 docs/workflow-support.md
 python_script
+docs/compiler.md
+docs/language.md
+docs/style.md
