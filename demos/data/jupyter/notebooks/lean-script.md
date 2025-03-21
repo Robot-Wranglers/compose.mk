@@ -17,7 +17,7 @@ jupyter:
     pygments_lexer: lean
 ---
 
-## A Lean4 Script
+## Demo: Lean4 Script
 -------------------
 
 ```python

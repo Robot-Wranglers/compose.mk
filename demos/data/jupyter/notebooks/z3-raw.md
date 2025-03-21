@@ -18,11 +18,11 @@ jupyter:
     pygments_lexer: scheme
 ---
 
-## Raw Z3
+## Demo: Z3 Raw
 ---------------------
 
 See also:
-* De Morgans law proof from [wikipedia](https://en.wikipedia.org/wiki/Z3_Theorem_Prover#Propositional_and_predicate_logic)
+* De Morgans law proof from [Wikipedia](https://en.wikipedia.org/wiki/Z3_Theorem_Prover#Propositional_and_predicate_logic)
 
 Note: *Success here is 'unsat'
 

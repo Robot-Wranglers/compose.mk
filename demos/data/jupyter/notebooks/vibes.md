@@ -28,7 +28,7 @@ jupyter:
 
 ----------------------
 
-**This notebook is vibes coded.**  If your own vibes are everywhere-continuous but nowhere differentiable, then you might enjoy some visualizations of the Weierstrass function and these other sundries.  The point of this notebook is just to generate various kinds of plots, testing how the images will render in pipeline-mode notebook previews.
+**This notebook is vibes coded!**  If your own vibes are everywhere-continuous but nowhere differentiable, then you might enjoy some visualizations of the Weierstrass function and these other sundries.  The point of this notebook is just to generate various kinds of plots, testing how the images will render in pipeline-mode notebook previews.
 
 -------------------
 
