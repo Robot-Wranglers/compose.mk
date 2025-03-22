@@ -505,7 +505,7 @@ compose.select/%:
 # 	@#
 # 	${docker.compose} $${COMPOSE_EXTRA_ARGS} -f ${*} config --services | sort
 
-compose.services/%:; $(call compose.services,${*})
+compose.services/%:; printf "$(call compose.services,${*})"
 	@# Returns space-delimited names for each non-abstract service defined by the given composefile.
 	@# Also available as a macro.
 	@#
