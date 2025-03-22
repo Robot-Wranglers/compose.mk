@@ -55,14 +55,17 @@ So that illustrates [container dispatch]({{mkdocs.site_relative_url}}/container-
 ### Discussion 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-
 This is actually a lot of control and data-flow that's been expressed.  Ignoring ordering, graphing it would look something like this:
 
 {{macros.img_link("example-platform-1.png", mkdocs, "90%")}}
 
+-----------------------------
+
 Not to belabor the point but we know what happens next is probably *more* platforms, more tools/containers, and more data flows.  Let's watch how it blows up with just one more platform:
 
 {{macros.img_link("example-platform-2.png", mkdocs, "90%")}}
+
+-----------------------------
 
 This tight expression of complex flow will already be familiar to lots of people: whether they are bash wizards, functional programming nerds, or Airflow/MLFlow/ArgoWF users.  Still, this example pipes data between 5 containers, with no dependencies, and in remarkably direct way that feels pretty seamless!*  It separates the automation itself from the context that it runs in, all with no platform lock-in.  Plus.. compared to the alternatives, doesn't it feel more like working with a programming language and less like jamming bash into yaml? 🤔
 
