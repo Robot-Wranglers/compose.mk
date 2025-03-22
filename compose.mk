@@ -1170,14 +1170,15 @@ io.gum.style/% io.draw.banner/%:
 # and uses 'trap' to handle at-exit file-deletion automatically.
 # Note that this has to be macro for reasons related to ONESHELL.
 # You should chain commands with ' && ' to avoid early deletes
-define io.mktemp
-	export tmpf=$$(TMPDIR=`pwd` mktemp ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -f $${tmpf}" EXIT
-endef
-
+ifeq (${OS_NAME},Darwin)
+io.mktemp=export tmpf=$$(mktemp -t`pwd` ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -f $${tmpf}" EXIT
 # Similar to io.mktemp, but returns a directory.
-define io.mktempd
-	export tmpd=$$(TMPDIR=`pwd` mktemp -d ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
-endef
+io.mktempd=export tmpd=$$(mktemp -t`pwd` ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
+else
+io.mktemp=export tmpf=$$(mktemp -p`pwd` ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -f $${tmpf}" EXIT
+# Similar to io.mktemp, but returns a directory.
+io.mktempd=export tmpd=$$(mktemp -p`pwd` ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
+endif
 
 io.bash:
 	@# Starts an interactive shell with all the environment variables set
