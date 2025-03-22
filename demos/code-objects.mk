@@ -1,9 +1,9 @@
 #!/usr/bin/env -S make -f
 # demos/code-objects.mk: 
 #   Demonstrating first-class support for foreign code-blocks in `compose.mk`.
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: ./demos/code-objects.mk
+# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# USAGE: ./demos/code-objects.mk
 
 include compose.mk
 .DEFAULT_GOAL := __main__

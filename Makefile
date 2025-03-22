@@ -56,7 +56,7 @@ services:
       context: .
       dockerfile_inline: |
         FROM python:3.9.21-bookworm
-        RUN pip3 install --break-system-packages pynchon==2025.3.20.17.28 mkdocs==1.5.3 mkdocs-autolinks-plugin==0.7.1 mkdocs-autorefs==1.0.1 mkdocs-material==9.5.3 mkdocs-material-extensions==1.3.1 mkdocstrings==0.25.2
+        RUN pip3 install --break-system-packages pynchon==2025.3.20.17.28 mkdocs==1.5.3 mkdocs-autolinks-plugin==0.7.1 mkdocs-autorefs==1.0.1 mkdocs-material==9.5.3 mkdocs-material-extensions==1.3.1 mkdocstrings==0.25.2 mkdocs-redirects==1.2.2
         RUN apt-get update && apt-get install -y tree jq
     entrypoint: bash
     working_dir: /workspace
@@ -64,9 +64,7 @@ services:
       - ${PWD}:/workspace
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
   mmd:
-    # <<: *base 
     hostname: mmd
-    # interactive: true
     build:
       context: .
       dockerfile_inline: |
@@ -129,7 +127,7 @@ README.md:
 ##
 actions.docs: docs.build 
 	@# Entrypoint for docs-action
-actions.lint:; cmd='-color' ${make} docker.image.run/rhysd/actionlint:latest 
+actions.lint:; cmd='-color' ${docker.image.run}/rhysd/actionlint:latest 
 	@# Helper for linting all action-yaml
 
 actions.demos:

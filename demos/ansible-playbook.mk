@@ -1,8 +1,9 @@
 #!/usr/bin/env -S make -f
 # demos/ansible-playbook.mk: 
 #   Demonstrates passing embedded-data into an embedded-container.
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
-#   USAGE: ./demos/ansible-playbook.mk
+#
+# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# USAGE: ./demos/ansible-playbook.mk
 
 include compose.mk
 .DEFAULT_GOAL := __main__

@@ -1704,7 +1704,7 @@ mk.interpret:
 	&& rest="`echo $${tmp}| cut -d' ' -f2- -s`" \
 	&& $(call log.mk, mk.interpret ${sep} ${bold}$${fname} ${sep} ${dim_ital}$${rest}) \
 	&& $(call io.mktemp) \
-	&& tmpf=.tmp.mk && ( cat ${CMK_SRC} | head -n -1 ; printf '\n\n\n' \
+	&& tmpf=.tmp.mk && ( cat ${CMK_SRC} | sed -e '$$d' ; printf '\n\n\n' \
 		 && cat $${fname} | grep -v "^include ${CMK_SRC}" \
 		 && printf '\n\n\n' ; cat ${CMK_SRC} | tail -n1 ) \
 	> $${tmpf} \
@@ -2317,6 +2317,7 @@ flux.each/%:
 	@#
 	${stream.stdin} | ${stream.space.to.nl} | xargs -I% sh ${dash_x_maybe} -c "${make} ${*}/%||exit 255"
 flux.each=${make} flux.each
+
 flux.fail:
 	@# Alias for 'exit 1', which is POSIX failure.
 	@# This is mostly for used for testing other pipelines.

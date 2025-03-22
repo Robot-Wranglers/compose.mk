@@ -29,18 +29,6 @@ For a more involved example of dashboarding, you can try `./compose.mk docker.co
 #### Working with Compose-Files
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{#
-`./compose.mk tux.demo`
-
-:   Tests basic functionality with `tmux` and `tte`, exercising geometry, task dispatch, etc.
-`./compose.mk loadf path/to/docker-compose.yml tux.open.service_shells/<svc1>,<svc2>,..<svcN>`
-:   Opens interactive shells for named services in N panes.
-`./compose.mk mk.include/demos/no-include.mk tux.open/clean,build,test`
-:   Opens named targets from named makefile
-the idea of a "zero config" TUI might seem strange.  
-Ultimately, you do need to bring a docker-compose file **or** a Makefile, but you can skip the usual [project integration]({{mkdocs.site_relative_url}}/integration).  
-#}
-
 **If your project has a docker-compose file,** the [selector docs]({{mkdocs.site_relative_url}}/selector/#interactive-container-selection) describe how you can select a single container interactively and shell into it.  
 
 You can also use the [`loadf` command]({{mkdocs.site_relative_url}}/loadf) to open several at once.  
@@ -54,9 +42,9 @@ $ ./compose.mk loadf demos/data/docker-compose.yml
 
 {{macros.img_link("loadf-1.png", mkdocs, "70%")}}
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+-------------------------
 
-Implicitly the `loadf` is dynamically creating make-targets corresponding to the compose-services.  We can get explicit by using `tux.open` as seen in the [Layout Section]({{mkdocs.site_relative_url}}/embedded-tui/#layout-basics), and passing in services names or target names:
+Implicitly `loadf` is dynamically creating make-targets corresponding to the compose-services.  We can get more explicit by using `tux.open` as seen in the [Layout Section]({{mkdocs.site_relative_url}}/embedded-tui/#layout-basics), and passing in services names or target names:
 
 ```bash
 # Equivalent to above, but more explicit and less magical.
@@ -74,12 +62,12 @@ $ layout=spiral ./compose.mk loadf demos/data/docker-compose.yml \
 
 If your project has a Makefile the [selector docs]({{mkdocs.site_relative_url}}/selector/#interactive-target-selection) describe how you can select a single target interactively and run it.  
 
-**Working with multiple targets and simple "dashboarding" is also possible with no configuration.**  This involves the {{macros.api_link('mk.include',mkdocs)}} target, which effectively simulates a `include compose.mk` in your project Makefile *without actually adding one.*  
+**Working with multiple targets and simple "dashboarding" is also possible with no configuration.**  This involves the {{macros.api_link('mk.include', mkdocs)}} target, which effectively simulates a `include compose.mk` in your project Makefile *without actually adding one.*  
 
 For demonstrating this, consider the following classic Makefile that just defines fake `build`, `clean`, and `test` targets that do nothing.
 
 ```Makefile
-{{open('demos/no-include.mk','r').read().strip()}}
+{{open('demos/no-include.mk', 'r').read().strip()}}
 ```
 
 Using `mk.include` by itself works how you'd expect, but does nothing very interesting:
@@ -104,7 +92,9 @@ $ ./compose.mk mk.include/demos/no-include.mk tux.open/clean,build,test
 
 So this is neat.. but it's not that useful to run *clean/build/test* in parallel.
 
-How about something more practical, like starting a TUI that runs the *clean/build* targets back-to-back, plus a separate pane that's running *test* in a loop?  This is actually doable-- For it to happen, we can leverage the workflow helpers in the [`flux.*`]({{mkdocs.site_relative_url}}/api#api-flux) target namespace.  
+How about something more practical, like starting a TUI that runs the *clean/build* targets back-to-back, plus a separate pane that's running *test* in a loop?  
+
+This is actually doable.  For it to happen, we can leverage the workflow helpers in the [`flux.*`]({{mkdocs.site_relative_url}}/api#api-flux) target namespace.  
 
 Like you might expect since we're still *completely avoiding writing config or custom code*, the command line starts to get complicated. So let's build it up piece by piece.  
 
@@ -129,10 +119,10 @@ $ layout=horizontal \
 
 {{macros.img_link("loadf-1.png", mkdocs, "85%")}}
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+-------------------------
 
 Expanding on this.. you could add the `io.bash` target to the comma-separated list of `tux.open` arguments for an additional pane featuring an interactive shell.  Or you could add the {{macros.api_link('io.env',mkdocs,arg='var_prefix')}} target to dump a list of relevant environment variables for this project.  You get the idea.
 
-But again, the command-line here is getting unwieldy, and a swiss-army knife CLI will only take you so far.  The next section looks at how we can achieve the same thing by actually editing files.
+This is pretty useful, but the command-line here is getting unwieldy, and a swiss-army knife CLI will only take you so far.  The next section looks at how we can achieve the same thing by editing files and avoiding one-liners.
 
 <hr style="width:100%;border-bottom:3px solid black;">

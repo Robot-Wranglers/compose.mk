@@ -11,15 +11,10 @@
 {{macros.img_link("mat.png", mkdocs, "13%",align="left")}}
 #}
 
-
 ## Matrioshka Automata
 <hr style="width:100%;border-bottom:3px solid black;">
 
-You might already be aware that `compose.mk` offers a [standard library for working with `make`]({{mkdocs.site_relative_url}}/standard-lib), a sort of stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview), and [a TUI framework]({{mkdocs.site_relative_url}}/embedded-tui), but now you've reached the page that will finally reveal the shocking secret truth. It was all an elaborate scam to setup this one big reveal: 
-
-<center>
-**compose.mk is actually a programming language!** 😮
-</center>
+You might already be aware that `compose.mk` offers a [standard library for working with `make`]({{mkdocs.site_relative_url}}/standard-lib), a sort of stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview), and [a TUI framework]({{mkdocs.site_relative_url}}/embedded-tui), but now you've reached the page that will finally reveal the shocking secret truth. It was all an elaborate scam to setup this one big reveal: **compose.mk is actually a programming language!** 😮
 
 More to the point though, compose.mk is a [matrioshka language](https://esolangs.org/wiki/Matrioshka_language), and maybe the **first one that's actually intended to be useful**.
 
@@ -55,7 +50,7 @@ You can skip directly to [specifics about the matrioshka idiom](#matrioshka-idio
     * via container layers, or via [yaml inheritance in composefiles](#)
     * via make-includes, via target-chaining, via [syntax conventions for target names](#), etc
 
-Further, you could say that `compose.mk` is an interpretted language that is implemented *in* `make`, but in some sense it also runs *on* `make` by hijacking it as a kind of [gadget](https://en.wikipedia.org/wiki/Gadget_(computer_science)).  And despite the fact that it's interpretted, [compose.mk's support for packaging artifacts]({{mkdocs.site_relative_url}}/demos/package) combines well with the sheer ubiquity of `make`, effectively allowing us to **release frozen artifacts** in a way that is similar to compilation.
+Further, you could say that `compose.mk` is an interpreted language that is implemented *in* `make`, but in some sense it also runs *on* `make` by hijacking it as a kind of [gadget](https://en.wikipedia.org/wiki/Gadget_(computer_science)).  And despite the fact that it's interpreted, [compose.mk's support for packaging artifacts]({{mkdocs.site_relative_url}}/demos/package) combines well with the sheer ubiquity of `make`, effectively allowing us to **release frozen artifacts** in a way that is similar to compilation.
 
 ### Homoiconic??
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -148,9 +143,9 @@ Both of these demos are instances of a general pattern that goes like this:
 1. **Combine bridges at the level of `compose.mk`** to easily express ideas across systems.
 1. **Compose bridges or groups of bridges**, using `flux` for workflows, `tux` for TUIs, etc.
 
-**If you don't need to combine systems, you can actually stop after step 3,** and you have something like a "tool factory", where you can wrap the interface of something else and potentially change it. Summarizing the [ansible demo]({{mkdocs.site_relative_url}}/demos/ansible), we lifted ansible's whole [adhoc feature](https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html) up out of the container, making it available to the host that doesn't have ansible.  We also changed/exposed the interface, insisting on JSON, providing aliased entrypoints for common use-cases, etc.  By using [compose.mk's support for packaging/compilation]({{mkdocs.site_relative_url}}/demos/package) it's even more obvious that you can spin off this whole effort as a stand-alone tool, or several tools.  *This is an example of using the matrioshka-bridge pattern to create a tool factory*.  Since this example exposes ansible's full module collection.. one might even call it a *tool-factory factory* ;)
+**If you don't need to combine systems, you can actually stop after step 3,** and you have something like a "tool factory", where you can wrap the interface of something else and potentially change it. Summarizing the [ansible demo]({{mkdocs.site_relative_url}}/demos/ansible), we lifted ansible's whole [adhoc feature](https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html) up out of the container, making it available to the host that doesn't have Ansible.  We also exposed and actually changed the default interface, insisting on JSON, providing aliased entrypoints for common use-cases, etc.  By using [compose.mk's support for packaging/compilation]({{mkdocs.site_relative_url}}/demos/package) it's even more obvious that you can spin off this whole effort as a stand-alone tool, or several tools.  *This is an example of using the matrioshka-bridge pattern to create a tool factory*.
 
-**By the time you get to step 4, the possibilities for composition are surprisingly powerful, expressive, and flexible**, in large part because the [homoiconicity](#homoiconic) we discussed earlier starts to pay off.  Summarizing [the justfile demo]({{mkdocs.site_relative_url}}/demos/just), embedding a justfile is incidental since we could easily work with an external one, but again the interesting part again is a bridge across layers.  We lift part of the `just` interface, then besides changing/exposing that interface, we actually wrap it and compose our way to new functionality.  As a result.. we end up with an interactive task selector in just one line.
+**By the time you get to step 4, the possibilities for composition are surprisingly powerful, expressive, and flexible**, in large part because the [homoiconicity](#homoiconic) we discussed earlier starts to pay off.  Summarizing [the justfile demo]({{mkdocs.site_relative_url}}/demos/just), embedding a justfile is incidental since we could easily work with an external one, but again the interesting part again is a bridge across layers.  We lift part of the `just` interface, then besides changing/exposing that interface, we actually wrapped it and compose our way to new functionality.  As a result.. we end up with an interactive task selector in just one line.
 
 **Step 5 is where the real magic happens,** and the demos mentioned so far are just hints.  Demonstrating the potential for this seriously under realistic circumstances starts to want more tools and larger use-cases.. which is a challenge for brief examples.  See the [platforming demo for a sketch]({{mkdocs.site_relative_url}}/demos/platform), or take a look at the *(under construction!)* sibling project [k8s-tools.git]({{jinja.vars.k8stools_docs_url}}) which uses `compose.mk` to *actually* automates cluster-lifecycles using more complex orchestration across a bigger toolbox.
 
@@ -167,11 +162,11 @@ The answer is *yes!*, because besides better options for structuring code and at
 
 -------------------------------
 
-As one example, [stage stacks]({{mkdocs.site_relative_url}}/stages) actually allow targets to represent operations on shared datastructures, and this is one one way to accomplish message-passing across matrioshka layers.
+As one example, [stage stacks]({{mkdocs.site_relative_url}}/stages) allow targets to represent operations on shared datastructures, and this is one one way to accomplish message-passing across matrioshka layers.
 
 Since `compose.mk` tool-container invocations [default to volume-mounts for the working directory and the docker socket automatically]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults), things like [structured io]({{mkdocs.site_relative_url}}/standard-lib#structured-io) can work reliably anywhere.  One consequence of this is a kind of "late binding" style, where basically you don't necessarily have to think much about whether tasks run on the host, or run on containers.
 
-As an *extreme example* of "fluency" across matrioshka layers, check out the [makeception demo]({{mkdocs.site_relative_url}}/demos/makeception), where we use `compose.mk` to embed 2 container definitions and to build and steer them, and shows some practical usage of [stage stacks]({{mkdocs.site_relative_url}}/stages).  What's really unusual about this example though, is that even *the build process* itself is encapsulated inside the same file, and rather than jamming bash in the Dockerfile, provisioning tasks are expressed as normal targets and executed as usual.
+As a pretty extreme example of "fluency" across matrioshka layers, check out the [makeception demo]({{mkdocs.site_relative_url}}/demos/makeception), where we use `compose.mk` to embed 2 container definitions and to build and steer them, and shows some practical usage of [stage stacks]({{mkdocs.site_relative_url}}/stages).  What's really unusual about this example though, is that even *the build process* itself is encapsulated inside the same file: rather than jamming bash in the Dockerfile, provisioning tasks are expressed as normal targets and executed as usual.
 
 For an advanced example in service of a more conventional use-case, you might want to take a look at the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking), which uses 3 different containers (a formal-methods toolkit) to augment the behaviour of a 4th container (a jupyter lab server).
 
