@@ -63,9 +63,21 @@ services:
     volumes:
       - ${PWD}:/workspace
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+  mmd:
+    # <<: *base 
+    hostname: mmd
+    # interactive: true
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ghcr.io/mermaid-js/mermaid-cli/mermaid-cli:10.6.1
+        USER root 
+        RUN apk add -q --update --no-cache coreutils alpine-sdk bash procps-ng
+    working_dir: /workspace 
+    volumes:
+        - ${PWD}:/workspace
 endef 
 $(eval $(call compose.import.string,  docs.builder.composefile,  TRUE))
-
 demo:
 	@# Interactive selector for which demo to run.
 	pattern='*.mk' dir=demos/ ${make} flux.select.file/mk.select
@@ -90,9 +102,17 @@ docs.jinja/% j/% jinja/%: docs.init
 	&& set -x && pynchon jinja render ${*} -o $${tmpf} --print \
 	&& dest="`dirname ${*}`/`basename -s .j2 ${*}`" \
 	&& mv $${tmpf} $${dest}
+
+
+mmd.args=--theme neutral -b transparent
 docs.mermaid docs.mmd:
 	@# Renders all diagrams for use with the documentation 
-	pynchon mermaid apply
+	# pynchon mermaid apply
+	find docs | grep '[.]mmd$$' | ${stream.peek} | ${flux.each}/.mmd.render
+.mmd.render/%:
+	output=`dirname ${*}`/`basename -s.mmd ${*}`.png \
+	&& cmd="-i ${*} -o $${output} ${mmd.args}" ${make} mmd \
+	&& cat $${output} | ${stream.img}
 
 
 mkdocs: mkdocs.build mkdocs.serve

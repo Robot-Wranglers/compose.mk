@@ -2316,7 +2316,7 @@ flux.each/%:
 	@#  printf 'one\ntwo' | ./compose.mk stream.nl.flux.each/<target>
 	@#
 	${stream.stdin} | ${stream.space.to.nl} | xargs -I% sh ${dash_x_maybe} -c "${make} ${*}/%||exit 255"
-
+flux.each=${make} flux.each
 flux.fail:
 	@# Alias for 'exit 1', which is POSIX failure.
 	@# This is mostly for used for testing other pipelines.
@@ -4145,20 +4145,12 @@ ${compose_file_stem}.exec/%:
 ${compose_file_stem}/$(compose_service_name).get_shell:
 	@# Detects the best shell to use with the `$(compose_service_name)` container @ ${compose_file}
 	@#
-	${trace_maybe} && ${docker.compose} -f $$(compose_file) \
-		run --rm --remove-orphans --entrypoint sh $(compose_service_name) \
-		-c "which bash || which sh" 2> ${devnull} \
-		|| ( [ $${TRACE} == 1 ] \
-			&& printf "${yellow}Neither 'bash' nor 'sh' are available!\n (service=$${compose_service_name} @ $${compose_file})\n${no_ansi}" > ${stderr} \
-			|| true )
+	$$(call compose.get_shell, $(compose_file), $(compose_service_name))
 
 ${compose_file_stem}/$(compose_service_name).shell:
 	@# Starts a shell for the "$(compose_service_name)" container defined in the $(compose_file) file.
 	@#
-	${trace_maybe} \
-	&& export entrypoint=`${make} ${compose_file_stem}/$(compose_service_name).get_shell` \
-	&& printf "${green}⇒${no_ansi}${dim} ${compose_file_stem}/$(compose_service_name).shell (${green}`env|grep entrypoint\=`${no_ansi}${dim})${no_ansi}\n" \
-		&& ${make} ${compose_file_stem}/$(compose_service_name)
+	$$(call compose.shell, $(compose_file), $(compose_service_name))
 
 # NB: implementation must NOT use 'io.mktemp'!
 ${compose_file_stem}/$(compose_service_name).shell.pipe:
@@ -4281,6 +4273,25 @@ ${target_namespace}/$(compose_service_name)/%:
 		make -f ${MAKEFILE} ${compose_file_stem}/$(compose_service_name)
 endef
 
+define compose.get_shell
+	${docker.compose} -f $(1) run --entrypoint bash $(2) -c "which bash" 2>/dev/null \
+	|| (${docker.compose} -f $(1) run --entrypoint sh $(2) -c "which sh" 2>/dev/null \
+		|| echo )
+endef
+define compose.shell
+	${trace_maybe} \
+	&& entrypoint="`${compose.get_shell}`" \
+	&& printf "${green}⇒${no_ansi}${dim} `basename -s.yaml \`basename -s.yml ${1}\``/$(strip $(2)).shell (${green}...${no_ansi_dim})${no_ansi}\n" \
+	&& docker compose -f ${1} \
+		run --rm --remove-orphans --quiet-pull \
+		--env CMK_INTERNAL=1 -e TERM="$${TERM}" \
+		-e GITHUB_ACTIONS=${GITHUB_ACTIONS} -e TRACE=$${TRACE} \
+		--env verbose=$${verbose} \
+		 --entrypoint $${entrypoint}\
+		${2}
+endef
+compose.shell/%:; fname=$(shell echo ${*}|cut -d, -f1) && svc=$(shell echo ${*}|cut -d, -f2-) && $(call compose.shell, $${fname}, $${svc})
+# demos/data/docker-compose.yml,alpine)
 # Macro to import services from strings.  This takes in a def-name, 
 # and an optional dispatch-namespace, then generates target-scaffolding
 # for each container.
