@@ -1171,7 +1171,7 @@ io.gum.style/% io.draw.banner/%:
 # Note that this has to be macro for reasons related to ONESHELL.
 # You should chain commands with ' && ' to avoid early deletes
 ifeq (${OS_NAME},Darwin)
-io.mktemp=export tmpf=$$(mktemp -u ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -f $${tmpf}" EXIT
+io.mktemp=export tmpf=$$(mktemp ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -f $${tmpf}" EXIT
 # Similar to io.mktemp, but returns a directory.
 io.mktempd=export tmpd=$$(mktemp -u ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
 else
@@ -4519,20 +4519,15 @@ $(foreach \
 	
 endef
 
+
 define compose.import.code_block
 ifeq ($${CMK_INTERNAL},1)
 else 
 # $$(shell $(call log, CMK_INTERNAL=$${CMK_INTERNAL} import.code_block(${1},${2})))
 $(eval defname=$(strip ${1}))
 $(eval bind.maybe=$(strip ${2}))
-${defname}.with.file/%:
-	@# Context manager.  
-	@# Runs the given (unary) target using for an argument
-	@# a tmpfile that contains the full contents of this code-block.
-	@$$(eval export tmpf:=$$(shell TMPDIR=. mktemp))
-	trap "rm -f $${tmpf}" EXIT \
-	&& ${mk.def.read}/${defname} > $${tmpf} \
-	&& CMK_INTERNAL=1 ${make} $${*}/$${tmpf}
+${defname}.with.file/%:; ${make} io.with.file/${defname}/$${*}
+
 ${defname}.to.file/%:
 	@#
 	@#
@@ -4557,6 +4552,15 @@ ${defname}.run:
 	esac
 endif
 endef
+
+io.with.file/%:
+	@# Context manager.
+	@# Runs the given (unary) target using for an argument
+	@# a tmpfile that contains the full contents of this code-block.
+	$(call io.mktemp) && def_name=$(shell echo ${*}|cut -d/ -f1) \
+	&& target=$(shell echo ${*}|cut -d/ -f2-) \
+	&& ${mk.def.read}/$${def_name} > $${tmpf} \
+	&& CMK_INTERNAL=1 ${make} $${target}/$${tmpf}
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## END: import-macros
