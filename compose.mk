@@ -1171,13 +1171,13 @@ io.gum.style/% io.draw.banner/%:
 # Note that this has to be macro for reasons related to ONESHELL.
 # You should chain commands with ' && ' to avoid early deletes
 ifeq (${OS_NAME},Darwin)
-io.mktemp=export tmpf=$$(mktemp -t`pwd` ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -f $${tmpf}" EXIT
+io.mktemp=export tmpf=$$(mktemp -u ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -f $${tmpf}" EXIT
 # Similar to io.mktemp, but returns a directory.
-io.mktempd=export tmpd=$$(mktemp -t`pwd` ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
+io.mktempd=export tmpd=$$(mktemp -u ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
 else
-io.mktemp=export tmpf=$$(mktemp -p`pwd` ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -f $${tmpf}" EXIT
+io.mktemp=export tmpf=$$(TMPDIR=`pwd` mktemp ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -f $${tmpf}" EXIT
 # Similar to io.mktemp, but returns a directory.
-io.mktempd=export tmpd=$$(mktemp -p`pwd` ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
+io.mktempd=export tmpd=$$(TMPDIR=`pwd` mktemp -d ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
 endif
 
 io.bash:
