@@ -7,7 +7,6 @@
 #   USAGE: ./demos/inlined-composefile.mk
 
 include compose.mk
-.DEFAULT_GOAL := __main__
 
 # Look it's an embedded compose file.  This defines services `alice` & `bob`
 define inlined.composefile 

@@ -6,7 +6,6 @@
 # USAGE:  demos/cli-help.mk
 
 include compose.mk 
-.DEFAULT_GOAL=__main__
 
 __main__: my-target my-parametric-target/FOO
 

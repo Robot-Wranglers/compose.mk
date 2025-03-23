@@ -25,7 +25,7 @@ print('hello world')
 endef
 
 # Import the code-block, creating additional target scaffolding for it.
-$(eval $(call compose.import.code_block, hello_world, python.interpreter))
+$(eval $(call compose.import.code, hello_world, python.interpreter))
 
 # With the new target-scaffolding in place, now we can use it.
 # First we preview the code with syntax highlighting, 

@@ -67,8 +67,30 @@ Here's an overview for how the `compose.mk` standard library is organized into m
 
 -------------------
 
-**In terms of idiomatic style for extensions,** see especially the [platform lifecycle demo]({{mkdocs.site_relative_url}}/demos/platform/) for a clean and practical example on a concrete problem.
+**In terms of style for extensions,** there's a range of options with most things.  You'll want to choose based on what/who you're already working with.  Depending on your apetite for magic / syntactic sugar, you can opt for:
 
+* Explicit container dispatch *(i.e. `<container>.dispatch/<target>`)*
+* Implicit container dispatch *(i.e. [namespace-style dispatch]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch)*
+* Explicit polyglot invocation *(i.e. [less magic]({{mkdocs.site_relative_url}}/demos/polyglots/#containerized-interpreters))* 
+* Implicit polyglot invocation *(i.e. [more magic]({{mkdocs.site_relative_url}}/demos/polyglots/#foreign-code-as-first-class))*
+
+For new development though, implicit style is more idiomatic and namespace-style dispatch is usually recommended.  See especially the [platform lifecycle demo]({{mkdocs.site_relative_url}}/demos/platform/) for especially clean and practical example usage with a concrete problem.
+
+-------------------------
+
+Revisiting the earlier idea that "sometimes macros improve readability" and targets with equivalent macros, there's a similar choice about implicit vs explicit style:
+
+```Makefile
+include compose.mk 
+
+explicit:
+	${make} <some_target>/<some_arg>
+
+implicit:
+	${some_target}/<some_arg>
+```
+
+When a target is used often enough, the explicit style becomes tedious to read and write.  So *whenever it won't confuse someone else* the implicit style is preferred.
 
 {% include "structured-io.md.j2" %}
 

@@ -6,7 +6,6 @@
 #   USAGE: ./demos/container-dispatch.mk
 
 include compose.mk
-.DEFAULT_GOAL := __main__
 
 # Import all the services in the compose file, including the 
 # "debian" container, into the root namespace

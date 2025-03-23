@@ -58,8 +58,8 @@ endef
 
 # Bind code objects to interpreters.  
 # This creates `script.run` and `theorem.run`.
-$(eval $(call compose.import.code_block, theorem, lean.run.theorem))
-$(eval $(call compose.import.code_block, script, lean.run.script))
+$(eval $(call compose.import.code, theorem, lean.run.theorem))
+$(eval $(call compose.import.code, script, lean.run.script))
 
 # Default entrypoint. Ensures container is built, then tests a script and a theorem
 __main__: docker.from.def/Lean.base script.run theorem.run

@@ -7,7 +7,7 @@ An annoying lack of structured output options for `make` is something that it ha
 
 Part of the explanation for this is just that a Makefile might be using any random tools with any kind of output format, but that's sort of inevitable for automation.  The other part is just a missing approach to idioms and tools, and `compose.mk` can help with that.  
 
-First a word about terminology: "*structured*" is intentionally vague here, and there's a few ways it's applicable to basic features in `compose.mk`. Usually [structured just means means JSON](#structured-io-basics) ^[6].  There is also support for a concept of [stream types](#structured-io-stream-types-pipes), which isn't *really* typed*, but at least lets you tell markdown content from image content, newline-delimited vs space-delimited, etc.  And in terms of datastructures, there is [basic support for stacks and stages]({{mkdocs.site_relative_url}}/stages).  For things like sets datastructures, see also the (unrelated) [GMSL](https://mxe.cc/gmsl.html) library.
+First a word about terminology: "*structured*" is intentionally vague here, and there's a few ways it's applicable to basic features in `compose.mk`. Usually [structured just means means JSON](#structured-io-basics) [^6].  There is also support for a concept of [stream types](#structured-io-stream-types-pipes), which isn't *really* typed, but at least lets you tell markdown content from image content, newline-delimited vs space-delimited, etc.  And in terms of datastructures, there is [basic support for stacks and stages]({{mkdocs.site_relative_url}}/stages).  For things like sets datastructures, see also the (unrelated) [GMSL](https://mxe.cc/gmsl.html) library.
 
 The main benefit of the approach that `compose.mk` takes to structured data comes from **exposing tools like [`jq`](https://github.com/jqlang/jq), [`jb`](https://github.com/h4l/json.bash), and [`yq`](https://github.com/mikefarah/yq) without explicitly depending on them.**  How does that work?  Basically `compose.mk` will use local tools if they are available, and fall back to using dockerized versions of them if necessary.  Other than that, `compose.mk` tries to stay out of the way of `jq` and `jb` and let them do what they do.
 
@@ -65,4 +65,4 @@ This isn't exhaustive, but you can see the section below for a few more samples.
 ```Makefile
 {{open('demos/stdlib-stream-io.mk','r').read().strip()}}
 ```
-
+<br/>

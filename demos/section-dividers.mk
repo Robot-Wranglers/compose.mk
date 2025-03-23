@@ -7,8 +7,6 @@
 
 include compose.mk 
 
-.DEFAULT_GOAL := __main__ 
-
 __main__: clean build test
 
 # Use `io.print.div` implicitly as a prereq => Timestamped divider

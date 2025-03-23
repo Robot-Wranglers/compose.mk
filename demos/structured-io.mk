@@ -5,10 +5,6 @@
 #   USAGE: ./demos/structured-io.mk
 
 include compose.mk
-.DEFAULT_GOAL := __main__
-
-__main__:
-	${make} emit | ${make} consume
 
 # Emit/consume JSON with `compose.mk` macros.  
 # Uses native tools if they are available, falling back to docker.
@@ -17,3 +13,6 @@ emit:
 
 consume:
 	${stream.stdin} | ${jq} .key
+
+__main__:
+	${make} emit | ${make} consume

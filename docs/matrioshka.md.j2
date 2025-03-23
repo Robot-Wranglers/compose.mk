@@ -50,8 +50,8 @@ You can skip directly to [specifics about the matrioshka idiom](#matrioshka-idio
 
 Further, you could say that `compose.mk` is an interpreted language that is implemented *in* `make`, but in some sense it also runs *on* `make` by hijacking it as a kind of [gadget](https://en.wikipedia.org/wiki/Gadget_(computer_science)).  And despite the fact that it's interpreted, [compose.mk's support for packaging artifacts]({{mkdocs.site_relative_url}}/demos/package) combines well with the sheer ubiquity of `make`, effectively allowing us to **release frozen artifacts** in a way that is similar to compilation.
 
-### Homoiconic??
-<hr style="width:100%;border-bottom:3px solid black;">
+#### Homoiconic??
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 We'll go into why it matters in further detail later, but for now let's introduce a somewhat surprising fact: `compose.mk` is designed to be [homoiconic](https://en.wikipedia.org/wiki/Homoiconicity) on `make` targets, at the same time as it generalizes what targets can *be*.  Thus among other things, a `compose.mk` target can:
 
@@ -69,8 +69,8 @@ In the [workflow docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-suppo
 * Meanwhile.. {{macros.api_link('flux.ok',mkdocs)}} and {{macros.api_link('flux.fail',mkdocs)}} are examples of nullary targets.
 * But invocation, like say `flux.wrap/flux.ok,flux.fail`, is itself also a (nullary) target.
 
-### Targets as Code
-<hr style="width:100%;border-bottom:3px solid black;">
+#### Interpreters & Targets-as-Code
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 By the way, since the claim is that something like `flux.wrap/flux.ok,flux.fail` is actually "a program" in a "language" though, it's worth pointing out that there are many ways to execute it beyond mentioning it in a Makefile as a target-prerequisite.  The following are all equivalent, but the last example demonstrates what you can think of as the `compose.mk` interpreter.
 
@@ -84,6 +84,8 @@ $ ./compose.mk flux.wrap/flux.ok,flux.fail
 # program as code
 $ echo flux.wrap/flux.ok,flux.fail | ./compose.mk mk.kernel
 ```
+
+For another example of how `compose.mk` can act as an interpreter, see the [signals & supervisors docs]({{mkdocs.site_relative_url}}/signals/#inheritance-interpreters)
 
 ### Matrioshka Idiom Basics
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -140,7 +142,7 @@ The previous section on [idiom basics](#matrioshka-idiom-basics) links several d
 
 Both of these demos are instances of a general pattern that goes like this:
 
-1. **Describe a foreign toolchain.**  *(image tags, container definitions inlined or external, etc)*
+1. **Describe a foreign toolchain.**  *(e.g. image tags, container definitions inlined or external, etc)*
 1. **Drill a tiny hole through the matrioshka layers**, exposing or "lifting" something useful by abstracting away the fact that the task actually happens in a container.
 1. **Better yet, lift something useful *that is parametric*** and then you have a *bridge*.
 1. **Combine bridges at the level of `compose.mk`** to easily express ideas across systems.

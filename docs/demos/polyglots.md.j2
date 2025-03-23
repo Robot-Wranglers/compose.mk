@@ -12,6 +12,7 @@ Polyglots come in a few basic types and this page tries to cover all the main ca
 * [Exotic Targets & Pipes](#exotic-targets-and-pipes)
 * [Compiled Languages](#compiled-languages)
 * [Foreign Code as First Class](#foreign-code-as-first-class)
+* [Templating](#templating-languages)
 
 For topics related to communication *between* polyglots, see the [section for pipes](#exotic-targets-and-pipes) or the [stages documentation]({{mkdocs.site_relative_url}}/stages).  For topics related to yielding control to polyglots, see the [signals and supervisors docs]({{mkdocs.site_relative_url}}/signals/#advanced-examples).
 
@@ -91,12 +92,12 @@ As seen in the [first elixir demo](#containerized-interpreters) there are alread
 
 If you *like* magic, then you will be interested to know that it's possible to treat foreign code as basically a first class object.  The way this works is similar to how [`compose.import` treats containers as first class]({{mkdocs.site_relative_url}}/bridge).
 
-First we import a code object using `compose.import.code_block`, and then several related targets are attached to the implied namespace.  In the simplest case, importing a code block just attaches a **`preview` target** to it, which is capable of showing syntax-highlighted code.  *(Under the hood, this uses a dockerized version of [pygments](https://pygments.org/))*.
+First we import a code object using `compose.import.code`, and then several related targets are attached to the implied namespace.  In the simplest case, importing a code block just attaches a **`preview` target** to it, which is capable of showing syntax-highlighted code.  *(Under the hood, this uses a dockerized version of [pygments](https://pygments.org/))*.
 
 #### Bind Blocks to Interpreters
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-A more typical use-case for `compose.import.code_block` provides *both* the code block's name and an interpreter handle that we want to *bind to it* which allows us to provide an additional **"run"** method.
+A more typical use-case for `compose.import.code` provides *both* the code block's name and an interpreter handle that we want to *bind to it* which allows us to provide an additional **"run"** method.
 
 ```Makefile
 {{open('demos/code-objects.mk','r').read().strip()}}
@@ -107,9 +108,9 @@ As seen above, sometimes this is slightly *more* work than the other methods, be
 #### Binding Multiple Blocks in One Shot
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-Why use this approach if it's needs a more shimming than other approaches?  Well, a small variation in this pattern is to use `compose.import.code`, which supports binding multiple chunks of code to the same interpreter.
+Why use this approach if it's needs a more shimming than other approaches?  Well, a small variation in this pattern is to use `compose.import.codes`, which supports binding multiple chunks of code to the same interpreter.
 
-Below, you can see that `compose.import.code` is using the argument `[.]py`, which will pattern match against *all available define-block names* and bind each of them to `python.interpreter`.
+Below, you can see that `compose.import.codes` is using the argument `[.]py`, which will pattern match against *all available define-block names* and bind each of them to `python.interpreter`.
 
 ```Makefile
 {{open('demos/code-objects-2.mk','r').read().strip()}}
@@ -118,9 +119,22 @@ Below, you can see that `compose.import.code` is using the argument `[.]py`, whi
 #### First Class Caveats 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-**Now for the main caveats with first-class code support.**  First, as with importing containers, you need to keep your namespacing in mind or you'll be pretty likely to have issues with collisions and shadowing.  
+**Now for the main caveats with first-class code support.**  First, as with importing containers, you need to keep namespacing in mind or you'll be pretty likely to have issues with collisions and shadowing.  Whereas tool containers have several [import-statement variations]({{mkdocs.site_relative_url}}/bridge/#other-import-statements), importing code objects doesn't support different namespacing scenarios.  The way to handle this is **just by using strong naming conventions**.  
 
-Whereas tool containers have several [import-statement variations]({{mkdocs.site_relative_url}}/bridge/#other-import-statements), importing code objects doesn't support different namespacing scenarios.  The way to handle this is **just by using strong naming conventions**.  Second, using `eval` like this is definitely not an optimized code-path in `compose.mk` yet, and so **this approach is currently slower than other techniques on this page**.  The cost for that is a delay in startup though, so many types of blocking or compute-heavy use-cases won't suffer much.
+Second, using `eval` like this is definitely not an optimized code-path in `compose.mk` yet, and so **this approach is currently slower than other techniques on this page**.  The cost for that is a delay in startup though, so many types of blocking or compute-heavy use-cases won't suffer much.
+
+### Templating Languages
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Use-cases related to templating are arguably more about [embedded data]({{mkdocs.site_relative_url}}/demos/matrioshka/#passing-inlined-data-structures), but they are presented here because they work especially well with [`compose.import.codes`](#binding-multiple-blocks-in-one-shot).
+
+The example below uses [jinjanator](https://pypi.org/project/jinjanator/), a CLI for use with [jinja](https://jinja.palletsprojects.com/en/stable/), but the approach itself can be extended to work with any other templating engine. [^4]
+
+```Makefile
+{{open('demos/j2-templating.mk','r').read().strip()}}
+```
+
+This prints "*hello foo!*" x3 and one "*bye foo!*" as expected, per the template.  In keeping with [other structured IO patterns]({{mkdocs.site_relative_url}}/standard-lib#structured-io) in `compose.mk`, we prefer JSON, generating it with `jb` and configuring `jinjanator` to use it.. but this can be easily changed to work with environment variables or yaml instead.  
 
 ### Other Polyglot Examples
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -151,3 +165,4 @@ This also means the **content is fairly static**, and not typically amenable to 
 [^1]: http://web.archive.org/web/20200515180041/https://agdr.org/2020/05/14/Polyglot-Makefiles.html
 [^2]: You might think from the [elixir examples](#containerized-interpreters) that this can be abstracted away to use streams somehow, but we opt to avoid it because some interpreters require actual files.
 [^3]: Yeah, sorry, you might be out of luck if your language of choice actually uses `define` and `endef` keywords.  If you think you have a reasonable use-case, please do [create an issue describing it]({{github.repo_url}}/issues).
+[^4]: For minimal basic templating  *without* an extra container, you could use [the local-interpreter strategy](#local-interpreters-no-containers) with [`m4`](https://en.wikipedia.org/wiki/M4_(computer_language)), which is usually present anywhere `make` is.

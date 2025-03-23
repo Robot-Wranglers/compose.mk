@@ -94,7 +94,6 @@ esac \
 SHELL:=bash
 MAKEFLAGS:=-s -S --warn-undefined-variables
 MAKEFLAGS+=--no-builtin-rules
-.DEFAULT_GOAL?=help
 .SUFFIXES:
 .INTERMEDIATE: .tmp.* .flux.*
 export TERM?=xterm-256color
@@ -307,10 +306,12 @@ ifneq ($(findstring compose.mk, ${MAKE_CLI}),)
 export CMK_LIB=0
 export CMK_STANDALONE=1
 export CMK_SRC=$(findstring compose.mk, ${MAKE_CLI})
+.DEFAULT_GOAL:=help
 endif
 ifeq ($(findstring compose.mk, ${MAKE_CLI}),)
 export CMK_LIB=1
 export CMK_STANDALONE=0
+.DEFAULT_GOAL:=__main__
 endif
 
 # Default base versions for a few important containers, allowing for override from environment
@@ -348,8 +349,8 @@ jb=${jb.docker}
 jq=${jq.run}
 yq=${yq.run}
 
-GUM_VERSION?=v0.15.2
-# GUM_VERSION?=v0.9.0
+IMG_GUM?=v0.15.2
+# IMG_GUM?=v0.9.0
 GLOW_VERSION?=v1.5.1
 GLOW_STYLE?=dracula
 
@@ -699,10 +700,12 @@ docker.def.start/% docker.start.def/%:
 	@#
 	${make} docker.from.def/${*} docker.start/compose.mk:${*}
 
+docker.dispatch=${make} docker.dispatch
 docker.dispatch/%:
 	@# Runs the named target inside the named docker container.
 	@# This works for any image as given; See instead 'mk.docker.run' for
 	@# a version that implicitly uses internally generated containers.
+	@# Also available as a macro.
 	@#
 	@# USAGE:
 	@#  img=<img> make docker.dispatch/<target>
@@ -717,9 +720,11 @@ docker.dispatch/%:
 
 docker.images=($(call docker.tags.by.repo,compose.mk) ; $(call docker.tags.by.repo,${CMK_EXTRA_REPO})) | sort | uniq
 
+docker.image.dispatch=${make} docker.image.dispatch
 docker.image.dispatch/%:
 	@# Similar to `docker.dispatch/<arg>`, but accepts both the image
 	@# and the target as arguments instead of using environment variables.
+	@# Also available as a macro.
 	@#
 	@# USAGE:
 	@#  ./compose.mk docker.image.dispatch/<img>/<target>
@@ -991,7 +996,7 @@ docker.start:; ${make} docker.start/$${img}
 	@# USAGE: 
 	@#   img=.. ./compose.mk docker.start
 
-docker.start/%:; img="${*}" entrypoint=none ${make} docker.run.sh
+docker.run/% docker.start/%:; img="${*}" entrypoint=none ${make} docker.run.sh
 	@# Starts the named docker image with the default entrypoint
 	@# USAGE: 
 	@#   ./compose.mk docker.start/<img>
@@ -1084,7 +1089,7 @@ log.maybe=([ "$${quiet:-0}" == "1" ] || $(call log, ${1}))
 CMK_EXEC=`dirname ${CMK_SRC}`/`basename ${CMK_SRC}`
 
 # This is a hack because charmcli/gum is distroless, but the spinner needs to use "sleep", etc
-# io.gum.alt.dumb=docker run -it -e TERM=dumb --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nRUN apk add -q --update --no-cache bash\nCOPY --from=charmcli/gum:${GUM_VERSION} /usr/local/bin/gum /usr/local/bin/gum")`
+# io.gum.alt.dumb=docker run -it -e TERM=dumb --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nRUN apk add -q --update --no-cache bash\nCOPY --from=charmcli/gum:${IMG_GUM} /usr/local/bin/gum /usr/local/bin/gum")`
 
 io.figlet/%:
 	@# Treats the argument as a label, and renders it with `figlet`. 
@@ -1100,7 +1105,7 @@ io.figlet:
 io.file.select=header="Choose a file: (dir=$${dir:-.})"; choices=`ls $${dir:-.}/$${pattern:-} | ${stream.nl.to.space}` && ${io.get.choice}
 
 io.get.url=$(call io.mktemp) && curl -sL $${url} > $${tmpf}
-io.gum.docker=${trace_maybe} && docker run $$(if [ -t 0 ]; then echo "-it"; else echo "-i"; fi) -e TERM=$${TERM:-xterm} --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nCOPY --from=charmcli/gum:${GUM_VERSION} /usr/local/bin/gum /usr/local/bin/gum\nRUN apk add --update --no-cache bash\n")`
+io.gum.docker=${trace_maybe} && docker run $$(if [ -t 0 ]; then echo "-it"; else echo "-i"; fi) -e TERM=$${TERM:-xterm} --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nCOPY --from=charmcli/gum:${IMG_GUM} /usr/local/bin/gum /usr/local/bin/gum\nRUN apk add --update --no-cache bash\n")`
 
 ifeq ($(shell which gum >/dev/null 2> /dev/null && echo 1|| echo 0),1) 
 io.gum.run:=`which gum`
@@ -1113,7 +1118,7 @@ endif
 io.script.run=script -qefc --return --command
 io.gum=(which gum >/dev/null && ( ${1} ) \
 	|| (entrypoint=gum cmd="${1}" quiet=0 \
-		img=charmcli/${GUM_VERSION} ${make} docker.run.sh)) > /dev/stderr
+		img=charmcli/${IMG_GUM} ${make} docker.run.sh)) > /dev/stderr
 io.gum.style=label="${1}" ${make} io.gum.style
 io.gum.style.div:=--border double --align center --width $${width:-$$(echo "x=$$(tput cols 2>/dev/null ||echo 45) - 5;if (x < 0) x=-x; default=30; if (default>x) default else x" | bc)}
 io.gum.style.default:=--border double --foreground 2 --border-foreground 2
@@ -1600,15 +1605,19 @@ mk.docker.dispatch=${make} mk.docker.dispatch
 # mk.docker.detach/%:; ${make} docker.detach/compose.mk:${*}
 # 	@# Like `docker.detach`, but assumes the 'compose.mk:' prefix implicitly. 
 
-mk.docker.run=${make} mk.docker.run
-mk.docker.run:; img="compose.mk:$${img}" ${make} docker.run
-	@# Like `docker.run`, but assumes the 'compose.mk:' prefix implicitly. 
-	@# Requires `img` variable to already to be set.
-	@# This is used with "local" images, i.e. what `compose.mk` uses 
-	@# internally, or to handle embedded Dockerfiles.
-
-mk.docker.run.sh:; img="compose.mk:$${img}" ${make} docker.run.sh
-	@# Like docker.run.sh, but implicitly assumes the 'compose.mk:' prefix.
+# mk.docker.run=${make} mk.docker.run
+# mk.docker.run/%:; img="compose.mk:${*}" ${make} docker.run.sh
+# mk.docker.run:; img="compose.mk:$${img}" ${make} docker.run
+# 	@# Like `docker.run`, but assumes the 'compose.mk:' prefix implicitly. 
+# 	@# Requires `img` variable to already to be set.
+# 	@# This is used with "local" images, i.e. what `compose.mk` uses 
+# 	@# internally, or to handle embedded Dockerfiles.
+mk.docker/% mk.docker.image/%:; ${make} docker.image.run/compose.mk:${*}
+mk.docker=${make} mk.docker
+mk.docker:; ${mk.docker}/$${img}
+# mk.docker=${make} mk.docker.run
+# mk.docker.run.sh:; img="compose.mk:$${img}" ${make} docker.run.sh
+# 	@# Like docker.run.sh, but implicitly assumes the 'compose.mk:' prefix.
 
 mk.get/%:; $(info ${${*}})
 	@# Returns the value of the given make-variable
@@ -2303,6 +2312,7 @@ flux.do.unless/%:
 	@#
 	${make} flux.do.when/`printf ${*}|cut -d, -f1`,flux.negate/`printf ${*}|cut -d, -f2-`
 
+flux.pipe.fork=${make} flux.pipe.fork
 flux.pipe.fork flux.split:
 	@# Demultiplex / fan-out operator that sends stdin to each of the named targets in parallel.
 	@# (This is like `flux.sh.tee` but works with make-target names instead of shell commands)
@@ -4522,18 +4532,18 @@ $(foreach \
 endef
 
 # Main macros to import a code-block
-define compose.import.code
+define compose.import.codes
 $(eval defpat=$(strip ${1}))
 #$$(shell $(call log, import.code ${defpat}))
 $(eval __code_blocks__:=$(shell echo "$(.VARIABLES)" | ${stream.space.to.nl} | grep ${defpat}))
 $(foreach \
  	codeblock, \
  	$(__code_blocks__), \
-	$(eval $(call compose.import.code_block, ${codeblock}, $(if $(filter undefined,$(origin 2)),"",$(2)))))
+	$(eval $(call compose.import.code, ${codeblock}, $(if $(filter undefined,$(origin 2)),"",$(2)))))
 	
 endef
 
-define compose.import.code_block
+define compose.import.code
 ifeq ($${CMK_INTERNAL},1)
 else 
 # $$(shell $(call log, CMK_INTERNAL=$${CMK_INTERNAL} import.code_block(${1},${2})))
@@ -4561,8 +4571,9 @@ ${defname}.run/%:
 ${defname}.run:
 	case "${bind.maybe}" in \
 		"")  $$(call log.io, ${defname}.run ${sep} error: ${defname} ${red}not bound${no_ansi} -- please bind it before running); exit 4 ;; \
-		*) $$(call log.io, ${defname}.run ${sep} ${no_ansi_dim}is bound to ${no_ansi}${underline}${bind.maybe}) && ${make} ${defname}.with.file/${bind.maybe} ;; \
+		*) $$(call log.io, ${defname}.run ${sep} ${no_ansi_dim}is bound to ${no_ansi}${underline}${bind.maybe}${no_ansi}) && ${make} ${defname}.with.file/${bind.maybe} ;; \
 	esac
+${defname}.run=${make} ${defname}.run
 endif
 endef
 

@@ -1,0 +1,38 @@
+#!/usr/bin/env -S make -f
+# demos/j2-templating.mk: 
+#   Demonstrates templating in 
+#
+# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# USAGE: ./demos/j2-templating.mk
+
+include compose.mk
+
+define Dockerfile.jinjanator
+FROM python:3.11-slim-bookworm
+RUN pip install jinjanator --break-system-packages
+endef
+
+define hello_template.j2
+{% for i in range(3) %}
+hello {{name}}! ( {{loop.index}} )
+{% endfor %}
+endef
+
+define bye_template.j2
+bye {{name}}!
+endef
+
+# An "interpreter" for templates.
+# This renders the given template file using JSON on stdin.
+render/%: Dockerfile.build/jinjanator
+	cmd="--quiet -fjson ${*} /dev/stdin" \
+		${make} mk.docker/jinjanator,jinjanate
+
+# Import the template-block, binding the 
+# interpreter & creating `*.j2.run` targets
+$(eval $(call compose.import.codes, [.]j2, render))
+
+# Generates JSON with `jb`, then pushes it into the template renderer.
+__main__: 
+	${jb} name=foo | ${hello_template.j2.run}
+	${jb} name=foo | ${bye_template.j2.run}

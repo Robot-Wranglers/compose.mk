@@ -6,7 +6,6 @@
 # USAGE: ./demos/code-objects-2.mk
 
 include compose.mk
-.DEFAULT_GOAL := __main__
 
 # First we pick an image and interpreter for the language kernel.
 # Here, iex can work too, but there are minor differences.
@@ -28,7 +27,7 @@ print('hello world 2')
 endef
 
 # Import the code-block, creating additional target scaffolding for it.
-$(eval $(call compose.import.code, [.]py, python.interpreter))
+$(eval $(call compose.import.codes, [.]py, python.interpreter))
 
 # With the new target-scaffolding in place, now we can use it.
 # First we preview the code with syntax highlighting, 

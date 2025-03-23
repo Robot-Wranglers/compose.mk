@@ -8,15 +8,16 @@
 #
 
 include compose.mk
-.DEFAULT_GOAL := __main__
+
+# Top-level default entrypoint.
 __main__: \
   just_container.dispatch/self.just.demo \
   just.recipe just.another.recipe
 
 # No official container (https://github.com/casey/just/issues/1497), so we'll build one.
 # Just to keep the demo self-contained, we embed a docker-compose spec for a container
-# here, as well as the justfile that we'll use.  A bind-map or volume would be faster 
-# and more practical here, but we won't need it.
+# here, as well as the justfile that we'll use, copied from the official example. Note 
+# that a bind-map or volume would be faster and more practical here, but we won't need it
 define just.services
 configs:
   justfile:
@@ -54,9 +55,10 @@ self.just.version:; just --version
 self.just.demo: self.just.list self.just.version
 	just another-recipe
 	just
+self.just.dispatch/%:; just ${*}
 
 # By making a dispatch alias, 
-# you can "lift" the private target to a "public" one, 
+# you can "lift" a private target to a "public" one, 
 # i.e. something that is safe to run on the docker host.
 just.list: just_container.dispatch/self.just.list
 
@@ -66,7 +68,6 @@ just.list: just_container.dispatch/self.just.list
 # tool API, or an opinionated subset, or create an API superset at this layer that 
 # extends it.
 demo.bridge/%:; ${make} just_container.dispatch/self.just.dispatch/${*}
-self.just.dispatch/%:; just ${*}
 
 # Having setup the bridge, we can use it-- you can alias existing targets, 
 # or stack them up as prerequisite targets as usual, etc
@@ -79,5 +80,3 @@ just.another.recipe: demo.bridge/another-recipe
 # `io.selector` gadget, which just expects a "get choices" target a 
 # "use chosen" handler target, and we already have both.
 justfile.target.selector: io.selector/just.list,demo.bridge
-
-

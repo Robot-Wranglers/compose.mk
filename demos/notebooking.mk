@@ -13,7 +13,6 @@
 include compose.mk
 
 # Main entrypoint, just shows usage hints 
-.DEFAULT_GOAL := __main__
 __main__:
 	$(call log, ${red}Provide a target like 'lab.tui' or 'lab.pipeline' or use 'help' for help.)
 
