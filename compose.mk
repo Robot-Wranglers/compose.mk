@@ -260,9 +260,9 @@ define log.trace.loop.item
 endef
 # Logger suitable for action logging in 2 parts: <label> <action-result>
 # Call this to show the label
-log.stdout.part1=([ -z "$${quiet:-}" ] && (printf "${log.prefix.makelevel}`echo "$(or $(1),)"| ${stream.lstrip}`${no_ansi} ${no_ansi_dim}..${no_ansi}") || true )
+log.stdout.part1=([ -z "$${quiet:-}" ] && (printf "${log.prefix.makelevel} $(strip $(or $(1),)) ${no_ansi_dim}..${no_ansi}") || true )
 # Call this to show the result
-log.stdout.part2=([ -z "$${quiet:-}" ] && (printf "`echo "${no_ansi} $(strip $(or $(1),))" | ${stream.lstrip}`${no_ansi}\n")|| true)
+log.stdout.part2=([ -z "$${quiet:-}" ] && (printf "${no_ansi} $(strip $(or $(1),)) ${no_ansi}\n")|| true)
 
 log.part1=(${log.stdout.part1}>${stderr})
 log.part2=(${log.stdout.part2}>${stderr})
@@ -3451,6 +3451,7 @@ tux.mux/%:
 	@#
 	label='Reattaching TUI' ${make} io.print.div
 	$(trace_maybe) && tmux attach -t ${TUI_TMUX_SESSION_NAME}
+
 tux.mux.detach/%: 
 	@# Like 'tux.mux' except without default attachment.
 	@#
