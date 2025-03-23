@@ -2894,12 +2894,12 @@ flux.timer/%:
 	@# USAGE:
 	@#   ./compose.mk flux.timer/<target_to_run>
 	@#
-	start_time=$$(date +%s%N) \
+	start_time=$$(date +%s) \
 	&& ${make} ${*} \
-	&& end_time=$$(date +%s%N) \
+	&& end_time=$$(date +%s) \
 	&& time_diff_ns=$$((end_time - start_time)) \
 	&& delta=$$(awk -v ns="$$time_diff_ns" 'BEGIN {printf "%.9f", ns / 1000000000}') \
-	&& $(call log.noindent, ${GLYPH.FLUX} flux.timer ${sep} ${dim}$${label:-${*}} ${yellow}$${delta}s)
+	&& $(call log.flux, flux.timer ${sep} ${dim}$${label:-${*}} ${yellow}$${delta}s)
 
 flux.timeout/%:
 	@# Runs the given target for the given number of seconds, then stops it with TERM.
@@ -3349,7 +3349,7 @@ tux.open/%: tux.require
 	@#
 	orient=$${layout:-spiral} \
 	&& targets="${*}" \
-	&& count=`printf "$${targets},"|${stream.comma.to.nl}|wc -l` \
+	&& count=$(strip $(shell printf "$${targets},"|${stream.comma.to.nl}|wc -l)) \
 	&& $(call log.tux, tux.open ${sep} ${dim}layout=${bold}$${orient}${no_ansi_dim} pane_count=${bold}$${count}) \
 	&& $(call log.tux, tux.open ${sep} ${dim}targets=$${targets}) \
 	&& TUX_LAYOUT_CALLBACK=tux.layout.$${orient}/$${targets} ${make} tux.mux.count/$${count}
