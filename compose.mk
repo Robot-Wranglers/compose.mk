@@ -350,7 +350,8 @@ jb=${jb.docker}
 jq=${jq.run}
 yq=${yq.run}
 
-IMG_GUM?=v0.15.2
+# IMG_GUM?=v0.15.2
+IMG_GUM?=v0.16.0
 # IMG_GUM?=v0.9.0
 GLOW_VERSION?=v1.5.1
 GLOW_STYLE?=dracula
@@ -1114,7 +1115,9 @@ io.gum.run:=`which gum`
 io.get.choice=chosen=$$(${io.gum.run} choose --header="$${header:-Choose:}" $${choices})
 else 
 io.gum.run:=${io.gum.docker}
-io.get.choice=$(call io.mktemp) && ${io.script} "${io.gum.run} choose --header=\"$${header:-Choose:}\" _ $${choices}" $${tmpf} && chosen=`cat $${tmpf} |col |tail -n-3|head -1|awk -F"006l" '{print $$2}'`
+io.get.choice=$(call io.mktemp) \
+	&& ${io.script} "${io.gum.run} choose --header=\"$${header:-Choose:}\" _ $${choices}" $${tmpf} \
+	&& chosen=`cat $${tmpf} |col |tail -n-3|head -1|awk -F"006l" '{print $$2}'`
 endif
 io.gum=(which gum >/dev/null && ( ${1} ) \
 	|| (entrypoint=gum cmd="${1}" quiet=0 \
