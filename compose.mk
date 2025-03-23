@@ -348,8 +348,8 @@ jb=${jb.docker}
 jq=${jq.run}
 yq=${yq.run}
 
-# GUM_VERSION?=v0.15.2
-GUM_VERSION?=v0.9.0
+GUM_VERSION?=v0.15.2
+# GUM_VERSION?=v0.9.0
 GLOW_VERSION?=v1.5.1
 GLOW_STYLE?=dracula
 
@@ -1101,6 +1101,7 @@ io.file.select=header="Choose a file: (dir=$${dir:-.})"; choices=`ls $${dir:-.}/
 
 io.get.url=$(call io.mktemp) && curl -sL $${url} > $${tmpf}
 io.gum.docker=${trace_maybe} && docker run $$(if [ -t 0 ]; then echo "-it"; else echo "-i"; fi) -e TERM=$${TERM:-xterm} --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nCOPY --from=charmcli/gum:${GUM_VERSION} /usr/local/bin/gum /usr/local/bin/gum\nRUN apk add --update --no-cache bash\n")`
+
 ifeq ($(shell which gum >/dev/null 2> /dev/null && echo 1|| echo 0),1) 
 io.gum.run:=`which gum`
 #io.get.choice=chosen=$$(${io.gum.run} choose --header=\"$${header:-Choose:}\" $${choices})

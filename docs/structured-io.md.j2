@@ -32,6 +32,8 @@ val
 ```
 Wrapped top-level entrypoints are documented in more detail as part of [tool mode]({{mkdocs.site_relative_url}}/tool-overview/#proxy-wrappers).  
 
+-------------------------------
+
 Inside a project Makefile, we can always use direct calls to `compose.mk` as seen above, or recursive calls to `make`.  This is often good enough, but if arguments to these tools get complicated then quoting could get sketchy, or determining a path to `compose.mk` could be tricky, etc. 
 
 Luckily there are equivalent forms that are more idiomatic, still use local tools if available and fall back to docker if they are missing, and spawn fewer processes:
