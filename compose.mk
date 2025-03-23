@@ -1120,7 +1120,7 @@ else
 io.gum.run:=${io.gum.docker}
 io.get.choice=$(call io.script, ${io.gum.run} choose --header=\"$${header:-Choose:}\" _ $${choices}) \
 	&& filter="`echo $${choices}|sed 's/ /|/g'`" \
-	&& cat $${tmpf} | LC_ALL=C col -b | grep -E "$${filter}" | tail -n-3 | tail -n-1 | awk -F"006l" '{print $$2}' | head -1 > $${tmpf}.selected \
+	&& cat $${tmpf} | ${col_b} | grep -E "$${filter}" | tail -n-3 | tail -n-1 | awk -F"006l" '{print $$2}' | head -1 > $${tmpf}.selected \
 	&& mv $${tmpf}.selected $${tmpf} && chosen="`cat $${tmpf}`"
 endif
 io.gum=(which gum >/dev/null && ( ${1} ) \
@@ -1198,10 +1198,12 @@ io.gum.style/% io.draw.banner/%:
 # Note that this has to be macro for reasons related to ONESHELL.
 # You should chain commands with ' && ' to avoid early deletes
 ifeq (${OS_NAME},Darwin)
+col_b=LC_ALL=C col -b
 io.mktemp=export tmpf=$$(mktemp ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -f $${tmpf}" EXIT
 # Similar to io.mktemp, but returns a directory.
 io.mktempd=export tmpd=$$(mktemp -u ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
 else
+col_b=col
 io.mktemp=export tmpf=$$(TMPDIR=`pwd` mktemp ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -f $${tmpf}" EXIT
 # Similar to io.mktemp, but returns a directory.
 io.mktempd=export tmpd=$$(TMPDIR=`pwd` mktemp -d ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
