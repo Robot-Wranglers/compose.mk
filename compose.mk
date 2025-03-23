@@ -1616,7 +1616,7 @@ mk.docker/% mk.docker.image/%:; ${make} docker.image.run/compose.mk:${*}
 mk.docker=${make} mk.docker
 mk.docker:; ${mk.docker}/$${img}
 # mk.docker=${make} mk.docker.run
-# mk.docker.run.sh:; img="compose.mk:$${img}" ${make} docker.run.sh
+mk.docker.run.sh:; img="compose.mk:$${img}" ${make} docker.run.sh
 # 	@# Like docker.run.sh, but implicitly assumes the 'compose.mk:' prefix.
 
 mk.get/%:; $(info ${${*}})
