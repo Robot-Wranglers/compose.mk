@@ -177,6 +177,7 @@ export MAKE_CLI:=$(shell \
 	( cat /proc/$(strip $(shell ps -o ppid= -p $$$$ 2> /dev/null))/cmdline 2>/dev/null \
 		| tr '\0' ' ' ) ||echo '?')
 endif
+
 export MAKE_CLI_EXTRA=$(shell printf "${MAKE_CLI}"|awk -F' -- ' '{print $$2}')
 export MAKEFILE_LIST:=$(call strip,${MAKEFILE_LIST})
 export MAKE_FLAGS=$(shell [ `echo ${MAKEFLAGS} | cut -c1` = - ] && echo "${MAKEFLAGS}" || echo "-${MAKEFLAGS}")
@@ -1113,9 +1114,8 @@ io.gum.run:=`which gum`
 io.get.choice=chosen=$$(${io.gum.run} choose --header="$${header:-Choose:}" $${choices})
 else 
 io.gum.run:=${io.gum.docker}
-io.get.choice=$(call io.mktemp) && ${io.script.run} "${io.gum.run} choose --header=\"$${header:-Choose:}\" _ $${choices}" $${tmpf} && chosen=`cat $${tmpf} |col |tail -n-3|head -1|awk -F"006l" '{print $$2}'`
+io.get.choice=$(call io.mktemp) && ${io.script} "${io.gum.run} choose --header=\"$${header:-Choose:}\" _ $${choices}" $${tmpf} && chosen=`cat $${tmpf} |col |tail -n-3|head -1|awk -F"006l" '{print $$2}'`
 endif
-io.script.run=script -qefc --return --command
 io.gum=(which gum >/dev/null && ( ${1} ) \
 	|| (entrypoint=gum cmd="${1}" quiet=0 \
 		img=charmcli/${IMG_GUM} ${make} docker.run.sh)) > /dev/stderr
@@ -1353,10 +1353,11 @@ io.quiet.stderr.sh:
 
 ifeq (${OS_NAME},Darwin)
 # https://www.unix.com/man_page/osx/1/script/
-io.script=script-not-defined-yet
+io.script=script -q -r /dev/null sh ${dash_x_maybe} -c
 else 
 # https://www.unix.com/man_page/linux/1/script/
-io.script=script -qec "${1}"
+#io.script=script -qec "${1}"
+io.script=script -qefc --return --command 
 endif
 
 io.selector/%: 
