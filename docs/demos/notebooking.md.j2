@@ -160,6 +160,7 @@ $ ./demos/notebooking.mk lab.notebook.preview
 # Synchronize changes between .md and .ipynb notebooks
 $ ./demos/notebooking.mk lab.notebooks.normalize
 ```
+<br/>
 
 ### TUI Mode
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -190,7 +191,7 @@ And that's it.. now `./lab.pipeline` runs as you see above, pretty much anywhere
 
 This is the whole project bundled into an executable archive, so now it's not dependent on working-directories or git clones, and it's easy to distribute.  Initial execution pulls lots of containers, but those exist *outside* the archive and are naturally cached between runs.  And plus.. now you can more easily hide the whole involvement of a weird tool like `compose.mk` ;), and yet everyone can still easily unarchive the distribution again using `./lab.pipeline --noexec --keep --target lab.unarchived`.
 
-Packaging is very practical here considering the external dependencies *(`compose.mk` itself, plus the [notebooks](#appendix-notebooks), plus containers for [jupyter](appendix-main-jupyter-container) and [fmtk](#appendix-fmtk-containers))*, but again it will **not** package up 10gb of containerized stuff like lean+mathlib.  *(A feature, not a bug!)*
+Packaging is very practical here considering the external dependencies *(`compose.mk` itself, plus the [notebooks](#appendix-notebooks), plus containers for [jupyter](#appendix-main-jupyter-container) and [fmtk](#appendix-fmtk-containers))*, but again it will **not** package up 10gb of containerized stuff like lean+mathlib.  *(A feature, not a bug!)*
 
 So to be clear.. despite packaging and using versioned containers/libs/etc, there are plenty of ways that pipeline output is *still not reproducible* if wild changes happen upstream.  What packaging really aims to fix is the typical tedious "bootstrap instructions" that distinguish "projects" from ready-to-go-pipelines, and prevent your "prototypes" from automatically being reusable tools.
 

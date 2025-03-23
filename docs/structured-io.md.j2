@@ -60,9 +60,8 @@ Such targets work fine in [stand-alone mode]({{mkdocs.site_relative_url}}/tool-o
 
 As a really simple example, targets that have to deal with streams will begin with `cat /dev/stdin` to capture input and start a pipeline, but this can be rewritten as simply `${stream.stdin}` for readability.  
 
-This isn't exhaustive, but you can see the section below for a few more samples.
-
 ```Makefile
 {{open('demos/stdlib-stream-io.mk','r').read().strip()}}
 ```
-<br/>
+
+The above isn't exhaustive, but you can see the sections below for more samples.

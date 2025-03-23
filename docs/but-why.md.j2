@@ -205,7 +205,7 @@ Suggested rules of thumb are also easier to come by:
 
 * **What's a maximum length for foreign code?** Well, ~20-30 LOC is probably a reasonable goal for any discrete chunk of foreign code, because this is in line with typical suggestions for the maximum method/subroutine/function length.  
 * **How many distinct foreign code objects?**  Probably at least one, because if not then you might be writing *very complex shell script* and/or obscure and tricky `awk`, etc, which is exactly what `compose.mk` should help you to avoid!   If you need more than 3 foreign code blocks though, and they are all in the same language, maybe you should just be working directly in that language?
-* **How many distinct foreign languages?**  As many as it takes, but not too many, so maybe ask your friends first and just be cool about it.  Stay away from [brainfuck](https://esolangs.org/wiki/5D_Brainfuck_With_Multiverse_Time_Travel) in your build scripts but otherwise.. you know, have some fun and get weird with it as long as you're building something *discrete, small, and useful* that's actually worth any new docker-pull that's required.  
+* **How many distinct foreign languages?**  As many as it takes, but not too many, so maybe ask your friends first and just be cool about it.  Stay away from [brainfuck](https://esolangs.org/wiki/5D_Brainfuck_With_Multiverse_Time_Travel) in your build scripts but otherwise.. you know, have some fun and get weird with it as long as you're building something *discrete, small, and useful*, and getting something new that's actually worth any docker-pull that's required.
 
 A big part of the benefit of polyglots is that you can responsibly leverage a [language for gremlins](https://buttondown.com/hillelwayne/archive/raku-a--for-gremlins/) for that one thing that it's perfect at, or perform amazing feats of [matrix golf with APL](https://theburningmonk.com/2015/06/fear-and-loathing-with-apl/?ref=hn), or [import a little antigravity](https://xkcd.com/353/) into your .net shop.  In some cases, you'll find that judicious and tactical usage of different languages not only makes the impossible possible, [it makes the impossible easy](https://frinklang.org/fsp/colorize.fsp?f=sunplot.frink).
 
@@ -214,9 +214,16 @@ A big part of the benefit of polyglots is that you can responsibly leverage a [l
 
 Lots of people have been traumatized by Makefiles in the past, but using `make` can be painless, and writing it can be done responsibly.  As much as possible.. just avoid advanced features and treat it like a tabby superset of plain old shell script.  That's enough to immediately fix the option-parsing, entrypoints, and partial execution problems with shell that were mentioned earlier, plus adding DAG flows & orchestration, plus you still end up with something most people can read, write, and run.
 
-To the extent you really *need* advanced Makefile features like eval-call macros, well..  you probably don't, but what if you do?  First, come to terms with the fact that *this is practically guaranteed to be hideously difficult to read/write/reason about*, because that's almost inevitable for macros anywhere. ;) 
+To the extent you really *need* advanced Makefile features like eval-call macros, well..  you probably don't, but what if you do?  First, come to terms with the fact that *this is practically guaranteed to be hideously difficult to read/write/reason about*, because that's almost inevitable for macros anywhere!
 
 In rare cases though, macros are the only option and it's worth it; implementations of make-macros can be powerful, and if you choose interfaces well then they can eventually reach a place where they are maintenance-free.  The first trick to this is, macros are best understood by how they are used, and not by how they are implemented.  *If use-cases and usage are clear*, then implementation won't matter much as long it's stable and portable.  The other trick is that there is no trick: keep it small, separate things into external libraries, test your public interfaces extensively.. just like any other software.
+
+Bonus reference material:
+
+* https://clarkgrubb.com/makefile-style-guide
+* https://gist.github.com/rueycheng/42e355d1480fd7a33ee81c866c7fdf78
+* https://www.gnu.org/software/make/manual/html_node/Quick-Reference.html
+
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -226,9 +233,6 @@ In rare cases though, macros are the only option and it's worth it; implementati
 [^4]: [make vs just](https://github.com/casey/just?tab=readme-ov-file#what-are-the-idiosyncrasies-of-make-that-just-avoids)
 
 {#
-# https://clarkgrubb.com/makefile-style-guide
-# https://gist.github.com/rueycheng/42e355d1480fd7a33ee81c866c7fdf78
-# https://www.gnu.org/software/make/manual/html_node/Quick-Reference.html
 
 ## Pragma for Developers
 <hr style="width:100%;border-bottom:3px solid black;">
