@@ -217,7 +217,7 @@ log.prefix.makelevel.glyph=${dim}$(call GLYPH.NUM, ${MAKELEVEL})${no_ansi}
 log.prefix.makelevel.indent=
 log.prefix.makelevel=${log.prefix.makelevel.glyph} ${log.prefix.makelevel.indent}
 log.prefix.loop.inner=${log.prefix.makelevel}${bold}${dim_green}${GLYPH.tree_item}${no_ansi}
-log.stdout=printf "${log.prefix.makelevel} `echo "$(strip $(or $(1),))"| ${stream.lstrip}`${no_ansi}\n"
+log.stdout=printf "${log.prefix.makelevel} $(strip $(if $(filter undefined,$(origin 1)),...,$(1))) ${no_ansi}\n"
 log=([ "$(shell echo $${quiet:-0})" == "1" ] || ( ${log.stdout} >${stderr} ))
 log.noindent=(printf "${log.prefix.makelevel.glyph} `echo "$(or $(1),)"| ${stream.lstrip}`${no_ansi}\n" >${stderr})
 log.fmt=( ${log} && (printf "${2}" | fmt -w 55 | ${stream.indent} | ${stream.indent} | ${stream.indent.to.stderr} ) )
@@ -430,7 +430,7 @@ compose.get.stem/%:
 	@#
 	basename -s .yml `basename -s .yaml ${*}`
 
-compose.kernel:
+mk.kernel:
 	@# Executes the input data on stdin as a kind of "script" that runs inside the current make-context.
 	@# This basically allows you to treat targets as an instruction-set without any kind of 'make ... ' preamble.
 	@#
@@ -2286,8 +2286,8 @@ flux.do.when/%:
 	@#    ./compose.mk flux.do.when/<umbrella>,<raining>
 	@#
 	$(trace_maybe) \
-	&& _then="printf "${*}" | cut -s -d, -f1" \
-	&& _if="printf "${*}" | cut -s -d, -f2-" \
+	&& _then="`printf "${*}" | cut -s -d, -f1`" \
+	&& _if="`printf "${*}" | cut -s -d, -f2-`" \
 	&& ${make} flux.if.then/$${_if},$${_then}
 
 flux.do.unless/%:
@@ -2373,7 +2373,7 @@ flux.finally/% flux.always/%:
 
 flux.help:; ${make} mk.namespace.filter/flux.
 	@# Lists only the targets available under the 'flux' namespace.
-
+bold.underline=${bold}${underline}
 flux.if.then/%:
 	@# Runs the 2nd given target iff the 1st one is successful.
 	@#
@@ -2390,17 +2390,19 @@ flux.if.then/%:
 	$(trace_maybe) \
 	&& _if=`printf "${*}"|cut -s -d, -f1` \
 	&& _then=`printf "${*}"|cut -s -d, -f2-` \
-	&& header="${GLYPH.FLUX} flux.if.then ${sep}${dim}" \
-	&& $(call log.part1, $${header} if//${ital}$${_if}${no_ansi} ) \
+	&& $(call log.part1, ${GLYPH.FLUX} flux.${bold.underline}if${no_ansi}${dim_green}.then ${sep}${dim} ${ital}$${_if}${no_ansi} ) \
 	&& case $${verbose:-0} in \
 		0) ${make} $${_if} 2>/dev/null; st=$$?; ;; \
 		*) ${make} $${_if}; st=$$?; ;; \
 	esac \
 	&& case $${st} in \
 		0) ($(call log.part2, ${dim_green}true${no_ansi_dim}) \
-			; $(call log, $${header} then//${dim_cyan}$${_then}); ${make} $${_then}); ;; \
+			; $(call log, ${GLYPH.FLUX} flux.if.${bold.underline}then${no_ansi} ${sep} ${dim_ital}$${_then} ${cyan_flow_right}); ${make} $${_then}); ;; \
 		*) $(call log.part2, ${yellow}false${no_ansi_dim}); ;; \
 	esac
+
+flux.stream.obliviate/%:; ${make} ${*} 2>/dev/null > /dev/null
+	@# Runs the given target, consigning all output to oblivion
 
 flux.if.then.else/%:
 	@# Standard if/then/else control flow, for make targets.

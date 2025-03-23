@@ -1,8 +1,8 @@
 {% import 'macros.j2' as macros -%}
 
-**Meet compose.mk, a tool / library /framework for makefile-based automation, scripting, and lightweight orchestration.**  Native support for docker, docker-compose, workflow primitives, TUI elements, and more.  
+**Meet compose.mk, a tool / library /framework for makefile-based automation, scripting, and lightweight orchestration.**  Support for docker, docker-compose, workflow primitives, TUI elements, and more.  
 
-Other superpowers include the ability to incorporate foreign tools and foreign code as first-class objects, which offers some unique capabilities for quickly assembling console applications, systems prototyping, and component-oriented design experiments in general.
+Typical use-cases might include **general project automation**, especially decoupling your CI/CD from different kinds of platform lock-in.  Other superpowers include the ability to **quickly incorporate foreign tools and foreign code** as first-class objects, which provides some unique and powerful capabilities for things like *quickly assembling console applications*, *systems prototyping*, and *component-oriented design experiments in general*.  Definitely [not the makefiles of your ancestors](#not-the-makefiles-of-your-ancestors).
 
 {{macros.img_link("docker.commander.gif", mkdocs, "90%")}}
 
@@ -36,11 +36,11 @@ As another improvement over classical `make`, note that help not only *works,* i
 
 #}
 
-Capabilities like [interactivity]({{mkdocs.site_relative_url}}/selector), [online help]({{mkdocs.site_relative_url}}/cli-help), and [working with TUIs](({{mkdocs.site_relative_url}}/embedded-tui)) all show a major break with traditional use-cases for `make` and create some attention-grabbing demos.  But things like dashboarding and console application development are only a few of the places where `compose.mk` shines, and <strong>average use-cases will probably look more like automation</strong>.  Related super powers include things like [glue code]({{mkdocs.site_relative_url}}/demos/notebooking), [tool factories]({{mkdocs.site_relative_url}}/demos/custom-automation-apis), & [tool wrappers]({{mkdocs.site_relative_url}}/demos/just).
+Capabilities like [interactivity]({{mkdocs.site_relative_url}}/selector), [online help]({{mkdocs.site_relative_url}}/cli-help), and [working with TUIs](({{mkdocs.site_relative_url}}/embedded-tui)) all show a major break with traditional use-cases for `make` and create some attention-grabbing demos.  But things like dashboarding and console application development are only a few of the places where `compose.mk` shines, and <strong>average use-cases will probably look more like automation</strong>, and it's well suited to things like [glue code]({{mkdocs.site_relative_url}}/demos/notebooking), [tool factories]({{mkdocs.site_relative_url}}/demos/custom-automation-apis), & [tool wrappers]({{mkdocs.site_relative_url}}/demos/just).
 
 -------------------------------
 
-There's a lot of hate for `make` (especially for "creative" usage of it!), but you'll quickly find that these are not the Makefile's of your ancestors.  While `compose.mk` remains completely backwards compatible with classic `make`, it also *extends it, generalizes it, and adds brand new kinds of idioms and patterns*.
+There's a lot of hate for `make` (especially for "creative" usage of it!), but you'll quickly find that `compose.mk` is [a different kind of animal]({{mkdocs.site_relative_url}}/matrioshka).  While `compose.mk` remains completely backwards compatible with classic `make`, it also *extends it, generalizes it, and adds new kinds of idioms and patterns*.
 
 Taken together, the native facilities for [working with containers]({{mkdocs.site_relative_url}}/bridge) and [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) actually suggest that `compose.mk` is  best thought of as a **new kind of meta-language** that makes it easier to [aggressively]({{mkdocs.site_relative_url}}/advanced-tuis/#understanding-widgets) [reuse]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/#hijacking-ansible) [existing]({{mkdocs.site_relative_url}}//demos/just/) [tools,]({{mkdocs.site_relative_url}}/demos/polyglots) and to think of them [in terms of ensembles]({{mkdocs.site_relative_url}}/demos/notebooking).  If you're interested in that sort of thing and prefer your overviews to focus more on theory, patterns, and paradigms.. the [matrioshka automata docs]({{mkdocs.site_relative_url}}/matrioshka) serve as an alternate landing page.
 
