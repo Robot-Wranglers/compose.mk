@@ -1104,7 +1104,10 @@ io.figlet:
 	echo "figlet -f$${font:-3d} $${label}" | ${make} tux.shell.pipe >/dev/stderr
 
 # docker run $(if [ -t 0 ]; then echo "-it"; else echo "-i"; fi) my-image:latest
-io.file.select=header="Choose a file: (dir=$${dir:-.})"; choices=`ls $${dir:-.}/$${pattern:-} | ${stream.nl.to.space}` && ${io.get.choice}
+io.file.select=header="Choose a file: (dir=$${dir:-.})"; \
+	choices="`ls $${dir:-.}/$${pattern:-} | ${stream.nl.to.space}`" \
+	&& $(call log.io,io.file.select ${sep} $${dir:-.} ${sep} $${choices}) \
+	&& ${io.get.choice} 
 
 io.get.url=$(call io.mktemp) && curl -sL $${url} > $${tmpf}
 io.gum.docker=${trace_maybe} && docker run $$(if [ -t 0 ]; then echo "-it"; else echo "-i"; fi) -e TERM=$${TERM:-xterm} --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nCOPY --from=charmcli/gum:${IMG_GUM} /usr/local/bin/gum /usr/local/bin/gum\nRUN apk add --update --no-cache bash\n")`
@@ -1115,9 +1118,10 @@ io.gum.run:=`which gum`
 io.get.choice=chosen=$$(${io.gum.run} choose --header="$${header:-Choose:}" $${choices})
 else 
 io.gum.run:=${io.gum.docker}
-io.get.choice=$(call io.mktemp) \
-	&& ${io.script} "${io.gum.run} choose --header=\"$${header:-Choose:}\" _ $${choices}" $${tmpf} \
-	&& chosen=`cat $${tmpf} |col |tail -n-3|head -1|awk -F"006l" '{print $$2}'`
+io.get.choice=$(call io.script, ${io.gum.run} choose --header=\"$${header:-Choose:}\" _ $${choices}) \
+	&& filter="`echo $${choices}|sed 's/ /|/g'`" \
+	&& cat $${tmpf} | LC_ALL=C col -b | grep -E "$${filter}" | tail -n-3 | tail -n-1 | awk -F"006l" '{print $$2}' | head -1 > $${tmpf}.selected \
+	&& mv $${tmpf}.selected $${tmpf} && chosen="`cat $${tmpf}`"
 endif
 io.gum=(which gum >/dev/null && ( ${1} ) \
 	|| (entrypoint=gum cmd="${1}" quiet=0 \
@@ -1356,11 +1360,11 @@ io.quiet.stderr.sh:
 
 ifeq (${OS_NAME},Darwin)
 # https://www.unix.com/man_page/osx/1/script/
-io.script=script -q -r /dev/null sh ${dash_x_maybe} -c
+io.script=$(call io.mktemp) && script -q -r $${tmpf} sh ${dash_x_maybe} -c "${1}"
 else 
 # https://www.unix.com/man_page/linux/1/script/
 #io.script=script -qec "${1}"
-io.script=script -qefc --return --command 
+io.script=$(call io.mktemp) && script -qefc --return --command "${1}" $${tmpf}
 endif
 
 io.selector/%: 
@@ -1371,7 +1375,12 @@ io.selector/%:
 	@#   ./compose.mk io.selector/<choice_generator>,<choice_handler>
 	@#
 	$(call io.selector, $(shell echo ${*}|cut -d, -f1),$(shell echo ${*}|cut -d, -f2-))
+# io.selector=choices=`${make} ${1} | ${stream.nl.to.space}` && ${io.get.choice} && ${make} ${2}/$${chosen}
 io.selector=choices=`${make} ${1} | ${stream.nl.to.space}` && ${io.get.choice} && ${make} ${2}/$${chosen}
+io.selector=choices=`${make} ${1} | ${stream.nl.to.space}` && ${io.get.choice} 
+# io.selector=choices=`${make} ${1} | ${stream.nl.to.space}` && cat .tmpf | LC_ALL=C col -b | tail -n-3 | grep -E \"`echo $${choices}|sed 's/ /|/g'`\" | head -1 | awk -F"006l" '{print $$2}' `"
+
+# && chosen="`cat $${tmpf} | LC_ALL=C col -b | tail -n-3 | grep -E \"`echo $${choices}|sed 's/ /|/g'`\" | head -1 | awk -F"006l" '{print $$2}' `" \
 
 io.stack/%:; $(call io.stack, ${*})
 	@# Returns all the data in the named stack-file 
@@ -1884,7 +1893,7 @@ flux.select.file/%:
 	@#   pattern='*.mk' dir=demos/ ./compose.mk flux.select.file/mk.select
 	@#
 	${trace_maybe} \
-	&& $(call log.trace, ${GLYPH_IO} ${@}) \
+	&& $(call log.io, ${GLYPH_IO} ${@}) \
 	&& export selector=io.file.select \
 	&& export dir="$${dir:-.}" && export target="${*}" \
 	&& $(call log.trace, choice from ${dim_ital}$${dir} ${yellow}->${no_ansi_dim} target=${dim_cyan}$${target}) \
@@ -1895,7 +1904,7 @@ flux.select.and.dispatch:
 	@# USAGE: 
 	@#   pattern='*.mk' dir=demos/ ./compose.mk flux.select.and.dispatch
 	@#
-	$(call log.trace, $${selector} ${sep} $${target}) \
+	$(call log.flux, $${selector} ${sep} $${target}) \
 	&& script="${make} $${target}/\$${chosen}" \
 	${make} flux.eval.symbol/$${selector}
 
