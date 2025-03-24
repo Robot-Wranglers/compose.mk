@@ -473,7 +473,7 @@ compose.loadf: tux.require
 	&& ( \
 			$(call log.part1, $${header} ${dim}Validating services) \
 			&& validation=`$${tmpf} $${stem}.services` \
-			&& count=`printf "$${validation}"|${wc_w}` \
+			&& count=`printf "$${validation}"|${stream.count.words}` \
 			&& validation=`printf "$${validation}" \
 				| xargs | fmt -w 60 \
 				| ${stream.indent} | ${stream.indent}` \
@@ -1030,7 +1030,7 @@ docker.stat:
 		| ${make} stream.json.object.append key=version \
 			val="`docker --version | sed 's/Docker " //' | cut -d, -f1|cut -d' ' -f3`" \
 		| ${make} stream.json.object.append key=container_count \
-			val="`docker ps --format json| ${jq.run} '.Names'|wc -l`" \
+			val="`docker ps --format json| ${jq.run} '.Names'|${stream.count.lines}`" \
 		| ${make} stream.json.object.append key=socket \
 			val="`cat $${tmpf} | ${jq.run} -r .Endpoints.docker.Host`" \
 		| ${make} stream.json.object.append key=context_name \
@@ -1060,7 +1060,7 @@ docker.stop.all:
 	@#   ./compose.mk docker.stop name=my-container timeout=99
 	@#
 	ids=`docker ps -q | tr '\n' ' '` \
-	&& count=`printf "$${ids:-}" | ${wc_w}` \
+	&& count=`printf "$${ids:-}" | ${stream.count.words}` \
 	&& $(call log.docker, docker.stop.all ${sep} ${dim}(${dim_green}$${count}${no_ansi_dim} containers total)) \
 	&& [ -z "$${ids}" ] && true || (set -x && docker stop -t $${timeout:-1} $${ids})
 
@@ -1530,7 +1530,7 @@ mk.__main__:
 	@# We need this for use with the supervisor because 
 	@# usage of `mk.supervisor.enter/<pid>` is ALWAYS present,
 	@# and that overrides default that would run with an empty CLI.
-	case `echo ${MAKEFILE_LIST}|${wc_w}` in \
+	case `echo ${MAKEFILE_LIST}|${stream.count.words}` in \
 		1) case `echo ${MAKEFILE_LIST}|xargs basename` in \
 				compose.mk) (\
 					$(call log.trace,empty invocation for compose.mk-- returning help) \
@@ -1721,7 +1721,7 @@ mk.help.search/%:
 	$(call io.mktemp) \
 	&& ${make} mk.parse.targets/${MAKEFILE} | grep "^${*}" \
 	| sed 's/\/%/\/<arg>/g' > $${tmpf} \
-	&& count="`cat $${tmpf}|wc -l`" \
+	&& count="`cat $${tmpf}|${stream.count.lines}`" \
 	&& max=5 \
 	&& case $${count} in \
 		1) exit 0; ;; \
@@ -1805,7 +1805,7 @@ mk.namespace.list help.namespaces:
 	@# Pipe-friendly; stdout is newline-delimited target prefixes.
 	@#
 	tmp="`$(call _help_gen) | cut -d. -f1 |cut -d/ -f1 | uniq | grep -v ^all$$`" \
-	&& count=`printf "$${tmp}"| wc -l` \
+	&& count=`printf "$${tmp}"| ${stream.count.lines}` \
 	&& $(call log, ${no_ansi}${GLYPH_MK} help.namespaces ${sep} ${dim}count=${no_ansi}$${count} ) \
 	&& printf "$${tmp}\n" \
 	&& $(call log, ${no_ansi}${GLYPH_MK} help.namespaces ${sep} ${dim}count=${no_ansi}$${count} )
@@ -2011,7 +2011,7 @@ mk.self: docker.from.def/makeself
 	&& $(call io.mktempd) \
 	&& cp -rf $${archive} $${tmpd} \
 	; archive_dir=$${tmpd} \
-	&& file_count=`find $${archive_dir}|wc -l` \
+	&& file_count=`find $${archive_dir}|${stream.count.lines}` \
 	&& $(call log, $${header} Total files: ${no_ansi}$${file_count}) \
 	&& $(call log, $${header} Entrypoint: ${no_ansi}$${script}) \
 	&& cmd="--noprogress --quiet --nomd5 --nox11 --notemp $${archive_dir} $${bin} \"$${label:-archive}\" $${script} $${script_args:-}" \
@@ -2161,7 +2161,7 @@ mk.targets.filter.parametric/%:
 	pattern="`printf ${*}|sed 's/\./[.]/g'`" \
 	&& ([ "$${quiet:-0}" == 1 ] && $(call log.part1, ${GLYPH_IO} mk.targets.filter.parametric ${sep} matching \'$${pattern}\') || true) \
 	&& targets="`${make} mk.targets.parametric | grep "^$${pattern}" || true`" \
-	&& count=`printf "$${targets}"|wc -l` \
+	&& count=`printf "$${targets}"|${stream.count.lines}` \
 	&& ([ "$${quiet:-0}" == 1 ] && $(call log.part2, ${yellow}$${count}${no_ansi_dim} total) || true ) \
 	&& printf "$${targets}"
 
@@ -2697,7 +2697,7 @@ flux.sh.tee:
 	&& cmd="${stream.stdin} | tee $${src} " \
 	&& $(call log.flux, $${header} (${no_ansi}${bold}$$(echo $${cmds} \
 		| grep -o ',' \
-		| wc -l | sed 's/ //g')${no_ansi_dim} components)) \
+		| ${stream.count.lines} | sed 's/ //g')${no_ansi_dim} components)) \
 	&& $(call log.flux, ${no_ansi_dim}${GLYPH.FLUX} ${no_ansi_dim}flux.sh.tee${no_ansi} ${sep} ${no_ansi_dim}$${cmd}) \
 	&& eval $${cmd} | cat
 
@@ -2867,7 +2867,7 @@ flux.star/% flux.match/%:
 	@#   make -f project.mk flux.star/test.
 	@# 
 	matches="`${make} mk.namespace.filter/${*}|${stream.nl.to.space}`" \
-	&& count=`printf "$${matches}"|${wc_w}` \
+	&& count=`printf "$${matches}"|${stream.count.words}` \
 	&& $(call log.target, ${bold}$${count}${no_ansi_dim} matches for pattern ${dim_cyan}${*}) \
 	&& printf "$${matches}" | ${stream.fold} | sed 's/ /, /g' | ${stream.dim.indent.stderr} \
 	&& printf "$${matches}" | ${make} flux.each/flux.apply
@@ -2983,6 +2983,10 @@ flux.try.except.finally/%:
 ##   * `[1]:` [Main API](https://robot-wranglers.github.io/compose.mk/docs/api#api-stream)
 ##   * `[2]:` [Docs for jb](https://github.com/h4l/json.bash)
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+# WARNING: without the tr, osx `wc -w` injects tabbed junk at the beginning of the result!
+stream.count.words=wc -w|tr -d '[:space:]'
+stream.count.lines=wc -l|tr -d '[:space:]'
 
 stream.stderr.iff.failed=2> >(stderr=$$(cat); exit_code=$$?; if [ $$exit_code -ne 0 ]; then echo "$$stderr" >&2; fi; exit $$exit_code)
 stream.as.log=${stream.dim.indent.stderr}
@@ -3329,7 +3333,7 @@ tux.require: ${CMK_COMPOSE_FILE} compose.validate.quiet/${CMK_COMPOSE_FILE}
 		&& (local_images=`${docker.images} | xargs` \
 			&& $(call log.trace.fmt, $${header} ${dim}local-images ${sep}, ${dim}$${local_images}) \
 			&& items=`printf "${TUI_SVC_BUILD_ORDER}" | ${stream.comma.to.space}` \
-			&& count=`printf "$${items}"|${wc_w}` \
+			&& count=`printf "$${items}"|${stream.count.words}` \
 			&& $(call log.trace.loop.top, $${header} ${yellow}$${count}${no_ansi_dim} items) \
 			&& for item in $${items}; do \
 				($(call log.trace.loop.item, ${dim}$${item}) \
@@ -3339,7 +3343,7 @@ tux.require: ${CMK_COMPOSE_FILE} compose.validate.quiet/${CMK_COMPOSE_FILE}
 			); done \
 			&& exit 0 ) \
 		)
-wc_w=wc -w|tr -d '[:space:]'
+
 tux.open/%: tux.require
 	@# Opens the given comma-separated targets in tmux panes.
 	@# This requires at least two targets, and defaults to a spiral layout.
@@ -3349,7 +3353,7 @@ tux.open/%: tux.require
 	@#
 	orient=$${layout:-spiral} \
 	&& targets="${*}" \
-	&& count="`printf "$${targets},"|${stream.comma.to.space}|${wc_w}`" \
+	&& count="`printf "$${targets},"|${stream.comma.to.space}|${stream.count.words}`" \
 	&& $(call log.tux, tux.open ${sep} ${dim}layout=${bold}$${orient}${no_ansi_dim} pane_count=${bold}$${count}) \
 	&& $(call log.tux, tux.open ${sep} ${dim}targets=$${targets}) \
 	&& TUX_LAYOUT_CALLBACK=tux.layout.$${orient}/$${targets} ${make} tux.mux.count/$${count}
@@ -4624,11 +4628,11 @@ help:
 		"") export key=`echo "$${MAKE_CLI#* help}"|awk '{$$1=$$1;print}'` ;; \
 		*) export key="$${search}" ;;\
 	esac \
-	&& count=`echo "$${key}" |${wc_w}` \
+	&& count=`echo "$${key}" |${stream.count.words}` \
 	&& header="${GLYPH.DOCKER} help ${sep}" \
 	&& case $${count} in \
 		0) ( $(call _help_gen) > $${tmpf} \
-			&& count=`cat $${tmpf}|wc -l` && count="${yellow}$${count}${dim} items" \
+			&& count=`cat $${tmpf}|${stream.count.lines}` && count="${yellow}$${count}${dim} items" \
 			&& cat $${tmpf} \
 			&& $(call log.docker, help ${sep} ${dim}Answered help for: ${no_ansi}${bold}top-level ${sep} $${count}) \
 			&& $(call log.docker, help ${sep} ${dim}Use ${no_ansi}help <topic>${no_ansi_dim} for more specific target / module help.) \
