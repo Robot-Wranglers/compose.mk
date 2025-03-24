@@ -473,7 +473,7 @@ compose.loadf: tux.require
 	&& ( \
 			$(call log.part1, $${header} ${dim}Validating services) \
 			&& validation=`$${tmpf} $${stem}.services` \
-			&& count=`printf "$${validation}"|wc -w` \
+			&& count=`printf "$${validation}"|${wc_w}` \
 			&& validation=`printf "$${validation}" \
 				| xargs | fmt -w 60 \
 				| ${stream.indent} | ${stream.indent}` \
@@ -1060,7 +1060,7 @@ docker.stop.all:
 	@#   ./compose.mk docker.stop name=my-container timeout=99
 	@#
 	ids=`docker ps -q | tr '\n' ' '` \
-	&& count=`printf "$${ids:-}" | wc -w` \
+	&& count=`printf "$${ids:-}" | ${wc_w}` \
 	&& $(call log.docker, docker.stop.all ${sep} ${dim}(${dim_green}$${count}${no_ansi_dim} containers total)) \
 	&& [ -z "$${ids}" ] && true || (set -x && docker stop -t $${timeout:-1} $${ids})
 
@@ -1530,7 +1530,7 @@ mk.__main__:
 	@# We need this for use with the supervisor because 
 	@# usage of `mk.supervisor.enter/<pid>` is ALWAYS present,
 	@# and that overrides default that would run with an empty CLI.
-	case `echo ${MAKEFILE_LIST}|wc -w` in \
+	case `echo ${MAKEFILE_LIST}|${wc_w}` in \
 		1) case `echo ${MAKEFILE_LIST}|xargs basename` in \
 				compose.mk) (\
 					$(call log.trace,empty invocation for compose.mk-- returning help) \
@@ -2867,7 +2867,7 @@ flux.star/% flux.match/%:
 	@#   make -f project.mk flux.star/test.
 	@# 
 	matches="`${make} mk.namespace.filter/${*}|${stream.nl.to.space}`" \
-	&& count=`printf "$${matches}"|wc -w` \
+	&& count=`printf "$${matches}"|${wc_w}` \
 	&& $(call log.target, ${bold}$${count}${no_ansi_dim} matches for pattern ${dim_cyan}${*}) \
 	&& printf "$${matches}" | ${stream.fold} | sed 's/ /, /g' | ${stream.dim.indent.stderr} \
 	&& printf "$${matches}" | ${make} flux.each/flux.apply
@@ -3266,7 +3266,7 @@ export TUI_COMPOSE_FILE?=${CMK_COMPOSE_FILE}
 export TUI_SVC_NAME?=tux
 export TUI_INIT_CALLBACK?=.tux.init
 
-export TUI_TMUX_SOCKET?=/workspace/tmux.sock
+export TUI_TMUX_SOCKET?=/socket/dir/tmux.sock
 export TMUX:=${TUI_TMUX_SOCKET}
 export TUI_TMUX_SESSION_NAME?=tui
 export _TUI_TMUXP_PROFILE_DATA_ = $(value _TUI_TMUXP_PROFILE)
@@ -3329,7 +3329,7 @@ tux.require: ${CMK_COMPOSE_FILE} compose.validate.quiet/${CMK_COMPOSE_FILE}
 		&& (local_images=`${docker.images} | xargs` \
 			&& $(call log.trace.fmt, $${header} ${dim}local-images ${sep}, ${dim}$${local_images}) \
 			&& items=`printf "${TUI_SVC_BUILD_ORDER}" | ${stream.comma.to.space}` \
-			&& count=`printf "$${items}"|wc -w` \
+			&& count=`printf "$${items}"|${wc_w}` \
 			&& $(call log.trace.loop.top, $${header} ${yellow}$${count}${no_ansi_dim} items) \
 			&& for item in $${items}; do \
 				($(call log.trace.loop.item, ${dim}$${item}) \
@@ -3339,7 +3339,7 @@ tux.require: ${CMK_COMPOSE_FILE} compose.validate.quiet/${CMK_COMPOSE_FILE}
 			); done \
 			&& exit 0 ) \
 		)
-
+wc_w=wc -w|tr -d '[:space:]'
 tux.open/%: tux.require
 	@# Opens the given comma-separated targets in tmux panes.
 	@# This requires at least two targets, and defaults to a spiral layout.
@@ -3349,7 +3349,7 @@ tux.open/%: tux.require
 	@#
 	orient=$${layout:-spiral} \
 	&& targets="${*}" \
-	&& count=$(strip $(shell printf "$${targets},"|${stream.comma.to.nl}|wc -l)) \
+	&& count="`printf "$${targets},"|${stream.comma.to.space}|${wc_w}`" \
 	&& $(call log.tux, tux.open ${sep} ${dim}layout=${bold}$${orient}${no_ansi_dim} pane_count=${bold}$${count}) \
 	&& $(call log.tux, tux.open ${sep} ${dim}targets=$${targets}) \
 	&& TUX_LAYOUT_CALLBACK=tux.layout.$${orient}/$${targets} ${make} tux.mux.count/$${count}
@@ -3609,16 +3609,18 @@ tux.shell.pipe: tux.require
 	@#
 	$(call log.tux, ${@} ${sep} ${dim}Initializing TUI)
 	$(trace_maybe) \
-	&& ${make} .tux.init.panes .tux.init.bind_keys .tux.theme || exit 1
+	&& ${make} .tux.init.panes .tux.init.bind_keys .tux.theme || exit 16
+	$(call log.tux, ${@} ${sep} ${dim}Setting pane labels ${TMUX})
 	tmux set -g pane-border-style fg=green \
 	&& tmux set -g pane-active-border-style "bg=black fg=lightgreen" \
 	&& index=0 \
-	&& cat .tmp.tmuxp.yml | yq -r .windows[].panes[].name \
+	&& cat .tmp.tmuxp.yml | yq -r .windows[].panes[].name | ${stream.peek} \
 	| while read item; do \
-		tmux select-pane -t $${index} -T " ┅ $${item} " \
+		$(call log.tux, ${@} ${sep} ${dim}Setting pane labels ${TMUX} $${item})\
+		; tmux select-pane -t $${index} -T " ┅ $${item} " \
 		; ((index++)); \
-	done
-	tmux set -g pane-border-format "#{pane_index} #{pane_title}"
+	done || $(call log.tux, ${@} ${sep} ${red}failed setting pane labels)
+	tmux set -g pane-border-format "#{pane_index} #{pane_title}" || $(call log.tux, ${@} ${sep} ${red}failed setting pane labels)
 	$(call log.tux, ${@} ${sep} ${dim}Done initializing TUI)
 .tux.init.bind_keys:
 	@# Private helper for .tux.init.
@@ -3666,7 +3668,7 @@ tux.shell.pipe: tux.require
 	&& ${trace_maybe} && tmux set -g base-index 0 \
 	&& tmux setw -g pane-base-index 0 \
 	&& tmux set -g pane-border-status top \
-	&& ${make} .tux.pane.focus/0 || true
+	&& ${make} .tux.pane.focus/0 || $(call log.tux, ${@} ${sep}${dim} ${red}Failed initializing panes)
 
 .tux.init.buttons:
 	@# Generates tmux-script that configures the buttons for "New Pane" and "Exit".
@@ -3704,16 +3706,18 @@ endef
 	@#
 	$(call log.tux, ${@} ${sep} ${dim}Initializing theme)
 	setter="tmux set -goq" \
-	&& $${setter} @powerline-color-main-1 colour2 \
-	&& $${setter} @powerline-color-main-2 colour2 \
-	&& $${setter} @powerline-color-main-3 colour65 \
-	&& $${setter} @powerline-color-black-1 colour233 \
-	&& $${setter} @powerline-color-grey-1 colour233 \
-	&& $${setter} @powerline-color-grey-2 colour235 \
-	&& $${setter} @powerline-color-grey-3 colour238 \
-	&& $${setter} @powerline-color-grey-4 colour240 \
-	&& $${setter} @powerline-color-grey-5 colour243 \
-	&& $${setter} @powerline-color-grey-6 colour245
+	&& ($${setter} @powerline-color-main-1 colour2 \
+		&& $${setter} @powerline-color-main-2 colour2 \
+		&& $${setter} @powerline-color-main-3 colour65 \
+		&& $${setter} @powerline-color-black-1 colour233 \
+		&& $${setter} @powerline-color-grey-1 colour233 \
+		&& $${setter} @powerline-color-grey-2 colour235 \
+		&& $${setter} @powerline-color-grey-3 colour238 \
+		&& $${setter} @powerline-color-grey-4 colour240 \
+		&& $${setter} @powerline-color-grey-5 colour243 \
+		&& $${setter} @powerline-color-grey-6 colour245 \
+		&& $(call log.tux, ${green} theme ok)) \
+	|| $(call log.tux, ${red} theme failed)
 
 .tux.layout.vertical:; tmux select-layout even-horizontal
 	@# Alias for the vertical layout.
@@ -3978,7 +3982,10 @@ define FILE.TUX_COMPOSE
 # you can build on this container by using 'FROM compose.mk:tux'
 # and then adding your own stuff.
 #
+volumes:
+  socket_data:  # Define the named volume
 services:
+
   dind_base: &dind_base
     tty: true
     build:
@@ -4019,6 +4026,8 @@ services:
       # Share the working directory with containers.
       # Overrides are allowed for the workspace, which is occasionally useful with DIND
       - ${workspace:-${PWD}}:/workspace
+      - socket_data:/socket/dir  # This is a volume mount
+
       - "${KUBECONFIG:-~/.kube/config}:/home/${DOCKER_UGNAME:-root}/.kube/config"
     environment: &tux_environment
       DOCKER_UID: ${DOCKER_UID:-1000}
@@ -4028,7 +4037,7 @@ services:
       TERM: ${TERM:-xterm-256color}
       CMK_DIND: "1"
       KUBECONFIG: /home/${DOCKER_UGNAME:-root}/.kube/config
-      TMUX: "${TUI_TMUX_SOCKET:-/workspace/tmux.sock}"
+      TMUX: "${TUI_TMUX_SOCKET:-/socket/dir/tmux.sock}"
     image: 'compose.mk:tux'
     build:
       tags: ['compose.mk:tux']
@@ -4615,7 +4624,7 @@ help:
 		"") export key=`echo "$${MAKE_CLI#* help}"|awk '{$$1=$$1;print}'` ;; \
 		*) export key="$${search}" ;;\
 	esac \
-	&& count=`echo "$${key}" |wc -w` \
+	&& count=`echo "$${key}" |${wc_w}` \
 	&& header="${GLYPH.DOCKER} help ${sep}" \
 	&& case $${count} in \
 		0) ( $(call _help_gen) > $${tmpf} \
