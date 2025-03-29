@@ -4,7 +4,6 @@
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #   USAGE: ./demos/stdlib-stream-io.mk
 
-.DEFAULT_GOAL := demo.streams 
 include compose.mk 
 
 __main__:

@@ -17,15 +17,14 @@ Most use-cases for stand-alone mode will fall into one of these categories:
 1. **Using wrapped versions of common tools,** so that more tools are available quickly and safely from more environments without adding more dependencies.  For example, `./compose.mk jq` defaults to using local executable if one is available, and falls back to a dockerized version of the tool otherwise. See the [tool wrappers section](#tool-wrappers) of this page for a more complete manifest.
 1. **Interactive-selection for make-targets or compose-containers,** basically a "runner" interface.  See the separate documentation & demos [here]({{mkdocs.site_relative_url}}/selector).
 1. **Loading compose files just-in-time.** Separate [documentation here]({{mkdocs.site_relative_url}}/loadf), but briefly.. this gives access to all of [the scaffolded targets]({{mkdocs.site_relative_url}}/bridge/#dynamic-api), and if no downstream targets are given, the default behaviouir is to open interactive shells for each tool container in a TUI.
+1. **General bash kung-fu,** which might help clean up other scripts or can be used interactively, because in many cases using `compose.mk` idioms are easier to read and write.  This isn't well documented yet, but for some hints see [these examples]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-stream-types-pipes) and refer to the [full target API]({{mkdocs.site_relative_url}}/api).
 
 ----------------
 
 {#Additionally, one of the major benefits of using `make` over plain bash scripting is that details for CLI entrypoints are handled automatically.  In fact, *make-targets always do double-duty as CLI entrypoints and as reusable tasks*, or in other words, **the "internal API" is automatically published as a CLI interface.**  
 
 Because of this basic duality, even the documentation for "programmatic" usage of `compose.mk` as a library tends to introduce or demonstrate concepts by using tool-mode first.  Even if you're not interested in `compose.mk` as a library for scripting.. the [library docs]({{mkdocs.site_relative_url}}/standard-lib) and the [full API ]({{mkdocs.site_relative_url}}/api) both have many examples that are relevant for stand-alone mode.  Just search for `./compose.mk` to find them.
-#}
 
-{#
 and the {{macros.api_link('compose.select',mkdocs)}} and {{macros.api_link('mk.select',mkdocs) }} targets
 1. **Cleaning up gnarly bash.**  In certain cases using `compose.mk` idioms can be easier to read and write.  For example, if your scripts are littered with `docker run ..` invocations, you might look at some of the [raw docker support]({{mkdocs.site_relative_url}}/raw-docker) for alternatives.  Tools available as part of [the standard library]({{mkdocs.site_relative_url}}/standard-lib) for logging, stream previews, and workflows also might be useful.
 
@@ -84,7 +83,6 @@ Under the hood, invocations for proxy-wrappers begin with an actual make-target,
 Proxy-wrappers are very useful for simple stuff, but the wrapped tools `jq`, `yq`, and `jb` all have big surface area with a lot of edge-cases for optional arguments, loading files, with or without pipes.  **If your use-case involves lots of flags or nested quotes or something, *maybe don't assume that the wrapped invocation is 1:1 with the original tool*.**  There's only so much that can be done here for the standalone-mode for `compose.mk`, but note that [library-style usage is more flexible]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics).
 
 #### Other Wrappers 
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Setting aside the big 3 tools that use [proxy-wrappers](#proxy-wrappers), other wrappers are simpler because `compose.mk` gets tactical and won't even try to expose a 1:1 interface.  Sometimes we accept arguments, but mostly we just pass data on pipes.  
@@ -99,7 +97,7 @@ You can see a few examples below, but this isn't an exhuastive list.  See also t
 
 Many of these targets are also available as macros, and might have more documentation available as part of the [library overview]({{mkdocs.site_relative_url}}/standard-lib).  All targets are documented in [the full API]({{mkdocs.site_relative_url}}/api).  
 
-For stuff related to `tmux`, see the separate [documentation for the embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui).  For a demo involving `chafa`, see [this workflow example]({{mkdocs.site_relative_url}}/standard-lib/#workflow-example-etl) or the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).  Many demos use `jq` and `jb`, but see especially the [documentation for stages]({{mkdocs.site_relative_url}}/stages).
+For stuff related to `tmux`, see the separate [documentation for the embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui).  For a demo involving `chafa`, see [this workflow example]({{mkdocs.site_relative_url}}/standard-lib/#workflow-example-etl) or the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).  Many demos use `jq` and `jb`, but see especially the documentation for [structured IO](/compose.mk/standard-lib#structured-io) and the [documentation for stages]({{mkdocs.site_relative_url}}/stages).
 
 
 <hr style="width:100%;border-bottom:3px solid black;">

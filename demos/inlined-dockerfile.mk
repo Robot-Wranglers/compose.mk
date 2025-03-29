@@ -5,7 +5,6 @@
 #
 #   USAGE: ./demos/inlined-dockerfile.mk
 include compose.mk
-.DEFAULT_GOAL := __main__
 
 # Entrypoint.  Ensures the container is built, then runs all the tests.
 __main__: Dockerfile.build/demo_dockerfile flux.star/test
