@@ -66,7 +66,7 @@ make: *** [compose.mk:1677: flux.fail] Error 1
 
 Above, `flux.ok` and `flux.fail` are just make-targets that exit with success and failure.  These are roughly equivalent to `true` and `false` in bash, so obviously there are no arguments (*aka nullary*).  You can think of `flux.ok` and `flux.fail` as placeholder targets for ones that you'll provide yourself.  
 
-For demonstration purposes, it's also useful to introduce `flux.echo` which accepts one argument. 
+Another target that's useful for testing is `flux.echo`, which accepts one argument. 
 
 ```bash
 # Introducing the `flux.echo` target:
@@ -74,8 +74,7 @@ $ ./compose.mk flux.echo/BANG
 
 BANG
 ```
-
----------------------------
+<br/>
 
 ##### **Dispatch:**
 
@@ -120,6 +119,19 @@ You can perform similar tests for other flow-control, like `./compose.mk flux.if
 
 -----------------------------
 
+{#
+##### **Parallelism & Retries:**
+
+Introducing {{macros.api_link('flux.each',mkdocs,arg='target')}} using `flux.echo`:
+
+```bash 
+$ printf 'one\ntwo' | ./compose.mk flux.each/flux.echo
+
+one
+two
+```
+#}
+
 ##### **Iteration, Pipelining, & Looping:**
 
 Introducing {{macros.api_link('flux.each',mkdocs,arg='target')}} using `flux.echo`:
@@ -130,6 +142,8 @@ $ printf 'one\ntwo' | ./compose.mk flux.each/flux.echo
 one
 two
 ```
+
+---------------------
 
 Introducing {{macros.api_link('flux.and',mkdocs,arg='t1>,<t2>,..<tn')}} and {{macros.api_link('flux.or',mkdocs,arg='t1>,<t2>,..<tn')}}:
 
@@ -145,6 +159,8 @@ $ ./compose.mk flux.or/flux.fail,flux.ok
 make[1]: *** [compose.mk:2131: flux.fail] Error 1
 Φ   flux.ok //  succeeding as requested!
 ```
+
+---------------------
 
 Introducing {{macros.api_link('flux.loop.until',mkdocs,arg='test_target')}}:
 
@@ -165,6 +181,6 @@ What's covered on this page isn't exhaustive, see also the [full API]({{mkdocs.s
 
 For more fleshed-out examples using workflows, see also:
 
-* [miniature ETL demo]({{mkdocs.site_relative_url}}/demos/workflows) 
-* [the platform lifecycle demo]({{mkdocs.site_relative_url}}/demos/platform)
+* [Miniature ETL demo]({{mkdocs.site_relative_url}}/demos/workflows) 
+* [Platform lifecycle demo]({{mkdocs.site_relative_url}}/demos/platform)
 

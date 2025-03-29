@@ -6,10 +6,10 @@
 #
 # This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 # See also: http://robot-wranglers.github.io/compose.mk/demos/platform
-# USAGE: ./demos/platform.mk platform.setup
+# USAGE: ./demos/platform.mk
 
 include compose.mk
-.DEFAULT_GOAL := platform.setup
+.DEFAULT_GOAL := platform.setup.basic
 
 # Import the platform compose file.
 # This generates target-scaffolding for terraform and ansible, 
@@ -22,7 +22,7 @@ $(eval $(call compose.import, demos/data/docker-compose.platform.yml, ▰))
 #   3. Both tasks emit JSON events (simulating terraform state output, etc)
 
 # Map targets to containers.  A public, top-level target. 
-platform.setup: ▰/terraform/self.infra.setup ▰/ansible/self.app.setup
+platform.setup.basic: ▰/terraform/self.infra.setup ▰/ansible/self.app.setup
 
 # Simulate the setup tasks for app and infrastructure.
 # Note usage of `jb` to emit JSON, and `self.` prefix to hint 

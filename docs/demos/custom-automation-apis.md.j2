@@ -75,15 +75,12 @@ And importing something like `cluster.purge` is what we were really aiming at or
 
 **Where this really gets interesting is larger projects.**  Suppose for example that your `cluster.create` operation is using a terraform container, and you work at a place that mostly writes golang code.  Whereas using `ansible` previously wasn't a good *cultural fit*, once you strip away the detail and expose an interface as we've seen here, it doesn't feel like as much of a commitment to a whole ecosystem, and that makes it easier to combine tools.  
 
-Although `Makefile` isn't anyone's favorite programming language, notice how the hypothetical `cluster.purge` target above is very effective at reducing friction for new contributions.  Ignoring the *implementation* and focusing on the custom automation API that we're exposing.. we're talking about one line or so in one file now, and it's reasonably accessible to devops, engineers, and data-science. If you're looking at just the `cluster.purge` operation, then you might say the list of topics that are safe to ignore now includes *yaml, python, pip, docker*, and might even include ansible/kubernetes!
+Although `Makefile` isn't anyone's favorite programming language, notice how the hypothetical `cluster.purge` target above is very effective at reducing friction for new contributions.  Ignoring the *implementation* and focusing on the custom automation API that we're exposing.. we're talking about one line or so in one file now, and it's reasonably accessible to devops, engineers, and data-science. If you're looking at just the `cluster.purge` operation, then you might say the list of topics that are safe to ignore now includes *yaml, python, pip, docker*, and arguably even includes ansible/kubernetes.
 
-Really, `compose.mk` is a foundation to build on, and it doesn't make assumptions about your domain.  But combining `compose.mk` with your own toolkit and **building** a new vocabulary is where it really starts to shine.  
+Really, `compose.mk` is a foundation to build on, and it doesn't make assumptions about your domain.  But combining `compose.mk` with your own toolkit and building a *new* vocabulary is where it really starts to shine.  
 
-Again, if you want to see a similar demo with different base technology, you can see a smaller bridge-building project like this [in the justfile demo]({{mkdocs.site_relative_url}}/demos/just), or a larger bridge-building project with jupyter in [the notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).
+Again, if you want to see a similar demo with different base technology, you can another bridge-building project like this [in the justfile demo]({{mkdocs.site_relative_url}}/demos/just), or a larger bridge-building project with jupyter in [the notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).
 
-For a deeper dive into a much larger example of this kind where `compose.mk` is used for orchestrating kubernetes tools, see the [sibling project at k8s-tools.git]({{jinja.vars.k8stools_docs_url}}).  (Among other things, it actually ships with the ansible tooling we've built here.)  See also the [packaging demo]({{mkdocs.site_relative_url}}/demos/packaging), which "compiles" or "bundles" this demo into a frozen release / stand-alone tool.
+For a deeper dive into a much larger example of this kind where `compose.mk` is used for orchestrating kubernetes tools, see a preview of the [sibling project at k8s-tools.git]({{jinja.vars.k8stools_docs_url}}).  (Among other things, it actually ships with the ansible tooling we've built here.)  See also the [packaging demo]({{mkdocs.site_relative_url}}/demos/packaging), which bundles this demo into a frozen release / stand-alone tool.
 
 <hr style="width:100%;border-bottom:3px solid black;">
-
-{#
-#}

@@ -1,18 +1,20 @@
 #!/usr/bin/env -S make -f
 # demos/no-include.mk: 
-#   A very basic demo that *doesnt* include compose.mk.  
-#   This is mostly used for testing parsing and reflection utilities
-.DEFAULT_GOAL := all 
+#   A very basic demo that *doesnt* include compose.mk.
+#   This is mostly used for testing parsing & reflection utilities,etc
+#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+.DEFAULT_GOAL := __main__ 
 
-all: clean build test
+__main__: clean build test
 
 clean:
 	@# Just a fake clean target. 
 	echo cleaning 
 
-# Just a fake `build` target 
-build:; echo building 
+build: 
+	@# Just a fake build target.
+	echo building
 
-# Just a fake `test` target.
 test:
+	@# Just a fake test target. 
 	echo testing

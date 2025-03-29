@@ -1,109 +1,33 @@
 {% import 'macros.j2' as macros -%}
 
-
-{#
-<hr style="width:100%;border-bottom:3px solid black;">
-<center>
-# Matrioshka Automata
-</center>
-<hr style="width:100%;border-bottom:3px solid black;">
-{{macros.img_link("mat.png", mkdocs, "25%",align="left")}}
-{{macros.img_link("mat.png", mkdocs, "13%",align="left")}}
-#}
-
-
 ## Matrioshka Automata
 <hr style="width:100%;border-bottom:3px solid black;">
 
-You might already be aware that `compose.mk` offers a [standard library for working with `make`]({{mkdocs.site_relative_url}}/standard-lib), a sort of stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview), and [a TUI framework]({{mkdocs.site_relative_url}}/embedded-tui), but now you've reached the page that will finally reveal the shocking secret truth. It was all an elaborate scam to setup this one big reveal: 
-
-<center>
-**compose.mk is actually a programming language!** 😮
-</center>
-
-More to the point though, compose.mk is a [matrioshka language](https://esolangs.org/wiki/Matrioshka_language), and maybe the **first one that's actually intended to be useful**.
+The [language overview page]({{mkdocs.site_relative_url}}/language) discusses how `compose.mk` is secretly a programming language, even though it's perfectly fine to think of it terms of [a library]({{mkdocs.site_relative_url}}/standard-lib) or [a tool]({{mkdocs.site_relative_url}}/tool-overview).  More to the point though.. compose.mk is a matrioshka language, and maybe the *first one that's actually intended to be useful*.
 
 --------------
 
 Matrioshka language
-:  Matrioshka languages can be identified by their program forms, which will have multiple, distinct 'phases' with different syntactic and semantic rules. There are often two phases; the first gives a set of rules, and the second provides objects on which those rules are to be applied.
+:  Matrioshka languages can be identified by their program forms, which will have multiple, distinct 'phases' with different syntactic and semantic rules. There are often two phases; the first gives a set of rules, and the second provides objects on which those rules are to be applied. *[--esolangs wiki](https://esolangs.org/wiki/Matrioshka_language)*
 
 --------------
 
-For `compose.mk`, the "objects" are containers and/or [foreign code]({{mkdocs.site_relative_url}}/demos/polyglots#foreign-code-as-first-class) and the "rules" are tasks and task-groupings.  First-class support for these as primitives turns out to be especially useful for things like [wrappers]({{mkdocs.site_relative_url}}/tool-overview#tool-wrappers), [tool-factories]({{mkdocs.site_relative_url}}/demos/ansible), and even [app-factories]({{mkdocs.site_relative_url}}/advanced-tuis) as seen in the rest of the site documentation.
+For `compose.mk`, the "objects" are containers or container specs that might be inlined or external, and/or [foreign code]({{mkdocs.site_relative_url}}/demos/polyglots#foreign-code-as-first-class).  The "rules" are tasks or task-groups.  First-class support for these as primitives turns out to be especially useful for things like [wrappers]({{mkdocs.site_relative_url}}/tool-overview#tool-wrappers), [tool-factories]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/#map-ansible-modules-to-targets), and even [app-factories]({{mkdocs.site_relative_url}}/advanced-tuis) as seen in the rest of the site documentation.
 
-This page covers idioms and patterns for matrioshka-dolling, but it **also serves as an alternate to the [main landing page]({{mkdocs.site_relative_url}}/overview)** for people who prefer their overviews to focus less on applications and more on **theory, architecture, and patterns**.  If you want to take in a few simple and concrete matrioshka demos before you continue reading, [see instead this index of demos]({{mkdocs.site_relative_url}}/demos/matrioshka).
-
-### Language Overview
-<hr style="width:100%;border-bottom:3px solid black;">
-
-You can skip directly to [specifics about the matrioshka idiom](#matrioshka-idiom-basics), but it's a good time to revisit what `compose.mk` is all about from this new perspective.  **As a language,** you could say that compose.mk has the following properties:
-
-* Inherits macros, declarative style, and basic [DAGs](https://en.wikipedia.org/wiki/Directed_acyclic_graph) from `make`
-* Inherits [tacit programming](https://en.wikipedia.org/wiki/Tacit_programming) from the unix shell
-* Supports [reflective programming](https://en.wikipedia.org/wiki/Reflective_programming) via e.g. [mk.*]({{mkdocs.site_relative_url}}/standard-lib/#reflection), {{macros.api_link('flux.star',mkdocs, arg='pattern')}}
-* Supports [extensible programming](https://en.wikipedia.org/wiki/Extensible_programming)
-    * via container support generally, but also 
-    * via [dynamically assigning syntax]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch)
-* Supports [functional style](https://en.wikipedia.org/wiki/Functional_programming) and [data flow programming](https://en.wikipedia.org/wiki/Dataflow_programming) via [flux]({{mkdocs.site_relative_url}}/api#api-flux)
-* Inclines towards [concatenative style](https://en.wikipedia.org/wiki/Concatenative_programming_language) and [stack oriented programming](https://en.wikipedia.org/wiki/Stack-oriented_programming)
-    * partly via default `make` target execution semantics
-    * partly via [compose.mk stage-stacks]({{mkdocs.site_relative_url}}/stage)
-* Inclines towards [data flow programming](https://en.wikipedia.org/wiki/Dataflow_programming) via [flux workflows]({{mkdocs.site_relative_url}}/demos/workflows), [etc]({{mkdocs.site_relative_url}}/demos/platform)
-* Supports [structured data]({{mkdocs.site_relative_url}}/standard-lib#structured-io) and makes [extensive use of streams]({{mkdocs.site_relative_url}}/standard-lib)
-* Supports *some* OOP implicitly, 
-    * via container layers, or via [yaml inheritance in composefiles](#)
-    * via make-includes, via target-chaining, via [syntax conventions for target names](#), etc
-
-Further, you could say that `compose.mk` is an interpretted language that is implemented *in* `make`, but in some sense it also runs *on* `make` by hijacking it as a kind of [gadget](https://en.wikipedia.org/wiki/Gadget_(computer_science)).  And despite the fact that it's interpretted, [compose.mk's support for packaging artifacts]({{mkdocs.site_relative_url}}/demos/package) combines well with the sheer ubiquity of `make`, effectively allowing us to **release frozen artifacts** in a way that is similar to compilation.
-
-### Homoiconic??
-<hr style="width:100%;border-bottom:3px solid black;">
-
-We'll go into why it matters in further detail later, but for now let's introduce a somewhat surprising fact: `compose.mk` is designed to be [homoiconic](https://en.wikipedia.org/wiki/Homoiconicity) on `make` targets, at the same time as it generalizes what targets can *be*.  Thus among other things, a `compose.mk` target can:
-
-1. Execute directly (default behaviour for `make`)
-1. Group other tasks into DAGs (default behaviour for `make`)
-1. Serve as a *handle* for a container's default entrypoint (via [`compose.import`]({{mkdocs.site_relative_url}}/bridge))
-1. Execute inside of containers (via [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch))
-1. Execute later, conditionally, or repeatedly etc (via [flux]({{mkdocs.site_relative_url}}/standard-lib#workflow-support))
-1. Describe data-flow and/or control-flow across other tasks (again via [flux]({{mkdocs.site_relative_url}}/standard-lib#workflow-support))
-1. Execute arbitrary tasks in foreign languages (via [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots))
-
-As a simple example of "targets all the way down" consider this:
-
-* {{macros.api_link('flux.wrap',mkdocs,arg='targets')}} is a n-ary target that accepts nullary targets as arguments.
-* Meanwhile {{macros.api_link('flux.ok',mkdocs)}} is a nullary target.
-* But invocation, like say `flux.wrap/flux.ok,flux.ok`, is itself also a (nullary) target.
-
-By the way, since the claim is that the above example is a "program" in a "language" though, it's worth pointing out that there are many ways to execute it beyond say, sticking it in a Makefile as a target-prerequisite.  The following are all equivalent, but the last example demonstrates what you can think of as the `compose.mk` interpreter.
-
-```bash 
-# program as target
-$ make -f compose.mk flux.wrap/flux.ok,flux.ok
-
-# program as subcommand
-$ ./compose.mk flux.wrap/flux.ok,flux.ok
-
-# program as code
-$ echo flux.wrap/flux.ok,flux.ok | ./compose.mk compose.kernel
-```
+This page is about identifying a through-line for the various more concrete work elsewhere, and you'll probably appreciate that if you prefer overviews that focus less on applications and more on **theory, architecture, and patterns**. If you want to take in a few simple and concrete matrioshka demos before you continue reading, [see instead this index of demos]({{mkdocs.site_relative_url}}/demos/matrioshka).
 
 ### Matrioshka Idiom Basics
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Having established the general properties of `compose.mk` as a language, we're in a better position to discuss the matrioshka-specific features.  
-
-{#
-Whether or not you agree that `compose.mk` is a language, it is at least a useful *perspective*, and having established that perspective, we're in a better position to discuss the matrioshka-specific features.  
-#}
 Typically matrioshkas in `compose.mk` use a variation on the working definition from earlier, and they have the following structure:
 
-1. **First phase:** declares a set of runtimes (image tags, container definitions inlined or external, etc) 
-1. **Second phase:** describes tasks (make targets)
+1. **First phase:** declares a set of runtimes *(image tags, container definitions inlined or external, etc)*
+1. **Second phase:** implement some tasks *(make targets)*
 1. **Third phase:** maps tasks and/or task-groups onto runtimes
 
-Using basic [container dispatch idioms]({{mkdocs.site_relative_url}}/container-dispatch) with external files is *matrioshka-like*, and almost all of [the polyglot demos]({{mkdocs.site_relative_url}}/demos/polyglots) are very simple matrioshkas that define (or just mention) a runtime & execute foreign languages there. 
+Sometimes the second phase is optional and we skip straight to phase 3. *(For an example of that, see the declarative style for [low-config TUIs]({{mkdocs.site_relative_url}}/low-config-tuis) with no need for target bodies.)*
+
+Using basic [container dispatch idioms]({{mkdocs.site_relative_url}}/container-dispatch) with external files is *matrioshka-like*, and almost all of [the polyglot demos]({{mkdocs.site_relative_url}}/demos/polyglots) are very simple matrioshkas that define (or just mention) a runtime & execute foreign code there. 
 
 More involved matrioshkas usually have [inlined containers or data]({{mkdocs.site_relative_url}}/demos/matrioshka), and they come in a few distinct categories that all have individual demos:
 
@@ -115,13 +39,13 @@ More involved matrioshkas usually have [inlined containers or data]({{mkdocs.sit
 ### Has Science Gone Too Far?
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Of course, any place you can use embedded stuff with `compose.mk` is just a special case, and nothing prevents you from using an external file.  But a determined individual can make a mess of anything, so it's probably worth pointing out that there are several reasons for matrioshka-dolling that aren't totally insane.
+Of course, any place you can use embedded stuff with `compose.mk` is a special case, and nothing prevents you from using an external file.  But a determined individual can make a mess of anything, so it's probably worth pointing out that there are reasons for matrioshka-dolling that aren't totally insane.
 
 {{macros.img_link("mad-science.png", mkdocs, "90%")}}
 
 Here's a few arguments that suggest matrioshka-dolling has some legitimate use-cases:
 
-* Sometimes having nested containers or data is just a way of keeping demos or prototypes *tight and small*, because being self-contained is the most legible or instructive.  Related, this is actually a pretty good format for a bug report / minimum reproducible example for some complex systems.
+* Sometimes having nested containers or data is just a way of keeping demos or prototypes *tight and small*, because being self-contained is the most legible or instructive.  On a related note, this is actually a pretty good format for a bug report / minimum reproducible example for some complex systems.
 * Since tool containers tend to be small and change infrequently, being self-contained reduces change-related friction that you usually get with external files, external repositories, and external registries.
 * Being self-contained is also at least *correlated* with other nice things like *stability and reproducibility*.
 
@@ -142,17 +66,17 @@ The previous section on [idiom basics](#matrioshka-idiom-basics) links several d
 
 Both of these demos are instances of a general pattern that goes like this:
 
-1. **Describe a foreign toolchain**, using matrioshka-doll style if necessary.
+1. **Describe a foreign toolchain.**  *(e.g. image tags, container definitions inlined or external, etc)*
 1. **Drill a tiny hole through the matrioshka layers**, exposing or "lifting" something useful by abstracting away the fact that the task actually happens in a container.
 1. **Better yet, lift something useful *that is parametric*** and then you have a *bridge*.
 1. **Combine bridges at the level of `compose.mk`** to easily express ideas across systems.
 1. **Compose bridges or groups of bridges**, using `flux` for workflows, `tux` for TUIs, etc.
 
-**If you don't need to combine systems, you can actually stop after step 3,** and you have something like a "tool factory", where you can wrap the interface of something else and potentially change it. Summarizing the [ansible demo]({{mkdocs.site_relative_url}}/demos/ansible), we lifted ansible's whole [adhoc feature](https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html) up out of the container, making it available to the host that doesn't have ansible.  We also changed/exposed the interface, insisting on JSON, providing aliased entrypoints for common use-cases, etc.  By using [compose.mk's support for packaging/compilation]({{mkdocs.site_relative_url}}/demos/package) it's even more obvious that you can spin off this whole effort as a stand-alone tool, or several tools.  *This is an example of using the matrioshka-bridge pattern to create a tool factory*.  Since this example exposes ansible's full module collection.. one might even call it a *tool-factory factory* ;)
+**If you don't need to combine systems, you can actually stop after step 3,** and you have something like a "tool factory", where you can wrap the interface of something else and potentially change it. Summarizing the [ansible demo]({{mkdocs.site_relative_url}}/demos/ansible), we lifted ansible's whole [adhoc feature](https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html) up out of the container, making it available to the host that doesn't have Ansible.  We also exposed and actually changed the default interface, insisting on JSON, providing aliased entrypoints for common use-cases, etc.  By using [compose.mk's support for packaging/compilation]({{mkdocs.site_relative_url}}/demos/package) it's even more obvious that you can spin off this whole effort as a stand-alone tool, or several tools.  *This is an example of using the matrioshka-bridge pattern to create a tool factory*.
 
-**By the time you get to step 4, the possibilities for composition are surprisingly powerful, expressive, and flexible**, in large part because the [homoiconicity](#homoiconic) we discussed earlier starts to pay off.  Summarizing [the justfile demo]({{mkdocs.site_relative_url}}/demos/just), embedding a justfile is incidental since we could easily work with an external one, but again the interesting part again is a bridge across layers.  We lift part of the `just` interface, then besides changing/exposing that interface, we actually wrap it and compose our way to new functionality.  As a result.. we end up with an interactive task selector in just one line.
+**By the time you get to step 4, the possibilities for composition are surprisingly powerful, expressive, and flexible**, in large part because the [homoiconicity](#homoiconic) we discussed earlier starts to pay off.  Summarizing [the justfile demo]({{mkdocs.site_relative_url}}/demos/just), embedding a justfile is incidental since we could easily work with an external one, but again the interesting part again is a bridge across layers.  We lift part of the `just` interface, then besides changing/exposing that interface, we actually wrapped it and compose our way to new functionality.  As a result.. we end up with an interactive task selector in just one line.
 
-**Step 5 is where the real magic happens,** and the demos mentioned so far are just hints.  Demonstrating the potential for this seriously under realistic circumstances starts to want more tools and larger use-cases.. which is a challenge for brief examples.  See the [platforming demo for a sketch]({{mkdocs.site_relative_url}}/demos/platform), or take a look at the *(under construction!)* sibling project [k8s-tools.git]({{jinja.vars.k8stools_docs_url}}) which uses `compose.mk` to *actually* automates cluster-lifecycles using more complex orchestration across a bigger toolbox.
+**Step 5 is where the real magic happens,** and the demos mentioned so far are just hints.  Demonstrating the potential for this seriously under realistic circumstances starts to want more tools and larger use-cases.. which is a challenge for brief examples.  See the [platforming demo for a sketch]({{mkdocs.site_relative_url}}/demos/platform), or the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).  See also a preview of the *(under construction!)* sister project [k8s-tools.git]({{jinja.vars.k8stools_docs_url}}) which uses `compose.mk` to automate cluster-lifecycles using more complex orchestration across a bigger toolbox.
 
 ### Advanced Matrioshka Idioms 
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -167,11 +91,11 @@ The answer is *yes!*, because besides better options for structuring code and at
 
 -------------------------------
 
-As one example, [stage stacks]({{mkdocs.site_relative_url}}/stages) actually allow targets to represent operations on shared datastructures, and this is one one way to accomplish message-passing across matrioshka layers.
+As one example, [stage stacks]({{mkdocs.site_relative_url}}/stages) allow targets to represent operations on shared datastructures, and this is one one way to accomplish message-passing across matrioshka layers.
 
 Since `compose.mk` tool-container invocations [default to volume-mounts for the working directory and the docker socket automatically]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults), things like [structured io]({{mkdocs.site_relative_url}}/standard-lib#structured-io) can work reliably anywhere.  One consequence of this is a kind of "late binding" style, where basically you don't necessarily have to think much about whether tasks run on the host, or run on containers.
 
-As an *extreme example* of "fluency" across matrioshka layers, check out the [makeception demo]({{mkdocs.site_relative_url}}/demos/makeception), where we use `compose.mk` to embed 2 container definitions and to build and steer them, and shows some practical usage of [stage stacks]({{mkdocs.site_relative_url}}/stages).  What's really unusual about this example though, is that even *the build process* itself is encapsulated inside the same file, and rather than jamming bash in the Dockerfile, provisioning tasks are expressed as normal targets and executed as usual.
+As a pretty extreme example of "fluency" across matrioshka layers, check out the [makeception demo]({{mkdocs.site_relative_url}}/demos/makeception), where we use `compose.mk` to embed 2 container definitions and to build and steer them, and shows some practical usage of [stage stacks]({{mkdocs.site_relative_url}}/stages).  What's really unusual about this example though, is that even *the build process* itself is encapsulated inside the same file: rather than jamming bash in the Dockerfile, provisioning tasks are expressed as normal targets and executed as usual.
 
 For an advanced example in service of a more conventional use-case, you might want to take a look at the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking), which uses 3 different containers (a formal-methods toolkit) to augment the behaviour of a 4th container (a jupyter lab server).
 
@@ -201,8 +125,6 @@ The rest of this page is dedicated to general discussion of matrioshka design an
 
 [^1]: https://en.wikipedia.org/wiki/Here_document
 [^2]: Like say, https://github.com/gabrieldemarmiesse/python-on-whales
-
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Wait for MkDocs to fully render the page including ToC

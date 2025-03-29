@@ -1,0 +1,22 @@
+# See also: https://docs.github.com/en/actions
+name: CMK Transpiler Demos
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch: {}
+  workflow_call: {}
+  push:
+    branches: [ "main" ]
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
+  pull_request:
+    branches: [ "main" ]
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
+permissions:
+  contents: read
+jobs:
+  test:
+    name: CMK Demos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run CMK Demos
+        run: make clean init demos/cmk

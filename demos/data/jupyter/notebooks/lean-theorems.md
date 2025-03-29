@@ -17,7 +17,7 @@ jupyter:
     pygments_lexer: lean
 ---
 
-## A Lean 4 Theorem
+## Demo: Lean Theorems
 
 ----------
 
@@ -25,8 +25,8 @@ Law of the excluded middle in lean4.
 
 See also:
 
-  * [classical reasoning](https://leanprover-community.github.io/logic_and_proof/classical_reasoning.html)
-  * [propositions and proofs](https://lean-lang.org/theorem_proving_in_lean4/propositions_and_proofs.html)
+  * [Classical reasoning](https://leanprover-community.github.io/logic_and_proof/classical_reasoning.html)
+  * [Propositions and proofs](https://lean-lang.org/theorem_proving_in_lean4/propositions_and_proofs.html)
 
 *Note: success is quiet here*
 

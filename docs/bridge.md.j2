@@ -272,7 +272,7 @@ Here's a variation that configures [syntactic sugar for dispatch namespaces]({{m
 include compose.mk
 $(eval $(call compose.import, path/to/docker-compose.yml, my_namespace))
 ```
-
+<br/>
 
 #### **Namespace Only**
 ----------------------
@@ -285,7 +285,7 @@ To configure a user-provided dispatch namespace and **not** import targets to th
 include compose.mk
 $(eval $(call compose.import.as, my_namespace, path/to/docker-compose.yml))
 ```
-
+<br/>
 
 #### **Multiple Compose Files**
 ----------------------
@@ -370,7 +370,7 @@ At first glance, maybe you're thinking this looks like lots of magic to save a l
 
 Even without dispatch though, native support for containers as primitives is useful, especially when you start to use **actions on those containers as prerequisite tasks**.  So far we've seen that scaffolded targets effectively create an API over tool containers, but what's not emphasized yet is just how composable that API really is.
 
-If you're unconvinced on this point, you might want to skip ahead to some more advanced stuff that is digging into this topic like [the TUI docs]({{mkdocs.site_relative_url}}/embedded-tui) or [other tutorials]({{mkdocs.site_relative_url}}/demos/notebooking).
+If you're unconvinced on this point, you might like to skip ahead to some more advanced stuff that is digging into this topic, like [the TUI docs]({{mkdocs.site_relative_url}}/embedded-tui) or [the notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).
 
 ### Import Macro Implementation
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -383,7 +383,7 @@ $(eval $(call compose.import.generic, ▰, TRUE, docker-compose.yml))
 
 The [`eval`](https://www.gnu.org/software/make/manual/html_node/Eval-Function.html) / [`call`](https://www.gnu.org/software/make/manual/html_node/Call-Function.html) combination is how you can give `make` dynamic targets.  This is basically a code-generation step, where `compose.import.generic` is basically a templated string, and then using `call` binds the values `( ▰, TRUE, docker-compose.yml)` as template parameters.  *Since the templated string happens to render to legal Makefile syntax*, the call to `eval` results in the declaration of new concrete targets.
 
-Of course, understanding this isn't required to *use* it.. and metaprogramming in `make` like this is something that's always guaranteed to inspire strong feelings of horror or of delight.  If you're *that* type of weirdo, you might like to [read more about the technique here](https://make.mad-scientist.net/the-eval-function/).
+Understanding the implementation isn't required to *use* it.. and metaprogramming in `make` like this is something that's always guaranteed to inspire strong feelings of horror or of delight.  If you're *that* type of weirdo, you might like to [read more about the technique here](https://make.mad-scientist.net/the-eval-function/).
 
 <hr style="width:100%;border-bottom:3px solid black;">
 <script>

@@ -6,8 +6,6 @@
 #   USAGE: ./demos/exotic-targets.mk
 
 include compose.mk
-.DEFAULT_GOAL := demo.python.pipes
-
 
 # A more complex python script, testing comments, indention, & using pipes
 define python_script
@@ -23,6 +21,6 @@ for x in [1, 2, 3]:
 endef
 
 # Runs the script, passing data into the pipe
-demo.python.pipes:
+__main__:
 	echo '{"hello":"bash"}' \
 	| ${make} mk.def.dispatch/python3,python_script

@@ -1,8 +1,9 @@
 {% import 'macros.j2' as macros -%}
 
 ## Intro 
+<hr style="width:100%;border-bottom:3px solid black;">
 
-This demo is really just a variation on [many other ones]({{mkdocs.site_relative_url}}/demos/matrioshka) that are using inlined data and container-definitions, but this case is an instance of [a custom containerized interpreter]({{mkdocs.site_relative_url}}/demos/polyglots/#custom-containerized-interpreters), and also demonstrates *custom interpreter invocations*.
+This demo is really just a variation on [many others]({{mkdocs.site_relative_url}}/demos/matrioshka) that are using inlined data and container-definitions, but this case is an instance of [a custom containerized interpreter]({{mkdocs.site_relative_url}}/demos/polyglots/#custom-containerized-interpreters), and also demonstrates *custom interpreter invocations*.
 
 ### Theorem Proving 
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -22,12 +23,13 @@ The lean demo comes in two flavors.  The first one that you see below is more ex
 {{open('demos/lean.mk','r').read().strip()}}
 ```
 
+{#
 -------------------------
 
 ```Makefile
 {{open('demos/lean-2.mk','r').read().strip()}}
 ```
-
+#}
 <hr style="width:100%;border-bottom:3px solid black;">
 
 [^1]: https://leanprover-community.github.io/100.html#6

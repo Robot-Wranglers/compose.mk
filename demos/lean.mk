@@ -3,21 +3,19 @@
 #   This example shows an embedded container with a lean+mathlib container, 
 #   plus enough glue code for dispatch so that we can abstract away the container usage.
 #   Included is a script and a theorem that we'll test with, but of course external files 
-#   are supported as well.  This version of the code is aiming to be pretty explicit- see 
-#   instead `lean-2.mk` for something that leans into a more compressed and idiomatic style.
+#   are supported as well.
 #
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
-#   See also: http://robot-wranglers.github.io/compose.mk/demos/lean
-#             http://robot-wranglers.github.io/compose.mk/demos/polyglots
-#   USAGE: ./demos/lean.mk
+# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# See also: http://robot-wranglers.github.io/compose.mk/demos/lean
+#           http://robot-wranglers.github.io/compose.mk/demos/polyglots
 #
-.DEFAULT_GOAL := __main__
+# USAGE: ./demos/lean.mk
 
 include compose.mk
 
 # Look, it's a minimal Dockerfile for running lean4 
 # See also: https://leanprover-community.github.io/install/debian.html
-define Dockerfile.Lean.base
+define Dockerfile.Lean
 FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
 SHELL ["/bin/bash", "-x", "-c"]
 RUN apt-get -qq update && apt-get install -qq -y git make curl sudo procps
@@ -31,6 +29,7 @@ RUN lake new default
 RUN cd default && printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' >> lakefile.toml
 RUN cd default && lake update && lake build
 RUN lean --version
+ENTRYPOINT ["lean"]
 endef
 
 # Look, it's hello-world in scriptwise lean-lang
@@ -59,29 +58,17 @@ example : A ∨ ¬ A := by
 end
 endef
 
-# Default entrypoint.  
-# Ensure the container is built, then test a script and a theorem
-__main__: docker.from.def/Lean.base lean.run.script/script lean.run.theorem/theorem
+# Main entrypoint.  Ensures the container is ready, 
+# then dispatches execution of both script and theorem
+__main__: Dockerfile.build/Lean lean.run.script/script lean.run.theorem/theorem
 
-# Top level helper to run the named target in the base-container
-lean/%:; img=Lean.base ${make} mk.docker.dispatch/${*}
+# Top-level helpers. 
+# These write embedded script/theorem to disk before use, 
+# run them inside the container, and clean up afterwards.
+lean.run.script/%:; lean_args="--run" ${make} lean.run.generic/${*}
+lean.run.generic/% lean.run.theorem/%:
+	${io.mktemp} && ${make} mk.def.to.file/${*}/$${tmpf} \
+	&& img=Lean cmd="$${lean_args:-} $${tmpf}" \
+      ${make} mk.docker
 
-# Top-level helpers to write embedded script/theorem to disk before use
-lean.run.script/%:
-	$(call io.mktemp) \
-	&& ${make} mk.def.to.file/${*}/$${tmpf} \
-	&& ${make} lean/self.run.script/$${tmpf}
-lean.run.theorem/%:
-	$(call io.mktemp) \
-	&& ${make} mk.def.to.file/${*}/$${tmpf} \
-	&& ${make} lean/self.run.file/$${tmpf}
-
-# Private targets. These run in the base container,
-# so using lean or lake from here directly is safe.
-self.run.script/%:
-	$(call log.file.preview,${*})
-	source ~/.profile && set -x && lean --run ${*}
-
-self.run.file/%:
-	$(call log.file.preview,${*})
-	source ~/.profile && set -x && lean ${*}
+# io.tempfile=$(call io.mktemp)

@@ -1,12 +1,12 @@
 #!/usr/bin/env -S make -f
 # demos/ansible-adhoc.mk: 
 #   Building a custom automation API with `compose.mk`.  
-#
 #   Here we build a wrapper around a containerized ansible, 
 #   exposing a new opinionated interface that is is versioned,
 #   slim, stateless, and defaults to JSON IO.
 #
-#   USAGE: ./demos/ansible-adhoc.mk
+# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# USAGE: ./demos/ansible-adhoc.mk
 include compose.mk
 .DEFAULT_GOAL := __main__
 
@@ -20,11 +20,6 @@ FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
 RUN apt-get update -qq && apt-get install -qq -y jq make bash procps
 RUN apt-get install -qq -y ansible python3-pip
 RUN pip3 install -q docker --break-system-packages
-# FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
-# RUN apk add -q --update --no-cache coreutils alpine-sdk bash procps-ng
-# RUN apk add -q --update --no-cache ansible docker
-# RUN apk add -q --update --no-cache py3-pip \
-# RUN pip3 install -q docker --break-system-packages
 endef
 
 # Let's build a bridge to expose adhoc ansible[1].

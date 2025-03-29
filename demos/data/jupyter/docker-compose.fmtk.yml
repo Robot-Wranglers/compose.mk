@@ -31,7 +31,7 @@ services:
         FROM ghcr.io/z3prover/z3:ubuntu-20.04-bare-z3-sha-d66609e
         RUN apt-get update -qq && apt-get install -qq -y python3 python3-pip
         RUN pip3 install z3-solver==4.14.0.0 -q
-  
+    
   z3_py:
     <<: *z3
     depends_on: ['z3']

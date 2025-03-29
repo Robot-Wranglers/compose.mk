@@ -10,7 +10,6 @@
 # USAGE: ./demos/uv.mk
 
 include compose.mk
-.DEFAULT_GOAL := __main__
 
 # Pick an image and a interpreter for the language kernel
 # https://docs.astral.sh/uv/guides/integration/docker/

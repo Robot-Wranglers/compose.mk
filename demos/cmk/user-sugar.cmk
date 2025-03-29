@@ -1,0 +1,42 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+# demos/cmk/user-sugar.cmk: 
+#   Showing user-defined rules for CMK -> Makefile transpilation.
+#   You can define cmk_dialect and cmk_sugar individually or together.
+#   
+# cmk_dialect ::: [["cmk.io.","${make} io."], ["this.","${make} "]] :::
+# cmk_sugar ::: [
+#   ["𒀹","𒀺","$(eval $(call compose.import.string,__NAME__,TRUE))"]
+# ] :::
+#
+# USAGE: ./demos/cmk/user-sugar.cmk
+
+𒀹 inlined.services
+services:
+  alice: &base
+    hostname: alice
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
+        RUN apt-get update -qq && apt-get install -qq -y make procps
+    working_dir: /workspace
+    volumes: ['${PWD}:/workspace']
+  bob:
+    <<: *base
+    hostname: bob
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM alpine:3.21.2
+        RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
+𒀺
+
+# A task that runs inside the containers.
+self.internal_task:; echo "Running inside `hostname`"
+
+__main__: 
+	cmk.log(Testing dialect substitutions)
+	cmk.io.print.banner/testing_dialect_substitution
+	cmk.log(Testing sugar and dispatching task to containers)
+	this.alice.dispatch/self.internal_task
+	this.bob.dispatch/self.internal_task

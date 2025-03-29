@@ -7,7 +7,6 @@
 #   USAGE: ./demos/local-interpreter.mk
 
 include compose.mk
-.DEFAULT_GOAL := demo.python
 
 # Look, here's a simple python script 
 define Python.demo
@@ -18,7 +17,7 @@ endef
 
 # Minimal boilerplate to run the script, using a specific interpreter (python3).
 # No container here, so this requires that the interpreter is actually available.
-demo.python: mk.def.dispatch/python3,Python.demo
+__main__: mk.def.dispatch/python3,Python.demo
 
 # Mapping the code to a different, more specific interpreter is also easy
 demo.python39: mk.def.dispatch/python3.9,Python.demo

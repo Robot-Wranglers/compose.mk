@@ -38,11 +38,11 @@ $ ./compose.mk jb foo=bar
 ### Inheritance & Interpreters
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Projects that are extending `compose.mk` might be interested in *inheriting* the capabilities for signals and supervisors.  The simplest reason you might want to do this is just for the sake of bringing [compose.mk-style CLI help]({{mkdocs.site_relative_url}}) to your own project, i.e. targets that actually support positional arguments, but [the advanced examples](#advanced-examples) on this page hint at other possibilities.
+Projects that are extending `compose.mk` might be interested in *inheriting* the capabilities for signals and supervisors.  The simplest reason you might want to do this is just for the sake of bringing [compose.mk-style CLI help]({{mkdocs.site_relative_url}}) to your own project, *i.e. targets that actually support positional arguments,* but [the advanced examples](#advanced-examples) on this page hint at other possibilities.  
 
-For [technical reasons](#implementation), there's unfortunately no way to inherit signal capabilities by simply using `include compose.mk` from your project Makefiles.  There is however a work-around if you're willing to **setup `compose.mk` itself as your interpreter**.
+For [technical reasons](#implementation-details), there's unfortunately no way to inherit signal capabilities by simply using `include compose.mk` from your project Makefiles.  There is however a work-around if you're willing to **setup `compose.mk` itself as your interpreter**.  (For information about getting an interpreter *and* a transpiler/preprocessor, see instead [the compiler docs]({{mkdocs.site_relative_url}}/compiler))
 
-This pattern is an advanced topic, and while using it is *surprisingly stable and portable*, the semantics of it are strange enough that the whole thing *should probably be considered experimental.*
+This pattern is an advanced topic, and while using it is surprisingly stable and portable, the semantics of it are strange enough that the whole thing should probably be considered experimental.
 
 #### Positional Arguments & Yield
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -51,23 +51,23 @@ Looking at a few examples of this will be useful context, so let's start with so
 
 To demonstrate short-circuiting the default command line processing of `make`, we'll try to create a clone of the `ls` command.  In the code, the differences start right away.  See the shebang at the top of the following file which uses {{macros.api_link('mk.interpret',mkdocs)}} ?
 
-```makefile
+```Makefile
 {{open('demos/interpreter.mk').read()}}
 ```
 
 The next extremely magical line is the call to `mk.yield`, where the argument is the command line that you want to *yield execution to*.
 
-We yield to `ls $${MAKE_CLI#*ls}`, where the right side expands to "the full command line, *after* the word `ls`".  *(This uses [bash parameter expansion](https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html) and the special variable `MAKE_CLI` that's provided by `compose.mk`)*
+We yield to `ls $${MAKE_CLI#*ls}`, where the right side expands to "the full command line, *after* the word `ls`".  [^4]
 
-At this point as long as the file is executable, then `./demos/interpreter.mk ls /var` works as expected.  But the body of `__main__` demonstrates something that might be surprising, which is that `mk.yield` really *does* drastically change the rest of program flow control afterwards.
+At this point as long as the file is executable, then `./demos/interpreter.mk ls /` works as expected.  But the body of `__main__` demonstrates something that might be surprising, which is that `mk.yield` really *does* drastically change the rest of program flow control afterwards.
 
-We can skip the usage of `compose.mk` as an interpreter by invoking the code as `make -f demos/interpreter.mk ls /var`, which *also works*, but includes a `Supervisor not found` message at the end.  Meanwhile, whereas `./demos/interpreter.mk` runs `__main__` and exits early with success, `make -f ./demos/interpreter.mk` fails because it does not exit early.
+We can skip the usage of `compose.mk` as an interpreter by invoking the code as `make -f demos/interpreter.mk ls /`, which *also works*, but includes a `Supervisor not found` message at the end.  Meanwhile, whereas `./demos/interpreter.mk` runs `__main__` and exits early with success, `make -f ./demos/interpreter.mk` fails because it does not exit early.
 
 A subtle but **potentially serious issue** with this approach is that `./demos/interpreter.mk ls -la` works as expected, but `./demos/interpreter.mk ls --help` actually returns *help for make* and **not** *help for ls*.. implying that our intent to proxy the "rest" of the command line still has some limitations, and it actually depends on the content of that command line.  
 
 If you're only interested in proxy for **positional arguments** then this won't matter, meanwhile **option-proxy** works in some cases but must always be tested carefully.
 
-#### More Generic Option Proxy
+#### Generic Option Proxy
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 The end of the last section hints at a basic problem with convenient but naive option-proxy.  What if we want `ls --help` to work, or to put it another way: **how can we stop make from eating our argv?**
@@ -124,6 +124,8 @@ Targets above are for low-level internal use, and even hacking directly on `comp
 ls:
 	$(call mk.yield, ls $${MAKE_CLI#*ls})
 ```
+<br/>
+<hr style="width:100%;border-bottom:3px solid black;">
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -140,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<hr style="width:100%;border-bottom:3px solid black;">
-[^1]: For people that have seen ' -- ' usage before but don't really know how it works, this isn't part of the shell itself.  It's a convention that is *almost* a guarantee, assuming [POSIX compliant getopt](https://pubs.opengroup.org/onlinepubs/9699919799.2018edition/functions/getopt.html
-[^2]: Determining the full CLI that invoked `make` is actually pretty hard, especially if you want portability.  If you've been wondering about `procps` and `procps-ng` package references that are scattered around and [recommended for dispatch]({{mkdocs.site_relative_url}}/integration/#docker-compose-integration), this is the answer.
+[^1]: For people that have seen ' -- ' usage before but don't really know how it works, this isn't part of the shell itself.  It's a convention that is *almost* a guarantee, assuming [POSIX compliant getopt](https://pubs.opengroup.org/onlinepubs/9699919799.2018edition/functions/getopt.html)
+[^2]: Determining the full CLI that invoked `make` is actually pretty hard, especially if you want portability.  If you've been wondering about `procps` and `procps-ng` package references that are scattered around and [recommended for dispatch]({{mkdocs.site_relative_url}}/integration/#docker-compose-integration), this is the reason.
 [^3]: Issues with proxying `--long-opt=..` is probably a bug and not a *fundamental* limitation, but this whole topic is so obscure it's probably not worth fixing =P
+[^4]: The incantation `${MAKE_CLI#*ls}` uses [bash parameter expansion](https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html) and the special variable `MAKE_CLI` that's provided by `compose.mk`.

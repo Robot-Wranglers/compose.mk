@@ -21,6 +21,3 @@
 
 # use `mk.include` reflection to generate help for a makefile with no `include compose.mk`
 ./compose.mk mk.include/./demos/no-include.mk help.local
-
-# or use the interpreter command 
-./compose.mk mk.interpret ./demos/no-include.mk help.local

@@ -96,8 +96,8 @@ samp {
 }
 pre {
   white-space: pre;
-  margin-left:20px;
-  margin-right:20px;
+  margin-left:10px;
+  margin-right:10px; 
 }
 q {
   quotes: none;
@@ -4902,11 +4902,13 @@ html {
 .wy-menu-vertical {
   width: 300px;
 }
+footer hr { display:none;}
+.footnote hr { display:none;}
 .wy-menu-vertical header,
 .wy-menu-vertical p.caption {
   color: #55a5d9;
-  height: 32px;
-  line-height: 32px;
+  height: 25px;
+  line-height: 25px;
   padding: 0 1.618em;
   margin: 12px 0 0;
   display: block;
@@ -4930,7 +4932,7 @@ html {
 .wy-menu-vertical li.current a {
   color: grey;
   border-right: 1px solid #c9c9c9;
-  padding: 0.4045em 2.427em;
+  padding: 0 2.427em;
 }
 .wy-menu-vertical li.current a:hover {
   background: #d6d6d6;
@@ -4956,8 +4958,9 @@ html {
 }
 .wy-menu-vertical li.current > a,
 .wy-menu-vertical li.on a {
-  color: #404040;
-  font-weight: 700;
+  color: black;
+  text-decoration:underline bold;
+  font-weight: 900;
   position: relative;
   background: #fcfcfc;
   border: none;
@@ -4980,6 +4983,9 @@ html {
 .wy-menu-vertical li.toctree-l1.current > a {
   border-bottom: 1px solid #c9c9c9;
   border-top: 1px solid #c9c9c9;
+}
+li.toctree-l2 {
+  font-size: 88%;
 }
 .wy-menu-vertical .toctree-l1.current .toctree-l2 > ul,
 .wy-menu-vertical .toctree-l2.current .toctree-l3 > ul,
@@ -5124,7 +5130,7 @@ html {
 }
 .wy-menu-vertical a {
   line-height: 18px;
-  padding: 0.4045em 1.618em;
+  padding: 0.045em 1.618em;
   display: block;
   position: relative;
   font-size: 90%;

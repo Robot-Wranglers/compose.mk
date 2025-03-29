@@ -17,6 +17,8 @@ Let's revisit [a previous example]({{mkdocs.site_relative_url}}/zero-config-tuis
 ```
 Look, **no target bodies!**  The declarative flavor is nice, and this is frequently the case for TUI customization: mostly we just need declare groups of existing targets and/or flow between them. We've seen that this frequently involves `compose.mk::flux` targets, like {{macros.api_link('flux.loopf',mkdocs,arg='target_name')}} and {{macros.api_link('flux.and',mkdocs,arg='targets')}}.  
 
+---------------------------
+
 Running it looks like this:
 
 {{macros.img_link("dashboarding.gif", mkdocs, "66%")}}
@@ -30,19 +32,21 @@ It's really no surprise that the implementation is small, since it only needs mi
 
 One powerful technique is to run a container inside a dedicated pane as a "widget".  As a simple example, we'll extend the example so far to include [`moncho/dry`](https://github.com/moncho/dry), a docker-monitoring application.
 
-Adding a new "middle" pane using this image only changes two lines, and doesn't break the declarative style:
+Adding a new "middle" pane using this container image only changes two lines, and doesn't break the declarative style:
 
 ```Makefile
 {{open('demos/tui/dashboarding-widgets.mk','r').read().strip()}}
 ```
 
-You might recognize this new widget, since we just recreated part of the `docker.commander` TUI mentioned in [docs for zero-config TUIs](#).  Our work so far looks like this:
+---------------------
+
+You might recognize the new widget, since we just recreated part of the `docker.commander` TUI mentioned in [docs for zero-config TUIs]({{mkdocs.site_relative_url}}/zero-config-tuis).  Our work so far looks like this:
 
 {{macros.img_link("tui-containers-as-widgets.png", mkdocs, "350px")}}
 
 Above, the {{macros.api_link('docker.start.tty',mkdocs,arg='img')}} target does the heavy lifting for us, and depending on your exact use-case you might have to write a target-body, or use other related targets like {{macros.api_link('docker.start',mkdocs,arg='img')}} , {{macros.api_link('docker.dispatch/<arg>',mkdocs)}} , or {{macros.api_link('docker.run.sh', mkdocs)}}.
 
-Crucially, the `docker.*` targets are designed to launch tool containers, so they **always share the working directory and the docker socket by default**.  You can always launch a dockerized "widget" by writing any target-body that directly calls `docker run ...`, but if you do it this way you probably need to remember add volume-mounts.  See also these docs re: [Tool-Container Defaults]({{mkdocs.site_relative_url}}/raw-docker#tool-container-defaults).
+Crucially, the `docker.*` targets are designed to launch tool containers, so they [**always share the working directory and the docker socket by default**]({{mkdocs.site_relative_url}}/raw-docker#tool-container-defaults).  You can always launch a dockerized "widget" by writing any target-body that directly calls `docker run ...`, but if you do it this way you probably need to remember add volume-mounts.
 
 #### Mixing in Container Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -77,7 +81,7 @@ For demonstrating that, we'll include the last example and just change the `bott
 {{open('demos/tui/dashboarding-dispatch-2.mk','r').read().strip()}}
 ```
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+-----------------------------
 
 That's pretty much it for the basics of low-config TUIs.  In the [next section]({{mkdocs.site_relative_url}}/advanced-tuis), we'll cover more advanced usage.
 

@@ -13,6 +13,8 @@ Other than the datastructure itself, there are few restrictions or isolation gua
 
 Since access to the stage-stack "just works" from the docker host, a container, or a nested container, and works inside or outside the particular subshell for any existing make-target, this adds a lot of missing flexibility for "crosswise" communication that task-DAGs and pipelining would usually struggle with.
 
+**The point of stacks and stages is to have something small, fast, and light** that you use out of the box or build on top of.  Stage-stacks in `compose.mk` are a project-local datastructure that feels native, is basically dependency free, and is actually kind of scalable.  After all.. `jq` will be happy to chug through a very large pile of JSON indeed, and file IO is a bottleneck, switching to [shared memory is straightforward](https://datawookie.dev/blog/2021/11/shared-memory-docker/).
+
 ### Stage Basics
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -141,8 +143,6 @@ Stages are implemented using the `flux.stage.*` family of targets, and the lower
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Nothing prevents further downstream slicing with `jq`, so stacks as presented thus far can be easily changed or extended to do LIFO/FIFO, express KV stores, etc.  Any changes along these lines can usually be completely expressed in jqlang, and should be fairly fast/atomic. [^1]
-
-**The point of stacks/stages is to have something small, fast, and light** that you use out of the box or build on top of.  Stage-stacks in `compose.mk` are a project-local datastructure that feels native, is basically dependency free, and is actually kind of scalable.  After all.. `jq` will be happy to chug through a very large pile of JSON indeed.  
 
 {#
 Eventually, the basic stack-operators might expand to include lightweight pattern matching and/or a simple tuple-space flavored interface. In the meantime though, you already got some new superpowers that might not be obvious:

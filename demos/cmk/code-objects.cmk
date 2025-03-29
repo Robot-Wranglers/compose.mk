@@ -1,0 +1,38 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+# demos/cmk/code-objects.cmk: 
+#   CMK-lang translation of demos/code-objects.mk
+# USAGE: ./demos/cmk/code-objects.cmk
+
+python.img?=python:3.11-slim-bookworm
+python.interpreter=python
+
+# Unbound code block: only `.preview` target is available 
+# unless you bind something else to `.interpreter` later
+🞹 hello_world1
+print('hello world 1')
+🞹
+
+# Code bound to a containerized interpreter.
+〚 hello_world2
+print('hello world 2')
+⟧ with ${python.img}, ${python.interpreter} as container
+
+〚 hello_world3
+import IO, only: [puts: 1]
+puts("elixir World!")
+System.halt(0)
+⟧ with elixir:otp-27-alpine, elixir as container
+
+# Code bound to a target-as-interpreter.
+# Target must be parametric, then do something with the parameter!
+〚 hello_world4
+hello world3 !
+⟧ with show.file as target
+
+# Just echo the file contents
+show.file/%:; cat ${*}
+
+# Main entrypoint, previewing and running the embedded code.
+__main__: hello_world1.preview \
+	hello_world2.preview hello_world2.run \
+	hello_world3.run hello_world4.run

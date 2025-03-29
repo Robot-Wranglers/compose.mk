@@ -7,10 +7,9 @@
 # USAGE: ./demos/stages.mk
 
 include compose.mk
-.DEFAULT_GOAL := __main__
 
 # disable gum usage by overriding the default target for printing banners
-export banner_target?=io.print.div
+export banner_target?=io.print.banner
 
 __main__: flux.star/test.stage
 

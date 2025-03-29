@@ -7,11 +7,10 @@
 
 
 include compose.mk
-.DEFAULT_GOAL := __main__
 
 $(eval $(call compose.import, demos/data/docker-compose.yml, ▰))
 
-# User-facing top-level target, with two dependencies
+# User-facing top-level default target, with two dependencies
 __main__: ▰/debian/self.demo ▰/alpine/self.demo
 
 # Displays platform info to show where target is running.

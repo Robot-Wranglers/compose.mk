@@ -8,20 +8,18 @@ SHELL := bash
 .SHELLFLAGS?=-euo pipefail -c
 MAKEFLAGS=-s -S --warn-undefined-variables
 THIS_MAKEFILE:=$(abspath $(firstword $(MAKEFILE_LIST)))
-.DEFAULT_GOAL:=help
 
-.SUFFIXES:
-.PHONY: docs demos README.md
+.PHONY: docs demos demos/cmk README.md
 
 export SRC_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 export PROJECT_ROOT := $(shell dirname ${THIS_MAKEFILE})
 
 include compose.mk
-$(eval $(call compose.import.generic,  _,  TRUE, demos/data/docker-compose.yml))
+$(eval $(call compose.import, demos/data/docker-compose.yml))
 
 ## BEGIN: Top-level
 ##
-all: init clean build test docs
+__main__: init clean build test docs
 
 init: mk.stat docker.stat
 
@@ -29,9 +27,11 @@ clean: flux.stage.clean
 	@# Only used during development; normal usage involves build-on-demand.
 	@# Cache-busting & removes temporary files used by build / tests 
 	rm -f tests/compose.mk
-	find . | grep .tmp | xargs rm 2>/dev/null|| true
+	find . | grep .tmp | xargs rm 2>/dev/null || true
 
-build normalize: # NOP
+build: tux.require 
+
+normalize: # NOP
 
 test: integration-test tui-test demo-test smoke-test 
 
@@ -39,7 +39,10 @@ smoke-test stest:
 	ls tests/*.sh | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 
 demos demos.test demo-test test.demos:
-	set -x && ls demos/*mk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
+	set -x && ls demos/*.mk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
+demos/cmk:
+	set -x && ls demos/cmk/*.cmk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
+
 bonk:
 	ls demos/container-dispatch.mk | xargs -I% ${io.shell.isolated} sh -x -c "trace=1 ./%||exit 255"
 ttest/%:; make test-suite/tui/${*}
@@ -56,16 +59,26 @@ services:
       context: .
       dockerfile_inline: |
         FROM python:3.9.21-bookworm
-        RUN pip3 install --break-system-packages pynchon==2025.3.20.17.28 mkdocs==1.5.3 mkdocs-autolinks-plugin==0.7.1 mkdocs-autorefs==1.0.1 mkdocs-material==9.5.3 mkdocs-material-extensions==1.3.1 mkdocstrings==0.25.2
+        RUN pip3 install --break-system-packages pynchon==2025.3.20.17.28 mkdocs==1.5.3 mkdocs-autolinks-plugin==0.7.1 mkdocs-autorefs==1.0.1 mkdocs-material==9.5.3 mkdocs-material-extensions==1.3.1 mkdocstrings==0.25.2 mkdocs-redirects==1.2.2
         RUN apt-get update && apt-get install -y tree jq
     entrypoint: bash
     working_dir: /workspace
     volumes:
       - ${PWD}:/workspace
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+  mmd:
+    hostname: mmd
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ghcr.io/mermaid-js/mermaid-cli/mermaid-cli:10.6.1
+        USER root 
+        RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
+    working_dir: /workspace 
+    volumes:
+        - ${PWD}:/workspace
 endef 
 $(eval $(call compose.import.string,  docs.builder.composefile,  TRUE))
-
 demo:
 	@# Interactive selector for which demo to run.
 	pattern='*.mk' dir=demos/ ${make} flux.select.file/mk.select
@@ -90,9 +103,16 @@ docs.jinja/% j/% jinja/%: docs.init
 	&& set -x && pynchon jinja render ${*} -o $${tmpf} --print \
 	&& dest="`dirname ${*}`/`basename -s .j2 ${*}`" \
 	&& mv $${tmpf} $${dest}
+
+
+mmd.args=--theme neutral -b transparent
 docs.mermaid docs.mmd:
 	@# Renders all diagrams for use with the documentation 
-	pynchon mermaid apply
+	find docs | grep '[.]mmd$$' | ${stream.peek} | ${flux.each}/.mmd.render
+.mmd.render/%:
+	output=`dirname ${*}`/`basename -s.mmd ${*}`.png \
+	&& cmd="-i ${*} -o $${output} ${mmd.args}" ${make} mmd \
+	&& cat $${output} | ${stream.img}
 
 
 mkdocs: mkdocs.build mkdocs.serve
@@ -109,7 +129,7 @@ README.md:
 ##
 actions.docs: docs.build 
 	@# Entrypoint for docs-action
-actions.lint:; cmd='-color' ${make} docker.image.run/rhysd/actionlint:latest 
+actions.lint:; cmd='-color' ${docker.image.run}/rhysd/actionlint:latest 
 	@# Helper for linting all action-yaml
 
 actions.demos:
@@ -125,12 +145,12 @@ actions.clean cicd.clean clean.github.actions:
 
 actions.clean.img.test:
 	gh run list --workflow=img-test.yml --json databaseId,createdAt \
-	| jq '.[] | select(.createdAt | fromdateiso8601 < now - (60*60*10)) | .databaseId' \
+	| ${jq} '.[] | select(.createdAt | fromdateiso8601 < now - (60*60*10)) | .databaseId' \
 	| xargs -I{} gh run delete {}
 
 actions.clean.old:
 	gh run list --limit 1000 --json databaseId,createdAt \
-	| jq '.[] | select(.createdAt | fromdateiso8601 < now - (60*60*24*7)) | .databaseId' \
+	| ${jq} '.[] | select(.createdAt | fromdateiso8601 < now - (60*60*24*7)) | .databaseId' \
 	| xargs -I{} gh run delete {}
 
 actions.run.delete/%:; gh run delete ${*}

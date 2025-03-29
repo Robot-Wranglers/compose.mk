@@ -7,22 +7,20 @@
 
 include compose.mk 
 
-.DEFAULT_GOAL := __main__ 
-
 __main__: clean build test
 
-# Use `io.print.div` implicitly as a prereq => Timestamped divider
-clean: io.print.div
+# Use `io.print.banner` implicitly as a prereq => Timestamped divider
+clean: io.print.banner
 	echo Cleaning stuff
 
-# Call `io.print.div` explicitly => Full control over divider label
+# Call `io.print.banner` explicitly => Full control over divider label
 build: 
-	label="Build Stage" ${make} io.print.div
+	label="Build Stage" ${make} io.print.banner
 	echo Building stuff
 
-# Use `io.print.div` as a macro => Automatically set label as the current target's name
+# Use `io.print.banner` as a macro => Automatically set label as the current target's name
 test:
-	${io.print.div}
+	${io.print.banner}
 	echo Testing stuff
 	label="divider-using-gum" ${make} io.draw.banner
 	label=test1 ${make} io.figlet

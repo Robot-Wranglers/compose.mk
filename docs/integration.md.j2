@@ -17,7 +17,11 @@ $ chmod ugo+x compose.mk
 $ ./compose.mk ...
 ```
 
-If you have `make` and `docker`, that's all the setup you'll need for [stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview) tool usage.  While it's not really recommended.. you can always copy it to a bin folder too if you want.  Read on for details about tighter integration with projects.
+If you have `make` and `docker`, that's all the setup you'll need for stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview) tool usage.  While it's not really recommended.. you can always copy it to a bin folder too if you want.
+
+Note that since [various utilities]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) are only pulled on demand, initial usage can be slow, but subsequent runs can take advantage of cache.
+
+Read on for details about tighter integration with projects.
 
 ### Project Integration
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -30,8 +34,6 @@ If you're looking to integrate with existing automation or you brought your own 
 A quick example of what your project Makefile should look like:
 
 ```Makefile
-# myproject/Makefile (Make sure you have real tabs, not spaces!)
- 
 # Include compose.mk for access to target API and macros.
 include compose.mk
 
@@ -39,20 +41,21 @@ include compose.mk
 # Call the bridge-building macro to get targets for each service.
 $(eval $(call compose.import, docker-compose.yml))
 
-# At this point, dynamic targets are defined for the services
-# defined in the external compose config and are ready to use.
+# At this point, scaffolded targets are defined for 
+# the tool containers mentioned in the compose file.
 # Now you can dispatch any task to any tool container.
-test: my_compose_service_name.dispatch/self.test
-self.test:
-  echo hello world from container `uname -n -v`
+test: compose_service_name.dispatch/self.test
+self.test:; echo hello world from container `uname -n -v`
 ```
+
+<br/>
 
 #### Docker Compose Integration
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 Working with docker compose is optional if you're just interested in [stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview/) or the [standard library]({{mkdocs.site_relative_url}}/standard-lib).  And if you *are* using docker-compose, then simple access to tools in containers from your docker-compose files will *just work* for many use-cases, [via the bridge]({{mkdocs.site_relative_url}}/bridge).  
 
-However.. more complicated use-cases probably require a volume-mount for your project directory to read/write files, and, container dispatch means your tool containers need `make` and `bash`.
+However.. more complicated use-cases require a volume-mount for your project directory so that tool containers can read/write files, and, [using container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) means that your tool containers need `make` and `bash`.
 
 Here is some fairly complete boilerplate that's usually a good starting place:
 
@@ -62,31 +65,23 @@ Here is some fairly complete boilerplate that's usually a good starting place:
 
 This example above is typical, but not necessarily minimal, so let's discuss a few things about it.  
 
-**First, what you need to know about base images.** There's a good chance your tool-container already includes `make`, and you don't need to add packages at all.  But if you're looking for a reasonable base-containers that include `make` and will help you avoid initial package updates with `apt` or `apk`.. you might consider things like [`debian/buildd:bookworm`](https://packages.debian.org/bookworm/buildd) or [gcc containers](https://hub.docker.com/_/gcc/).
-
+**Regarding base images,** there's a good chance your tool-container already includes `make`, and you don't need to add packages at all.  But if you're looking for a reasonable base-containers that include `make` and will help you avoid initial package updates with `apt` or `apk`.. you might consider things like [golang containers](https://hub.docker.com/_/golang/tags), [gcc containers](https://hub.docker.com/_/gcc/), or [`debian/buildd:bookworm`](https://packages.debian.org/bookworm/buildd).
 
 Next, a few tips and tricks about the docker-compose config details:
 
-1. **Use defaults-with-overrides in `FROM` lines to stay versioned but still keep some flexibility.** 
-1. **Use `dockerfile_inline` to quickly extend a base-container without adding an extra Dockerfile to your repository.**  Tool-containers rarely change once established, and having a separate file and separate git/docker repos for everything can get tedious.  
-1. **Use yaml inheritance with anchors,** i.e. `&base` and `<<: *base`.  This is a good trick to keep compose files DRY and as simple as possible.  Config keys for `entrypoint` and `hostname` are usually optional but provided for clarity, and this can help to clean up logging.  
+1. **Use defaults-with-overrides in `FROM` lines** to stay versioned but still keep some flexibility. 
+1. **Use `dockerfile_inline` to quickly extend a base-container**, without adding an extra Dockerfile to your repository.  Tool-containers rarely change once established, and having a separate file and separate git/docker repos for everything can get tedious.  
+1. **Use yaml inheritance with anchors,** i.e. `&base` and `<<: *base`.  This is a good trick to keep compose files DRY and as simple as possible.  
+1. **Provide a few optional keys just for clarity.** Things like `hostname` clean up logging, and even if `entrypoint` isn't used by software it can help humans who are trying to debug.
 1. **Correct config keys for `working_dir` and `volumes` are crucial for project file IO,** which might include reading your project `Makefile` if you're using container dispatch.
 1. It's optional, but **there are cases where you'll want `docker` to be available inside tool-containers** and you also might want to share the hosts docker-socket.[^1]  The boilerplate above goes half way, defaulting to using a volume mount but stopping short of actually installing docker.  
-
-
-{#
-### Embedding Tools With Makefiles
-### Stand Alone Tools
-If you're not interested in custom automation that requires project-Makefile integration, some features of `compose.mk` can be used without that.  See for example the [Loading Compose Files]({{mkdocs.site_relative_url}}/compose.mk#loading-compose-files) docs, plus the [full CLI docs]({{mkdocs.site_relative_url}}/api) for more details.
-#}
-
 
 ### Compatibility Notes
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Platforms used in development include modern docker (say `25+`), recentish make (`3.8+`), and bash `(~5`) on both Linux and MacOS. Testing in github-actions only uses Linux, and won't try every possible combination of versions.  
+Platforms used in development for `compose.mk` include modern docker (say *25+*), recentish make (*3.8+*) and bash (*~5*) on both Linux and MacOS. Testing in github-actions only uses Linux, and won't try every possible combination of versions.
 
-In general though, **the goal is to support most things you'll encounter in the wild**, including OSX, out of the box.  But you may see some of the usual problems with certain arguments to non-posix OSX default `sed` / `ps` / `xargs`, etc.  Please report issues!
+In general though **the goal is to support most things you'll encounter in the wild**, including OSX, out of the box.  But you may see some of the usual problems with certain arguments to non-gnu OSX default `sed` / `ps` / `xargs`, etc.  Please report issues!
 
 ### For Developers
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -101,7 +96,7 @@ $ git clone {{github.repo_ssh_url}}
 $ git clone {{github.repo_url}}
 
 # build the tool containers & check them
-$ make clean build test
+$ make clean build demos
 ```
 
 <br/>

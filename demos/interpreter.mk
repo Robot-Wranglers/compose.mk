@@ -10,8 +10,6 @@
 # as well with `make -f ..`
 include compose.mk
 
-.DEFAULT_GOAL:=__main__ 
-
 ls:; $(call mk.yield, ls $${MAKE_CLI#*ls})
 
 __main__:

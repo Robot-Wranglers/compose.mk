@@ -7,7 +7,6 @@
 #   USAGE: ./demos/inlined-composefile.mk
 
 include compose.mk
-.DEFAULT_GOAL := __main__
 
 # Look it's an embedded compose file.  This defines services `alice` & `bob`
 define inlined.composefile 
@@ -31,7 +30,7 @@ services:
       context: .
       dockerfile_inline: |
         FROM alpine:3.21.2
-        RUN apk add -q --update --no-cache coreutils alpine-sdk bash procps-ng
+        RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
 endef 
 
 # After the inline, just call `compose.import.string` on it to 

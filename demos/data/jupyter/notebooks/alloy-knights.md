@@ -17,9 +17,11 @@ jupyter:
     pygments_lexer: alloy
 ---
 
-## Alloy Spec Demo
+## Demo: Alloy Specification Language
 
 ----------------------
+
+See also:
 
 * Knights puzzle: [https://www.hillelwayne.com/post/knights-knaves/](https://www.hillelwayne.com/post/knights-knaves/)
 * Headless alloy analyzer that returns JSON: [docker-alloy-cli](https://github.com/elo-enterprises/docker-alloy-cli)

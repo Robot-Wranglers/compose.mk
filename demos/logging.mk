@@ -6,10 +6,6 @@
 #   USAGE: ./demos/logging.mk
 
 include compose.mk
-.DEFAULT_GOAL := all
-
-# Runs all the examples 
-all: logging_example.basic logging_example.formatting logging_example.json
 
 # Basic example, just write a message to log.
 logging_example.basic:
@@ -31,3 +27,6 @@ logging_example.trace:
 logging_example.json:
 	$(call log.json.min, stage=Building )
 	$(call log.json, stage=Building more=info anything=you_want)
+
+# Runs all the examples 
+__main__: logging_example.basic logging_example.formatting logging_example.json

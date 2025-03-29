@@ -59,24 +59,25 @@ After the target is defined, it can be used on the same command line.
 ./compose.mk mk.let/foo:flux.ok foo
 ```
 
+--------------------------------
+
 As another example, how about fearlessly mixing `compose.mk` functionality with an existing Makefile that *does not actually `include compose.mk`*?
 
 ```bash 
 $ ./compose.mk \
-  mk.include/demos/no-include.mk \
-  mk.let/foo:clean \
-  foo
+    mk.include/demos/no-include.mk \
+    mk.let/foo:clean \
+    foo
 ```
 
-Pulling apart this command, let's note that the final target `foo` *does not exist* in either `compose.mk` or in the simple `demos/no-include.mk` Makefile.  And the `clean` target does not exist in `compose.mk`.  The command above basically creates and runs this non-existant Makefile just in time:
+Pulling apart this command, let's note that the final target `foo` *does not exist* in either `compose.mk` or in the simple `demos/no-include.mk` Makefile.  And the `clean` target does not exist in `compose.mk`.  The command above basically creates and runs this (non-existant) Makefile just in time:
 
 ```Makefile
 include compose.mk
 include demos/no-include.mk
 foo: clean 
-DEFAULT_GOAL=foo
 ```
-
+<br/>
 
 #### Reading Defines
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -88,3 +89,15 @@ Related targets include:
 {{macros.api_link_many('mk.def',mkdocs)}}
 
 Currently, if you want to embed data that includes tokens like "endef", you are sadly out of luck!
+
+#### Pattern-Matching on Targets
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+There are various ways to enumerate available targets for the current runtime, either restricting it to targets defined in the local file, or also adding targets from includes.  
+
+One nice thing about this is the ability to easily dispatch *all targets matching a given pattern*.  See the API for {{macros.api_link('flux.star',mkdocs,arg='pattern')}}, or the following example of how it's used in the test suite:
+
+```Makefile 
+{{open('demos/inlined-dockerfile.mk','r').read()}}
+```
+<br/>

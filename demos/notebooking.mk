@@ -13,7 +13,6 @@
 include compose.mk
 
 # Main entrypoint, just shows usage hints 
-.DEFAULT_GOAL := __main__
 __main__:
 	$(call log, ${red}Provide a target like 'lab.tui' or 'lab.pipeline' or use 'help' for help.)
 
@@ -151,8 +150,8 @@ lab.init: \
 	@# Besides background the jupyter lab server, it also synchronizes 
 	@# raw .ipynb with paired markdown equivalent using `jupytext`.
 
-lab.notebook.exec/%:
-	quiet=1 ${make} lab.dispatch/self.notebook.exec/${*}
+lab.notebook.run/% lab.notebook.exec/%:
+	${make} lab.dispatch.quiet/self.notebook.exec/${*}
 
 lab.notebook.preview/%:
 	@# Shows input and execution for a single notebook.
@@ -234,7 +233,7 @@ lab.test: lab.dispatch/self.kernelspec.list
 lab.wait: flux.loop.until/lab.running
 	@# Waits for the jupyter lab service to become ready
 
-lab.webpage.open: lab.wait io.browser/lab.url
+lab.webpage.open lab.wui wui: lab.wait io.browser/lab.url
 	@# Attempts to open a browser pointed at jupyter lab.
 	@# (This requires python on the host and can't run from docker)
 

@@ -4,12 +4,13 @@
 #   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #   USAGE: ./demos/stdlib-stream-io.mk
 
-.DEFAULT_GOAL := demo.streams 
 include compose.mk 
 
-demo.streams:
+__main__:
 	$(call log.test_case, preview results mid-pipe on stderr leaving stdout uninterrupted)
-	ls README.md | ${stream.peek} > .tmp.ls.out
+	ls README.md | ${stream.peek} > .tmp.ls.out && rm .tmp.ls.out
+	ls README.md | ${stream.as.log}
+	ls docs/*.md.j2 | with=45 ${stream.fold}
 	
 	$(call log.test_case, preview markdown with glow )
 	cat README.md | ${stream.markdown}

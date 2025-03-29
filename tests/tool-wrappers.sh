@@ -1,4 +1,6 @@
 #!/usr/bin/env -S bash -x -euo pipefail
+# tests/tool-wrappers.sh:
+#   Exercise some of the tool-wrappers that are part of stand-alone mode.
 #
 # This demo ships with the `compose.mk` repository and runs as part of the test-suite.
 #
@@ -10,17 +12,26 @@ cat docs/img/icon.png | ./compose.mk stream.chafa
 # Use `stream.chafa` to preview an image on the console with chafa (alternate)
 cat docs/img/icon.png | ./compose.mk stream.img.preview
 
+# preview image without streams
+./compose.mk io.preview.img/docs/img/icon.png
+
+# preview multiple images
+find docs/img/icon.png | ./compose.mk flux.each/io.preview.img
+
 # Use `stream.glow` to preview markdown
 cat README.md | ./compose.mk stream.glow
 
 # Use `stream.glow` to preview markdown (alternate)
 cat README.md | ./compose.mk stream.markdown
 
-# Use `stream.pygmentize` to syntax-highlight code with pygments (guess lexer)
+# Use `stream.pygmentize` to syntax-highlight code with pygments (guess lexer, default style)
 cat Makefile | ./compose.mk stream.pygmentize
 
 # Use `stream.pygmentize` to syntax-highlight code with pygments (explicit lexer)
 cat Makefile | lexer=Makefile ./compose.mk stream.pygmentize 
+
+# Use `stream.pygmentize` to syntax-highlight code with pygments (explicit style and lexer)
+cat Makefile | style=monokai lexer=Makefile ./compose.mk stream.pygmentize 
 
 # # Use `stream.json.pygmentize` to preview JSON (minified)
 ./compose.mk jb key=val | ./compose.mk stream.json.pygmentize
@@ -33,3 +44,4 @@ cat Makefile | lexer=Makefile ./compose.mk stream.pygmentize
 
 # pull data from yaml with yq
 echo 'one: two' | ./compose.mk yq .one
+

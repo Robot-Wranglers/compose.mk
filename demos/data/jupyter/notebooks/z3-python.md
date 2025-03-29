@@ -18,14 +18,14 @@ jupyter:
     pygments_lexer: ipython3
 ---
 
-## Z3 Demo (with python bindings)
+## Demo: Z3 with Python Bindings
 
 -------------------
 
 Examples from:
 
-* [socrates @ z3 official](https://github.com/Z3Prover/z3/blob/master/examples/python/socrates.py)
-* [8 queens @ philzooks](https://github.com/philzook58/z3_tutorial/blob/master/Z3%20Tutorial.ipynb)
+* [Socrates @ Z3 official](https://github.com/Z3Prover/z3/blob/master/examples/python/socrates.py)
+* [8 queens @ philzook](https://github.com/philzook58/z3_tutorial/blob/master/Z3%20Tutorial.ipynb)
 
 -------------------
 
