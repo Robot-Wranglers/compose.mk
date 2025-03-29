@@ -2,3 +2,4 @@
 --ignore-dir=docs/theme
 --ignore-dir=site/
 --ignore-dir=.tox
+--ignore-file=match:/[.]ipynb$/

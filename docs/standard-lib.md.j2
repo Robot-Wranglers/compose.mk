@@ -23,7 +23,6 @@ Here's a brief overview of how the modules are layed out.
 
 * **No host dependencies.** This uses the `compose.mk:tux` tool container to dockerize tmux itself.Built-in supervisor process, [improving support for signal handling](#signals-and-supervisors).
   * **Supports docker-in-docker style host-socket sharing with zero configuration,** so your TUI can generally do all the same container orchestration tasks as the docker host.
-  * Open split-screen displays, shelling into 1 or more of the tool containers in k8s-tools.yml (or any other compose file).
   * Combines well with `flux.*` targets to quickly create dashboards / custom development environments.
 
 With that in place, you have access to a few different possibilities:
