@@ -95,14 +95,55 @@ The example below demonstrates an embedded python-script that we'll run inside a
 
 Above we use `$(call mk.yield)` with no arguments, which is equivalent to `$(call mk.yield, true)`, i.e. just stopping CLI parsing and exiting immediately. This is often sufficient and has the correct exit status, because if the line before it should fail, execution will stop anyway.
 
+### Pre & Post Hooks 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+If you're using the interpreter as seen in the previous examples, you'll also **automatically be able to use pre and post hooks for every target that runs via the command line.**  Here's a simple example to illustrate:
+
+```makefile
+{{open('demos/interpreter-4.mk').read()}}
+```
+
+Running the code above works the way you'd expect:
+
+```./demos/interpreter-4.mk main_target
+
+hello pre-hook
+hello main
+hello post-hook
+```
+
+Cool, so we can get pre and post effects with no explicit plumbing.  This is named-based with post-fixes as seen above.  This is partly just a style choice that can make certain code more readable, but it does also make possible a certain interesting kind of code reuse, because many targets may wish to share the *same* pre-conditions or post-conditions.  This works because there's no need to define an explicit target body for the hooks actually, and you can just treat `my.target.pre: common.precondition` as label  This approach is similar to function decorators in python, or lightweight "aspect oriented" programming.
+
+It's very important to understand the limitation that was hinted at earlier though.  What does it mean that hooks work for "*every target that via command line*" ? To put this in other words, **hooks are only fired when the interpreter is used directly,** i.e. recursive calls via `${make}` or similar will not execute them!  This makes the feature pretty useful for standalone tools, and less useful for libraries.
+
+Hooks are enabled by default since they don't affect peformance much, but it's possible they might conflict with existing naming conventions or similar.  To override this, set `CMK_DISABLE_HOOKS=1`.
+
+### At-Exit Handlers
+<hr style="width:100%;border-bottom:3px solid black;">
+
+*Note: this is experimental and not extensively tested.* 
+
+To setup one or more exit handlers, try using the `CMK_AT_EXIT_TARGETS` environment variable with space-separated target names.  This should run even if `make` dies for any reason and even if it is killed, but cannot run if the wrapper process is killed  (see the [implementation details](#implementation)).  This is called whenever `mk.supervisor.exit` is called, which has the usual caveats that **you must be using a interpreter-style invocation,** and not running via `make -f ...`!
+
+This is If there are 
+
 ### Implementation
 <hr style="width:100%;border-bottom:3px solid black;">
 
 If you're already very familiar with `make` and looking over the rest of this page, you might be wondering how this kind of semi-magical behavior can be achieved.   And since the answer to that question is frankly kind of ridiculous, this should probably be considered experimental =)  *With that sternly worded warning out of the way..*
 
-Signals and supervisors are implemented using [a shebang hack](https://en.wikipedia.org/wiki/Shebang_(Unix)) and a [polyglot](https://en.wikipedia.org/wiki/Polyglot_(computing)), whereby `compose.mk` is simultaneously a Makefile, a Makefile library, *and* a bash script.  The bash script invokes `make`, but wraps it to catch any signals that are thrown.  After throwing a supported signal causes `make` to exit, bash catches, and then passes the code for the caught signal back to *another* invocation of `make` for an exit handler.
+Signals and supervisors are implemented using [a shebang hack](https://en.wikipedia.org/wiki/Shebang_(Unix)) and a [polyglot](https://en.wikipedia.org/wiki/Polyglot_(computing)), whereby `compose.mk` is simultaneously a Makefile, a Makefile library, *and* a bash script.  The way this works is as follows:
+
+------------------------------
+
+The bash script invokes `make`, but wraps it to catch any signals that are thrown.  After throwing a supported signal causes `make` to exit, bash catches, and then passes the code for the caught signal back to *another* invocation of `make` for an exit handler.
+
+------------------------
 
 **As a consequence of this, signals can only be handled when `compose.mk` is invoked directly,** i.e. with `./compose.mk ...`, and cannot work for `make -f compose.mk`.  
+
+The [pre/post hooks](#pre-post-hooks) have exactly the same limitation, but a different implementation.  Since the bash wrapper-script ultimately controls the initial invocation of `make`, it's possible to dynamically inject targets *between* any targets that are initially declared.
 
 {#So note that **project Makefile's that are using `include compose.mk` cannot currently inherit this ability.**  
 

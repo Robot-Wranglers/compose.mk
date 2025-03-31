@@ -29,7 +29,10 @@ clean: flux.stage.clean
 	rm -f tests/compose.mk
 	find . | grep .tmp | xargs rm 2>/dev/null || true
 
-build: tux.require 
+build: tux.require
+	@# Containers are normally pulled on demand, 
+	@# but pre-caching cleans up the build logs.
+	${jb} foo=bar | ${jq} .
 
 normalize: # NOP
 
@@ -43,11 +46,9 @@ demos demos.test demo-test test.demos:
 demos/cmk:
 	set -x && ls demos/cmk/*.cmk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 
-bonk:
-	ls demos/container-dispatch.mk | xargs -I% ${io.shell.isolated} sh -x -c "trace=1 ./%||exit 255"
-ttest/%:; make test-suite/tui/${*}
+# ttest/%:; make test-suite/tui/${*}
 
-itest integration-test: make -f demos/itest.mk
+itest integration-test: ./demos/itest.mk
 
 ## BEGIN: Documentation related targets
 ##

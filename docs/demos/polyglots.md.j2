@@ -72,8 +72,14 @@ Another variation on {{macros.api_link('docker.run.def',mkdocs,arg='def_block_na
 {{open('demos/uv.mk','r').read().strip()}}
 ```
 
-Hard to say exactly where it's useful, but this example is kind of remarkable for being an extreme version of "late-binding".
+By default this caches nothing including the dependencies or the python version, and it's hard to say exactly where that is useful, but it is kind of remarkable for being an extreme kind of "late-binding".
 
+To get UV to leverage more caching, you can use a volume.  This can be done by modifying the script accordingly but also directly via the CLI by settings `docker_args` like this:
+
+```bash 
+$ docker_args="-v ${HOME}/.cache:/root/.cache" ./demos/uv.mk 
+```
+See the official docs for caching [here](https://docs.astral.sh/uv/concepts/cache).
 
 ### Compiled Languages
 <hr style="width:100%;border-bottom:3px solid black;">

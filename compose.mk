@@ -52,7 +52,7 @@
 
 # Let's get into the horror and the delight right away with shebang hacks. 
 # The block below these comments looks like a comment, but it is not. That line,
-# and a matching one at EOF, makes this file a polyglot, and so it is executable
+# and a matching one at EOF, makes this file a polyglot so that it is executable
 # simultaneously as both a bash script and a Makefile.  This allows for some improvement 
 # around the poor signal-handling that Make supports by default, and each CLI invocation 
 # that uses this file directly is wrapped to bootstrap handlers. If relevant signals are 
@@ -60,7 +60,7 @@
 #
 # Signals are used sometimes to short-circuit `make` from attempting to parse the full CLI. 
 # This supports special cases like `./compose.mk loadf` & container invocations that use ' -- '
-# See docs & usage of `mk.interrupt` for details.
+# See docs & usage of `mk.interrupt` and `mk.yield` for details.
 #
 #/* \
 _make_="make -sS --warn-undefined-variables -f ${0}"; trace="${TRACE:-${trace:-0}}"; \
@@ -73,9 +73,14 @@ case ${CMK_SUPERVISOR:-1} in \
 		printf "ᐂ ${sep} Installing supervisor..\n\033[0m" > /dev/stderr); \
 		export MAKE_SUPER=$(exec sh -c 'echo "$PPID"'); \
 		[ "${trace}" == 1 ] && set -x || true;  \
-		trap "${_make_} mk.supervisor.trap/SIGINT; " SIGINT; \
-		${_make_} mk.supervisor.enter/${MAKE_SUPER} ${@:-mk.__main__} 2> >(sed '/^make.*:.*mk.interrupt\/SIGINT.*Killed/,/^make:.*Error.*/d' >/dev/stderr); \
-		st=$? ; ${_make_} mk.supervisor.exit/${st}; st=$?; ;; \
+		trap "CMK_DISABLE_HOOKS=1 ${_make_} mk.supervisor.trap/SIGINT; " SIGINT; \
+		case ${CMK_DISABLE_HOOKS:-0} in \
+			0) targets="`echo ${@:-mk.__main__} | quiet=1 ${_make_} io.awker/.awk.rewrite.targets.maybe`";; \
+			1) targets="${@:-mk.__main__}";; \
+		esac; \
+		CMK_DISABLE_HOOKS=1 ${_make_} mk.supervisor.enter/${MAKE_SUPER} ${targets} \
+			2> >(sed '/^make.*:.*mk.interrupt\/SIGINT.*Killed/,/^make:.*Error.*/d' >/dev/stderr); \
+		st=$? ; CMK_DISABLE_HOOKS=1 ${_make_} mk.supervisor.exit/${st}; st=$?; ;; \
 esac \
 ; exit ${st}
 
@@ -127,7 +132,7 @@ endif
 dim_red=${dim}${red}
 dim_cyan=${dim}${cyan}
 bold_cyan=${bold}${cyan}
-bold.green=${bold}${green}
+bold_green=${bold}${green}
 bold.underline=${bold}${underline}
 
 dim_green=${dim}${green}
@@ -136,8 +141,8 @@ dim_ital_cyan=${dim_ital}${cyan}
 no_ansi_dim=${no_ansi}${dim}
 cyan_flow_left=${bold_cyan}⋘${dim}⋘${no_ansi_dim}⋘${no_ansi}
 cyan_flow_right=${no_ansi_dim}⋙${dim}${cyan}⋙${no_ansi}${bold_cyan}⋙${no_ansi} 
-green_flow_left=${bold.green}⋘${dim}⋘${no_ansi_dim}⋘${no_ansi}
-green_flow_right=${no_ansi_dim}⋙${dim_green}⋙${no_ansi}${green}⋙${bold.green}⋙ 
+green_flow_left=${bold_green}⋘${dim}⋘${no_ansi_dim}⋘${no_ansi}
+green_flow_right=${no_ansi_dim}⋙${dim_green}⋙${no_ansi}${green}⋙${bold_green}⋙ 
 sep=${no_ansi}//
 
 # Glyphs used in log messages 📢 🤐
@@ -227,8 +232,8 @@ log.stdout=printf "${log.prefix.makelevel} $(strip $(if $(filter undefined,$(ori
 log=([ "$(shell echo $${quiet:-0})" == "1" ] || ( ${log.stdout} >${stderr} ))
 log.noindent=(printf "${log.prefix.makelevel.glyph} `echo "$(or $(1),)"| ${stream.lstrip}`${no_ansi}\n" >${stderr})
 log.fmt=( ${log} && (printf "${2}" | fmt -w 55 | ${stream.indent} | ${stream.indent} | ${stream.indent.to.stderr} ) )
-log.json=$(call log, ${dim}${bold.green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.docker} ${1} | ${jq.run} . | ${stream.as.log}
-log.json.min=$(call log, ${dim}${bold.green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.docker} ${1} | ${jq.run} -c . | ${stream.as.log}
+log.json=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.docker} ${1} | ${jq.run} . | ${stream.as.log}
+log.json.min=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.docker} ${1} | ${jq.run} -c . | ${stream.as.log}
 log.target=$(call log.io, ${dim_green} $(shell printf "${@}" | cut -d/ -f1) ${sep}${dim_ital} $(strip $(or $(1),$(shell printf "${@}" | cut -d/ -f2-))))
 log.target.part1=([ -z "$${quiet:-}" ] && (printf "${log.prefix.makelevel}${GLYPH_IO}${dim_green} $(shell printf "${@}" | cut -d/ -f1) ${sep}${dim_ital} `echo "$(strip $(or $(1),))"| ${stream.lstrip}`${no_ansi_dim}..${no_ansi}") || true )>${stderr}
 log.target.part2=([ -z "$${quiet:-}" ] && $(call log.part2, ${1}))
@@ -352,6 +357,7 @@ jq.run.pipe:=$(shell which jq 2>/dev/null || echo "${docker.run.base} -i -e key=
 yq.run.pipe:=$(shell which yq 2>/dev/null || echo "${docker.run.base} -i -e key=$${key:-} -v `pwd`:/workspace -w/workspace mikefarah/yq:$${YQ_VERSION:-4.43.1}")
 jb.docker:=docker container run --rm ghcr.io/h4l/json.bash/jb:$${JB_CLI_VERSION:-0.2.2}
 jb=${jb.docker}
+json.from=${jb}
 jq=${jq.run}
 yq=${yq.run}
 
@@ -961,6 +967,10 @@ docker.run.def:
 	@#
 	true \
 	&& $(call log.docker, docker.run.def ${no_ansi}${sep} ${dim_cyan}${ital}$${def}${no_ansi} ${sep} ${bold}${underline}$${img}) \
+	&& case $${docker_args:-}} in \
+		"") true;; \
+		*) quiet=$${quiet:-0};; \
+	esac \
 	&& $(call io.mktemp) \
 	&& ${make} mk.def.to.file/$${def}/$${tmpf} \
 	&& (script_pre="$${cmd:-}" \
@@ -978,7 +988,7 @@ docker.run.sh:
 	@# those variables will be dereferenced and passed into docker's "-e" arguments.
 	@#
 	@# USAGE:
-	@#   img=... entrypoint=... cmd=... env=var1,var2 ./compose.mk docker.run.sh
+	@#   img=... entrypoint=... cmd=... env=var1,var2 docker_args=.. ./compose.mk docker.run.sh
 	@#
 	${trace_maybe} \
 	&& image_tag="$${img}" \
@@ -990,7 +1000,11 @@ docker.run.sh:
 		[ -z "$${quiet:-}" ] \
 		&& ( \
 			$(call log.docker, docker.run ${sep} ${dim}img=${no_ansi}$${image_tag}) \
-			;$(call log, ${green_flow_right} ${dim_cyan}[${no_ansi}${bold}$${entrypoint:-}${no_ansi}${cyan}] ${no_ansi_dim}$${disp_cmd})  \
+			&& case $${docker_args:-} in \
+				"") true=;; \
+				*) $(call log.docker, docker.run ${sep}${dim} docker_args=${no_ansi}${ital}$${docker_args:-});; \
+			esac \
+			&& $(call log, ${green_flow_right} ${dim_cyan}[${no_ansi}${bold}$${entrypoint:-}${no_ansi}${cyan}] ${no_ansi_dim}$${disp_cmd})  \
 			) \
 		|| true ) \
 	&& extra_env=`[ -z $${env:-} ] && true || ${make} .docker.proxy.env/$${env}` \
@@ -1459,11 +1473,9 @@ io.tail/%:
 	@#
 	$(trace_maybe) && touch ${*} && tail -f ${*} 2>/dev/null
 
-io.terminal.cols=$(shell which tput >/dev/null 2>/dev/null && echo `tput cols 2> /dev/null` || echo 45)
+io.terminal.cols=$(shell which tput >/dev/null 2>/dev/null && echo `tput cols 2> /dev/null` || echo 50)
 
-io.term.width:=${io.terminal.cols}
-
-# io.term.cols:; ${io.terminal.cols}
+io.term.width=$(shell echo $$(( $${COLUMNS:-${io.terminal.cols}}-6)))
 io.time.wait/% io.wait/%:
 	@# Pauses for the given amount of seconds.
 	@#
@@ -1773,8 +1785,6 @@ mk.kernel:
 	&& printf "$${instructions}" | ${stream.as.log} \
 	&& set -x && ${make} $${instructions}
 
-
-
 define cmk.default.sugar
 [
 	["⋘", "⋙", "$(eval $(call compose.import.string,__NAME__,TRUE))"],
@@ -1953,8 +1963,9 @@ mk.interpret:
 	&& tmp=`echo $${tmp} | ${stream.lstrip}` \
 	&& fname="`echo $${tmp}| cut -d' ' -f1`" \
 	&& rest="`echo $${tmp}| cut -d' ' -f2- -s`" \
-	&& $(call log.mk, mk.interpret ${sep} ${dim}file=${bold}$${fname} ${sep} ${dim_ital}$${rest:-..}) \
+	&& $(call log.mk, mk.interpret ${sep} ${dim}starting interpreter ${sep} ${dim}timestamp=${bold}${io.timestamp}) \
 	&& continuation="$${rest}" ${make} mk.interpret/$${fname}
+	$(call mk.yield, true)
 
 mk.interpret/%:
 	@# A version of `mk.interpret` that accepts file-args.
@@ -1969,7 +1980,7 @@ mk.interpret/%:
 		 && cat $${fname} | grep -v "^include ${CMK_SRC}" \
 		 && printf '\n\n\n' ; cat ${CMK_SRC} | tail -n1 ) \
 	> $${tmpf} \
-	&& $(call log.mk, mk.interpret ${sep} ${dim}file=${*} ${sep} ${dim_ital}$${continuation:-..}) \
+	&& $(call log.mk, mk.interpret ${sep} ${dim}file=${bold}${*} ${sep} ${dim_ital}$${continuation:-..}) \
 	&& chmod ugo+x $${tmpf} \
 	&& $(call io.script.trace, MAKEFILE=$${tmpf} $${tmpf} $${continuation:-})
 
@@ -2127,7 +2138,6 @@ mk.parse.module.docs/%:
 	@#
 	${trace_maybe} && (${pynchon} parse --module-docs ${*} 2>/dev/null || echo '{}') | ${jq} . || true
 
-
 define Dockerfile.makeself
 FROM debian:bookworm
 RUN apt-get update
@@ -2276,7 +2286,7 @@ mk.supervisor.exit/%:
 	header="${GLYPH_MK} mk.supervisor.exit ${sep}" \
 	&& $(call log.trace, $${header} ${red} status=${*} ${sep} ${bold}pid=$${MAKE_SUPER}) \
 	&& $(call log.trace, $${header} ${red} calling exit handlers: ${CMK_AT_EXIT_TARGETS}) \
-	&& ${make} ${CMK_AT_EXIT_TARGETS} \
+	&& CMK_DISABLE_HOOKS=1 ${make} ${CMK_AT_EXIT_TARGETS} \
 	&& if [ -f .tmp.mk.super.${MAKE_SUPER} ]; then \
 		( $(call log.trace, ${GLYPH_MK} ${yellow}WARNING: ${no_ansi_dim}execution was yielded from ${no_ansi}${MAKE_SUPER}${no_ansi_dim} (pidfile=${no_ansi}.tmp.mk.super.${MAKE_SUPER}${no_ansi_dim})) \
 			; trap "rm -f .tmp.mk.super.${MAKE_SUPER}" EXIT \
@@ -2289,7 +2299,6 @@ mk.supervisor.trap/%:
 	@#
 	header="${GLYPH_MK} mk.supervisor.trap ${sep}" \
 	&& $(call log.trace, $${header} ${red}${*} ${sep} ${dim}Supervisor trapped signal)
-
 
 mk.targets.simple/%:; ${make} mk.targets/${*} | grep -v '%$$'
 	@# Returns only local targets from the given file, 
@@ -2563,8 +2572,8 @@ flux.if.then/%:
 	&& _if=`printf "${*}"|cut -s -d, -f1` \
 	&& _then=`printf "${*}"|cut -s -d, -f2-` \
 	&& $(call log.part1, ${GLYPH.FLUX} flux.${bold.underline}if${no_ansi}${dim_green}.then ${sep}${dim} ${ital}$${_if}${no_ansi} ) \
-	&& case $${verbose:-0} in \
-		0) ${make} $${_if} 2>/dev/null; st=$$?; ;; \
+	&& case $${quiet:-1} in \
+		1) ${make} $${_if} 2>/dev/null; st=$$?; ;; \
 		*) ${make} $${_if}; st=$$?; ;; \
 	esac \
 	&& case $${st} in \
@@ -2592,7 +2601,6 @@ flux.if.then.else/%:
 		0) $(call log.part2, ${dim_green}true${no_ansi_dim} - dispatching ${dim_cyan}$${_then}) ; ${make} $${_then};; \
 		*) $(call log.part2, ${yellow}false${no_ansi_dim} - dispatching ${dim_cyan}$${_else}); ${make} $${_else};; \
 	esac
-
 
 flux.indent/%:
 	@# Given a target, this runs it and indents both the resulting output for both stdout/stderr.
@@ -2738,7 +2746,7 @@ flux.pipeline/%:
 	&& hdr="flux.pipeline ${sep} " \
 	&& first=`echo "$${targets}"|cut -d$${delim} -f1` \
 	&& rest=`echo "$${targets}"|cut -s -d$${delim} -f2-`  \
-	&& $(call log.flux, $${hdr}${bold_cyan}$${opipe} ${sep} ${bold.green}$${first} ${no_ansi_dim}stage ) \
+	&& $(call log.flux, $${hdr}${bold_cyan}$${opipe} ${sep} ${bold_green}$${first} ${no_ansi_dim}stage ) \
 	&& ${make} $${first} >> $${tmpf} 2> >(tee /dev/null >&2) \
 	&& if [ -z "$${rest:-}" ]; \
 		then (([ -z "$${quiet:-}" ] && ${.flux.pipeline.preview} || true); cat $${tmpf}); \
@@ -2746,7 +2754,7 @@ flux.pipeline/%:
 			([ -z "$${quiet:-}" ] && ${.flux.pipeline.preview} || true) \
 			; cat $${tmpf} | ${make} flux.pipeline/$${rest}); fi
 .flux.pipeline.preview=(\
-	$(call log.flux, $${hdr} ${bold.green}$${first} ${no_ansi_dim}stage ${sep} ${underline}result preview${no_ansi}) \
+	$(call log.flux, $${hdr} ${bold_green}$${first} ${no_ansi_dim}stage ${sep} ${underline}result preview${no_ansi}) \
 				; cat $${tmpf} | quiet=1 ${make} stream.pygmentize ; printf '\n'>/dev/stderr)
 
 flux.pipeline.quiet/%:
@@ -2800,7 +2808,6 @@ flux.negate/%:; ! ${make} ${*}
 	@#
 	@# USAGE: 
 	@#   `./compose.mk flux.negate/flux.fail`
-	@#
 
 flux.noop:; exit 0
 	@# NO-OP mostly used for testing.  
@@ -2808,7 +2815,6 @@ flux.noop:; exit 0
 	@#
 	@# USAGE:	
 	@#  ./compose.mk flux.noop
-	@#
 
 flux.ok:
 	@# Alias for 'exit 0', which is success.
@@ -2848,7 +2854,6 @@ flux.sh.tee:
 	&& $(call log.flux, ${no_ansi_dim}flux.sh.tee${no_ansi} ${sep} ${no_ansi_dim}$${cmd}) \
 	&& eval $${cmd} | cat
 
-FLUX_POLL_DELTA?=5
 flux.retry/%:
 	@# Retries the given target a certain number of times.
 	@#
@@ -2869,6 +2874,7 @@ flux.retry/%:
 				; exit 1) \
 		); do ((--r)) || exit; sleep $${interval:-${FLUX_POLL_DELTA}}; done)
 
+FLUX_POLL_DELTA?=5
 FLUX_STAGES=
 export FLUX_STAGE?=
 flux.stage.file=.flux.stage.${*}
@@ -2947,7 +2953,7 @@ flux.stage.enter/% flux.stage/%:
 	&& header="flux.stage ${sep} ${bold}${underline}${*}${no_ansi} ${sep}" \
 	&& (label="${*}" ${make} $${banner_target:-io.draw.banner}) \
 	&& true $(eval export FLUX_STAGE=${*}) $(eval export FLUX_STAGES+=${*}) \
-	&& $(call log.flux, $${header} ${dim} stack file @ ${dim_ital}$${stagef}) \
+	&& $(call log.flux, $${header}${dim} stack file @ ${dim_ital}$${stagef}) \
 	&& ${jb} stage.entered="`date`" | ${make} flux.stage.push/${*}
 
 flux.stage.exit/%:; ${make} flux.stage.stack/${*} flux.stage.clean/${*}
@@ -2956,8 +2962,6 @@ flux.stage.exit/%:; ${make} flux.stage.stack/${*} flux.stage.clean/${*}
 	@#
 	@# USAGE: ( generic )
 	@#  ./compose.mk flux.stage.exit/<stage_name>
-	@#
-	@#
 
 flux.stage.file/%:; echo "${flux.stage.file}"
 	@# Returns the name of the current stage file.
@@ -2977,7 +2981,6 @@ flux.stage.stack/%:; ${make} io.stack/${flux.stage.file}
 	@#
 	@# USAGE: ( generic )
 	@#  ./compose.mk flux.stage./
-	@#
 
 flux.stage.push/%: 
 	@# Push the JSON data on stdin into the stack for the named stage.
@@ -2986,7 +2989,6 @@ flux.stage.push/%:
 	@#   echo '<json_data>' | ./compose.mk flux.stage.push/<stage_name>
 	@#
 	header="flux.stage.push ${sep} ${bold}${underline}${*}${no_ansi}" \
-	&& $(call log, $${header} ) \
 	&& test -p ${stdin}; st=$$?; case $${st} in \
 		0) ${stream.stdin} | ${make} io.stack.push/${flux.stage.file}; ;; \
 		*) $(call log.flux, $${header} ${sep} ${red}Failed pushing data${no_ansi} because no data is present on stdin); ;; \
@@ -2999,7 +3001,6 @@ flux.stage.push:
 	@#  ./compose.mk flux.stage.push
 	@#
 	${stream.stdin} | ${make} flux.stage.push/${FLUX_STAGE}
-
 
 flux.stage.pop/%:
 	@# Pops the stack for the named stage.  
@@ -3022,6 +3023,13 @@ flux.stage.stack:
 	$(call io.stack, ${flux.stage.file})
 flux.stage.stack=$(call io.stack, ${flux.stage.file})
 
+flux.stage.wrap:
+	@# Like `flux.stage.wrap/<stage>/<target>`, but taking args from env
+	@#
+	${make} \
+		flux.stage.enter/$${stage} \
+		$${target} flux.stage.exit/$${stage} 
+
 flux.stage.wrap/%:
 	@# Context-manager that wraps the given target with stage-enter 
 	@# and stage-exit.  It only accepts one stage at a time, but can
@@ -3041,13 +3049,6 @@ flux.stage.wrap/%:
 		&& ( \
 			export target="flux.and/$${target}" && ${make} flux.stage.wrap  ) \
 		|| (${make} flux.stage.wrap ) 
-flux.stage.wrap:
-	@# Like `flux.stage.wrap/<stage>/<target>`, but taking args from env
-	@#
-	${make} \
-		flux.stage.enter/$${stage} \
-		$${target} flux.stage.exit/$${stage} 
-
 
 flux.star/% flux.match/%:
 	@# Runs all targets in the local namespace matching given pattern
@@ -3085,7 +3086,7 @@ flux.timer/%:
 	&& ${make} ${*} \
 	&& end_time=$$(date +%s) \
 	&& time_diff_ns=$$((end_time - start_time)) \
-	&& delta=$$(awk -v ns="$$time_diff_ns" 'BEGIN {printf "%.9f", ns / 1000000000}') \
+	&& delta=$$(awk -v ns="$$time_diff_ns" 'BEGIN {printf "%.9f", ns }') \
 	&& $(call log.flux, flux.timer ${sep} ${dim}$${label:-${*}} ${yellow}$${delta}s)
 
 flux.timeout/%:
@@ -3141,7 +3142,6 @@ flux.try.except.finally/%:
 	&& ${make} $${finally} \
 	&& exit $${exit_status}
 	
-
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## END: flux.* targets
 ## BEGIN: stream.* targets
@@ -3172,8 +3172,8 @@ flux.try.except.finally/%:
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # WARNING: without the tr, osx `wc -w` injects tabbed junk at the beginning of the result!
-stream.count.words=wc -w|tr -d '[:space:]'
-stream.count.lines=wc -l|tr -d '[:space:]'
+stream.count.words=wc -w | tr -d '[:space:]'
+stream.count.lines=wc -l | tr -d '[:space:]'
 
 stream.stderr.iff.failed=2> >(stderr=$$(cat); exit_code=$$?; if [ $$exit_code -ne 0 ]; then echo "$$stderr" >&2; fi; exit $$exit_code)
 stream.as.log=( ${stream.dim.indent} > ${stderr}; printf "\n" >/dev/stderr)
@@ -3194,7 +3194,7 @@ stream.fold:; ${stream.fold}
 	@# Also available as a macro.
 stream.fold=${stream.nl.to.space} | fold -s -w $${width:-${io.term.width}}
 
-stream.code:; ${stream.stdin}| ${make} io.preview.file//dev/stdin
+stream.code:; ${stream.stdin} | ${make} io.preview.file//dev/stdin
 	@# A version of `io.preview.file` that works with streaming input.
 	@# Uses pygments on the backend; pass style=.. lexer=.. to override.
 
@@ -3425,7 +3425,6 @@ stream.space.enum:
 	@#
 	${stream.stdin} | ${stream.space.to.nl} | ${stream.nl.enum}
 
-
 stream.space.to.comma=(${stream.stdin} | sed 's/ /,/g')
 
 stream.space.to.nl=xargs -n1 echo
@@ -3468,7 +3467,6 @@ stream.makefile.pygmentize=lexer=makefile ${make} stream.pygmentize
 ## ```
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-
 
 ICON_DOCKER:=https://cdn4.iconfinder.com/data/icons/logos-and-brands/512/97_Docker_logo_logos-512.png
 # Geometry constants, used by the different commander-layouts
@@ -3747,7 +3745,6 @@ tux.pane/%:; ${make} tux.dispatch/.tux.pane/${*}
 	@#
 	@# USAGE:
 	@#   ./compose.mk tux.pane/1/<target_name>
-	
 
 tux.panic:
 	@#
@@ -4548,6 +4545,7 @@ define compose.get_shell
 	|| (${docker.compose} -f $(1) run --entrypoint sh $(2) -c "which sh" 2>/dev/null \
 		|| echo )
 endef
+
 define compose.shell
 	${trace_maybe} \
 	&& entrypoint="`${compose.get_shell}`" \
@@ -4636,7 +4634,7 @@ ${compose_file_stem}.build $(target_namespace).build:
 	@# WARNING: This is not actually safe for all legal compose files, because
 	@# compose handles run-ordering for defined services, but not build-ordering.
 	@#
-	$$(call log.docker, ${bold.green}${target_namespace} ${sep} ${bold_cyan}build ${sep} ${dim_ital}all services) \
+	$$(call log.docker, ${bold_green}${target_namespace} ${sep} ${bold_cyan}build ${sep} ${dim_ital}all services) \
 	&&  $(trace_maybe) \
 	&& ${docker.compose} $${COMPOSE_EXTRA_ARGS} -f ${compose_file} build -q 
 
@@ -4648,7 +4646,7 @@ ${compose_file_stem}.build.quiet $(target_namespace).build.quiet:
 	@# WARNING: This is not actually safe for all legal compose files, because
 	@# compose handles run-ordering for defined services, but not build-ordering.
 	@#
-	$(call log.docker, ${bold.green}${target_namespace} ${sep} ${bold_cyan}build ${sep} ${dim_ital}$(shell echo $${svc:-all services}))
+	$(call log.docker, ${bold_green}${target_namespace} ${sep} ${bold_cyan}build ${sep} ${dim_ital}$(shell echo $${svc:-all services}))
 	$(trace_maybe) \
 	&& quiet=1 label="build finished in" ${make} flux.timer/compose.build/${compose_file}
 
@@ -4706,7 +4704,7 @@ ${compose_file_stem}.stop $(target_namespace).stop:
 	@# Stops all services for the ${compose_file} file.  
 	@# Provided for completeness; the stop, start, up, and 
 	@# down verbs are not really what you want for tool containers!
-	$$(call log.docker, ${bold.green}${target_namespace} ${sep} ${bold_cyan}stop ${sep} ${dim_ital}all services)
+	$$(call log.docker, ${bold_green}${target_namespace} ${sep} ${bold_cyan}stop ${sep} ${dim_ital}all services)
 	${trace_maybe} && ${docker.compose} -f $${compose_file} stop -t 1 2> >(grep -v '\] Stopping'|grep -v '^ Container ' >&2)
 
 ${compose_file_stem}.up:
@@ -4795,6 +4793,7 @@ $(foreach \
  	$(__code_blocks__), \
 	$(eval $(call polyglot.bind.target, ${codeblock}, $(2), )))
 endef
+
 define polyglots.bind.container
 $(eval defpat=$(strip ${1}))
 #$$(shell $(call log, import.code ${defpat}))
@@ -4804,9 +4803,11 @@ $(foreach \
  	$(__code_blocks__), \
 	$(eval $(call polyglot.bind.container, ${codeblock}, $(2), $(3))))
 endef
+
 define polyglot.bind.target
 $(call compose.import.code, ${1}, ${2})
-endef 
+endef
+
 define polyglot.bind.container
 $(eval defname=$(strip ${1}))
 $(eval code_img=$(strip ${2}))
@@ -5042,8 +5043,7 @@ function process_text(text, result, pos, method_start, method_name, args_start, 
             pos++ }
         if (pos > length(text)) {
             # No opening parenthesis found, append remaining text
-            result = result "cmk." method_name
-            break }
+            result = result "cmk." method_name; break }
         # Skip opening parenthesis
         pos++
         # Extract arguments with balanced parentheses
@@ -5076,18 +5076,15 @@ function process_text(text, result, pos, method_start, method_name, args_start, 
   line = string_substitute($0)
   if (in_define_block) {print $0} else {print process_text(line)} }
 endef
+
 define .awk.sugar
 BEGIN {
  if (ARGC < 3) {
- print "Usage: script.awk open_pattern close_pattern post_process_template" > "/dev/stderr"
- exit 1
- }
- open_pattern = ARGV[1]
- close_pattern = ARGV[2]
+	print "Usage: script.awk open_pattern close_pattern post_process_template" > "/dev/stderr"
+	exit 1 }
+ open_pattern = ARGV[1]; close_pattern = ARGV[2]
  post_process_template = ARGV[3]
- delete ARGV[1]
- delete ARGV[2]
- delete ARGV[3]
+ delete ARGV[1]; delete ARGV[2]; delete ARGV[3]
 }
 # Look for opening block marker
 $0 ~ open_pattern && block_mode == 0 {
@@ -5102,19 +5099,19 @@ $0 ~ open_pattern && block_mode == 0 {
  block_mode = 1
  next
 }
+
 # Look for closing block marker
 $0 ~ close_pattern && block_mode == 1 {
  # Print define end
  print "endef"
  # Parse remainder of the line after close_pattern
- remainder = $0
- sub(close_pattern, "", remainder)
- sub(/^[ \t]+/, "", remainder)
+ remainder = $0; sub(close_pattern, "", remainder); sub(/^[ \t]+/, "", remainder)
  
  # Prepare template for substitution
  cur_template = post_process_template
  
  # Check for "with ... as ..." pattern
+ # Use original substitutions
  if (match(remainder, /^with (.+)\s+as\s+(.+)$/, matches)) {
      # matches[1] is always the with-clause
      # matches[3] is the as-clause (or empty if not present)
@@ -5124,12 +5121,8 @@ $0 ~ close_pattern && block_mode == 1 {
      # Replace @ with with-clause and _ with as-clause
      gsub(/__WITH__/, with_clause, cur_template)
      gsub(/__AS__/, as_clause, cur_template)
-     gsub(/__NAME__/, block_name, cur_template)
- } else {
-     # Use original substitutions
-     gsub(/__NAME__/, block_name, cur_template)
-     gsub(/__REST__/, remainder, cur_template)
- }
+     gsub(/__NAME__/, block_name, cur_template) }
+ else { gsub(/__NAME__/, block_name, cur_template); gsub(/__REST__/, remainder, cur_template) }
  
  print cur_template
  # Exit block mode
@@ -5137,12 +5130,43 @@ $0 ~ close_pattern && block_mode == 1 {
  next
 }
 # In block mode, print lines as-is
-block_mode == 1 {
- print $0
-}
 # Print non-block lines normally when not in block mode
-block_mode == 0 {
- print $0
+block_mode == 1 { print $0 }
+block_mode == 0 { print $0 }
+endef
+
+flux.pre/%:
+	export CMK_DISABLE_HOOKS=1 \
+	&& ${make} -q ${*}.pre > /dev/null 2>&1 \
+	; case $$? in \
+		0) $(call log.mk, flux.pre ${sep} pre-hook found, dispatching ${*}) ; ${make} ${*}.pre ;; \
+		1) $(call log.trace, flux.pre ${sep} pre-hook found, dispatching ${*}) ; ${make} ${*}.pre ;; \
+		*) $(call log.trace, flux.pre ${sep} no such hook: ${*}.pre); exit 0;; \
+	esac
+flux.post/%:
+	export CMK_DISABLE_HOOKS=1 \
+	&& ${make} -q ${*}.post > /dev/null 2>&1 \
+	; case $$? in \
+		0) $(call log.mk, flux.post ${sep} post-hook found, dispatching ${*}) ; ${make} ${*}.post;; \
+		1) $(call log.trace, flux.post ${sep} post-hook found, dispatching ${*}) ; ${make} ${*}.post;; \
+		*) $(call log.trace, flux.post ${sep} no such hook: ${*}.post ${MAKE_CLI}) && exit 0;; \
+	esac
+
+# { print $0 }
+define .awk.rewrite.targets.maybe 
+{
+  result = ""
+  for (i=1; i<=NF; i++) {
+    # Skip words that start with "." or contain "/"
+    # Add space separator for non-first elements
+    # Add the transformed word pattern
+    #if ($i ~ /^\./ || $i ~ /\//) result = result " " $i
+    if ($i ~ /^\./ || $i ~ /\//) {result = result " " $i; continue}
+    if ($i ~ "mk.interpret") {result = result " " $i; continue}
+    if (result != "") result = result " "
+    result = result "flux.pre/" $i " " $i " flux.post/" $i
+  }
+  print result
 }
 endef
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░

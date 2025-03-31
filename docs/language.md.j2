@@ -12,10 +12,11 @@ This page focuses on other language-related features and **also serves as an alt
 ### Language Properties
 <hr style="width:100%;border-bottom:3px solid black;">
 
-**As a language,** you could say that `compose.mk` is and has the following properties:
+**As a language,** you could say that `compose.mk` is multi-paradigm and has the following properties:
 
 * Inherits macros, declarative style, and basic DAGs[^2] from `make`
-* Inherits tacit programming[^3] from the unix shell
+* Inherits tacit programming[^3] from the unix shell and [uses lots of pipes & streams]({{mkdocs.site_relative_url}}/standard-lib#structured-io-stream-types-pipes)
+* Supports [structured data]({{mkdocs.site_relative_url}}/standard-lib#structured-io)
 * Supports reflective programming[^4] via e.g. [mk.*]({{mkdocs.site_relative_url}}/standard-lib/#reflection)
 * Supports extensible programming[^5]
     * via container support generally, but also 
@@ -25,14 +26,15 @@ This page focuses on other language-related features and **also serves as an alt
 * Inclines towards concatenative style[^8] and stack-oriented programming[^9]
     * partly via default `make` target execution semantics
     * partly via [compose.mk stage-stacks]({{mkdocs.site_relative_url}}/stage)
-* Supports [structured data]({{mkdocs.site_relative_url}}/standard-lib#structured-io) and makes [extensive use of streams]({{mkdocs.site_relative_url}}/standard-lib)
-* Supports *some* OOP implicitly, 
+* Limited support for lightweight aspect-oriented programming[^10]
+    * via [pre/post hooks]({{mkdocs.site_relative_url}}/signals/pre-post-hooks)
+* Supports *some* OOP implicitly , 
     * via container layers, or via yaml inheritance in composefiles
     * via make-includes, via target-chaining, via syntax conventions for target names, etc
 
-Further, you could say that `compose.mk` is an interpreted language that is implemented *in* `make`, but in some sense it also runs *on* `make` by hijacking it as a kind of [gadget](https://en.wikipedia.org/wiki/Gadget_(computer_science)).  
+Further, you could say that `compose.mk` is an [interpreted language](#interpreters-transpilation) that is implemented *in* `make`, but in some sense it also runs *on* `make` by hijacking it as a kind of [gadget](https://en.wikipedia.org/wiki/Gadget_(computer_science)).  
 
-{#Related topics include the [support for packaging]({{mkdocs.site_relative_url}}/demos/package), which combines well with the sheer ubiquity of `make`, effectively allowing us to **release frozen artifacts** in a way that is similar to compilation.#}
+Somewhat related but harder to categorize, the [packaging support]({{mkdocs.site_relative_url}}/demos/package), combines well with the sheer ubiquity of `make` to effectively allow us to **release frozen artifacts**.  This topic **is not** compilation, but it's language-adjacent if you squint, because it's similar to image-based persistence[^11].
 
 ### Homoiconic?
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -47,7 +49,7 @@ Let's introduce a somewhat surprising fact: `compose.mk` is designed to be [homo
 1. Describe data-flow and/or control-flow across other tasks (again via [flux]({{mkdocs.site_relative_url}}/standard-lib#workflow-support))
 1. Execute arbitrary tasks in foreign languages (via [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots))
 
-In the [workflow docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support), the `flux.*` namespace is introduced as a "target algebra", and compared to shell process algebra.  But as a simple example of "targets all the way down" consider this:
+In the [workflow docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support), the `flux.*` namespace is introduced as a **target algebra**, and compared to more familiar shell process-algebra.  But as a simple example of "targets all the way down" consider this:
 
 * {{macros.api_link('flux.wrap',mkdocs,arg='targets')}} is a n-ary target that accepts nullary targets as arguments.
 * Meanwhile.. {{macros.api_link('flux.ok',mkdocs)}} and {{macros.api_link('flux.fail',mkdocs)}} are examples of nullary targets.
@@ -58,7 +60,7 @@ Of course, no matter how easily you can incorporate foreign tools.. at some poin
 ### Interpreters & Transpilation
 <hr style="width:100%;border-bottom:3px solid black;">
 
-By the way, since the claim is that something like `flux.wrap/flux.ok,flux.fail` is actually "a program" in a "language" though, it's worth pointing out that there are many ways to execute it beyond mentioning it in a Makefile as a target-prerequisite.  The following are all equivalent, but the last example demonstrates what you can think of as the `compose.mk` interpreter.
+By the way, since the claim is that something like `flux.wrap/flux.ok,flux.fail` is actually *a program* in a "language" though, it's worth pointing out that there are many ways to execute it beyond just mentioning it in a Makefile as a target-prerequisite.  The following are all equivalent, but the last example demonstrates what you can think of as the `compose.mk` interpreter.
 
 ```bash 
 # program as target
@@ -83,3 +85,5 @@ The example above is simplistic, but there are other ways that `compose.mk` can 
 [^7]: https://en.wikipedia.org/wiki/Dataflow_programming
 [^8]: https://en.wikipedia.org/wiki/Concatenative_programming_language 
 [^9]: https://en.wikipedia.org/wiki/Stack-oriented_programming
+[^10]: https://en.wikipedia.org/wiki/Aspect-oriented_programming
+[^11]: https://en.wikipedia.org/wiki/Smalltalk#Image-based_persistence
