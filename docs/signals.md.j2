@@ -54,9 +54,7 @@ To demonstrate short-circuiting the default command line processing of `make`, w
 {{open('demos/interpreter.mk').read()}}
 ```
 
-The next extremely magical line is the call to `mk.yield`, where the argument is the command line that you want to *yield execution to*.
-
-We yield to `ls $${MAKE_CLI#*ls}`, where the right side expands to "the full command line, *after* the word `ls`".  [^4]
+The next extremely magical line is the call to `mk.yield`, where the argument is the command line that you want to *yield execution to*.  We yield in this case to `ls $${MAKE_CLI#*ls}`, where the right side expands to "the full command line, *after* the word `ls`".[^4]
 
 At this point as long as the file is executable, then `./demos/interpreter.mk ls /` works as expected.  But the body of `__main__` demonstrates something that might be surprising, which is that `mk.yield` really *does* drastically change the rest of program flow control afterwards.
 
@@ -99,20 +97,23 @@ Above we use `$(call mk.yield)` with no arguments, which is equivalent to `$(cal
 
 If you're using the interpreter as seen in the previous examples, you'll also **automatically be able to use pre and post hooks for every target that runs via the command line.**  Here's a simple example to illustrate:
 
-```makefile
+```Makefile
 {{open('demos/interpreter-4.mk').read()}}
 ```
 
-Running the code above works the way you'd expect:
+Running the code above works the way you'd expect, and we can get pre and post effects with no explicit plumbing.  This is named-based with post-fixes as seen above.  Here's the output:
 
-```./demos/interpreter-4.mk main_target
+```bash 
+$ ./demos/interpreter-4.mk main_target
 
 hello pre-hook
 hello main
 hello post-hook
 ```
 
-Cool, so we can get pre and post effects with no explicit plumbing.  This is named-based with post-fixes as seen above.  This is partly just a style choice that can make certain code more readable, but it does also make possible a certain interesting kind of code reuse, because many targets may wish to share the *same* pre-conditions or post-conditions.  This works because there's no need to define an explicit target body for the hooks actually, and you can just treat `my.target.pre: common.precondition` as label  This approach is similar to function decorators in python, or lightweight "aspect oriented" programming.
+This is partly just a style choice that can make certain code more readable, but it does also make possible a certain interesting kind of code reuse.  Many targets may wish to share the *same* pre-conditions or post-conditions.  This works because there's no need to define an explicit target body for the hooks actually, and you can just treat `my.target.pre: common.precondition` as label  This approach is similar to function decorators in python, or lightweight "aspect oriented" programming.
+
+--------------------------
 
 It's very important to understand the limitation that was hinted at earlier though.  What does it mean that hooks work for "*every target that via command line*" ? To put this in other words, **hooks are only fired when the interpreter is used directly,** i.e. recursive calls via `${make}` or similar will not execute them!  This makes the feature pretty useful for standalone tools, and less useful for libraries.
 
@@ -123,22 +124,19 @@ Hooks are enabled by default since they don't affect peformance much, but it's p
 
 *Note: this is experimental and not extensively tested.* 
 
-To setup one or more exit handlers, try using the `CMK_AT_EXIT_TARGETS` environment variable with space-separated target names.  This should run even if `make` dies for any reason and even if it is killed, but cannot run if the wrapper process is killed  (see the [implementation details](#implementation)).  This is called whenever `mk.supervisor.exit` is called, which has the usual caveats that **you must be using a interpreter-style invocation,** and not running via `make -f ...`!
+To setup one or more exit handlers, try using the `CMK_AT_EXIT_TARGETS` environment variable with space-separated target names.  This should run even if `make` dies for any reason and even if it is killed, but cannot run if the wrapper process is killed.  
 
-This is If there are 
+At-exit handlers defined this way are called whenever `mk.supervisor.exit` is called, which has the usual caveats that **you must be using a interpreter-style invocation,** and not running via `make -f ...`!  For more details, read on into the implementation section below.
 
 ### Implementation
 <hr style="width:100%;border-bottom:3px solid black;">
 
 If you're already very familiar with `make` and looking over the rest of this page, you might be wondering how this kind of semi-magical behavior can be achieved.   And since the answer to that question is frankly kind of ridiculous, this should probably be considered experimental =)  *With that sternly worded warning out of the way..*
 
-Signals and supervisors are implemented using a shebang hack[^5] and a polyglot[^6], whereby `compose.mk` is simultaneously a Makefile, a Makefile library, *and* a bash script.  The way this works is as follows:
+Signals and supervisors are implemented using a shebang hack[^5] and a polyglot[^6], whereby `compose.mk` is simultaneously a Makefile, a Makefile library, *and* a bash script.  
 
-------------------------------
-
-The bash script invokes `make`, but wraps it to catch any signals that are thrown.  After throwing a supported signal causes `make` to exit, bash catches, and then passes the code for the caught signal back to *another* invocation of `make` for an exit handler.
-
-------------------------
+The way this works is as follows:
+:  The bash script invokes `make`, but wraps it to catch any signals that are thrown.  After throwing a supported signal causes `make` to exit, bash catches, and then passes the code for the caught signal back to *another* invocation of `make` for an exit handler.
 
 **As a consequence of this, signals can only be handled when `compose.mk` is invoked directly,** i.e. with `./compose.mk ...`, and cannot work for `make -f compose.mk`.  
 
@@ -152,19 +150,11 @@ Note that while passing control over to a completely different process like this
 ### For Developers
 <hr style="width:100%;border-bottom:3px solid black;">
 
-All targets related to signals/supervisors can be found under the `mk.interrupt` and `mk.super` namespaces, respectively.  
+All targets related to signals/supervisors can be found under the `mk.interrupt` and `mk.super` namespaces, respectively.  These targets are for low-level internal use, and even hacking directly on `compose.mk` source probably won't require editing them, considering the [other techniques available](#inheritance-interpreters).  Still, quick links to the relevant parts of the API are provided below for reference:
 
 {{macros.api_link_many('mk.super', mkdocs)}}
 {{macros.api_link_many('mk.interrupt', mkdocs)}}
 
-Targets above are for low-level internal use, and even hacking directly on `compose.mk` source probably won't require editing them.  To implement a new [proxy-wrapper]({{mkdocs.site_relative_url}}/tool-overview/#proxy-wrappers), use `mk.yield`.  Here's how you'd give `compose.mk` a new proxy-wrapper for the `ls` command:
-
-```Makefile 
-# compose.mk src 
-ls:
-	$(call mk.yield, ls $${MAKE_CLI#*ls})
-```
-<br/>
 <hr style="width:100%;border-bottom:3px solid black;">
 
 <script>
