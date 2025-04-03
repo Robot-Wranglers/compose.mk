@@ -43,8 +43,6 @@ The original code was simple, but rewriting this in CMK is even better and much 
 
 We'll get to the odd arrow syntax later, but first the basic stuff: 
 
---------------
-
 **New Interpreter:**
 :  This example introduces `mk.interpret!` via a shebang that's different from other demos that use `make -f ..`.  As with other demos, this one is **executable directly** as `./demos/cmk/structured-io.cmk`.  Unlike other demos, we can't run it directly with `make`.  If you want to run a file that's not executable, use `./compose.mk mk.interpret! <filename>`.  We've introduced the more basic version of `mk.interpret` [elsewhere]({{mkdocs.site_relative_url}}/signals/#inheritance-interpreters) in a very different context.  This example is similar in effect, but **`mk.interpret!` opts into all the pre-processing / compilation / transpilation** stuff that allows us to extend the base syntax of `make` and use the more exotic stuff you see in the rest of the file.
 
@@ -206,7 +204,7 @@ To get the full current default sugar in a minified form that's ready for your o
 ### Status Info & Other Advice
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Be advised that compilation and interpreted CMK is more experimental than the rest of the project.  However if you're nervous about upstream changes, due to depending on the default dialect, one option is to just [make it the user-defined default](#user-defined-dialect).  
+Be advised that compilation and interpreted CMK is more experimental than the rest of the project.  However if you're nervous about upstream changes due to depending on the default dialect, one option is to just [make it the user-defined default](#user-defined-dialect).  
 
 That said, everything that's documented here is stable and unlikely to change.  Practically speaking what *experimental* actually means here is that testing so far is limited, [so please report bugs]({{github.repo_url}}/issues).  
 
@@ -215,17 +213,15 @@ Per the rest of the design philosophy, the goal is to [freeze CMK after it's **u
 ### Implementation Details
 <hr style="width:100%;border-bottom:3px solid black;">
 
-**Terminology:** Yes, *ackshually* the compilation process is really *transpilation*, since this is source-to-source, and usually the resulting artifact is executed directly rather than saved, so you might also call it interpreted.
+**Terminology:** Yes, *ackshually* the compilation process is really *transpilation*, since this is source-to-source, and usually the resulting artifact is executed directly rather than saved, so you might also call it interpreted.  Since the entire process is *extremely simple*, you may also prefer to think of it as more like **preprocessing that supports user-defined configuration**.  Still.. the fact remains that CMK code is **not necessarily** legal Makefile without this step in the middle.
 
-Since the entire process is *extremely simple*, you may also prefer to think of it as more like **preprocessing that supports user-defined configuration**.  Still.. the fact remains that CMK code is **not necessarily** legal Makefile without this step in the middle.
-
-Luckily, the target language *(i.e. Makefile)* has almost no syntax itself and is ridiculously easy to generate.  This isn't that ambitious of a goal anyway!  The hard work for backend-idioms and other support is already done, and those are all Makefile-compatible.. this is "merely" a matter of matching and rewriting some strings.
+Luckily, the target-language *(i.e. Makefile)* has almost no syntax itself and is ridiculously easy to generate.  This isn't that ambitious of a goal anyway!  The hard work for backend-idioms and other support is already done, and those are all Makefile-compatible.. this is "merely" a matter of matching and rewriting some strings.
 
 -----------------
 
 **For the actual code-generation,** we need to avoid fancy tools that might require a slower dockerized toolchain, and even though it's just glorified string manipulation, `make` itself is not really up to the challenge.  The only tool for the job that's as fast and ubiquitous as `make` is `awk` [^2], but this is still pretty daunting!
 
-In a somewhat ironic twist, the requirement that [dialects](#about-dialects) and [sugar](#about-sugar) should be extensible actually makes it easier to see a solution.  The compilation pipeline basically works as follows:
+In an ironic twist, the requirement that [dialects](#about-dialects) and [sugar](#about-sugar) should be extensible actually makes it easier to see a solution.  The compilation pipeline basically works as follows:
 
 1. One static `awk` script for dialects, accepting a single substition pair as arguments
 1. One static `awk` script for sugar, accepting a single triplet as arguments 

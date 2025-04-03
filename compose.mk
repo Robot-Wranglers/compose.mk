@@ -242,7 +242,7 @@ log.trace=[ "${TRACE}" == "0" ] && true || (printf "${log.prefix.makelevel}`echo
 log.trace.fmt=( ${log.trace} && [ "${TRACE}" == "0" ] && true || (printf "${2}" | fmt -w 70 | ${stream.indent.to.stderr} ) )
 log.trace.part1=[ "${TRACE}" == "0" ] && true || $(call log.part1, ${1})
 log.trace.part2=[ "${TRACE}" == "0" ] && true || $(call log.part2, ${1})
-log.target.rerouting=$(call log.io,  ${@} ${sep}${dim} Invoked from top; rerouting to tool-container)
+log.target.rerouting=$(call log, ${dim}${_GLYPH_IO}${dim} $(shell echo ${@}|sed 's/\/.*/\/../') ${sep}${dim} Invoked from top; rerouting to tool-container)
 log.trace.target.rerouting=( [ "${TRACE}" == "0" ] && true || $(call log.target.rerouting) )
 log.file.preview=$(call log.target, ${cyan_flow_left}) ; $(call io.preview.file, ${1})
 
@@ -1533,6 +1533,8 @@ io.with.color/%:
 	&& $(call io.mktemp) && ${make} $${target} 2>$${tmpf} \
 	&& printf "$(value $(shell echo ${*}| cut -d, -f1))`cat $${tmpf}`${no_ansi}\n" >/dev/stderr
 
+io.xargs=xargs -I% sh ${dash_x_maybe} -c
+
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## END: io.* targets
 ## BEGIN: mk.* targets
@@ -1963,7 +1965,7 @@ mk.interpret:
 	&& tmp=`echo $${tmp} | ${stream.lstrip}` \
 	&& fname="`echo $${tmp}| cut -d' ' -f1`" \
 	&& rest="`echo $${tmp}| cut -d' ' -f2- -s`" \
-	&& $(call log.mk, mk.interpret ${sep} ${dim}starting interpreter ${sep} ${dim}timestamp=${bold}${io.timestamp}) \
+	&& $(call log.mk, mk.interpret ${sep} ${dim}starting interpreter ${sep} ${dim}timestamp=${yellow}${io.timestamp}) \
 	&& continuation="$${rest}" ${make} mk.interpret/$${fname}
 	$(call mk.yield, true)
 
@@ -1980,7 +1982,8 @@ mk.interpret/%:
 		 && cat $${fname} | grep -v "^include ${CMK_SRC}" \
 		 && printf '\n\n\n' ; cat ${CMK_SRC} | tail -n1 ) \
 	> $${tmpf} \
-	&& $(call log.mk, mk.interpret ${sep} ${dim}file=${bold}${*} ${sep} ${dim_ital}$${continuation:-..}) \
+	&& $(call log.mk, mk.interpret ${sep} ${dim}file=${bold}${*} ) \
+	&& $(call log.mk, mk.interpret ${sep} ${dim_ital}$${continuation:-(no additional arguments passed)}) \
 	&& chmod ugo+x $${tmpf} \
 	&& $(call io.script.trace, MAKEFILE=$${tmpf} $${tmpf} $${continuation:-})
 
@@ -4557,6 +4560,16 @@ define compose.shell
 		--env verbose=$${verbose} \
 		 --entrypoint $${entrypoint}\
 		${2}
+endef
+
+# Reroutes call into container if necessary, or otherwise executes the target directly
+#
+# USAGE:
+#   foo:; $(call in.container, container_name)
+#   .foo:; echo hello-world
+#
+define in.container
+case $${CMK_INTERNAL} in 0)  ${log.target.rerouting} ; quiet=1 ${make} $(strip ${1}).dispatch/.$(strip ${@});; *) ${make} .$(strip ${@}) ;; esac
 endef
 
 # demos/data/docker-compose.yml,alpine)
