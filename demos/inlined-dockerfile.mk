@@ -1,9 +1,11 @@
 #!/usr/bin/env -S make -f
 # demos/inlined-dockerfile.mk: 
 #   Demonstrates inlining a Dockerfile, building it, then working with the container.
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.
 #
-#   USAGE: ./demos/inlined-dockerfile.mk
+# This demo ships with the `compose.mk` repository and runs as part of the test-suite.
+#
+# USAGE: ./demos/inlined-dockerfile.mk
+
 include compose.mk
 
 # Entrypoint.  Ensures the container is built, then runs all the tests.

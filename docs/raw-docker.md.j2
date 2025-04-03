@@ -21,6 +21,28 @@ Most of the low-level docker support in `compose.mk` makes the assumption that y
 
 In the first case, without sharing the working directory, tools could not do any file IO, and only stream-based communication would be possible.  And in the second case, the ability to access *other* dockerized tools from inside docker containers enables many other `compose.mk` features, from [structured io]({{mkdocs.site_relative_url}}/standard-lib#structured-io) and [stage stacks]({{mkdocs.site_relative_url}}/stages) to the [embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui).
 
+### Dispatch Tasks in Containers
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Dispatch for [imported tool containers from compose files]({{mkdocs.site_relative_url}}/bridge) is explained in detail [here]({{mkdocs.site_relative_url}}/container-dispatch), and [other sections of this page](#inlined-dockerfiles) show examples of dispatch used with an *embedded image*.
+
+The situation is similar though for any other kind of **unmodified stock image**, as long as that image actually ships with `make`.  One of the smallest images preconfigured with `make` seems to be `debian/buildd`, so we'll use that here.  
+
+```bash
+# Run the trivial `flux.ok` target inside the given image
+$ img=debian/buildd:bookworm ./compose.mk docker.dispatch/flux.ok
+```
+
+-------------------------------------
+
+If you're doing something like the above frequently, then you can also use `compose.import.docker_image` to generate scaffolded targets that do the same thing:
+
+```Makefile
+{{open('demos/import-image.mk','r').read().strip()}}
+```
+
+As mentioned in [the installation docs]({{mkdocs.site_relative_url}}/integration/#docker-compose-integration), lots of your daily-driver images probably have `make` by default, including images for stuff like gcc, golang, maven, etc.
+
 ### Inlined Dockerfiles
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -30,44 +52,18 @@ The [polyglot demos]({{mkdocs.site_relative_url}}/demos/polyglots) and [these ma
 {{open('demos/inlined-dockerfile.mk','r').read().strip()}}
 ```
 
-<br/>
+For an approach with better style and more native syntax, see also [this example in CMK-lang]({{mkdocs.site_relative_url}}/compiler/#dockerfile-example)
 
-{#### Dockerfile API
-<hr style="width:100%;border-bottom:3px solid black;">
-{{macros.api_link_many('Dockerfile', mkdocs)}}#}
-### Dispatch Tasks in Containers
-<hr style="width:100%;border-bottom:3px solid black;">
-
-Dispatch for [imported tool containers]({{mkdocs.site_relative_url}}/bridge) is explained in detail [here]({{mkdocs.site_relative_url}}), and the [last section](#inlined-dockerfiles) includes examples of dispatch used with an embedded image. The situation is similar though for any other kind of stock image that actually ships with `make`.  
-
-One of the smallest images preconfigured with `make` seems to be `debian/buildd`, so we'll use that here.  
-
-```bash
-# run the trivial `flux.ok` target inside the given image
-$ img=debian/buildd:bookworm ./compose.mk docker.dispatch/flux.ok
-```
-
-As mentioned in [the installation docs]({{mkdocs.site_relative_url}}/integration/#docker-compose-integration), lots of your daily-driver images probably have `make` by default, including images for stuff like gcc, golang, maven, etc.  
 
 ### Other Docker Utilities
 <hr style="width:100%;border-bottom:3px solid black;">
 
-As we've seen elsewhere on this page, most of the use-cases for raw docker support are related to scripting with `compose.mk`.  Sometimes though the raw docker support has more of a [stand-alone / tool mode]({{mkdocs.site_relative_url}}/tool-overview) vibe. For usage hints along those lines, see the test cases below.
+Most of the use-cases for raw docker support are related to scripting with `compose.mk`.  Sometimes though the raw docker support has more of a [stand-alone / tool mode]({{mkdocs.site_relative_url}}/tool-overview) vibe. For usage hints along those lines, see the test cases below.
 
 ```Makefile
 {{open('tests/docker-utils.sh','r').read().strip()}}
 ```
 <br/>
-
-{#
---------------------------------------
-{{macros.inlined_help('docker.stat',mkdocs)}}
----------------------------------------------------
-{{macros.inlined_help('Dockerfile.build',mkdocs)}}
----------------------------------------------------
-{{macros.inlined_help('docker.stat',mkdocs)}}
----------------------------------------------------
-#}
 
 ### Full Docker API 
 <hr style="width:100%;border-bottom:3px solid black;">

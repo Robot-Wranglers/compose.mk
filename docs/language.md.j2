@@ -17,24 +17,26 @@ This page focuses on other language-related features and **also serves as an alt
 * Inherits macros, declarative style, and basic DAGs[^2] from `make`
 * Inherits tacit programming[^3] from the unix shell and [uses lots of pipes & streams]({{mkdocs.site_relative_url}}/standard-lib#structured-io-stream-types-pipes)
 * Supports [structured data]({{mkdocs.site_relative_url}}/standard-lib#structured-io)
-* Supports reflective programming[^4] via e.g. [mk.*]({{mkdocs.site_relative_url}}/standard-lib/#reflection)
 * Supports extensible programming[^5]
     * via container support generally, but also 
     * via [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and 
     * via [dynamically]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch) [assigned syntax]({{mkdocs.site_relative_url}}/compiler/#user-defined-extensions)
-* Supports functional programming[^6] and data flow programming[^7] via [flux]({{mkdocs.site_relative_url}}/api#api-flux), [flux workflows]({{mkdocs.site_relative_url}}/demos/workflows), [etc]({{mkdocs.site_relative_url}}/demos/platform)
+* Supports functional programming[^6] and data flow programming[^7] 
+    * via [flux]({{mkdocs.site_relative_url}}/api#api-flux) generally, 
+    * via [flux workflows]({{mkdocs.site_relative_url}}/demos/workflows), [etc]({{mkdocs.site_relative_url}}/demos/platform)
+* Supports reflective programming[^4] and lightweight aspect-oriented programming[^10]
+    * via e.g. [mk.*]({{mkdocs.site_relative_url}}/standard-lib/#reflection)
+    * via [pre/post hooks]({{mkdocs.site_relative_url}}/signals/pre-post-hooks)
 * Inclines towards concatenative style[^8] and stack-oriented programming[^9]
     * partly via default `make` target execution semantics
     * partly via [compose.mk stage-stacks]({{mkdocs.site_relative_url}}/stage)
-* Limited support for lightweight aspect-oriented programming[^10]
-    * via [pre/post hooks]({{mkdocs.site_relative_url}}/signals/pre-post-hooks)
-* Supports *some* OOP implicitly , 
+* Supports *some* OOP implicitly 
     * via container layers, or via yaml inheritance in composefiles
     * via make-includes, via target-chaining, via syntax conventions for target names, etc
 
 Further, you could say that `compose.mk` is an [interpreted language](#interpreters-transpilation) that is implemented *in* `make`, but in some sense it also runs *on* `make` by hijacking it as a kind of [gadget](https://en.wikipedia.org/wiki/Gadget_(computer_science)).  
 
-Somewhat related but harder to categorize, the [packaging support]({{mkdocs.site_relative_url}}/demos/package), combines well with the sheer ubiquity of `make` to effectively allow us to **release frozen artifacts**.  This topic **is not** compilation, but it's language-adjacent if you squint, because it's similar to image-based persistence[^11].
+Also related but harder to categorize, the [packaging support]({{mkdocs.site_relative_url}}/demos/package), combines well with the sheer ubiquity of `make` to effectively allow us to **release frozen artifacts**.  This topic different [from compilation]({{mkdocs.site_relative_url}}/compiler), but it is language-adjacent if you squint, because it's similar to image-based persistence[^11].
 
 ### Homoiconic?
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -77,13 +79,13 @@ The example above is simplistic, but there are other ways that `compose.mk` can 
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-[^2]: https://en.wikipedia.org/wiki/Directed_acyclic_graph
-[^3]: https://en.wikipedia.org/wiki/Tacit_programming
-[^4]: https://en.wikipedia.org/wiki/Reflective_programming
-[^5]: https://en.wikipedia.org/wiki/Extensible_programming
-[^6]: https://en.wikipedia.org/wiki/Functional_programming 
-[^7]: https://en.wikipedia.org/wiki/Dataflow_programming
-[^8]: https://en.wikipedia.org/wiki/Concatenative_programming_language 
-[^9]: https://en.wikipedia.org/wiki/Stack-oriented_programming
-[^10]: https://en.wikipedia.org/wiki/Aspect-oriented_programming
-[^11]: https://en.wikipedia.org/wiki/Smalltalk#Image-based_persistence
+[^2]:  [https://en.wikipedia.org/wiki/Directed_acyclic_graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph)
+[^3]:  [https://en.wikipedia.org/wiki/Tacit_programming](https://en.wikipedia.org/wiki/Tacit_programming)
+[^4]:  [https://en.wikipedia.org/wiki/Reflective_programming](https://en.wikipedia.org/wiki/Reflective_programming)
+[^5]:  [https://en.wikipedia.org/wiki/Extensible_programming](https://en.wikipedia.org/wiki/Extensible_programming)
+[^6]:  [https://en.wikipedia.org/wiki/Functional_programming](https://en.wikipedia.org/wiki/Functional_programming)
+[^7]:  [https://en.wikipedia.org/wiki/Dataflow_programming](https://en.wikipedia.org/wiki/Dataflow_programming)
+[^8]:  [https://en.wikipedia.org/wiki/Concatenative_programming_language](https://en.wikipedia.org/wiki/Concatenative_programming_language)
+[^9]:  [https://en.wikipedia.org/wiki/Stack-oriented_programming](https://en.wikipedia.org/wiki/Stack-oriented_programming)
+[^10]: [https://en.wikipedia.org/wiki/Aspect-oriented_programming](https://en.wikipedia.org/wiki/Aspect-oriented_programming)
+[^11]: [https://en.wikipedia.org/wiki/Smalltalk#Image-based_persistence](https://en.wikipedia.org/wiki/Smalltalk#Image-based_persistence)

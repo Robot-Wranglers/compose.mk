@@ -2,7 +2,7 @@
 #
 # This demo ships with the `compose.mk` repository and runs as part of the test-suite.
 #
-# USAGE: bash -x tests/docker-utilities.sh
+# USAGE: bash -x tests/docker-utils.sh
 
 # Shows docker version info
 ./compose.mk docker.init

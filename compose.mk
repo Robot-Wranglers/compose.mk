@@ -4576,6 +4576,8 @@ $(shell cat $(firstword $(MAKEFILE_LIST)) | awk '/define ${defname}/{flag=1; nex
 $(call compose.import.generic, $(defname), $(if $(filter undefined,$(origin 2)),TRUE,$(2)), .tmp.${defname}.yml)
 endef
 
+# USAGE: ( generic )
+#   $(eval $(call compose.import.dockerfile.string, <def_name>))
 define compose.import.dockerfile.string
 $(eval defname:=$(strip $(1)))
 $(eval img_name:=$(patsubst Dockerfile.%,%,${defname}))
@@ -4585,12 +4587,25 @@ ${img_name}.dispatch/%:; img=${img_name} ${make} mk.docker.dispatch/$${*}
 ${img_name}.run:; img=compose.mk:${img_name} ${make} docker.run.sh 
 endef
 
+# USAGE: ( generic )
+#   $(eval $(call compose.import.docker_image, <image_alias>, <image>))
+#
+# USAGE: ( example )
+#   $(eval $(call compose.import.docker_image, my_alias, debian/buildd:bookworm))
+define compose.import.docker_image
+$(eval image_alias:=$(strip $(1)))
+$(eval image_actual:=$(strip $(2)))
+${image_alias}.dispatch/%:; img=${image_actual} ${make} docker.dispatch/$${*}
+${image_alias}.run:; img=${image_actual} ${make} docker.run.sh 
+endef
+
 # Helper macro, defaults to root-import with an optional dispatch-namespace.
 # If not provided, the default dispatch namespace is `services`.
 #
-# USAGE: $(eval $(call compose.import, docker-compose.yml))
-# USAGE: $(eval $(call compose.import, docker-compose.yml, ▰))
-#
+# USAGE: 
+#   $(eval $(call compose.import, docker-compose.yml))
+# USAGE: 
+#   $(eval $(call compose.import, docker-compose.yml, ▰))
 define compose.import
 $(call compose.import.generic, $(if $(filter undefined,$(origin 2)),services,$(2)), TRUE, $(1))
 endef
@@ -4600,7 +4615,6 @@ endef
 
 compose.import.*=${compose.import}
 compose.import.def=${compose.import.string}
-
 
 # Main macro to import services from an entire compose file
 define compose.import.generic
