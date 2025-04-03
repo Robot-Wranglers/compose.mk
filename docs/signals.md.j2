@@ -3,7 +3,6 @@
 ## Signals and Supervisors
 <hr style="width:100%;border-bottom:3px solid black;">
 
-
 Every direct invocation of `compose.mk` optionally gets a "supervisor" process that allows for enhanced use (abuse?) of POSIX signals. Amongst other use-cases, you can use this pattern to yield control to another process in the middle of target-processing, or to implement entrance/exit handlers for `make`, in `make`.
 
 {#{macros.img_link("escher-still-life.png", mkdocs, width="50%", align='center')}#}
@@ -133,7 +132,7 @@ This is If there are
 
 If you're already very familiar with `make` and looking over the rest of this page, you might be wondering how this kind of semi-magical behavior can be achieved.   And since the answer to that question is frankly kind of ridiculous, this should probably be considered experimental =)  *With that sternly worded warning out of the way..*
 
-Signals and supervisors are implemented using [a shebang hack](https://en.wikipedia.org/wiki/Shebang_(Unix)) and a [polyglot](https://en.wikipedia.org/wiki/Polyglot_(computing)), whereby `compose.mk` is simultaneously a Makefile, a Makefile library, *and* a bash script.  The way this works is as follows:
+Signals and supervisors are implemented using a shebang hack[^5] and a polyglot[^6], whereby `compose.mk` is simultaneously a Makefile, a Makefile library, *and* a bash script.  The way this works is as follows:
 
 ------------------------------
 
@@ -155,8 +154,8 @@ Note that while passing control over to a completely different process like this
 
 All targets related to signals/supervisors can be found under the `mk.interrupt` and `mk.super` namespaces, respectively.  
 
-{{macros.api_link_many('mk.super',mkdocs)}}
-{{macros.api_link_many('mk.interrupt',mkdocs)}}
+{{macros.api_link_many('mk.super', mkdocs)}}
+{{macros.api_link_many('mk.interrupt', mkdocs)}}
 
 Targets above are for low-level internal use, and even hacking directly on `compose.mk` source probably won't require editing them.  To implement a new [proxy-wrapper]({{mkdocs.site_relative_url}}/tool-overview/#proxy-wrappers), use `mk.yield`.  Here's how you'd give `compose.mk` a new proxy-wrapper for the `ls` command:
 
@@ -187,3 +186,5 @@ document.addEventListener('DOMContentLoaded', function() {
 [^2]: Determining the full CLI that invoked `make` is actually pretty hard, especially if you want portability.  If you've been wondering about `procps` and `procps-ng` package references that are scattered around and [recommended for dispatch]({{mkdocs.site_relative_url}}/integration/#docker-compose-integration), this is the reason.
 [^3]: Issues with proxying `--long-opt=..` is probably a bug and not a *fundamental* limitation, but this whole topic is so obscure it's probably not worth fixing =P
 [^4]: The incantation `${MAKE_CLI#*ls}` uses [bash parameter expansion](https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html) and the special variable `MAKE_CLI` that's provided by `compose.mk`.
+[^5]: https://en.wikipedia.org/wiki/Shebang_(Unix)
+[^6]: https://en.wikipedia.org/wiki/Polyglot_(computing)
