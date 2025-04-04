@@ -77,6 +77,8 @@ nav:
     - 'Pipelining & Workflow Basics': demos/workflows.md
     - 'Platform Lifecycle Example': demos/platform.md
     - 'Notebooking & Ensembles': demos/notebooking.md
+    - 'RAG Demo / Obligatory AI': demos/RAG.md
+    # - 'Lean Prover': demos/notebooking.md
   - CMK Language:
       - 'Language Overview': language.md
       - 'Matrioshka Automata': matrioshka.md

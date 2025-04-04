@@ -20,7 +20,7 @@ FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
 SHELL ["/bin/bash", "-x", "-c"]
 RUN apt-get -qq update && apt-get install -qq -y git make curl sudo procps
 RUN curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf > /usr/local/bin/elan-init.sh
-RUN bash /usr/local/bin/elan-init.sh -y 
+RUN bash /usr/local/bin/elan-init.sh -y --default-toolchain leanprover/lean4:v4.17.0
 RUN cp /root/.elan/bin/lean /usr/local/bin 
 RUN cp /root/.elan/bin/lake /usr/local/bin 
 ENV PATH="$PATH:/root/.elan/bin/"
@@ -28,7 +28,7 @@ RUN lean --help
 RUN lake new default
 RUN cd default && printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' >> lakefile.toml
 RUN cd default && lake update && lake build
-RUN lean --version
+RUN elan --version; lean --version; leanc --version; lake --version; 
 ENTRYPOINT ["lean"]
 endef
 
@@ -66,9 +66,9 @@ __main__: Dockerfile.build/Lean lean.run.script/script lean.run.theorem/theorem
 # These write embedded script/theorem to disk before use, 
 # run them inside the container, and clean up afterwards.
 lean.run.script/%:; lean_args="--run" ${make} lean.run.generic/${*}
+
 lean.run.generic/% lean.run.theorem/%:
-	${io.mktemp} && ${make} mk.def.to.file/${*}/$${tmpf} \
+	${io.mktemp} \
+	&& ${make} mk.def.to.file/${*}/$${tmpf} \
 	&& img=Lean cmd="$${lean_args:-} $${tmpf}" \
       ${make} mk.docker
-
-# io.tempfile=$(call io.mktemp)

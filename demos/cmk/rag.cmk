@@ -1,0 +1,84 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+# demos/rag.mk: 
+#   Demonstrates building a self-contained RAG pipeline with compose.mk, 
+#   docker-compose, ollama and langchain.  No host dependencies, host ports, etc
+#
+# This demo ships with the `compose.mk` repository but does NOT run as part of the 
+# test-suite, because model requirements are ~5GB.
+#
+# See the main docs: https://robot-wranglers.github.io/compose.mk/demos/RAG
+#
+#   USAGE: 
+#     # Ask a one-shot question
+#     glob='docs/*.md' query='what is this project about?' ./demos/cmk/rag.cmk ask
+#
+#     # Interactively chat with a glob 
+#     glob='docs/*.md' ./demos/cmk/rag.cmk chat
+
+## Create target-scaffolding for all containers in compose file.
+compose.import(demos/data/docker-compose.rag.yml)
+
+## These are default values in the python script anyway, 
+## but this is here to be explicit and allows for user overrides.
+export EBD_MODEL_NAME?=all-MiniLM-L6-v2
+export LLM_MODEL_NAME?=phi3:mini
+export OLLAMA_PORT?= 11434
+
+## Don't override this one- 
+## this detects if ollama is available on the host, or if not uses compose service
+export OLLAMA_HOST:=$(shell \
+	${io.curl.stat} http://localhost:${OLLAMA_PORT} \
+	&& echo localhost || echo ollama_server)
+
+## Nix some of the logging output for clarity, add macros
+## to stream-line the repetitive parts of wrapper-targets
+export quiet=1
+export rag_script=demos/data/rag.py
+corpus_count=$${glob} (${yellow}`ls $${glob} | wc -l`${no_ansi_dim} files total)
+
+## Preparing to dispatch commands into the `rag` service defined in the compose file.
+## This uses the scaffolded target created by `compose.import` call at the top.
+## This is a partial, not ready to run until it gets a `cmd`.  See targets below
+wrapper=${make} rag ${streams.join} | ${stream.as.log}
+
+## Begin simple wrapper targets, 
+## one for each of the python script subcommands
+init:
+	@# Ensure given model is available to ollama, downloading if needed.
+	@# Implied by `ingest`, `ask`, and `chat`.
+	cmk.log.target(Initializing model: $${LLM_MODEL_NAME})
+	cmd="${rag_script} init $${LLM_MODEL_NAME}" ${wrapper}
+
+ingest:
+	@# Slurp any files matching the pattern.  
+	@# This is implied by `ask` or `chat`, and no-op if content already indexed.
+	cmk.log.target(Ingesting corpus: ${corpus_count})
+	cmd="${rag_script} ingest $${rag_script_extra:-} '$${glob}'" ${wrapper}
+
+ingest.force:
+	@# A cache-busting version of ingest that forces reindexing.
+	rag_script_extra="--force" this.ingest
+
+ask:
+	@# Ask a question about files that match the given pattern.
+	cmk.log.target(Answering query for corpus: ${corpus_count})
+	cmd="${rag_script} query '$${glob}' '$${query:-describe it}'" ${wrapper}
+ 
+chat:
+	@# Interactive chat about files that match the given pattern.
+	cmk.log.target(Chatting with corpus: ${corpus_count})
+	cmd="${rag_script} chat '$${glob}'" this.rag
+
+## A new verb, this builds on top of the python script's API instead of just using it.
+summarize:
+	@# An alias for `ask` that summarizes files matching the given pattern.
+	query="summarize all of the content" this.ask
+
+## Default behaviour for docker compose is to brings up containers 
+## that are required by `depends_on`, but it never shuts them down!
+## Thus when `rag` container `depends_on` `ollama_server`, we still
+## need to clean up.
+export CMK_AT_EXIT_TARGETS=stop
+
+stop: ollama_server.stop
+	@# Shutdown hook, this ensures the (embedded) ollama service is halted

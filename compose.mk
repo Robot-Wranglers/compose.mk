@@ -212,14 +212,14 @@ devnull:=/dev/null
 stderr_stdout_indent=2> >(sed 's/^/  /') 1> >(sed 's/^/  /')
 stderr_devnull:=2>${devnull}
 all_devnull:=2>&1 > /dev/null
-
+streams.join:=2>&1 
 # Literal newline and other constants 
 define nl
 
 endef
 comma=,
 
-# Aliases used with redirects
+# Returns "-x" iff trace is enabled.  (This is used with calls to bash/sh to show the command)
 dash_x_maybe:=`[ $${TRACE} == 1 ] && echo -x || true`
 
 trace_maybe=[ "${TRACE}" == 1 ] && set -x || true 
@@ -294,7 +294,6 @@ docker.run.base:=docker run --rm -i
 ## | Variable               | Meaning                                                          |
 ## | ---------------------- | ---------------------------------------------------------------- |
 ## | CMK_COMPOSE_FILE       | *Temporary file used for the embedded-TUI*                       |
-## | verbose:             | 1 if normal debugging output should be shown, otherwise 0          |
 ## | CMK_DIND               | *Determines whether docker-in-docker is allowed*                 |
 ## | CMK_INTERNAL           | *1 if dispatched inside container, otherwise 0*                  |
 ## | CMK_SUPERVISOR         | *1 if supervisor/signals is enabled, otherwise 0*                |
@@ -302,6 +301,7 @@ docker.run.base:=docker run --rm -i
 ## | DOCKER_HOST_WORKSPACE  | *Needs override for correctly working with DIND volumes*         |
 ## | TRACE:                 | Increase verbosity (more detailed than verbose)                  |
 ## | GITHUB_ACTIONS:        | 1 if running inside github actions, 0 otherwise                  |
+## | verbose:               | 1 if normal debugging output should be shown, otherwise 0        |
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 export COMPOSE_IGNORE_ORPHANS?=True
@@ -318,18 +318,20 @@ export CMK_LIB=0
 export CMK_STANDALONE=1
 export CMK_SRC=$(findstring compose.mk, ${MAKE_CLI})
 .DEFAULT_GOAL:=help
-endif
-ifeq ($(findstring compose.mk, ${MAKE_CLI}),)
+else
 export CMK_LIB=1
 export CMK_STANDALONE=0
 .DEFAULT_GOAL:=__main__
 endif
-
+ifeq ($(strip ${CMK_SRC}),)
+export CMK_SRC=compose.mk
+endif
 # Default base versions for a few important containers, allowing for override from environment
 export DEBIAN_CONTAINER_VERSION?=debian:bookworm
 export ALPINE_VERSION?=3.21.2
 IMG_CARBONYL?=fathyb/carbonyl
 IMG_IMGROT?=robotwranglers/imgrot:07abe6a
+IMG_MONCHO_DRY=moncho/dry@sha256:6fb450454318e9cdc227e2709ee3458c252d5bd3072af226a6a7f707579b2ddd
 
 # Used internally.  If this is container-dispatch and DIND,
 # then DOCKER_HOST_WORKSPACE should be treated carefully
@@ -339,7 +341,7 @@ export CMK_INTERNAL=0
 endif
 export CMK_EXTRA_REPO?=.
 export GITHUB_ACTIONS?=false
-
+export CMK_INTERPRETING?=
 docker.env.standard=-e DOCKER_HOST_WORKSPACE=$${DOCKER_HOST_WORKSPACE:-$${PWD}} -e TERM=$${TERM:-xterm} -e GITHUB_ACTIONS=${GITHUB_ACTIONS} -e TRACE=$${TRACE}
 
 # External tool used for parsing Makefile metadata
@@ -1149,7 +1151,11 @@ io.file.select=header="Choose a file: (dir=$${dir:-.})"; \
 io.get.url=$(call io.mktemp) && curl -sL $${url} > $${tmpf}
 io.gum.docker=${trace_maybe} && docker run $$(if [ -t 0 ]; then echo "-it"; else echo "-i"; fi) -e TERM=$${TERM:-xterm} --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nCOPY --from=charmcli/gum:${IMG_GUM} /usr/local/bin/gum /usr/local/bin/gum\nRUN apk add --update --no-cache bash\n")`
 
-ifeq ($(shell which gum >/dev/null 2> /dev/null && echo 1|| echo 0),1) 
+IMG_CURL=curlimages/curl:8.13.0
+io.curl=$(shell which curl 2>/dev/null || echo docker run --rm ${IMG_CURL})
+io.curl.stat=${io.curl} -s -o /dev/null
+
+ifeq ($(shell which gum >/dev/null 2> /dev/null && echo 1 || echo 0),1) 
 io.gum.run:=`which gum`
 #io.get.choice=chosen=$$(${io.gum.run} choose --header=\"$${header:-Choose:}\" $${choices})
 io.get.choice=chosen=$$(${io.gum.run} choose --header="$${header:-Choose:}" $${choices})
@@ -1476,6 +1482,7 @@ io.tail/%:
 io.terminal.cols=$(shell which tput >/dev/null 2>/dev/null && echo `tput cols 2> /dev/null` || echo 50)
 
 io.term.width=$(shell echo $$(( $${COLUMNS:-${io.terminal.cols}}-6)))
+io.echo:; ${stream.stdin}
 io.time.wait/% io.wait/%:
 	@# Pauses for the given amount of seconds.
 	@#
@@ -1657,12 +1664,11 @@ mk.docker.dispatch/%:; img="compose.mk:$${img}" ${make} docker.dispatch/${*}
 	@# managed by compose.mk, i.e. using the  "compose.mk:" prefix.
 	@# Also available as a macro.
 mk.docker.dispatch=${make} mk.docker.dispatch
+
 # mk.docker.start/%:; ${make} docker.start/compose.mk:${*}
 # 	@# Like `docker.start`, but assumes the 'compose.mk:' prefix implicitly. 
-
 # mk.docker.detach/%:; ${make} docker.detach/compose.mk:${*}
 # 	@# Like `docker.detach`, but assumes the 'compose.mk:' prefix implicitly. 
-
 # mk.docker.run=${make} mk.docker.run
 # mk.docker.run/%:; img="compose.mk:${*}" ${make} docker.run.sh
 # mk.docker.run:; img="compose.mk:$${img}" ${make} docker.run
@@ -1670,12 +1676,18 @@ mk.docker.dispatch=${make} mk.docker.dispatch
 # 	@# Requires `img` variable to already to be set.
 # 	@# This is used with "local" images, i.e. what `compose.mk` uses 
 # 	@# internally, or to handle embedded Dockerfiles.
+
 mk.docker/% mk.docker.image/%:; ${make} docker.image.run/compose.mk:${*}
+	@# Like `docker.image.run`, but automatically adds the `compose.mk:` prefix.
+	@# This is used with "local" images that are managed by compose.mk itself, 
+	@# e.g. embedded images that are built with `Dockerfile.build/..`, etc.
+
 mk.docker=${make} mk.docker
 mk.docker:; ${mk.docker}/$${img}
-# mk.docker=${make} mk.docker.run
+	@# Like `mk.docker/..` but expects `img` argument is available from environment.
+
 mk.docker.run.sh:; img="compose.mk:$${img}" ${make} docker.run.sh
-# 	@# Like docker.run.sh, but implicitly assumes the 'compose.mk:' prefix.
+	@# Like docker.run.sh, but implicitly assumes the 'compose.mk:' prefix.
 
 mk.get/%:; $(info ${${*}})
 	@# Returns the value of the given make-variable
@@ -1929,7 +1941,7 @@ mk.interpret!:
 	&& cat $${fname} | ${make} mk.compile > $${tmpf} \
 	&& chmod ugo+x $${tmpf} \
 	&& ${trace_maybe} \
-	&& continuation="$${rest}" ${make} mk.interpret/$${tmpf} \
+	&& continuation="$${rest}" CMK_INTERPRETING=$${fname} ${make} mk.interpret/$${tmpf} \
 	&& $(call mk.yield, true)
 
 mk.include/%:
@@ -1966,7 +1978,7 @@ mk.interpret:
 	&& fname="`echo $${tmp}| cut -d' ' -f1`" \
 	&& rest="`echo $${tmp}| cut -d' ' -f2- -s`" \
 	&& $(call log.mk, mk.interpret ${sep} ${dim}starting interpreter ${sep} ${dim}timestamp=${yellow}${io.timestamp}) \
-	&& continuation="$${rest}" ${make} mk.interpret/$${fname}
+	&& continuation="$${rest}" CMK_INTERPRETING=$${CMK_INTERPRETING:-$${fname}} ${make} mk.interpret/$${fname}
 	$(call mk.yield, true)
 
 mk.interpret/%:
@@ -1983,9 +1995,9 @@ mk.interpret/%:
 		 && printf '\n\n\n' ; cat ${CMK_SRC} | tail -n1 ) \
 	> $${tmpf} \
 	&& $(call log.mk, mk.interpret ${sep} ${dim}file=${bold}${*} ) \
-	&& $(call log.mk, mk.interpret ${sep} ${dim_ital}$${continuation:-(no additional arguments passed)}) \
+	&& $(call log.trace, mk.interpret ${sep} ${dim_ital}$${continuation:-(no additional arguments passed)}) \
 	&& chmod ugo+x $${tmpf} \
-	&& $(call io.script.trace, MAKEFILE=$${tmpf} $${tmpf} $${continuation:-})
+	&& $(call io.script, CMK_INTERPRETING=$${CMK_INTERPRETING:-$${fname}} MAKEFILE=$${tmpf} $${tmpf} $${continuation:-})
 
 mk.let/%:
 	@# Dynamic target assignment.
@@ -2047,12 +2059,12 @@ mk.parse/%:
 mk.pkg:
 	@# Like `mk.self`, but includes `compose.mk` source also.
 	@#
-	archive="$${archive} ${CMK_SRC}" ${make} mk.self
+	set -x && archive="$${archive} ${CMK_SRC}" ${make} mk.self
 
 mk.pkg/%:
 	@# Packages the given make target as a single-file executable.
 	@#
-	@# This works by using to `makeself` to bundle/freezes/release 
+	@# This works by using to `makeself` to bundle/freeze/release 
 	@# a self-extracting archive where we include the current Makefile, 
 	@# and try to automatically include any related dependencies.
 	@#
@@ -2062,10 +2074,23 @@ mk.pkg/%:
 	@# USAGE:
 	@#  archive="file1 file2 dir1" make -f ... mk.pkg/<target_name>
 	@#
-	label=$${label:-${*}} bin=$${bin:-${*}} script=make \
-	script_args="${MAKE_FLAGS} -f ${MAKEFILE} ${*}" \
-	${make} mk.pkg
+	${make} .mk.pkg/${*}
 
+ifeq (${CMK_INTERPRETING},) 
+.mk.pkg/%:; cmd=${*} ${make} mk.pkg.root
+mk.pkg.root:
+	@# Packages the application root, or the given command if provided.
+	label=$${label:-${*}} bin=$${bin:-${*}} script=make \
+	script_args="${MAKE_FLAGS} -f ${MAKEFILE} $${cmd:-}" \
+	${make} mk.pkg
+else 
+mk.pkg.root:
+	@# Packages the application root, or the given command if provided.
+	label=$${label:-${*}} bin=$${bin:-${*}} script=./compose.mk \
+	script_args="mk.interpret! ${CMK_INTERPRETING} $${cmd:-}" \
+	${make} mk.pkg
+.mk.pkg/%:; cmd=${*} ${make} mk.pkg.root
+endif
 mk.namespace.filter/%:
 	@# Lists all targets in the given namespace, filtering them by the given pattern.
 	@# Simple, pipe-friendly output.  
@@ -3086,7 +3111,7 @@ flux.timer/%:
 	@#   ./compose.mk flux.timer/<target_to_run>
 	@#
 	start_time=$$(date +%s) \
-	&& ${make} ${*} \
+	&& ${stream.stdin} | ${make} ${*} \
 	&& end_time=$$(date +%s) \
 	&& time_diff_ns=$$((end_time - start_time)) \
 	&& delta=$$(awk -v ns="$$time_diff_ns" 'BEGIN {printf "%.9f", ns }') \
@@ -3647,7 +3672,6 @@ tux.dispatch.sh:; ${tux.dispatch.sh}
 	@#
 	@# USAGE:
 	@#   cmd=... ./compose.mk tux.dispatch.sh
-	@#
 	
 tux.help:; ${make} mk.namespace.filter/tux.
 	@# Lists only the targets available under the 'tux' namespace.
@@ -3665,7 +3689,7 @@ tux.mux/%:
 	&& $(trace_maybe) && ${make} tux.mux.detach/$${targets}
 
 .tux.attach:;  
-	@#
+	@# Thin wrapper on `tmux attach`.
 	@#
 	label='Reattaching TUI' ${make} io.print.banner
 	$(trace_maybe) && tmux attach -t ${TUI_TMUX_SESSION_NAME}
@@ -3750,11 +3774,10 @@ tux.pane/%:; ${make} tux.dispatch/.tux.pane/${*}
 	@#   ./compose.mk tux.pane/1/<target_name>
 
 tux.panic:
-	@#
+	@# Non-graceful stops for the TUI plus any affiliated containers.
 	@#
 	@# USAGE:
 	@#  ./compose.mk tui.panic
-	@#
 	$(call log.tux, tux.panic ${sep}${dim} Stopping all TUI sessions)
 	${make} tux.ps | xargs -I% bash -c "id=% ${make} docker.stop" | ${stream.dim.indent}
 
@@ -3763,7 +3786,6 @@ tux.ps:
 	@#
 	@# USAGE:
 	@#  ./compose.mk tux.ps
-	@#
 	$(call log.tux, tux.ps ${sep} $${TUI_CONTAINER_IMAGE} ${sep} ${dim} Looking for TUI containers)
 	docker ps | grep compose.mk:tux | awk '{print $$1}'
 
@@ -3958,8 +3980,7 @@ endef
 	@#   * `[1]`: https://raw.githubusercontent.com/sunaku/home/master/bin/tmux-layout-dwindle
 	
 .tux.layout.shuffle:
-	@#
-	@#
+	@# Shuffles the pane layout randomly
 	@#
 	$(call log.tux, ${@} ${sep} shuffling layout )
 	tmp=`printf "h tlvc v h trvc h blvc brvc tlvs trvs brvs v blvs h tlhc v trhc blhc brhc tlhs trhs blhs brhs" | tr ' ' '\n' | shuf -n 1` \
@@ -4100,9 +4121,11 @@ endef
 	done
 
 .tux.widget.img.rotate:
+	@# Like `.tux.widget.img`, but sets up a rotating version of the image.
 	display_target=.tux.img.rotate ${make} .tux.widget.img
 
 .tux.widget.img/%:; url="${*}" ${make} .tux.widget.img
+	@# Like `.tux.widget.img`, but accepts arguments explicitly rather looking in the environment.
 .tux.widget.img:
 	@# Displays the given image URL or file-path forever, as a TUI widget.
 	@# This functionality requires a loop, otherwise chafa won't notice or adapt
@@ -4152,7 +4175,6 @@ endef
 
 # A container monitoring tool.  
 # https://github.com/moncho/dry https://hub.docker.com/r/moncho/dry
-IMG_MONCHO_DRY=moncho/dry@sha256:6fb450454318e9cdc227e2709ee3458c252d5bd3072af226a6a7f707579b2ddd
 .tux.widget.ctop:; img="${IMG_MONCHO_DRY}" ${make} io.wait/2 docker.start.tty
 	@# A container monitoring tool.  
 	
@@ -4595,6 +4617,7 @@ define compose.import.dockerfile.string
 $(eval defname:=$(strip $(1)))
 $(eval img_name:=$(patsubst Dockerfile.%,%,${defname}))
 ${img_name}.build: Dockerfile.build/${img_name}
+${img_name}.shell:; img=compose.mk:${img_name} entrypoint=$${entrypoint:-sh} ${make} docker.run.sh 
 ${img_name}.build.force:; force=1 ${make} ${img_name}.build 
 ${img_name}.dispatch/%:; img=${img_name} ${make} mk.docker.dispatch/$${*}
 ${img_name}.run:; img=compose.mk:${img_name} ${make} docker.run.sh 
@@ -4734,6 +4757,13 @@ ${compose_file_stem}.stop $(target_namespace).stop:
 	$$(call log.docker, ${bold_green}${target_namespace} ${sep} ${bold_cyan}stop ${sep} ${dim_ital}all services)
 	${trace_maybe} && ${docker.compose} -f $${compose_file} stop -t 1 2> >(grep -v '\] Stopping'|grep -v '^ Container ' >&2)
 
+${compose_file_stem}.down $(target_namespace).down:
+	@# Bring down all services for the ${compose_file} file.  
+	@# Provided for completeness; the stop, start, up, and 
+	@# down verbs are not really what you want for tool containers!
+	$$(call log.docker, ${bold_green}${target_namespace} ${sep} ${bold_cyan}down ${sep} ${dim_ital}all services)
+	${trace_maybe} && ${docker.compose} -f $${compose_file} down -t 1 2> >(grep -v '^Network.*Removing'|grep -v '^Network.*Removed' >&2)
+
 ${compose_file_stem}.up:
 	@# Brings up all services in the given compose file.
 	@# Stops all services for the ${compose_file} file.  
@@ -4750,7 +4780,8 @@ ${compose_file_stem}.clean:
 # NB: implementation must NOT use 'io.mktemp'!
 ${compose_file_stem}/%:
 	@# Generic dispatch for given service inside ${compose_file}
-	@#
+	@# WARNING: This uses noglob to let expansion happen in the container. 
+	@#          This could be confusing but is usually correct.
 	@#
 	@$$(eval export svc_name:=$$(shell echo $$@|awk -F/ '{print $$$$2}'))
 	@$$(eval export cmd:=$(shell echo $${MAKE_CLI_EXTRA:-$${cmd:-}}))
@@ -4782,8 +4813,8 @@ ${compose_file_stem}/%:
 	@$$(eval export cmd_disp:=`[ -z "$${cmd}" ] && echo " " || echo " $${cmd}\n${log.prefix.makelevel}"`)
 	@$$(eval export cmd_disp:=$$(shell echo "$${cmd}" | sed 's/-s -S --warn-undefined-variables --no-builtin-rules //g'))
 	@$$(eval export cmd_disp:=${no_ansi_dim}${ital}$${cmd_disp}${no_ansi})
-	
 	@trap "rm -f $${stdin_tempf}" EXIT \
+	&& set -o noglob \
 	&& if [ -z "$${pipe}" ]; then \
 		([ $${verbose} == 1 ] && printf "$${header}${log.prefix.makelevel} ${green_flow_right}  ${no_ansi_dim}$${entrypoint_display}$${cmd_disp} ${cyan}<${no_ansi}${bold}..${no_ansi}${cyan}>${no_ansi}${dim_ital}`cat $${stdin_tempf} | sed 's/^[\\t[:space:]]*//'| sed -e 's/CMK_INTERNAL=[01] //'`${no_ansi}\n" > ${stderr} || true) \
 		&& ($(call log.trace, ${dim}$${base}${no_ansi})) \
