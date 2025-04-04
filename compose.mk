@@ -219,7 +219,7 @@ define nl
 endef
 comma=,
 
-# Aliases used with redirects
+# Returns "-x" iff trace is enabled.  (This is used with calls to bash/sh to show the command)
 dash_x_maybe:=`[ $${TRACE} == 1 ] && echo -x || true`
 
 trace_maybe=[ "${TRACE}" == 1 ] && set -x || true 
@@ -294,7 +294,6 @@ docker.run.base:=docker run --rm -i
 ## | Variable               | Meaning                                                          |
 ## | ---------------------- | ---------------------------------------------------------------- |
 ## | CMK_COMPOSE_FILE       | *Temporary file used for the embedded-TUI*                       |
-## | verbose:             | 1 if normal debugging output should be shown, otherwise 0          |
 ## | CMK_DIND               | *Determines whether docker-in-docker is allowed*                 |
 ## | CMK_INTERNAL           | *1 if dispatched inside container, otherwise 0*                  |
 ## | CMK_SUPERVISOR         | *1 if supervisor/signals is enabled, otherwise 0*                |
@@ -302,6 +301,7 @@ docker.run.base:=docker run --rm -i
 ## | DOCKER_HOST_WORKSPACE  | *Needs override for correctly working with DIND volumes*         |
 ## | TRACE:                 | Increase verbosity (more detailed than verbose)                  |
 ## | GITHUB_ACTIONS:        | 1 if running inside github actions, 0 otherwise                  |
+## | verbose:               | 1 if normal debugging output should be shown, otherwise 0        |
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 export COMPOSE_IGNORE_ORPHANS?=True
@@ -330,6 +330,7 @@ export DEBIAN_CONTAINER_VERSION?=debian:bookworm
 export ALPINE_VERSION?=3.21.2
 IMG_CARBONYL?=fathyb/carbonyl
 IMG_IMGROT?=robotwranglers/imgrot:07abe6a
+IMG_MONCHO_DRY=moncho/dry@sha256:6fb450454318e9cdc227e2709ee3458c252d5bd3072af226a6a7f707579b2ddd
 
 # Used internally.  If this is container-dispatch and DIND,
 # then DOCKER_HOST_WORKSPACE should be treated carefully
@@ -3750,11 +3751,10 @@ tux.pane/%:; ${make} tux.dispatch/.tux.pane/${*}
 	@#   ./compose.mk tux.pane/1/<target_name>
 
 tux.panic:
-	@#
+	@# Non-graceful stops for the TUI plus any affiliated containers.
 	@#
 	@# USAGE:
 	@#  ./compose.mk tui.panic
-	@#
 	$(call log.tux, tux.panic ${sep}${dim} Stopping all TUI sessions)
 	${make} tux.ps | xargs -I% bash -c "id=% ${make} docker.stop" | ${stream.dim.indent}
 
@@ -3763,7 +3763,6 @@ tux.ps:
 	@#
 	@# USAGE:
 	@#  ./compose.mk tux.ps
-	@#
 	$(call log.tux, tux.ps ${sep} $${TUI_CONTAINER_IMAGE} ${sep} ${dim} Looking for TUI containers)
 	docker ps | grep compose.mk:tux | awk '{print $$1}'
 
@@ -3958,8 +3957,7 @@ endef
 	@#   * `[1]`: https://raw.githubusercontent.com/sunaku/home/master/bin/tmux-layout-dwindle
 	
 .tux.layout.shuffle:
-	@#
-	@#
+	@# Shuffles the pane layout randomly
 	@#
 	$(call log.tux, ${@} ${sep} shuffling layout )
 	tmp=`printf "h tlvc v h trvc h blvc brvc tlvs trvs brvs v blvs h tlhc v trhc blhc brhc tlhs trhs blhs brhs" | tr ' ' '\n' | shuf -n 1` \
@@ -4152,7 +4150,6 @@ endef
 
 # A container monitoring tool.  
 # https://github.com/moncho/dry https://hub.docker.com/r/moncho/dry
-IMG_MONCHO_DRY=moncho/dry@sha256:6fb450454318e9cdc227e2709ee3458c252d5bd3072af226a6a7f707579b2ddd
 .tux.widget.ctop:; img="${IMG_MONCHO_DRY}" ${make} io.wait/2 docker.start.tty
 	@# A container monitoring tool.  
 	
