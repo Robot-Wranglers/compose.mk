@@ -9,8 +9,8 @@ include compose.mk
 
 .DEFAULT_GOAL:=__main__
 
-ls:; $(call mk.yield, ls $${MAKE_CLI_EXTRA})
+ls:; ls $${MAKE_CLI_EXTRA}; $(call mk.yield, true)
 
 __main__:
-	${make} ls -- --help
+	${make} ls -- --color=auto
 	this line still wont run, we already yielded execution!

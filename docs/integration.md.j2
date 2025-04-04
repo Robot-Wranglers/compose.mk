@@ -17,7 +17,7 @@ $ chmod ugo+x compose.mk
 $ ./compose.mk ...
 ```
 
-If you have `make` and `docker`, that's all the setup you'll need for stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview) tool usage.  While it's not really recommended.. you can always copy it to a bin folder too if you want.
+If you have `make` and `docker`, that's all the setup you'll need for stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview) tool usage.  While it's not really necessary or recommended.. you can always copy it to a bin folder too if you want.  *(See the [forks and versioning section](#forks-versioning) for more details.)*
 
 Note that since [various utilities]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) are only pulled on demand, initial usage can be slow, but subsequent runs can take advantage of cache.
 
@@ -79,9 +79,18 @@ Next, a few tips and tricks about the docker-compose config details:
 ### Compatibility Notes
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Platforms used in development for `compose.mk` include modern docker (say *25+*), recentish make (*3.8+*) and bash (*~5*) on both Linux and MacOS. Testing in github-actions only uses Linux, and won't try every possible combination of versions.
+Platforms used in development for `compose.mk` include modern docker (say *25+*), recentish make (*3.8+*) and bash (*~5*) on both Linux and MacOS. Testing done in CI only uses Linux, and won't try every possible combination of versions.
 
-In general though **the goal is to support most things you'll encounter in the wild**, including OSX, out of the box.  But you may see some of the usual problems with certain arguments to non-gnu OSX default `sed` / `ps` / `xargs`, etc.  Please report issues!
+In general though **the goal is to support most things you'll encounter in the wild**, including OSX, out of the box.  But with MacOS you may see some of the usual problems with certain invocations to non-gnu OSX default `sed` / `ps` / `xargs`, etc.  Please report issues!  
+
+Simple usage of `compose.mk` should work without problems even using BSD tools instead of GNU ones, but for some [advanced usage]({{mkdocs.site_relative_url}}/compiler) you'll probably encounter problems with `awk`.  
+
+```bash 
+$ brew install gawk
+$ cp /usr/local/bin/gawk /usr/local/bin/awk
+```
+
+Opting in to GNU tools on MacOS in general is documented for example [here](https://gist.github.com/skyzyx/3438280b18e4f7c490db8a2a2ca0b9da) and [here](https://github.com/pkill37/linuxify).
 
 ### For Developers
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -89,13 +98,13 @@ In general though **the goal is to support most things you'll encounter in the w
 For development on `compose.mk` itself, here's how you can clone the project, build related containers, and run the test suites.
 
 ```bash
-# for ssh
+# Clone with ssh
 $ git clone git@github.com:Robot-Wranglers/compose.mk.git
 
-# or for http
+# Clone with http
 $ git clone https://github.com/Robot-Wranglers/compose.mk.git
 
-# build the tool containers & check them
+# Build the tool containers & check them
 $ make clean build demos
 ```
 
@@ -106,7 +115,9 @@ $ make clean build demos
 
 Given the advice above to simply embed `compose.mk` directly into your project repositories, some people might be reading this and thinking **what if compose.mk changes upstream?**  
 
-If you're really worried about this, you can always setup `compose.mk.git` (or your fork of it) as a git submodule inside your project folder, but there's probably no need.  For more discussion, see the section on [Contributing]({{mkdocs.site_relative_url}}/contributing).
+Eventually `compose.mk` will probably get a [pypi installer option](https://medium.com/%40azinke.learn/packaging-shell-scripts-9309e200c818) although of course that won't help much if you're not already in the Python ecosystem, and it does undermine the goal of minimalism.
+
+For now, if you're really worried about this, you can always setup the `compose.mk` repository (or your fork of it) as a git submodule inside your project folder, but there's probably no need.  Fork-and-forget is a reasonable strategy here, and *removing dependency problems* rather than causing new ones is the goal.  For more discussion, see the section on [Contributing]({{mkdocs.site_relative_url}}/contributing).
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
