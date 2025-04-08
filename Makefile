@@ -9,7 +9,7 @@ SHELL := bash
 MAKEFLAGS=-s -S --warn-undefined-variables
 THIS_MAKEFILE:=$(abspath $(firstword $(MAKEFILE_LIST)))
 
-.PHONY: docs demos demos/cmk README.md
+.PHONY: docs demos demos/cmk README.md docs.agent
 
 export SRC_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 export PROJECT_ROOT := $(shell dirname ${THIS_MAKEFILE})
@@ -159,3 +159,8 @@ actions.run.delete/%:; gh run delete ${*}
 
 actions.list/%:; gh run list --status ${*} --json databaseId
 	@# Helper for filtering action runs
+docs.agent:
+	mv docs/img docs.img \
+	; archive='docs demos' bin=docs.agent ./demos/cmk/rag.cmk mk.pkg.root \
+	; mv docs.agent docs/artifacts \
+	; mv docs.img docs/img

@@ -1845,7 +1845,6 @@ define .eval.call
 eval.call=$(eval $(call $(if $(filter undefined,$(origin 1)),,$(1)),$(if $(filter undefined,$(origin 2)),,$(2)),$(if $(filter undefined,$(origin 3)),,$(3)),$(if $(filter undefined,$(origin 4)),,$(4))))
 endef
 mk.preprocess: 
-	@# Runs the CMK input preprocessor on stdin.
 	$(call log.target, starting) \
 	&& $(call io.mktemp) && export inputf=`echo $${tmpf}` \
 	&& ${stream.stdin} > $${inputf} \
@@ -3338,6 +3337,7 @@ stream.grep.safe=grep -iv password | grep -iv passwd
 stream.img=${stream.stdin} | docker run -i --entrypoint chafa compose.mk:tux `[ "$${GITHUB_ACTIONS:-false}" = "true" ] && echo "--size 100x -c full --fg-only --invert --symbols dot,quad,braille,diagonal" || echo "--center on"` /dev/stdin
 
 # Converts multiple sequential newlines to just one.
+# stream.nl.compress=sed -z 's/\n\n/\n/g'
 stream.nl.compress=awk -v RS='\0' '{ gsub(/\n{2,}/, "\n"); printf "%s", $$0 RS }'
 
 stream.chafa=${stream.img}

@@ -1,5 +1,16 @@
-# See the docs for the full demo:
-# https://robot-wranglers.github.io/compose.mk/demos/RAG
+# See the demo docs: https://robot-wranglers.github.io/compose.mk/demos/RAG
+#
+# NB: GPU support disabled by default; to enable this, use something like this 
+# in the ollama_server block. You must also remove the '+cpu' from torch requirement.
+#
+#   https://docs.docker.com/compose/how-tos/gpu-support/
+#   deploy:
+#     resources:
+#       reservations:
+#         devices:
+#           - driver: nvidia
+#             count: 1
+#             capabilities: [gpu]
 services:
   ollama_server: &base
     build:
@@ -19,28 +30,13 @@ services:
         RUN pip install --no-cache-dir ollama==0.4.7 sentence-transformers==4.0.2 faiss-cpu==1.10.0 
         RUN pip install --no-cache-dir tqdm==4.67.1 unstructured[md]==0.17.2
         RUN pip install --no-cache-dir requests==2.32.3 click==8.1.8 rich==14.0.0 accelerate==1.6.0
-    # NB: GPU support disabled by default; to enable this
-    # you must also remove the '+cpu' from torch requirement.
-    # https://docs.docker.com/compose/how-tos/gpu-support/
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
     entrypoint: ['ollama','serve']
     volumes:
       # NB: this allows model-sharing for any host-installation of ollama if 
       # it's available probably wrong for non-Linux and also maybe wrong for 
       # some ollama versions
       - /usr/share/ollama/.ollama:/root/.ollama
-  
-  shell: 
-    <<: *base
-    entrypoint: bash
-    links: ['ollama_server'] 
-  rag: &base2
+  rag: 
     <<: *base
     working_dir: /workspace
     entrypoint: ["python3.11"]
