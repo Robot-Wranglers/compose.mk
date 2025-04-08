@@ -108,7 +108,7 @@ Without a doubt the more advanced features of `compose.mk` have more bugs and/or
 
 In terms of minimalism and dependencies, `just` just requires `just`, and is available from package managers, whereas `compose.mk` does require `make` and most use-cases will want `docker`.  For that matter, we have to use things like `cut` and `sed` too, and you'll want `git` or `curl` to install it!  Still, a direct comparison in terms of "minimalism" isn't really possible though, because if you want to use tools like `jq` from `just`, then you need those too, whereas `compose.mk` [wraps things like jq implicitly]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) and provides easy access to everything else as long as it's available (or constructable) with docker.
 
-In the end, **the main differentiator for `compose.mk` is that it's designed first and foremost *to be extended***.  It moonlights as a tool, but in many ways is much closer to an [extensible scripting language]({{mkdocs.site_relative_url}}/matrioshka).
+In the end, **the main differentiator for `compose.mk` is that it's designed first and foremost *to be extended***.  It moonlights as a tool, but in many ways is much closer to an [extensible scripting language]({{mkdocs.site_relative_url}}/compiler).
 
 ## The Top of the Stack
 <hr style="width:100%;border-bottom:3px solid black;">

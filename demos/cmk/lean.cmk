@@ -1,0 +1,67 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+# demos/cmk/inlined-dockerfile.cmk: 
+#   CMK-lang translation of demos/lean.mk
+#
+# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#
+# See also: http://robot-wranglers.github.io/compose.mk/demos/lean
+#           http://robot-wranglers.github.io/compose.mk/demos/polyglots
+#
+# USAGE: ./demos/cmk/lean.cmk
+
+# Look, it's a minimal Dockerfile for running lean4 
+# See also: https://leanprover-community.github.io/install/debian.html
+⫻ Dockerfile.Lean
+FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
+SHELL ["/bin/bash", "-x", "-c"]
+RUN apt-get -qq update && apt-get install -qq -y git make curl sudo procps
+RUN curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf > /usr/local/bin/elan-init.sh
+RUN bash /usr/local/bin/elan-init.sh -y --default-toolchain leanprover/lean4:v4.17.0
+RUN cp /root/.elan/bin/lean /usr/local/bin 
+RUN cp /root/.elan/bin/lake /usr/local/bin 
+ENV PATH="$PATH:/root/.elan/bin/"
+RUN lean --help
+RUN lake new default
+RUN cd default && printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' >> lakefile.toml
+RUN cd default && lake update && lake build
+RUN elan --version; lean --version; leanc --version; lake --version; 
+ENTRYPOINT ["lean"]
+⫻
+
+# Look, it's hello-world in scriptwise lean-lang
+# https://lean-lang.org/functional_programming_in_lean/hello-world/running-a-program.html
+〚 script
+def main : IO Unit := IO.println "Hello, world!"
+⟧ with lean.run.script as target
+
+# Look, it's a theorem we might want to prove
+# https://leanprover-community.github.io/logic_and_proof/classical_reasoning.html
+# https://lean-lang.org/theorem_proving_in_lean4/propositions_and_proofs.html
+〚 theorem 
+section
+open Classical
+example : A ∨ ¬ A := by
+  apply byContradiction
+  intro (h1 : ¬ (A ∨ ¬ A))
+  have h2 : ¬ A := by
+    intro (h3 : A)
+    have h4 : A ∨ ¬ A := Or.inl h3
+    show False
+    exact h1 h4
+  have h5 : A ∨ ¬ A := Or.inr h2
+  show False
+  exact h1 h5
+end
+⟧ with lean.run.theorem as target
+
+# Main entrypoint.  Ensures the container is ready, 
+# then dispatches execution of both script and theorem
+__main__: theorem.run script.run
+
+# Top-level helpers. 
+# These write embedded script/theorem to disk before use, 
+# run them inside the container, and clean up afterwards.
+lean.run.script/%:; lean_args="--run" ${make} lean.run.generic/${*}
+
+lean.run.generic/% lean.run.theorem/%:
+	img=Lean cmd="$${lean_args:-} ${*}" ${make} mk.docker

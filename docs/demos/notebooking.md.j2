@@ -51,7 +51,7 @@ Without further delay, let's get into it.
 :  Also known as the standard Jupyter web interface, accessible as usual from the docker host and the browser of your choice.  This of course involves port-forwarding, and we disable auth for brevity and convenience, so *don't leave this running on the internet!*
 
 **TUI Mode**: 
-:  Building on the [embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui), we'll expose 2 dedicated content-panes: one for webserver-launch & log-tailing, and one for viewing that webserver with a full-featured browser that's console-friendly^[4]
+:  Building on the [embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui), we'll expose 2 dedicated content-panes: one for webserver-launch & log-tailing, and one for viewing that webserver with a full-featured browser that's console-friendly[^4]
 
 **Pipeline Mode:** 
 :  A serverless or completely network-sandboxed mode that's more directly amenable to automation, running all notebooks end to end.
@@ -174,7 +174,7 @@ Since the carbonyl browser is just another container and can also share the netw
 ### WUI Mode
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The WUI is mostly stock, except for add-ons created by install jupytext, [annoying announcements](https://jupyterlab.readthedocs.io/en/stable/user/announcements.html) disabled by default, etc.  See the folder at {{macros.repo_link('demos/data/jupyter/lab', github)}} for more details.
+The web UI for jupyter is mostly stock, except for add-ons created by install jupytext, [annoying announcements](https://jupyterlab.readthedocs.io/en/stable/user/announcements.html) disabled by default, etc.  See the folder at {{macros.repo_link('demos/data/jupyter/lab', github)}} for more details.
 
 ### Project As Tool
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -191,21 +191,19 @@ And that's it.. now `./lab.pipeline` runs as you see above, pretty much anywhere
 
 This is the whole project bundled into an executable archive, so now it's not dependent on working-directories or git clones, and it's easy to distribute.  Initial execution pulls lots of containers, but those exist *outside* the archive and are naturally cached between runs.  And plus.. now you can more easily hide the whole involvement of a weird tool like `compose.mk` ;), and yet everyone can still easily unarchive the distribution again using `./lab.pipeline --noexec --keep --target lab.unarchived`.
 
-Packaging is very practical here considering the external dependencies *(`compose.mk` itself, plus the [notebooks](#appendix-notebooks), plus containers for [jupyter](#appendix-main-jupyter-container) and [fmtk](#appendix-fmtk-containers))*, but again it will **not** package up 10gb of containerized stuff like lean+mathlib.  *(A feature, not a bug!)*
+Packaging is very practical here considering the external dependencies *(`compose.mk` itself, plus the [notebooks](#appendix-notebooks), plus containers for [jupyter](#appendix-main-jupyter-container) and [fmtk](#appendix-fmtk-containers))*, but again it will **not** package up 10gb of containerized stuff like lean+mathlib.  *A feature, not a bug!*  Despite using versioned containers/libs anywhere possible.. some are probably missed, and there are probably still some ways that pipeline output is not reproducible if wild changes happen upstream, network connections break down, etc.  What packaging really aims to fix is the typical tedious bootstrap instructions that distinguish "projects" from ready-to-go-pipelines, and prevent your "prototypes" from automatically being reusable tools.
 
-So to be clear.. despite packaging and using versioned containers/libs/etc, there are plenty of ways that pipeline output is *still not reproducible* if wild changes happen upstream.  What packaging really aims to fix is the typical tedious "bootstrap instructions" that distinguish "projects" from ready-to-go-pipelines, and prevent your "prototypes" from automatically being reusable tools.
-
-This is convenient for an "end-to-end" test in a single command line, but there's nothing special about `lab.pipeline`.  In a similar way, you can break off other individual entrypoints if you wish.  Besides pulling data from somewhere just in time, variations on this basic theme can also *include the data the pipeline runs on* in addition to container specs, or be modified to work with external notebooks rather than packaged ones, etc.
+This is convenient for an "end-to-end" test in a single command line, but there's nothing special about `lab.pipeline`.  In a similar way, you can break off other individual entrypoints if you wish.  Besides pulling data from somewhere just in time, variations on this basic theme can also *include the data the pipeline runs on* in addition to container specs, or be modified to work with external notebooks rather than packaged ones, and so on.
 
 ### Discussion
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Well now that all this exists, *what exactly is it* anyway?  In some ways, it's easier to say what it is not:
+Well now that all this exists, **what exactly is it** anyway?  In some ways, it's easier to say what it is not:
 
 1. Obviously a TUI jupyter client cannot compete with IDE's like VSCode or fancy third-party vendors.
 1. Obviously a compose-backed webserver cannot compete with a k8s jupyter deployment.
 
-On the other hand.. this whole problem space is a pecular combination of code, extensions, environments, and infrastructure.  For the most part there's no visible seams, but under the hood this is orchestrating 4 containers for jupyter and the language kernels alone, and about a dozen if you include the various other utilities that we used but *didn't have to install*.  We also completely avoided the distraction of *push-pull-check* loops with external repos and registries.  And during the development process.. work was mostly in a single file until it was stable enough to break apart, and this further drastically reduced context-switching.
+On the other hand.. this whole problem space is a pecular combination of code, extensions, environments, and infrastructure.  For the most part there are no visible seams, but under the hood this is orchestrating 4 containers for jupyter and the language kernels alone, and about a dozen if you include the various other utilities that we used but *didn't have to install*.  We also completely avoided the distraction of *push-pull-check* loops with external repos and registries.  And during the development process.. work was mostly in a single file until it was stable enough to break apart, and this further drastically reduced context-switching.
 
 If you're interested in **reproducibility**, then it's not like the mere notebook code is the final word.  And if you're interested in **collaboration**, then it turns out that it's kind of hard to simply "share" things like an IDE with a bunch of custom setup, or a kubernetes cluster with a custom deployment.  A for-profit relationship with a vendor will easily get you access to an environment and handy starter-containers, but that also kind of immediately puts a fence around the work, and shelf-life on it too.  While handing off a dockerhub reference for a custom container is pretty easy, that's a lot of work to commit to for mere prototyping, especially if that's outside of your interest or expertise.
 
@@ -213,7 +211,7 @@ Earlier the jupyter setup was compared to a "distribution", and that's really wh
 
 --------------------
 
-In the end **the main features for this demo are the packaging, the dynamic kernels, and the approach to pipelining.**  There's an aspect of this that's related to "local first" development, but it also frees you up to run jupyter outside of jupyter, abstract away the details of "tasks in containers", and maybe avoid using a vendor by just treating this whole pipeline as a single step in another platform like Airflow / Argo.
+In the end **the main features for this demo are the packaging, the dynamic kernels, and the approach to pipelining.**  There's an aspect of this that's related to "local first" development, but it also frees you up to run jupyter outside of jupyter, abstract away the details of "tasks in containers", and maybe avoid using a vendor by just treating this whole pipeline as a single step in another platform like Airflow / Argo.  As mentioned previously.. the whole pipeline also [works fine from Github Actions](https://github.com/Robot-Wranglers/compose.mk/actions/workflows/notebook-pipeline.yml)
 
 This is just a demo and not a real project, but if you're thinking it's not production ready.. you can of course ship the flexible [base kernel shim](#appendix-jupyter-kernel-shims) to pypi, and the kind of additional automation that ships the [fmtk containers](#appendix-fmtk-containers) to dockerhub is practically a one-liner with `compose.mk`.  Doing both of those things just reduces the support code though, and won't answer the majority of [the goals](#goals)![^5]
 
@@ -221,7 +219,7 @@ This is just a demo and not a real project, but if you're thinking it's not prod
 
 One final thought before the support-code appendices. The main thing this example accomplishes is a small but powerful framework for extending jupyter lab.  But it's also perhaps the first nontrivial demonstration of an extension for `compose.mk` itself.  In [various other]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/) [demos]({{mkdocs.site_relative_url}}/demos/just) we've already seen examples of how you can use `compose.mk` to build a bridge across the host/container gap, and to expose and mix components from foreign tools and foreign languages.  
 
-Now that we've effectively created a recipe for mapping **containers** -> **targets** -> **kernels**, we have essentially extended the [default homoiconicity]({{mkdocs.site_relative_url}}/matrioshka/#homoiconic) of `compose.mk` in a new and powerful way.  In principle.. we could choose to throw away the webserver and our naive end-to-end-pipeline, and then start scripting with notebooks as our "first-class components" of choice, leaving `compose.mk` primitives to handle things like IO and control-flow between components.  Whether or not that's really *useful* it's certainly kind of interesting, and we're 95% of the way there without even trying.
+Now that we've effectively created a recipe for mapping **containers** -> **targets** -> **kernels**, we have essentially extended the [default homoiconicity]({{mkdocs.site_relative_url}}/matrioshka/#homoiconic) of `compose.mk` in a new and powerful way.  In principle.. we could choose to throw away the webserver and our naive end-to-end-pipeline, and then start scripting with notebooks as our "first-class components" of choice, leaving `compose.mk` primitives to handle things like IO and control-flow between components.  Whether or not that's really *useful* it is certainly kind of interesting, and we're 95% of the way there without even trying.
 
 ### Appendix: Support Code
 <hr style="width:100%;border-bottom:3px solid black;">
