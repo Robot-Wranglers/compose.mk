@@ -51,7 +51,7 @@ Without further delay, let's get into it.
 :  Also known as the standard Jupyter web interface, accessible as usual from the docker host and the browser of your choice.  This of course involves port-forwarding, and we disable auth for brevity and convenience, so *don't leave this running on the internet!*
 
 **TUI Mode**: 
-:  Building on the [embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui), we'll expose 2 dedicated content-panes: one for webserver-launch & log-tailing, and one for viewing that webserver with a full-featured browser that's console-friendly^[4]
+:  Building on the [embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui), we'll expose 2 dedicated content-panes: one for webserver-launch & log-tailing, and one for viewing that webserver with a full-featured browser that's console-friendly[^4]
 
 **Pipeline Mode:** 
 :  A serverless or completely network-sandboxed mode that's more directly amenable to automation, running all notebooks end to end.
@@ -174,7 +174,7 @@ Since the carbonyl browser is just another container and can also share the netw
 ### WUI Mode
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The WUI is mostly stock, except for add-ons created by install jupytext, [annoying announcements](https://jupyterlab.readthedocs.io/en/stable/user/announcements.html) disabled by default, etc.  See the folder at {{macros.repo_link('demos/data/jupyter/lab', github)}} for more details.
+The web UI for jupyter is mostly stock, except for add-ons created by install jupytext, [annoying announcements](https://jupyterlab.readthedocs.io/en/stable/user/announcements.html) disabled by default, etc.  See the folder at {{macros.repo_link('demos/data/jupyter/lab', github)}} for more details.
 
 ### Project As Tool
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -191,7 +191,7 @@ And that's it.. now `./lab.pipeline` runs as you see above, pretty much anywhere
 
 This is the whole project bundled into an executable archive, so now it's not dependent on working-directories or git clones, and it's easy to distribute.  Initial execution pulls lots of containers, but those exist *outside* the archive and are naturally cached between runs.  And plus.. now you can more easily hide the whole involvement of a weird tool like `compose.mk` ;), and yet everyone can still easily unarchive the distribution again using `./lab.pipeline --noexec --keep --target lab.unarchived`.
 
-Packaging is very practical here considering the external dependencies *(`compose.mk` itself, plus the [notebooks](#appendix-notebooks), plus containers for [jupyter](#appendix-main-jupyter-container) and [fmtk](#appendix-fmtk-containers))*, but again it will **not** package up 10gb of containerized stuff like lean+mathlib.  *A feature, not a bug!*  Despite using versioned containers/libs anywhere possible.. some are probably missed, and there are ways that pipeline output is *still not reproducible* if wild changes happen upstream, network connections break down, etc.  What packaging really aims to fix is the typical tedious bootstrap instructions that distinguish "projects" from ready-to-go-pipelines, and prevent your "prototypes" from automatically being reusable tools.
+Packaging is very practical here considering the external dependencies *(`compose.mk` itself, plus the [notebooks](#appendix-notebooks), plus containers for [jupyter](#appendix-main-jupyter-container) and [fmtk](#appendix-fmtk-containers))*, but again it will **not** package up 10gb of containerized stuff like lean+mathlib.  *A feature, not a bug!*  Despite using versioned containers/libs anywhere possible.. some are probably missed, and there are probably still some ways that pipeline output is not reproducible if wild changes happen upstream, network connections break down, etc.  What packaging really aims to fix is the typical tedious bootstrap instructions that distinguish "projects" from ready-to-go-pipelines, and prevent your "prototypes" from automatically being reusable tools.
 
 This is convenient for an "end-to-end" test in a single command line, but there's nothing special about `lab.pipeline`.  In a similar way, you can break off other individual entrypoints if you wish.  Besides pulling data from somewhere just in time, variations on this basic theme can also *include the data the pipeline runs on* in addition to container specs, or be modified to work with external notebooks rather than packaged ones, and so on.
 

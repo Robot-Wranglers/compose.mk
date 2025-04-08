@@ -34,7 +34,7 @@ This page focuses on other language-related features and **also serves as an alt
 
 Further, you could say that `compose.mk` is an [interpreted language](#interpreters-transpilation) that is implemented *in* `make`, but in some sense it also runs *on* `make` by hijacking it as a kind of [gadget](https://en.wikipedia.org/wiki/Gadget_(computer_science)).  
 
-Also related but harder to categorize, the [packaging support]({{mkdocs.site_relative_url}}/demos/package), combines well with the sheer ubiquity of `make` to effectively allow us to **release frozen artifacts**.  This topic different [from compilation]({{mkdocs.site_relative_url}}/compiler), but it is language-adjacent if you squint, because it's similar to image-based persistence[^11].
+Also related but harder to categorize, the [packaging support]({{mkdocs.site_relative_url}}/demos/package) is *almost* a language feature in that it effectively allow us to **release frozen artifacts**.  This topic is different [from compilation]({{mkdocs.site_relative_url}}/compiler), but it's somewhat inspired by the idea of image-based persistence[^11].
 
 ### Homoiconic?
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -49,7 +49,7 @@ Let's introduce a somewhat surprising fact: `compose.mk` is designed to be [homo
 1. Describe data-flow and/or control-flow across other tasks (again via [flux]({{mkdocs.site_relative_url}}/standard-lib#workflow-support))
 1. Execute arbitrary tasks in foreign languages (via [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots))
 
-In the [workflow docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support), the `flux.*` namespace is introduced as a **target algebra**, and compared to more familiar shell process-algebra.  But as a simple example of "targets all the way down" consider this:
+In the [workflow docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support), the `flux.*` module is introduced as a **target algebra**, and compared to more familiar shell process-algebra.  But as a simple example of "targets all the way down" consider this:
 
 * {{macros.api_link('flux.wrap',mkdocs,arg='targets')}} is a n-ary target that accepts nullary targets as arguments.
 * Meanwhile.. {{macros.api_link('flux.ok',mkdocs)}} and {{macros.api_link('flux.fail',mkdocs)}} are examples of nullary targets.
