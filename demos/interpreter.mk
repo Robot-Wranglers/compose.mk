@@ -1,4 +1,4 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret
+#!/usr/bin/env -S CMK_DISABLE_HOOKS=1 ./compose.mk mk.interpret
 # demos/interpreter.mk: 
 #   Demonstrating compose.mk as an alternate interpreter for make.
 #   This is mostly used with extensions that want to inherit signals/supervisors.
@@ -10,7 +10,7 @@
 # as well with `make -f ..`
 include compose.mk
 
-ls:; $(call mk.yield, ls $${MAKE_CLI#*ls})
+ls:; $(call mk.yield, ls $${MAKE_CLI#* ls})
 
 __main__:
 	# this line works, but exits afterwards

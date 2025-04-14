@@ -34,6 +34,7 @@ export OLLAMA_HOST:=$(shell \
 ## to stream-line the repetitive parts of wrapper-targets
 export quiet=1
 export rag_script=demos/data/rag.py
+export glob?=docs/*.md
 corpus_count=$${glob} (${yellow}`ls $${glob} | wc -l`${no_ansi_dim} files total)
 
 ## Preparing to dispatch commands into the `rag` service defined in the compose file.

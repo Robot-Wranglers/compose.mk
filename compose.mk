@@ -37,17 +37,6 @@
 #
 #   # show full interface (see also: https://github.com/robot-wranglers/compose.mk/bridge)
 #   make help
-#
-# APOLOGIES:
-#   In advance if you're checking out the implementation.  This is unavoidably gnarly in a lot of places.
-#   No one likes a file this long, and especially make-macros are not the most fun stuff to read or write.
-#   Breaking this apart would make development easier but complicate boilerplate required for integration
-#   with external projects.  Pull requests are welcome! =P
-#
-# HINTS:
-#   1) The goal is that the implementation is well tested, nearly frozen, and generally safe to ignore!
-#   2) If you just want API or other docs, see https://github.com/robot-wranglers/compose.mk
-#   3) If you need to work on this file, you want Makefile syntax-highlighting & tab/spaces visualization.
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # Let's get into the horror and the delight right away with shebang hacks. 
@@ -1991,13 +1980,24 @@ mk.interpret/%:
 		*) fname="${*}" ;; \
 	esac && $(call io.mktemp) \
 	&& ( cat ${CMK_SRC} | sed -e '$$d' ; printf '\n\n\n' \
-		 && cat $${fname} | grep -v "^include ${CMK_SRC}" \
+		 && cat $${fname} | grep -a -v "^include ${CMK_SRC}" \
 		 && printf '\n\n\n' ; cat ${CMK_SRC} | tail -n1 ) \
 	> $${tmpf} \
+	&& ${make} mk.validate/$${tmpf} \
 	&& $(call log.mk, mk.interpret ${sep} ${dim}file=${bold}${*} ) \
 	&& $(call log.trace, mk.interpret ${sep} ${dim_ital}$${continuation:-(no additional arguments passed)}) \
 	&& chmod ugo+x $${tmpf} \
-	&& $(call io.script, CMK_INTERPRETING=$${CMK_INTERPRETING:-$${fname}} MAKEFILE=$${tmpf} $${tmpf} $${continuation:-})
+	&& CMK_INTERPRETING=$${CMK_INTERPRETING:-$${fname}} MAKEFILE=$${tmpf} $${tmpf} $${continuation:-}
+
+# && $(call io.script, CMK_INTERPRETING=$${CMK_INTERPRETING:-$${fname}} MAKEFILE=$${tmpf} $${tmpf} $${continuation:-})
+mk.validate/%:
+	@# Validate the given Makefile (using `make -n`)
+	$(call log.part1, ${GLYPH_MK} mk.validate ${sep} ${dim_ital}${*})
+	err=`make -n -f ${*} 2>&1 1>/dev/null` \
+	; case $$? in \
+		0) $(call log.part2, ${green}ok);; \
+		*) $(call log.part2, ${red}failed); printf "$${err}" | ${stream.as.log}; exit 1;; \
+	esac
 
 mk.let/%:
 	@# Dynamic target assignment.
@@ -3337,7 +3337,8 @@ stream.grep.safe=grep -iv password | grep -iv passwd
 stream.img=${stream.stdin} | docker run -i --entrypoint chafa compose.mk:tux `[ "$${GITHUB_ACTIONS:-false}" = "true" ] && echo "--size 100x -c full --fg-only --invert --symbols dot,quad,braille,diagonal" || echo "--center on"` /dev/stdin
 
 # Converts multiple sequential newlines to just one.
-stream.nl.compress=sed -z 's/\n\n/\n/g'
+# stream.nl.compress=sed -z 's/\n\n/\n/g'
+stream.nl.compress=awk -v RS='\0' '{ gsub(/\n{2,}/, "\n"); printf "%s", $$0 RS }'
 
 stream.chafa=${stream.img}
 stream.img stream.chafa stream.img.preview: tux.require
@@ -4925,13 +4926,13 @@ help:
 	@# Older versions of make dont have '--print-targets', so this uses the 'print database' feature.
 	@# See also: https://stackoverflow.com/questions/4219255/how-do-you-get-the-list-of-targets-in-a-makefile
 	@#
-	$(call io.mktemp) \
+	export CMK_DISABLE_HOOKS=1 \
+	&& $(call io.mktemp) \
 	&& case $${search:-} in \
 		"") export key=`echo "$${MAKE_CLI#* help}"|awk '{$$1=$$1;print}'` ;; \
 		*) export key="$${search}" ;;\
 	esac \
 	&& count=`echo "$${key}" |${stream.count.words}` \
-	&& header="${GLYPH.DOCKER} help ${sep}" \
 	&& case $${count} in \
 		0) ( $(call _help_gen) > $${tmpf} \
 			&& count=`cat $${tmpf}|${stream.count.lines}` && count="${yellow}$${count}${dim} items" \
@@ -5221,6 +5222,7 @@ define .awk.rewrite.targets.maybe
     #if ($i ~ /^\./ || $i ~ /\//) result = result " " $i
     if ($i ~ /^\./ || $i ~ /\//) {result = result " " $i; continue}
     if ($i ~ "mk.interpret") {result = result " " $i; continue}
+    if ($i ~ "help") {result = result " " $i; continue}
     if (result != "") result = result " "
     result = result "flux.pre/" $i " " $i " flux.post/" $i
   }

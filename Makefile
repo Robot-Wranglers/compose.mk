@@ -9,7 +9,7 @@ SHELL := bash
 MAKEFLAGS=-s -S --warn-undefined-variables
 THIS_MAKEFILE:=$(abspath $(firstword $(MAKEFILE_LIST)))
 
-.PHONY: docs demos demos/cmk README.md
+.PHONY: docs demos demos/cmk README.md docs.agent
 
 export SRC_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 export PROJECT_ROOT := $(shell dirname ${THIS_MAKEFILE})
@@ -22,6 +22,8 @@ $(eval $(call compose.import, demos/data/docker-compose.yml))
 __main__: init clean build test docs
 
 init: mk.stat docker.stat
+validate:
+	ls demos/*[.]mk|./compose.mk flux.each/mk.validate
 
 clean: flux.stage.clean
 	@# Only used during development; normal usage involves build-on-demand.
@@ -36,19 +38,18 @@ build: tux.require
 
 normalize: # NOP
 
-test: integration-test tui-test demo-test smoke-test 
-
-smoke-test stest:
+test: validate integration-test demos smoke-test 
+itest integration-test:; ./demos/itest.mk
+stest smoke-test:
 	ls tests/*.sh | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 
-demos demos.test demo-test test.demos:
+demos demos.test demo-test:
 	set -x && ls demos/*.mk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 demos/cmk:
 	set -x && ls demos/cmk/*.cmk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 
 # ttest/%:; make test-suite/tui/${*}
 
-itest integration-test: ./demos/itest.mk
 
 ## BEGIN: Documentation related targets
 ##
@@ -159,3 +160,8 @@ actions.run.delete/%:; gh run delete ${*}
 
 actions.list/%:; gh run list --status ${*} --json databaseId
 	@# Helper for filtering action runs
+docs.agent:
+	mv docs/img docs.img \
+	; archive='docs demos' bin=docs.agent ./demos/cmk/rag.cmk mk.pkg.root \
+	; mv docs.agent docs/artifacts \
+	; mv docs.img docs/img
