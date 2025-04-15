@@ -56,7 +56,7 @@ end
 
 # Main entrypoint.  Ensures the container is ready, 
 # then dispatches execution of both script and theorem
-__main__: theorem.run script.run
+__main__: Lean.build theorem.run script.run
 
 # Top-level helpers. 
 # These write embedded script/theorem to disk before use, 

@@ -20,6 +20,12 @@ user=alpine-docker repo=git tag="1.0.38" ./compose.mk docker.from.github
 # Build a Dockerfile to a tag
 tag=compose.mk:testing  ./compose.mk docker.from.file/demos/data/Dockerfile
 
+# Failure if no tag is provided
+! ./compose.mk docker.from.file/demos/data/Dockerfile
+
+# Failure if file does not exist
+! ./compose.mk docker.from.file/demos/data/Dockerfile.missing
+
 # Run an image with a command
 img=debian/buildd:bookworm  entrypoint=sh cmd='-c ls' ./compose.mk docker.run.sh
 
