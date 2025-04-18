@@ -34,14 +34,14 @@ endef
 
 # Look, it's hello-world in scriptwise lean-lang
 # https://lean-lang.org/functional_programming_in_lean/hello-world/running-a-program.html
-define script
+define my.script
 def main : IO Unit := IO.println "Hello, world!"
 endef
 
 # Look, it's a theorem we might want to prove
 # https://leanprover-community.github.io/logic_and_proof/classical_reasoning.html
 # https://lean-lang.org/theorem_proving_in_lean4/propositions_and_proofs.html
-define theorem 
+define my.theorem 
 section
 open Classical
 example : A ∨ ¬ A := by
@@ -60,7 +60,7 @@ endef
 
 # Main entrypoint.  Ensures the container is ready, 
 # then dispatches execution of both script and theorem
-__main__: Dockerfile.build/Lean lean.run.script/script lean.run.theorem/theorem
+__main__: Dockerfile.build/Lean lean.run.script/my.script lean.run.theorem/my.theorem
 
 # Top-level helpers. 
 # These write embedded script/theorem to disk before use, 
