@@ -65,11 +65,6 @@ nav:
     - 'Low-config TUIs': low-config-tuis.md
     - 'Advanced TUIs': advanced-tuis.md
     #- 'Configuration & Customization':  tui-customization-config.md
-  - Misc Features:
-      - 'CLI Help': cli-help.md
-      - 'Stacks & Stages': stages.md
-      - 'Supervisors & Signals': signals.md
-      - 'Self Extracting Executables': demos/packaging.md
   - Tutorials:
     - 'Polyglot Index': demos/polyglots.md
     - 'Embedded Containers and Data': demos/matrioshka.md
@@ -79,6 +74,11 @@ nav:
     - 'Notebooking & Ensembles': demos/notebooking.md
     - 'RAG Demo / Obligatory AI': demos/RAG.md
     # - 'Lean Prover': demos/notebooking.md
+  - Misc Features:
+      - 'CLI Help': cli-help.md
+      - 'Stacks & Stages': stages.md
+      - 'Supervisors & Signals': signals.md
+      - 'Self Extracting Executables': demos/packaging.md
   - CMK Language:
       - 'Language Overview': language.md
       - 'Matrioshka Automata': matrioshka.md

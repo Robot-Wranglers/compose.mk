@@ -14,6 +14,8 @@ Whether you love `make` or passionately hate it, you'll probably agree that defa
 
 We'll dive into examples soon, but first some preliminaries.
 
+--------------------------
+
 1. The `compose.mk` language is called **CMK** or **CMK-lang**, to differentiate it from tool/library mode.
 1. CMK is compiled into legal classic Makefile.  Source files use the `.cmk` extension by convention.
 1. CMK is a superset of Makefile: Makefile is always valid CMK, but the reverse might not be true.
@@ -21,6 +23,8 @@ We'll dive into examples soon, but first some preliminaries.
 1. The compiler itself is extensible, effectively enabling a family of related CMK / Makefile dialects with user-defined configuration.
 
 You could say that `CMK = Makefile + compose.mk standard library + extra syntax`.  
+
+--------------------
 
 Crucially, writing code in the CMK language **does not add new core capabilities** to the stuff that `compose.mk` already does *without* CMK.  In broad strokes, the point of CMK is to **eliminate lots of pesky dollar-signs and curly brackets** while it also **elevates various existing [container]({{mkdocs.site_relative_url}}/demos/matrioshka) and [polyglot]({{mkdocs.site_relative_url}}/demos/polyglots) idioms to native syntax.**  For more background about the compilation process itself, see [the implementation details section](#implementation-details).
 
@@ -41,7 +45,7 @@ The original code was simple, but rewriting this in CMK is even better and much 
 {{open('demos/cmk/structured-io.cmk','r').read().strip()}}
 ```
 
-We'll get to the odd arrow syntax later, but first the basic stuff: 
+We'll get to the odd arrow syntax at the end of this section, but start with most basic stuff first. 
 
 **New Interpreter:**
 :  This example introduces `mk.interpret!` via a shebang that's different from other demos that use `make -f ..`.  As with other demos, this one is **executable directly** as `./demos/cmk/structured-io.cmk`.  Unlike other demos, we can't run it directly with `make`.  If you want to run a file that's not executable, use `./compose.mk mk.interpret! <filename>`.  We've introduced the more basic version of `mk.interpret` [elsewhere]({{mkdocs.site_relative_url}}/signals/#inheritance-interpreters) in a very different context.  This example is similar in effect, but **`mk.interpret!` opts into all the pre-processing / compilation / transpilation** stuff that allows us to extend the base syntax of `make` and use the more exotic stuff you see in the rest of the file.
@@ -55,9 +59,8 @@ We'll get to the odd arrow syntax later, but first the basic stuff:
 **Recursive Calls Rewritten:**
 :  Awkward stuff like `${make} foo` can be written as `this.foo` instead.  Recursive invocation of the current context is common, and absolutely critical for code-reuse.[^2] And the choice of `this` for a new keyword is actually configurable.. we'll get to that in the next section.
 
------------
-
-As for that arrow syntax?  These operators just help to make JSON IO feel more native, and are sugar to use `jq` and `jb` for parsing and pushing JSON, respectively.  If you glanced at the [original code]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) that's "ported" to CMK-lang here, then you might notice that the only code-transformation rules we really need to get from **CMK -> Makefile** are *very simple string substititions*.
+**As for that arrow syntax?**
+:  These operators just help to make JSON IO feel more native, and are sugar to use `jq` and `jb` for parsing and pushing JSON, respectively.  If you glanced at the [original code]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) that's "ported" to CMK-lang here, then you might notice that the only code-transformation rules we really need to get from **CMK -> Makefile** are *very simple string substititions*.
 
 The next section explains the specific substitions that enable the code above at the same time as explaining "dialects" in general.
 
@@ -76,11 +79,13 @@ $ ./compose.mk mk.def.read/cmk.default.dialect
 ]
 ```
 
-The full dialect details are [available in the appendix](#appendix-default-dialect), but the rules shown above are the ones relevant to the [basic example we started with](#basic-example): all we've done so far is introduce new syntax for common stuff with `jq` and `jb` and correctly calling `make` recursively.
+The full dialect details are [available in the appendix](#appendix-default-dialect), but the rules shown above are the ones relevant to the [basic example we started with](#basic-example): all we've done so far is introduce new syntax for common stuff with `jq` and `jb` and calling `make` recursively.
 
 -----------
 
-It might not be obvious how useful and powerful that simple substition actually is here, so let's take a brief detour to peel back the layers.  Above is the dialect literal, but below you can see a first approximation of variable expansion.  As discussed in [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics), we try to use local tools if available, and fall back to docker.
+It might not be obvious how useful and powerful that simple substition actually is here, so let's take a brief detour to peel back the layers.  Above is the dialect literal, but below you can see a first approximation of variable expansion.
+
+As discussed in [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics), we try to use local tools if available, and fall back to docker.
 
 ```bash 
 $ ./compose.mk mk.get/cmk.default.dialect
@@ -108,13 +113,18 @@ Fallback works as advertised, and you can also see that there's actually yet ano
 
 Let's revisit the code from the [inlined compose-file demo]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files), and port it to CMK.
 
-Like the original demo, this embeds a compose file and dispatches tasks to the containers involved, but this time we introduce the `⋘ name ..body.. ⋙` syntax for compose files.  *(NB: This is unicode and `⋘` isn't `<<<` !)*
+Like the original demo, this embeds a compose file, creates scaffolding for the containers involved, and demonstrates task-dispatch for them.  But this time we introduce the `⋘ name ..body.. ⋙` syntax for compose files.  *(NB: This is unicode and `⋘` isn't `<<<` !)*
 
 ```Makefile 
 {{open('demos/cmk/inlined-composefile.cmk','r').read().strip()}}
 ```
 
-As discussed in the [basic example](#basic-example) our CMK port does **not** need an `include compose.mk`.  Another difference is that we can skip the [`compose.import.string(..)`]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) that the original code uses to create [service target scaffolding]({{mkdocs.site_relative_url}}/bridge).  After declaration of services with `⋘ name ..body.. ⋙` all target handles are available immediately.
+Most of the differences here with the original demo are pretty obvious, and alternate equivalents are shown to make what's happening more clear, but let's walk through it.
+
+1. As discussed in the [basic example](#basic-example) our CMK port does **not** need an `include compose.mk`.  1. Here we skip the [`compose.import.string(..)`]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) that the original code used to create [service target scaffolding]({{mkdocs.site_relative_url}}/bridge), and after declaration of services with `⋘ name ..body.. ⋙` all target handles are available immediately.  
+1. We replaced a more naive *"echo ..."* command with a call to `cmk.log` that's using some color.  
+
+Most interestingly though, `<container_name>.dispatch(<target_name>)` now looks like a normal function invocation.  Also notice that `alternate_style1` shows that stacking up *multiple rewrite rules* for transpiler substition works the way you'd expect, since resolution there requires 2 rewrites for resolving `this` and `dispatch(..)`.
 
 ### About Sugar
 <hr style="width:100%;border-bottom:3px solid black;">

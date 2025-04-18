@@ -4,7 +4,7 @@
 # USAGE: ./demos/cmk/inlined-dockerfile.cmk
 
 ⫻ Dockerfile.some_container
-FROM alpine
+FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
 RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
 ⫻
 
@@ -17,7 +17,7 @@ test.scaffold: \
 
 test.runner:
 	cmk.log.test_case(Low level access to run commands)
-	entrypoint=sh cmd='-c "pwd"' ${make} some_container.run
+	entrypoint=sh cmd='-c "pwd"' this.some_container.run
 
 test.raw:
 	cmk.log.test_case(Low-level unmediated access to image)

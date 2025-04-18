@@ -13,12 +13,21 @@
 # Shows newline-separated size details per repo / image.
 ./compose.mk docker.size.summary
 
+# Create container from URL
 url="https://github.com/alpine-docker/git.git#1.0.38:." \
     tag="alpine-git" ./compose.mk docker.from.url
+
+# Construct URL from attributes
 user=alpine-docker repo=git tag="1.0.38" ./compose.mk docker.from.github
 
 # Build a Dockerfile to a tag
-tag=compose.mk:testing  ./compose.mk docker.from.file/demos/data/Dockerfile
+tag=compose.mk:testing ./compose.mk docker.from.file/demos/data/Dockerfile
+
+# Failure if no tag is provided
+! ./compose.mk docker.from.file/demos/data/Dockerfile
+
+# Failure if file does not exist
+! ./compose.mk docker.from.file/demos/data/Dockerfile.missing
 
 # Run an image with a command
 img=debian/buildd:bookworm  entrypoint=sh cmd='-c ls' ./compose.mk docker.run.sh

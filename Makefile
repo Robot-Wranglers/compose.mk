@@ -24,6 +24,7 @@ __main__: init clean build test docs
 init: mk.stat docker.stat
 validate:
 	ls demos/*[.]mk|./compose.mk flux.each/mk.validate
+	ls demos/tui/*[.]mk|./compose.mk flux.each/mk.validate
 
 clean: flux.stage.clean
 	@# Only used during development; normal usage involves build-on-demand.

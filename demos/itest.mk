@@ -23,20 +23,30 @@ $(eval $(call compose.import, demos/data/docker-compose.yml, ▰))
 
 all: flux.star/test.* 
 
+test.mk.assert_env_var:
+	$(call log.test_case, Testing assert.env_var)
+	my_var=1; $(call mk.assert.env_var, my_var)
+	! $(call mk.assert.env_var, my_var) ${stderr_devnull}
+	another_var=2; my_var=1; $(call mk.assert.env, my_var another_var)
+	! ( another_var=2; my_var=1; $(call mk.assert.env, my_var another_var missing) ) ${stderr_devnull}
+	foo=1 bar=2 ./compose.mk mk.assert.env/foo,bar
+	! bar=2 ./compose.mk mk.assert.env/foo,bar ${stderr_devnull}
+	! foo=1 ./compose.mk mk.assert.env/foo,bar ${stderr_devnull}
+
 test.mk.reflection:
-	$(call log.test_case, testing reflection)
+	$(call log.test_case, Testing reflection)
 	./compose.mk \
 		mk.set/foo/bar mk.get/foo \
 		mk.ifdef/foo mk.ifndef/baz
 
 test.flux.if.then:
-	$(call log.test_case, test a few kinds of if/then flows)
+	$(call log.test_case, Test a few kinds of if/then flows)
 	set -x \
 	&& ./compose.mk flux.if.then/flux.ok,flux.ok \
 	&& ./compose.mk flux.if.then/flux.fail,flux.ok 
 
 test.flux.do.when:
-	$(call log.test_case, test a few kinds of do/when flows)
+	$(call log.test_case, Test a few kinds of do/when flows)
 	set -x \
 	&& ./compose.mk flux.do.when/flux.ok,flux.ok \
 	&&	./compose.mk flux.negate/flux.do.when/flux.fail,flux.ok
@@ -44,8 +54,8 @@ test.flux.do.when:
 test.signals:
 	$(call log.test_case, mk.interrupt should throw an error)
 	! ./compose.mk mk.interrupt
-	$(call log.test_case, signal handler should not be installed for library usage)
-	! make mk.parse.local|grep mk.interrupt
+	$(call log.test_case, Signal handler should not be installed for library usage)
+	! make mk.parse.local | grep mk.interrupt
 	
 demo: ▰/debian/self.demo
 	@# New target declaration that we can use to run stuff
@@ -67,15 +77,6 @@ demo.double.dispatch: ▰/debian/self.demo ▰/alpine/self.demo
 # test.containerized.tty.output: 
 # 	cmd='sleep 2' label='testing gum spinner inside container' make io.gum.spin
 
-test.import.root:
-# make io.print.banner label="${bold_cyan}${@}${no_ansi}"
-# $(call log, ${dim_cyan}Test import-to-root argument for compose.import)
-# # test that the 4th argument for
-# # import-to-root-namespace is honored
-# ! echo uname | make debian.pipe 2>/dev/null
-# echo uname | make docker-compose.cm-tools/debian.pipe 2>/dev/null
-# echo uname | make docker-compose/alpine.shell.pipe
-
 test.main.bridge:
 	$(call log.test_case, main bridge)
 	make io.print.banner label="${cyan}${@}${no_ansi}"
@@ -84,49 +85,14 @@ test.main.bridge:
 	$(call log.test_case, Test detection\nTarget @ <compose_file>.get_shell)
 	${make} docker-compose/alpine.get_shell
 
-# test.multiple.compose.files:
-# 	make io.print.banner label="${cyan}${@}${no_ansi}"
-# 	$(call log, ${dim_cyan}Test services enumeration, 2nd file\nTarget @ <compose_file>/<svc>.services)
-# 	${make} docker-compose.services
-# 	$(call log, ${dim_cyan}Test Streaming commands, 2nd file\nTarget @ <compose_file>/<svc>.pipe)
-# 	echo uname -n -v | ${make} docker-compose/debian.pipe \
-
-# test.compose.pipes:
-# 	make io.print.banner label="${cyan}${@}${no_ansi}"
-# 	$(call log, ${dim_cyan}Streaming commands to container\nTarget @ <svc>.shell.pipe)
-# 	echo uname -n -v | ${make} docker-compose/alpine.shell.pipe
-# 	$(call log, ${dim_cyan}Test streaming commands to container\nTarget @ <compose_file_stem><svc>.shell.pipe)
-# 	echo uname -n -v | ${make} docker-compose/alpine.shell.pipe
-# 	$(call log, ${dim_cyan}Test streaming data to container\nTarget @ <svc>.shell.pipe ${no_color})
-# 	echo 'foo: bar' | ${make} docker-compose.cm-tools/yq.pipe
-# 	set -x && echo '{"foo":"bar"}' | cmd='.foo' make docker-compose.cm-tools/jq.pipe
-
-# test.compose.services:
-# 	make io.print.banner label="${cyan}${@}${no_ansi}"
-# 	$(call log, ${dim_cyan}Test main entrypoints Target @ <compose_file>/<svc> ${no_color})
-# 	${make} docker-compose.cm-tools/yq cmd='--version'
-# 	${make} docker-compose.cm-tools/jq cmd='--version'
-
 test.dispatch.retvals:
 	$(call log.test_case, Checking dispatch return codes)
 	! (echo exit 1 | ${make} docker-compose/debian.shell.pipe 2>/dev/null)
 	echo exit  | ${make} docker-compose/debian.shell.pipe
 
-# test.dispatch:
-# 	make io.print.banner label="${cyan}${@}${no_ansi}"
-# 	$(call log, ${dim_cyan}Dispatch using private base target:${no_color})
-# 	echo uname | pipe=yes ${make} ▰/debian
-# 	$(call log, ${dim_cyan}Dispatch using debian container:${no_color})
-# 	${make} ▰/debian/self.container.dispatch
-# 	$(call log, ${dim_cyan}Dispatch using alpine container:${no_color})
-# 	${make} ▰/alpine/self.container.dispatch
-# self.container.dispatch:
-# 	printf "in container `hostname`, platform info: `uname`\n"
-
-# test.flux.lib: test.flux.finally test.flux.try.except.finally test.flux.mux test.flux.pipe.fork test.flux.loop
 
 test.flux.try.except.finally:
-	$(call log.test_case, Checking)
+	$(call log.test_case, testing try.except.finally)
 	make flux.try.except.finally/flux.fail,flux.ok,flux.ok
 	! make flux.try.except.finally/flux.ok,flux.ok,flux.fail
 	# except fails, but try succeeds so it never runs
@@ -135,7 +101,7 @@ test.flux.try.except.finally:
 	make flux.try.except.finally/flux.ok,flux.ok,flux.ok
 
 test.flux.finally:
-	$(call log.test_case, Checking)
+	$(call log.test_case, testing flux.finally)
 	# demo of using finally/always functionality in a pipeline.  touches a tmpfile 
 	# somewhere in the middle of a failing pipeline without getting to the cleanup 
 	# task, and it should be cleaned up anyway.
@@ -150,34 +116,44 @@ test.flux.finally:
 .file.cleanup:
 	rm .tmp.test.flux.finally
 
-# test.flux.loop:
-# 	${make} docker-compose.dispatch/alpine/flux.loop/2/io.time.wait
+test.flux.loop:
+	$(call log.test_case, Testing..)
+	./compose.mk flux.loop/2/io.time.wait/1
 
-# test.flux.pipe.fork:
-# 	echo {} | ${make} flux.pipe.fork/docker-compose.cm-tools/yq,docker-compose.cm-tools/jq
-# 	echo {} | ${make} flux.split/docker-compose.cm-tools/yq,docker-compose.cm-tools/jq
+test.flux.each:
+	$(call log.test_case, Testing flux.each)
+	printf "one\ntwo"|./compose.mk flux.each/flux.echo
+test.flux.pipe.fork:
+	$(call log.test_case, Testing flux.pipe.fork)
+	echo hello-world | targets="stream.echo,stream.echo" ./compose.mk flux.pipe.fork
+	echo hello-world | ./compose.mk flux.pipe.fork/stream.echo,stream.echo
+
+test.flux.pipe:
+	$(call log.test_case, Testing flux.pipe.fork)
+	echo hello-world | targets="stream.echo,stream.echo" ./compose.mk flux.pipe.fork
+	echo hello-world | ./compose.mk flux.pipe.fork/stream.echo,stream.echo
 
 test.flux.retry:
-	$(call log.test_case, Checking)
+	$(call log.test_case, Testing..)
 	! interval=1 make flux.retry/3/flux.fail
 
 test.flux.apply:
-	$(call log.test_case, Checking)
-	${make} flux.apply/flux.echo,THUNK ${stream.obliviate}
+	$(call log.test_case, Testing..)
+	./compose.mk flux.apply/flux.echo,THUNK ${stream.obliviate}
 
 test.flux.starmap:
-	$(call log.test_case, Checking)
-	${make} ./compose.mk flux.starmap/flux.echo,flux.echo/bonk ${stream.obliviate}
+	$(call log.test_case, Testing..)
+	./compose.mk flux.starmap/flux.echo,flux.echo/bonk ${stream.obliviate}
 
 test.flux.apply.later:
-	$(call log.test_case, Checking)
-	${make} flux.apply.later/2/io.time.wait/1 ${stream.obliviate}
+	$(call log.test_case, Testing..)
+	./compose.mk flux.apply.later/2/io.time.wait/1 ${stream.obliviate}
 
 test.flux.mux:
-	$(call log.test_case, Checking)
-	make flux.mux targets="io.time.wait,io.time.wait,io.time.wait/2" | jq .
-	make flux.join targets="io.time.wait,io.time.wait,io.time.wait/2" | jq .
-	make flux.mux/io.time.wait
+	$(call log.test_case, Testing..)
+	targets="io.time.wait,io.time.wait,io.time.wait/4" ./compose.mk flux.mux  | jq .
+	targets="io.time.wait,io.time.wait,io.time.wait/2" ./compose.mk flux.join | jq .
+	./compose.mk flux.mux/io.time.wait
 
 test.docker.run:
 	$(call log.test_case, Checking)

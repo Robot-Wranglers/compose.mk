@@ -83,3 +83,5 @@ export CMK_AT_EXIT_TARGETS=stop
 
 stop: ollama_server.stop
 	@# Shutdown hook, this ensures the (embedded) ollama service is halted
+
+__main__:; printf "${red}USAGE: see https://robot-wranglers.github.io/compose.mk/demos/RAG/\n"

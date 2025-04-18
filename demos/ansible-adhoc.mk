@@ -31,7 +31,7 @@ endef
 # defined at `self.ansible.adhoc/<module_name>`.
 #
 # [1] https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html
-ansible.adhoc/%: 
+ansible.adhoc/%:
 	img=compose.mk:Ansible \
 	${make} docker.dispatch/self.ansible.adhoc/${*} 
 
