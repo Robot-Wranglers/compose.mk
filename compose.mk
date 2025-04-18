@@ -850,7 +850,7 @@ docker.from.def/% docker.build.def/% Dockerfile.build/%:
 	&& $(call log.trace, $${header} ) \
 	&& $(trace_maybe) \
 	&& $(call io.mktemp) \
-	&& ${mk.def.to.file}/$${def_name}/$${tmpf} ; cp $${tmpf} tmp \
+	&& ${mk.def.to.file}/$${def_name}/$${tmpf} \
 	&& case `${make} docker.def.is.cached/${*}` in \
 		yes) true;; \
 		no) ( $(call log.docker, $(shell echo ${@}|cut -d/ -f1) \
@@ -3130,7 +3130,7 @@ flux.timer/%:
 	&& label=${*} ${make} io.timer 
 	
 io.timer:
-	start_time=$$(date +%s) \
+	${trace_maybe} && start_time=$$(date +%s) \
 	&& eval $${script} \
 	&& end_time=$$(date +%s) \
 	&& time_diff_ns=$$((end_time - start_time)) \
@@ -5052,7 +5052,7 @@ jb jb.pipe:
 	esac
 define .awk.strip.shebang 
 NR == 1 && $$0 ~ /^#!.*/ {next } {print $$0}
-endef 
+endef
 define .awk.main.preprocess
 BEGIN {
     in_define_block = 0
@@ -5246,6 +5246,15 @@ flux.post/%:
 # { print $0 }
 define .awk.rewrite.targets.maybe 
 {
+  if ($0 ~ /help/) {
+    print $0  # Print original input unchanged
+    next      # Skip to next record
+  }
+  if ($0 ~ /mk.interpret/) {
+    print $0  # Print original input unchanged
+    next      # Skip to next record
+  }
+  
   result = ""
   for (i=1; i<=NF; i++) {
     # Skip words that start with "." or contain "/"
@@ -5253,8 +5262,6 @@ define .awk.rewrite.targets.maybe
     # Add the transformed word pattern
     #if ($i ~ /^\./ || $i ~ /\//) result = result " " $i
     if ($i ~ /^\./ || $i ~ /\//) {result = result " " $i; continue}
-    if ($i ~ "mk.interpret") {result = result " " $i; continue}
-    if ($i ~ "help") {result = result " " $i; continue}
     if (result != "") result = result " "
     result = result "flux.pre/" $i " " $i " flux.post/" $i
   }
