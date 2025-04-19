@@ -197,7 +197,9 @@ Unlike the "*helm bolted on to terraform/ansible/jenkins*" approach, using `comp
 ## Forever Development Considered Harmful
 <hr style="width:100%;border-bottom:3px solid black;">
 
-While `compose.mk` is committed to bugfixes, and will continue to change in cases where it feels **incompatible, incomplete, or internally inconsistent**.. the goal is to freeze development as much as possible after it's mature enough to be **extensible**.  It will never change simply to accomodate "one more" domain specific thing, e.g. no increase in surface area for use cases like *documentation builds*, or *cluster lifecycles*, etc.  See also the [fork-and-forget advice]({{mkdocs.site_relative_url}}/integration/#forks-versioning) for installation, and remarks re: [contributing]({{mkdocs.site_relative_url}}/contributing).
+While `compose.mk` is committed to bugfixes, and will continue to change in cases where it feels **incompatible, incomplete, or internally inconsistent**.. the goal is to freeze development as much as possible after it's mature enough to be **extensible**.  It will never change simply to accomodate "one more" domain specific thing, e.g. no increase in surface area for use cases like *documentation builds*, or *cluster lifecycles*, etc.  
+
+As another example, support for something like `podman` won't ever bloat the code-base until/unless it's clearly more ubiquitous than `docker` is.  In some ways, `compose.mk` is a proof of concept and a reference, so that usage of `docker` or even `make` itself is an implementation detail that could be swapped out in a fork.  Hate to see a [gruesome transpiler hackjob]({{mkdocs.site_relative_url}}/compiler) written in `awk`?  Rewrite it by all means.. but if it's more elegant at the expense of becoming larger or less portable, it probably won't be merged.  See also the [fork-and-forget advice]({{mkdocs.site_relative_url}}/integration/#forks-versioning) for installation, and remarks re: [contributing]({{mkdocs.site_relative_url}}/contributing).
 
 --------------
 
@@ -210,9 +212,9 @@ Obviously there is another way.  Most operating systems do better, even with cha
 ## Polyglots Considered Pretty Reasonable
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Those who are fans of microservices for distributed applications already know this, and anyone who has ever wanted to leave their ORM behind in favor of writing naked SQL.  The popularity of [FFI style](https://en.wikipedia.org/wiki/Foreign_function_interface) programming is also finding many use-cases in the wild, and indeed `compose.mk` demos even include a [doubly embedded julia/C example]({{mkdocs.site_relative_url}}/demos/polyglots/#compiled-languages).
+Those who are fans of microservices for distributed applications already know this, and anyone who has ever wanted to leave their ORM behind in favor of writing naked SQL.  The popularity of [FFI style](https://en.wikipedia.org/wiki/Foreign_function_interface) programming finds many use-cases in the wild, and indeed `compose.mk` demos even include a [doubly embedded julia/C example]({{mkdocs.site_relative_url}}/demos/polyglots/#compiled-languages).
 
-On the other hand, lots of people despise [microservices](https://en.wikipedia.org/wiki/Microservices) and maybe anything that smells similar, like [SOA](https://en.wikipedia.org/wiki/Service-oriented_architecture) or even [component architectures](https://en.wikipedia.org/wiki/Component-based_software_engineering), perhaps in favor of reactors or agents or something.  For large distributed systems, it's definitely true that deciding good service-boundaries is hard, and it's hard to even make good general statements about simple stuff like min/max values for service line-count.
+On the other hand, lots of people despise [microservices](https://en.wikipedia.org/wiki/Microservices) and maybe anything that smells similar, like [SOA](https://en.wikipedia.org/wiki/Service-oriented_architecture) or even [component architectures](https://en.wikipedia.org/wiki/Component-based_software_engineering) in favor of monolithis, actors, reactors, etc.  For large distributed systems, it's definitely true that deciding good service-boundaries is hard, and it's hard to even make good general statements about simple stuff like min/max values for service line-count.
 
 -------------------------------
 
@@ -220,8 +222,8 @@ Meanwhile though, the polyglot design approach for *non-distributed applications
 
 Suggested rules of thumb for application-level polyglot design are perhaps also easier to come by.  Here's a hot take:
 
-* **What's a maximum length for foreign code?** Well, ~20-30 LOC is probably a reasonable goal for any discrete chunk of foreign code, because this is in line with typical suggestions for the maximum method/subroutine/function length.  
-* **How many distinct foreign code objects?**  Probably at least one, because if not then you might be writing *very complex shell script* and/or obscure and tricky `awk`, `make`, etc, which is exactly what `compose.mk` should help you to avoid!   If you need more than 3 foreign code blocks though and they are all in the same language, maybe you should just be working directly in that language?
+* **What's a maximum length for foreign code?** Well, ~20-30 LOC is probably a reasonable goal for any discrete chunk of foreign code, because this is in line with typical suggestions for the maximum method/subroutine/function length.
+* **How many distinct foreign code objects?**  Probably at least one, because if not then you might be writing *very complex shell script* and/or obscure and tricky `awk`, `make`, etc, which is exactly what `compose.mk` should help you to avoid!  If you need more than 3 foreign code blocks though and they are all in the same language, maybe you should just be working directly in that language?
 * **How many distinct foreign languages?**  As many as it takes, but not too many, so probably just ask your friends first and try to be cool about it.  Stay away from [brainfuck](https://esolangs.org/wiki/5D_Brainfuck_With_Multiverse_Time_Travel) in your build scripts but otherwise.. you know, have some fun and get weird with it as long as you're building something *discrete, small, and useful*, and getting something new that's actually worth any docker-pull that's required.
 
 -------------------------------
@@ -273,4 +275,3 @@ Bonus reference material:
 [^2]: [Non-recursive Make Considered Harmful](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/03/hadrian.pdf)
 [^3]: [Unreasonable effectiveness of Makefiles](https://matt-rickard.com/the-unreasonable-effectiveness-of-makefiles)
 [^4]: [make vs just](https://github.com/casey/just?tab=readme-ov-file#what-are-the-idiosyncrasies-of-make-that-just-avoids)
-

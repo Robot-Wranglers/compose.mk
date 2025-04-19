@@ -12,8 +12,7 @@ __main__: test.scaffold test.runner test.raw
 
 test.scaffold: \
 	some_container.build \
-	some_container.dispatch/self.dispatch_test \
-	some_container.build.force
+	some_container.dispatch(self.dispatch_test)
 
 test.runner:
 	cmk.log.test_case(Low level access to run commands)

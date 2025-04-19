@@ -67,13 +67,21 @@ Not to belabor the point but we know what happens next is probably *more* platfo
 
 -----------------------------
 
-This tight expression of complex flow will already be familiar to lots of people: whether they are bash wizards, functional programming nerds, or Airflow/MLFlow/ArgoWF users.  Still, this example pipes data between 5 containers, with no dependencies, and in remarkably direct way that feels pretty seamless!*  It separates the automation itself from the context that it runs in, all with no platform lock-in.  Plus.. compared to the alternatives, doesn't it feel more like working with a programming language and less like jamming bash into yaml? 🤔
+This tight expression of complex flow will already be familiar to lots of people: whether they are bash wizards, functional programming nerds, or Airflow/MLFlow/ArgoWF users.  Still, this example pipes data between 5 containers, with no dependencies, and in remarkably direct way that feels pretty seamless!*  It separates the automation itself from the context that it runs in, all with no platform lock-in.  Plus.. compared to the alternatives, doesn't it feel more like working with a programming language and less like jamming bash into yaml? 🤔  
 
-{#As mentioned previously, the workflow description weighs in at only ~20 lines.  That's almost exactly the same number of lines in the mermaid [source]({{macros.repo_link('docs/example-platform-1.mmd',github)}}) [code]({{macros.repo_link('docs/example-platform-2.mmd',github)}}) for the diagrams, which is interesting, because usually implementations are usually *orders of magnitude larger* than the diagrams that describe them!  Zeroing in on a minimum viable description length?#}
+If it doesn't yet feel like a "real" programming language compared with vanilla `make`, here's a quick look at an equivalent version ported to [CMK-lang]({{mkdocs.site_relative_url}}/compiler):
 
-It's a neat party trick that `compose.mk` has some features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.  Really, `flux.*` is more similar in spirit to things like [declarative pipelines in Jenkins](https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline).
+```Makefile
+{{open('demos/cmk/platform-lme.cmk','r').read().strip()}}
+```
 
-For a full blown project, see a preview of the sister projects at [k8s-tools.git]({{jinja.vars.k8stools_docs_url}}/demos/cluster-lifecycle) and [k3d-faas.git](https://github.com/robot-wranglers/k3d-faas), which also break down automation into platforms, infrastructure, and app phases.
+CMK-lang is an advanced topic and safe to ignore, but under the hood, the 2nd version above is transpiled to classic Makefile. See the [compiler docs]({{mkdocs.site_relative_url}}/compiler). 
+
+-------------------
+
+So, this feels like it's zeroing in a minimum-viable description length for the sort of problem it's tackling.  It's a neat party trick that `compose.mk` has features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.  Really, `flux.*` is more similar in spirit to things like [declarative pipelines in Jenkins](https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline).
+
+For a full blown project, see a preview of the WIP sister project at [k8s-tools.git]({{jinja.vars.k8stools_docs_url}}/demos/cluster-lifecycle), which also breaks down automation into platforms, infrastructure, and app phases.
 
 <hr style="width:100%;border-bottom:3px solid black;">
  

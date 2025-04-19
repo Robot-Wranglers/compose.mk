@@ -167,9 +167,9 @@ $ query='whats the best way to get started with compose.mk? explain like i am 5'
 ### Orchestration
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The orchestration script isn't *short* but it's very basic.  This is mostly just using `compose.mk` idioms to express very thin wrappers that call [the python code](#appendix-langchain-code) inside [the ollama container](#appendix-ollama-container).  Describing dispatch/import idioms is out of scope for this demo since it's all documented in detail elsewhere; see the [scaffolding docs]({{mkdocs.site_relative_url}}/bridge), [dispatch documentation]({{mkdocs.site_relative_url}}/container-dispatch), etc.
+The orchestration script isn't *short* but it's very basic.  This is mostly just using `compose.mk` idioms to describe wrappers that call [the python code](#appendix-langchain-code) inside [the ollama container](#appendix-ollama-container).  Describing dispatch/import idioms is out of scope for this demo since it's all documented in detail elsewhere; see the [scaffolding docs]({{mkdocs.site_relative_url}}/bridge), [dispatch documentation]({{mkdocs.site_relative_url}}/container-dispatch), etc.
 
-To spice it up, this file is written in [CMK-lang]({{mkdocs.site_relative_url}}/compiler) and interpreted by `compose.mk` and transpiled to Makefile, which allows for cleaner syntax in some places.  
+To spice it up, this file is written in [CMK-lang]({{mkdocs.site_relative_url}}/compiler), interpreted by `compose.mk`, and transpiled to Makefile on demand, which allows for cleaner syntax in some places.  
 
 **Via: {{macros.repo_link('demos/cmk/rag.cmk', github)}}**
 
@@ -207,7 +207,9 @@ $ query='which features are related to interactivity' \
   [snip]
 ```
 
-This example should now be able to run almost anywhere, including places where ollama is not available, where models are not yet available, and where python is not even installed.  The resulting file is about 7mb, mostly because we didn't specify *specific* files earlier and just grabbed the full folders for `docs` and `demos`.  It requires `make` and `docker` and downloads ~4gb of LLM models if you don't have them, but it won't pester you about running a single install command or setting up API keys.  You can download the agent [here]({{mkdocs.site_relative_url}}/artifacts/docs.agent).
+This example should now be able to run almost anywhere, including places where ollama is not available, where ports cannot be opened, where models are not yet available, and where python is not even installed, but there are a few caveats.  It does require `make` and `docker`, and on OSX [you'll probably need gnu awk]({{mkdocs.site_relative_url}}/compiler/#status-info-limitations-other-advice).  It downloads ~4gb of LLM models if you don't have them already (which is the only reason this test case doesn't run in github actions, like the other demos).  But it won't pester you about running any other installation or setting up API keys.  
+
+You can download the agent [here]({{mkdocs.site_relative_url}}/artifacts/docs.agent).
 
 ### Appendix: Support Code
 <hr style="width:100%;border-bottom:3px solid black;">

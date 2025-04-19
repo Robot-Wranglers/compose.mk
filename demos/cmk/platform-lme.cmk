@@ -1,0 +1,57 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+# demos/cmk/platform-lme.cmk: 
+#  A version of demos/platform-lme.mk ported from Makefile to CMK-lang.
+#  See the other file for more details and docs, and the tutorial at 
+#  http://robot-wranglers.github.io/compose.mk/demos/platform/
+#
+# Implementing a fake setup for platform bootstrap:
+#   1. Infrastructure is configured by the terraform container, 
+#   2. Application is configured by the ansible container,
+#   3. Both infra/app setup emits JSON events (simulating terraform state output, etc)
+#   4. JSON from both is routed to all interested handlers
+#
+# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# USAGE: ./demos/cmk/platform-lme.mk
+
+compose.import(demos/data/docker-compose.platform.yml, ▰)
+.DEFAULT_GOAL=platform.setup.observable
+
+# Map targets to containers.  A public, top-level target. 
+platform.setup.basic: ▰/terraform/self.infra.setup ▰/ansible/self.app.setup
+
+# Two "private" targets below, bound to specific containers by the target above.
+# These emit JSON events using the arrow operator.
+self.infra.setup:
+	cmk.log.target(pretending to do stuff with terraform..)
+	🡄 log="infra setup done" metric=123 \
+		event="terraform container task" 
+self.app.setup:
+	cmk.log.target(pretending to do stuff with ansible..)
+	🡄 log="app setup done" metric=456 \
+		event="ansible container task"
+
+# Three paired public/private targets representing LME handlers.
+# These consume just the parts of JSON they need to use.
+# 1. Logging uses the `elk` container
+# 2. Metrics uses the `prometheus` container
+# 3. Events uses the `datadog` container.
+logging: ▰/elk/self.logging
+self.logging:
+	cmk.log.target(pretending to push log data somewhere)
+	🡆 .log
+
+metrics: ▰/prometheus/self.metrics
+self.metrics:
+	cmk.log.target(pretending to do stuff with the promtool CLI)
+	🡆 .metric
+
+events: ▰/datadog/self.events
+self.events:
+	cmk.log.target(pretending to do stuff with the datadog CLI)
+	🡆 .event
+
+# Bind all handlers into a single pipe
+# Send the `platform.setup.basic` output into a handler for each LME backend
+downstream_handlers: flux.pipe.fork/logging,metrics,events
+platform.setup.observable: flux.pipeline/platform.setup.basic,downstream_handlers
+

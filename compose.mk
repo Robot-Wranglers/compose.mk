@@ -661,8 +661,10 @@ docker.build/% Dockerfile.from.fs/% docker.from.file/%:
 
 .docker.build/%:
 	${trace_maybe} \
-	&& quiet=$${quiet:-1} \
-	&& quiet=`[ -z "$${quiet:-}" ] && true || echo "-q"` \
+	&& case $${quiet:-1} in \
+		0) quiet=;; \
+		*) quiet=-q;; \
+	esac \
 	&& set -x && docker build $${quiet} $${build_args:-} -t $${tag} $${docker_args:-} -f ${*} .
 
 docker.commander:
