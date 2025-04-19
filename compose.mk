@@ -3149,7 +3149,7 @@ flux.timeout/%:
 	@#
 	timeout=`printf ${*} | cut -d/ -f1` \
 	&& target=`printf ${*} | cut -d/ -f2-` \
-	timeout=$${timeout} cmd="make $${target}" make flux.timeout.sh
+	timeout=$${timeout} cmd="${make} $${target}" ${make} flux.timeout.sh
 
 flux.timeout.sh:
 	@# Runs the given command for the given amount of seconds, then stops it with TERM.
@@ -4469,7 +4469,7 @@ ${compose_file_stem}.exec/%:
 	&& docker compose -f ${compose_file} \
 		exec `[ -z "$${detach}" ] && echo "" || echo "--detach"` \
 		`printf $${*}|cut -d/ -f1` \
-		${make} `printf $${*}|cut -d/ -f2-`
+		${make} `printf $${*}|cut -d/ -f2-` 2> >(grep -v 'variable is not set' >&2)
 
 ${compose_file_stem}/$(compose_service_name).get_shell:
 	@# Detects the best shell to use with the `$(compose_service_name)` container @ ${compose_file}
@@ -4552,7 +4552,7 @@ $(compose_service_name).dispatch.quiet/%:; quiet=1 ${make} $(compose_service_nam
 $(compose_service_name).exec.detach/%:; detach=1 ${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}
 $(compose_service_name).exec/%:
 	@# Shorthand for ${compose_file_stem}.exec/$(compose_service_name)/<target_name>
-	set -x && ${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}
+	${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}
 
 $(compose_service_name).get_shell: ${compose_file_stem}/$(compose_service_name).get_shell
 	@# Shorthand for ${compose_file_stem}/$(compose_service_name).get_shell

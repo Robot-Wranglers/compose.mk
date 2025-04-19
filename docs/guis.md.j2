@@ -1,0 +1,69 @@
+{% import 'macros.j2' as macros -%}
+
+## Bonus: GUIs!
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Given the power and flexibility that we've seen so far in quickly putting together TUI applications, you might wonder.. what about GUIs?  This is also doable, and this section collects a growing collection of small demos.  
+
+{{macros.img_link("i3.png", mkdocs, "95%", align='center')}}
+
+### Background 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+GUIs come with a few caveats. Despite excellent work with projects like x11docker[^1], Xephyr[^2], xquartz[^3], and xpra[^4] containerized GUIs tend to be more complex and a lot less portable than terminal apps.  Any or all of those projects can in principle be combined with `compose.mk`, but the right approach to "batteries included" is much harder to land on.
+
+All the projects mentioned are about **solving the issue of getting a stand-alone XOrg server,** but after you have one you still need to decide how exactly to use it, i.e. whether you want to forward graphics via a browser, VNC, ssh, sockets, etc.  Searching for any combination of these tools + docker gives lots of results for this sort of thing, but much of the related work is old, archived, or unmaintained.  Tutorials in this space usually have lots of different files, and invite you to do lots of copy/paste.  As usual with `compose.mk` we'll aim for something self-contained and try to minimize pain with dependencies!
+
+### Xephyr and I3
+<hr style="width:100%;border-bottom:3px solid black;">
+
+This example only works on linux, requires x11 to be already started, and requires *`Xephyr`* on the host.  *(In debian-based distros, you can install it with something like `apt-get install -y xserver-xephyr`.)*  
+
+The goal for this demo is a "composite" kind of application, similar to what many of the TUI demos are showing.  We want to throw together "widgets" that might consist of smaller applications that are themselves dockerized, or are already available on the host.  The feel should be "native", i.e. no port-forwarding, no browsers.
+
+Similar to how we've already seen `compose.mk` leveraging *`tmux`* to get a geometry manager for console, we'll piggyback on *`i3`* for a tiling window manager.  As with *`tmux`*, we don't want to assume *`i3`* is actually available on the host.  Even if it is available on the host.. we want a sandboxed configuration for it that ships as part of the rest of the composite app we're building.
+
+Also, just for fun, we'll use [CMK-lang]({{mkdocs.site_relative_url}}/compiler#compose-file-example) for the implementation here, which is compiled to Makefile on demand.  You can see the code for this below, it is complete and runs as-is.  Code is also in the repository at *{{macros.repo_link('demos/cmk/i3.cmk', github)}}*.
+
+```Makefile
+{{open('demos/cmk/i3.cmk','r').read().strip()}}
+```
+
+Running the demo just opens a few copies of *`xeyes`* and uses *`feh`* to display an image.  These tools and the window manager itself all run inside the i3 container, but the environment is also accessible from other containers, or from your host.  *(To see this, you can try running something like* `DISPLAY=:23 xeyes` *from the host to test one way mix in other components.)*  A screenshot was included at the top of the page already, but here's a reminder:
+
+{{macros.img_link("i3.png", mkdocs, "55%", align='center')}}
+
+
+Obviously what we're looking at is more of a "skeleton" than anything with real meat on the bones.  But what's accomplished here is all about **quickly shipping a whole environment as an application**, and several aspects of the skeleton are carefully chosen for convenient extension:
+
+**Lifecycle:** 
+:  The way this launches Xephyr and i3, the xorg server depends on the window manager, and the window manager depends on the xorg server.  In case either one exits, the other will as well.  Despite multiple blocking components, launching is nonblocking, and doesn't require additional thought about piecewise shut down for backgrounded stuff.  As with other demos, it's possible to zip this into a completely self-contained application, [using the packaging features]({{mkdocs.site_relative_url}}/demos/packaging).
+
+**Scriptable:**
+:  See the usage of `i3-msg exec` ?  Good support for RPC in *`i3`* makes this very scriptable.  If *`i3`* on the host and a shared socket, you can drive this without using containers.  And in addition to controlling the window-manager *via* make-targets, you can also have it *run* targets, [which might represent other containers, etc]({{mkdocs.site_relative_url}}/language#homoiconic).  Since *`i3`* has many language bindings[^5], you can also drive this thing via [compose.mk polyglots]({{mkdocs.site_relative_url}}/demos/polyglots).
+
+**Configurable:** 
+:  The config for i3 and its status bar that's embedded above could be an external file, and might seem like an unnecessary distraction for a small demo.  For *actual use-cases* this is actually pretty nice though, because it makes it easy to offload the complexity of customized application startup and shortcuts somewhere else, without creating all the code for that from scratch.
+
+
+### XPra Demo
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Rather than the "native app" look and feel in the [i3 demo](#xephyr-and-i3), another approach is to expose x11 via a webbrowser.  The main benefit of this approach is that it can be more self-contained, since we dockerize the xorg server itself instead of using an additional one that's nested on the host.
+
+<font color=red>Coming soon,</font> stay tuned for a demo.
+
+### XQuartz
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Although the [XPra demo](#xpra-demo) is OSX friendly thanks to using a browser, we lost the "native application" aspect.  For OSX, the only way to get this back is by using xquartz.  
+
+<font color=red>Coming soon,</font> stay tuned for a demo.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+[^1]: [https://github.com/mviereck/x11docker](https://github.com/mviereck/x11docker)
+[^2]: [https://freedesktop.org/wiki/Software/Xephyr/](https://freedesktop.org/wiki/Software/Xephyr/)
+[^3]: [https://www.xquartz.org/](https://www.xquartz.org/)
+[^4]: [https://xpra.org/index.html](https://xpra.org/index.html)
+[^5]: For example [https://github.com/altdesktop/i3ipc-python](https://github.com/altdesktop/i3ipc-python)

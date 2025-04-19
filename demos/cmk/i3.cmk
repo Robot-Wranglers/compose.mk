@@ -1,0 +1,104 @@
+#!/usr/bin/env -S stdbuf -i0 -o0 -e0 ./compose.mk mk.interpret!
+# demos/cmk/i3.cmk: 
+#   Demonstrating GUI capabilities with Xephyr and i3 window manager.
+#
+# USAGE: demos/cmk/i3.cmk gui
+
+__main__:
+	@# Main entrypoint does not actually start the GUI
+	@# because we don't want this run from tests.  
+	@# Print usage info and exit.
+	cmk.log(${red}USAGE: ./demos/cmk/i3.cmk gui)
+
+# Begin containerized version of i3 window manager and support files.
+⋘ gui.services
+configs:
+  # See https://i3wm.org/docs/userguide.html for a complete reference
+  i3statconf:
+    content: |
+      general {
+        output_format = "i3bar"
+        colors = true
+        interval = 5
+      }
+      order += "cpu_usage"
+      order += "disk /"
+      order += "tztime local"
+      cpu_usage { format = "CPU: %usage" }
+      disk "/" { format = "Disk: %free" }
+      tztime local { format = "%Y-%m-%d %H:%M:%S" }
+  i3conf:
+    content: |
+      # Set mod key to Alt (Mod1)
+      set $$mod Mod1
+      # Use Mouse+$mod to drag floating windows
+      floating_modifier $$mod
+      # Kill focused window
+      bindsym $$mod+Shift+q kill
+      # Change focus between windows
+      bindsym $$mod+h focus left
+      bindsym $$mod+j focus down
+      bindsym $$mod+k focus up
+      bindsym $$mod+l focus right
+      # Split window
+      bindsym $$mod+v split v
+      bindsym $$mod+b split h
+      # Toggle fullscreen
+      bindsym $$mod+f fullscreen toggle
+      # Layout toggle (stacked, tabbed, default)
+      bindsym $$mod+s layout stacking
+      bindsym $$mod+w layout tabbed
+      bindsym $$mod+e layout toggle split
+      # Floating toggle
+      bindsym $$mod+Shift+space floating toggle
+      bar { status_command i3status }
+services:
+  i3: &base
+    image: compose.mk:i3
+    hostname: i3
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${IMG_UBUNTU_BASE:-ubuntu:22.04}
+        ENV DEBIAN_FRONTEND=noninteractive
+        RUN apt-get update -qq 
+        RUN apt-get install -qq -y make procps
+        RUN apt-get install -qq -y i3 i3status x11-apps xterm feh
+    entrypoint: i3
+    working_dir: /workspace
+    volumes:
+      - ${PWD}:/workspace
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      DISPLAY: :23
+    configs:
+      - source: i3conf
+        target: /root/.config/i3/config
+      - source: i3statconf
+        target: /root/.config/i3status/config
+⋙
+
+# Top-level helpers, these require Xephyr 
+# on the host and starts a stand-alone XOrg server.
+xephyr.init: xephyr.require xephyr.start
+
+xephyr.start:
+	@# Start Xephyr in the background.
+	Xephyr -ac -screen 1024x500 -br -reset -terminate :23 &
+
+xephyr.require:
+	@# Assert Xephyr is available or fail.
+	which Xephyr > /dev/null \
+	&& cmk.log.target(${dim} found Xephyr ${GLYPH_SPARKLE}) \
+	|| (cmk.log.target(${red} Xephyr not found); exit 1)
+
+gui: xephyr.init i3.stop i3.build i3.up.detach i3.exec/i3.start_apps 
+	@# Start an XOrg server, rebuild the i3 container if necessary.
+	@# Then start/detach i3 WM, and start a few applications.
+
+i3.start_apps:
+	@# Use I3's RPC tool to drive the display
+	i3-msg exec xeyes
+	i3-msg exec "feh -B black --scale ./demos/data/droste.png"
+	i3-msg exec xeyes
