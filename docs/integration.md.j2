@@ -8,7 +8,7 @@ $ cd myproject
 
 # Download the compose.mk automation lib
 $ curl -sL \
-  {{github.raw_url}}/master/compose.mk \
+  https://raw.githubusercontent.com/Robot-Wranglers/compose.mk/master/compose.mk \
     > compose.mk
 
 $ chmod ugo+x compose.mk
@@ -44,7 +44,8 @@ $(eval $(call compose.import, docker-compose.yml))
 # At this point, scaffolded targets are defined for 
 # the tool containers mentioned in the compose file.
 # Now you can dispatch any task to any tool container.
-test: compose_service_name.dispatch/self.test
+test: my_compose_service_name.dispatch/self.test
+
 self.test:; echo hello world from container `uname -n -v`
 ```
 

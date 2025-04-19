@@ -27,16 +27,16 @@ services:
     build:
       context: .
       dockerfile_inline: |
-        FROM alpine:3.21.2
+        FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
         RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
 𒀺
 
 # A task that runs inside the containers.
-self.internal_task:; echo "Running inside `hostname`"
+self.internal_task:; cmk.log(Running inside ${red}`hostname`)
 
 __main__: 
 	cmk.log(Testing dialect substitutions)
 	cmk.io.print.banner/testing_dialect_substitution
 	cmk.log(Testing sugar and dispatching task to containers)
-	this.alice.dispatch/self.internal_task
-	this.bob.dispatch/self.internal_task
+	this.alice.dispatch(self.internal_task)
+	this.bob.dispatch(self.internal_task)

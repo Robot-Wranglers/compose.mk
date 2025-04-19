@@ -7,7 +7,7 @@ Usually it's a good idea to separate task-definitions from the containers runtim
 
 However.. `compose.mk` sometimes needs more direct and low-level access to docker primitives for internal use, and this functionality is exposed for external use as well.  
 
-**Note that functionality here is *use-case driven*** and so the [`docker.*` target api]({{mkdocs.site_relative_url}}/api/#api-docker) interface is not intended to be 1:1 with the docker CLI.  Using the docker CLI directly is still [idiomatic compose.mk]({{mkdocs.site_relative_url}}/standard-lib), so we're not looking to replace it.  Instead, the offerings here are all building on top of it or making common interactions somewhat smoother.
+**Note that functionality here is *use-case driven*** and so the [`docker.*` target api]({{mkdocs.site_relative_url}}/api/#api-docker) interface is not intended to be 1:1 with the docker CLI.  Using the docker CLI directly is still [idiomatic compose.mk]({{mkdocs.site_relative_url}}/style), so we're not looking to replace it.  Instead, the offerings here are all building on top of it or making common interactions somewhat smoother.
 
 {#**For use-cases related to cleaning and refactoring bash-script or Makefiles that are already using the docker CLI,** there are various utility functions that are available as part of the [`docker.*` namespace of the API]({{mkdocs.site_relative_url}}/api/#api-docker).#}
 
@@ -16,7 +16,7 @@ However.. `compose.mk` sometimes needs more direct and low-level access to docke
 
 Most of the low-level docker support in `compose.mk` makes the assumption that you're <u><strong>working with tool containers</strong></u>, and there's two important defaults that come along with this assumption:
 
-1. **The working directory, which is usually the project root, is volume-mounted by default** so that it can be shared with containers.  
+1. **The working directory, which is usually the project root, is volume-mounted by default.**
 1. **The docker-socket is mounted and shared by default also.** 
 
 In the first case, without sharing the working directory, tools could not do any file IO, and only stream-based communication would be possible.  And in the second case, the ability to access *other* dockerized tools from inside docker containers enables many other `compose.mk` features, from [structured io]({{mkdocs.site_relative_url}}/standard-lib#structured-io) and [stage stacks]({{mkdocs.site_relative_url}}/stages) to the [embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui).

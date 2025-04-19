@@ -661,8 +661,10 @@ docker.build/% Dockerfile.from.fs/% docker.from.file/%:
 
 .docker.build/%:
 	${trace_maybe} \
-	&& quiet=$${quiet:-1} \
-	&& quiet=`[ -z "$${quiet:-}" ] && true || echo "-q"` \
+	&& case $${quiet:-1} in \
+		0) quiet=;; \
+		*) quiet=-q;; \
+	esac \
 	&& set -x && docker build $${quiet} $${build_args:-} -t $${tag} $${docker_args:-} -f ${*} .
 
 docker.commander:
@@ -1842,11 +1844,13 @@ mk.compile mk.compiler:
 	&& ${trace_maybe} \
 	&& printf "#!/usr/bin/env -S ./compose.mk mk.interpret\n" \
 	&& ${stream.stdin} \
-	| ${make} io.awker/.awk.main.preprocess 
+	| ${make} io.awker/.awk.main.preprocess \
+	| ${make} io.awker/.awk.dispatch
 define .eval.call
 eval.call=$(eval $(call $(if $(filter undefined,$(origin 1)),,$(1)),$(if $(filter undefined,$(origin 2)),,$(2)),$(if $(filter undefined,$(origin 3)),,$(3)),$(if $(filter undefined,$(origin 4)),,$(4))))
 endef
 mk.preprocess: 
+	@# Runs the CMK input preprocessor on stdin.
 	$(call log.target, starting) \
 	&& $(call io.mktemp) && export inputf=`echo $${tmpf}` \
 	&& ${stream.stdin} > $${inputf} \
@@ -3145,7 +3149,7 @@ flux.timeout/%:
 	@#
 	timeout=`printf ${*} | cut -d/ -f1` \
 	&& target=`printf ${*} | cut -d/ -f2-` \
-	timeout=$${timeout} cmd="make $${target}" make flux.timeout.sh
+	timeout=$${timeout} cmd="${make} $${target}" ${make} flux.timeout.sh
 
 flux.timeout.sh:
 	@# Runs the given command for the given amount of seconds, then stops it with TERM.
@@ -3357,7 +3361,6 @@ stream.grep.safe=grep -iv password | grep -iv passwd
 stream.img=${stream.stdin} | docker run -i --entrypoint chafa compose.mk:tux `[ "$${GITHUB_ACTIONS:-false}" = "true" ] && echo "--size 100x -c full --fg-only --invert --symbols dot,quad,braille,diagonal" || echo "--center on"` /dev/stdin
 
 # Converts multiple sequential newlines to just one.
-# stream.nl.compress=sed -z 's/\n\n/\n/g'
 stream.nl.compress=awk -v RS='\0' '{ gsub(/\n{2,}/, "\n"); printf "%s", $$0 RS }'
 
 stream.chafa=${stream.img}
@@ -4466,7 +4469,7 @@ ${compose_file_stem}.exec/%:
 	&& docker compose -f ${compose_file} \
 		exec `[ -z "$${detach}" ] && echo "" || echo "--detach"` \
 		`printf $${*}|cut -d/ -f1` \
-		${make} `printf $${*}|cut -d/ -f2-`
+		${make} `printf $${*}|cut -d/ -f2-` 2> >(grep -v 'variable is not set' >&2)
 
 ${compose_file_stem}/$(compose_service_name).get_shell:
 	@# Detects the best shell to use with the `$(compose_service_name)` container @ ${compose_file}
@@ -4549,7 +4552,7 @@ $(compose_service_name).dispatch.quiet/%:; quiet=1 ${make} $(compose_service_nam
 $(compose_service_name).exec.detach/%:; detach=1 ${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}
 $(compose_service_name).exec/%:
 	@# Shorthand for ${compose_file_stem}.exec/$(compose_service_name)/<target_name>
-	set -x && ${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}
+	${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}
 
 $(compose_service_name).get_shell: ${compose_file_stem}/$(compose_service_name).get_shell
 	@# Shorthand for ${compose_file_stem}/$(compose_service_name).get_shell
@@ -5167,7 +5170,16 @@ function process_text(text, result, pos, method_start, method_name, args_start, 
   line = string_substitute($0)
   if (in_define_block) {print $0} else {print process_text(line)} }
 endef
-
+define .awk.dispatch
+{
+    while (match($$0, /([[:alnum:]_.]+)\.dispatch\(([^)]+)\)/, arr)) {
+        before = substr($$0, 1, RSTART-1)
+        after = substr($$0, RSTART+RLENGTH)
+        $$0 = before arr[1] ".dispatch/" arr[2] after
+    }
+    print
+}
+endef
 define .awk.sugar
 BEGIN {
  if (ARGC < 3) {
@@ -5243,24 +5255,13 @@ flux.post/%:
 		*) $(call log.trace, flux.post ${sep} no such hook: ${*}.post ${MAKE_CLI}) && exit 0;; \
 	esac
 
-# { print $0 }
 define .awk.rewrite.targets.maybe 
 {
-  if ($0 ~ /help/) {
-    print $0  # Print original input unchanged
-    next      # Skip to next record
-  }
-  if ($0 ~ /mk.interpret/) {
-    print $0  # Print original input unchanged
-    next      # Skip to next record
-  }
-  
+  if ($0 ~ /help/ || $0 ~ /mk.interpret/) {
+	print $0
+	next }
   result = ""
   for (i=1; i<=NF; i++) {
-    # Skip words that start with "." or contain "/"
-    # Add space separator for non-first elements
-    # Add the transformed word pattern
-    #if ($i ~ /^\./ || $i ~ /\//) result = result " " $i
     if ($i ~ /^\./ || $i ~ /\//) {result = result " " $i; continue}
     if (result != "") result = result " "
     result = result "flux.pre/" $i " " $i " flux.post/" $i

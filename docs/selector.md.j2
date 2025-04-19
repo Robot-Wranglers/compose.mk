@@ -53,3 +53,30 @@ $ ./compose.mk flux.loopf/compose.select/demos/data/docker-compose.minimal.yml
 ```
 
 <hr style="width:100%;border-bottom:3px solid black;">
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for MkDocs to fully render the page including ToC
+    setTimeout(function() {
+        const heading = document.getElementById('interactive-target-selection');
+        const img = document.createElement('img');
+        img.style.height = '2em'; img.style.verticalAlign = 'middle';
+        img.src = '../img/makefile.png'; 
+        heading.insertBefore(img, heading.firstChild);
+        //img.style.marginRight = '10px';
+        //heading.appendChild(img);
+    }, 100); // Small delay to ensure ToC is already processed
+});
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for MkDocs to fully render the page including ToC
+    setTimeout(function() {
+        const heading = document.getElementById('interactive-container-selection');
+        const img = document.createElement('img');
+        img.style.height = '2.5em'; img.style.verticalAlign = 'bottom';
+        img.src = '../img/compose.png'; 
+        heading.insertBefore(img, heading.firstChild);
+        //img.style.marginRight = '10px';
+        //heading.appendChild(img);
+    }, 100); // Small delay to ensure ToC is already processed
+});
+</script>

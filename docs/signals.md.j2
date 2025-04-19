@@ -111,27 +111,25 @@ hello main
 hello post-hook
 ```
 
-This is partly just a style choice that can make certain code more readable, but it does also make possible a certain interesting kind of code reuse.  Many targets may wish to share the *same* pre-conditions or post-conditions.  This works because there's no need to define an explicit target body for the hooks actually, and you can just treat `my.target.pre: common.precondition` as label  This approach is similar to function decorators in python, or lightweight "aspect oriented" programming.
+This is partly just a style choice that can make certain code more readable, but it does also make possible a certain interesting kind of code reuse.  Many targets may wish to share the *same* pre-conditions or post-conditions.  This works because there's no need to define an explicit target body for the hooks actually, and you can just treat `my.target.pre: common.precondition` as label, similar to function decorators in python, or lightweight "aspect oriented" programming.
 
 --------------------------
 
 It's very important to understand the limitation that was hinted at earlier though.  What does it mean that hooks work for "*every target that via command line*" ? To put this in other words, **hooks are only fired when the interpreter is used directly,** i.e. recursive calls via `${make}` or similar will not execute them!  This makes the feature pretty useful for standalone tools, and less useful for libraries.
 
-Hooks are enabled by default since they don't affect peformance much, but it's possible they might conflict with existing naming conventions or similar.  To override this, set `CMK_DISABLE_HOOKS=1`.
+Hooks are enabled by default since they don't affect peformance much, but it's possible they might conflict with existing naming conventions or similar.  To override this, you can set `CMK_DISABLE_HOOKS=1` in your environment, or in the shebang lines at the top of your script.
 
 ### At-Exit Handlers
 <hr style="width:100%;border-bottom:3px solid black;">
 
-*Note: this is experimental and not extensively tested.* 
-
-To setup one or more exit handlers, try using the `CMK_AT_EXIT_TARGETS` environment variable with space-separated target names.  This should run even if `make` dies for any reason and even if it is killed, but cannot run if the wrapper process is killed.  
+To setup one or more exit handlers, try using the `CMK_AT_EXIT_TARGETS` environment variable with space-separated target names.  This should run if `make` dies for any reason and even if it is killed, but cannot run if the wrapper process is killed.
 
 At-exit handlers defined this way are called whenever `mk.supervisor.exit` is called, which has the usual caveats that **you must be using a interpreter-style invocation,** and not running via `make -f ...`!  For more details, read on into the implementation section below.
 
 ### Implementation
 <hr style="width:100%;border-bottom:3px solid black;">
 
-If you're already very familiar with `make` and looking over the rest of this page, you might be wondering how this kind of semi-magical behavior can be achieved.   And since the answer to that question is frankly kind of ridiculous, this should probably be considered experimental =)  *With that sternly worded warning out of the way..*
+If you're already very familiar with `make` and looking over the rest of this page, you might be wondering how this kind of semi-magical behavior can be achieved.   And since the answer to that question is frankly kind of ridiculous, this should probably be considered experimental =)  *With that sternly worded warning out of the way..* 
 
 Signals and supervisors are implemented using a shebang hack[^5] and a polyglot[^6], whereby `compose.mk` is simultaneously a Makefile, a Makefile library, *and* a bash script.  
 
@@ -141,11 +139,6 @@ The way this works is as follows:
 **As a consequence of this, signals can only be handled when `compose.mk` is invoked directly,** i.e. with `./compose.mk ...`, and cannot work for `make -f compose.mk`.  
 
 The [pre/post hooks](#pre-post-hooks) have exactly the same limitation, but a different implementation.  Since the bash wrapper-script ultimately controls the initial invocation of `make`, it's possible to dynamically inject targets *between* any targets that are initially declared.
-
-{#So note that **project Makefile's that are using `include compose.mk` cannot currently inherit this ability.**  
-
-Note that while passing control over to a completely different process like this seems to *actually work* for both Linux and MacOS, this is still bad form.  In particular, complex argument passing might be misquoted, or exit codes may not be reliable.
-#}
 
 ### For Developers
 <hr style="width:100%;border-bottom:3px solid black;">

@@ -65,3 +65,15 @@ Taken together, the facilities for [working]({{mkdocs.site_relative_url}}/bridge
 🔎 **If you are withholding judgement on just how insane this project is until you see concrete larger-scale use-cases..** skip directly to [some of]({{mkdocs.site_relative_url}}/demos/notebooking) the [larger demos]({{mkdocs.site_relative_url}}/demos/custom-automation-apis). You can also check out a preview of the [sibling project k8s-tools.git]({{jinja.vars.k8stools_docs_url}}), which is still a work in progress.  It's more domain specific, and covers automation specifically for kubernetes cluster lifecycles.
 
 <hr style="width:100%;border-bottom:3px solid black;">
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for MkDocs to fully render the page including ToC
+    setTimeout(function() {
+        document.querySelectorAll('li').forEach(item => {
+            item.style.marginBottom = '10px'; // Adjust the spacing as needed
+        });
+    }, 100); // Small delay to ensure ToC is already processed
+});
+</script>
+
+margin-top: 24px;
