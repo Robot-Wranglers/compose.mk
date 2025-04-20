@@ -5,7 +5,7 @@
 
 **Meet compose.mk, a tool / library / framework for Makefile-based automation, scripting, and lightweight orchestration.**  Support for docker, docker-compose, workflow primitives, TUI elements, and more, all provided by a single file with no dependencies beyond what's already in your development environment.
 
-Typical use-cases include **general project automation**, especially decoupling your CI/CD from different kinds of platform lock-in.  Other superpowers include the ability to **quickly incorporate foreign tools and foreign code** as first-class objects, which provides unique and powerful capabilities for stuff like *quickly assembling console applications*, *systems prototyping*, and *component-oriented design experiments in general*.  Definitely <a href=#not-the-makefiles-of-your-ancestors><u><strong>not</strong></u> the Makefiles of your ancestors.
+Typical use-cases include **general project automation**, especially decoupling your CI/CD from different kinds of platform lock-in.  Other superpowers include the ability to **quickly incorporate foreign tools and foreign code** as first-class objects, which provides unique and powerful capabilities for quickly assembling console applications, systems prototyping, and component-oriented design experiments in general.  Definitely <a href=#not-the-makefiles-of-your-ancestors><u><strong>not</strong></u> the Makefiles of your ancestors.
 
 ------------------------------
 
@@ -34,7 +34,7 @@ As another improvement over classical `make`, note that help not only *works,* i
 {{macros.img_link("cli-help.gif", mkdocs, "90%")}}
 #}
 
-Capabilities like [interactivity]({{mkdocs.site_relative_url}}/selector), [online help]({{mkdocs.site_relative_url}}/cli-help), and [working with TUIs](({{mkdocs.site_relative_url}}/embedded-tui)) all show a major break with traditional use-cases and create some attention-grabbing demos.  But making console application development easy is just one of the places where `compose.mk` shines, and <strong>average use-cases will probably look more like automation</strong>.
+Capabilities like [interactivity]({{mkdocs.site_relative_url}}/selector), [online help]({{mkdocs.site_relative_url}}/cli-help), and [working with TUIs]({{mkdocs.site_relative_url}}/embedded-tui) all show a major break with traditional use-cases and create some attention-grabbing demos.  But making console application development easy is just one of the places where `compose.mk` shines, and <strong>average use-cases will probably look more like automation</strong>.
 
 
 {#There's a lot of hate for `make` (especially for "creative" usage of it!), but you'll quickly find that `compose.mk` is [a different kind of animal]({{mkdocs.site_relative_url}}/compiler).  While `compose.mk` remains completely backwards compatible with classic `make`, it also *extends it, generalizes it, and adds new kinds of idioms and patterns*.
@@ -73,7 +73,7 @@ Taken together, the facilities for [working]({{mkdocs.site_relative_url}}/bridge
 
 🤨 **If you are *understandably skeptical about getting involved with the biggest, baddest, and most highly-powered mutant Makefile the world has ever seen***, you might want to focus on stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview), or see how [CMK as a language]({{mkdocs.site_relative_url}}/compiler) can help you move further away from classic Makefile syntax.  You can also read long-format discussion about [motivations and design philosophy]({{mkdocs.site_relative_url}}/but-why).
 
-🔎 **If you are withholding judgement on just how insane this project is until you see concrete larger-scale use-cases..** skip directly to [some of]({{mkdocs.site_relative_url}}/demos/notebooking) the [larger demos]({{mkdocs.site_relative_url}}/demos/custom-automation-apis). You can also check out a preview of the [sibling project k8s-tools.git]({{jinja.vars.k8stools_docs_url}}), which is still a work in progress.  It's more domain specific, and covers automation specifically for kubernetes cluster lifecycles.
+🔎 **If you are withholding judgement on just how insane this project is until you see concrete larger-scale use-cases..** skip directly to [some of]({{mkdocs.site_relative_url}}/demos/notebooking) the [larger demos]({{mkdocs.site_relative_url}}/demos/custom-automation-apis). You can also check out a preview of the [sibling project @ k8s-tools]({{jinja.vars.k8stools_docs_url}}), which is still a work in progress.  It's more domain specific, and covers automation specifically for kubernetes cluster lifecycles.
 
 <hr style="width:100%;border-bottom:3px solid black;">
 <script>
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Wait for MkDocs to fully render the page including ToC
     setTimeout(function() {
         document.querySelectorAll('li').forEach(item => {
-            {# item.style.marginBottom = '10px'; // Adjust the spacing as needed #}
+            {# item.style.marginBottom = '10px'; #}
         });
     }, 100); // Small delay to ensure ToC is already processed
 });

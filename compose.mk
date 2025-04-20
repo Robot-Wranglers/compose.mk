@@ -1540,7 +1540,7 @@ io.with.file/%:
 	&& CMK_INTERNAL=1 ${make} $${target}/$${tmpf}
 
 io.with.color/%:
-	@# A context manager that paints the given target's output as the given color.
+	@# A context manager that paints the given targets output as the given color.
 	@# This outputs to stderr, and only assumes the original target-output was also on stderr.
 	@#
 	@# USAGE: ( colors the banner red )
@@ -1633,9 +1633,10 @@ mk.def.dispatch/%:
 mk.def.read=${make} mk.def.read
 mk.def.read/%:
 	@# Reads the named define/endef block from this makefile,
-	@# emitting it to stdout. This works around make's normal 
-	@# behaviour of completely wrecking indention/newlines
-	@# present inside the block.  Also available as a macro.
+	@# emitting it to stdout. This works around normal behaviour 
+	@# of completely wrecking indention/newlines and requiring 
+	@# escaped dollar-signs present inside the block.  
+	@# Also available as a macro.
 	@#
 	@# USAGE:
 	@#   ./compose.mk mk.read_def/<name_of_define>
@@ -1799,8 +1800,10 @@ mk.help.search/%:
 			); ;; \
 	esac
 mk.kernel:
-	@# Executes the input data on stdin as a kind of "script" that runs inside the current make-context.
-	@# This basically allows you to treat targets as an instruction-set without any kind of 'make ... ' preamble.
+	@# Executes the input data on stdin as a kind of "script" that 
+	@# runs inside the current make-context.  This basically allows
+	@# you to treat targets as an instruction-set without any kind 
+	@# of 'make ... ' preamble.
 	@#
 	@# USAGE: ( concrete )
 	@#  echo flux.ok | ./compose.mk kernel
@@ -1837,7 +1840,7 @@ mk.compile mk.compiler:
 	@# Quiet by default, pass quiet=0 to preview results from intermediate stages.
 	@#
 	@# USAGE:
-	@#  echo "<source_code>" | ./compose.mk mk.compiler/<output_file>
+	@#  echo "<source_code>" | ./compose.mk mk.compiler
 	@#
 	case $${quiet:-1} in \
 		*) runner=flux.pipeline.quiet;; \
@@ -1849,7 +1852,7 @@ mk.compile mk.compiler:
 		style=monokai lexer=makefile \
 		${make} $${runner}/mk.preprocess,.mk.compiler
 .mk.compiler:
-	@# Strips shebangs iff it's the first line
+	@# Strips shebangs iff it is the first line
 	@# Main transpilation
 	$(call log.mk, mk.compiler ${sep} ) \
 	&& ${trace_maybe} \
@@ -1907,6 +1910,8 @@ BEGIN{block=0} /^define/{block=1} /^endef/{block=0} !block{gsub(old,new)} 1
 endef
 
 mk.preprocess.sugar:
+	@# Part of the CMK->Makefile transpilation process.
+	@# 
 	$(call log.target,starting)
 	$(call io.mktemp) && awkf=`echo $${tmpf}` && ${mk.def.to.file}/.awk.sugar/$${awkf} \
 	&& $(call io.mktemp) && export hint_file=`echo $${tmpf}` \
@@ -2008,12 +2013,12 @@ mk.interpret/%:
 		-) fname=/dev/stdin ;;\
 		*) fname="${*}" ;; \
 	esac && $(call io.mktemp) \
+	&& $(call log.mk, mk.interpret ${sep} ${dim}file=${bold}$${fname} ) \
 	&& ( cat ${CMK_SRC} | sed -e '$$d' ; printf '\n\n\n' \
 		 && cat $${fname} | grep -a -v "^include ${CMK_SRC}" \
 		 && printf '\n\n\n' ; cat ${CMK_SRC} | tail -n1 ) \
 	> $${tmpf} \
 	&& ${make} mk.validate/$${tmpf} \
-	&& $(call log.mk, mk.interpret ${sep} ${dim}file=${bold}${*} ) \
 	&& $(call log.trace, mk.interpret ${sep} ${dim_ital}$${continuation:-(no additional arguments passed)}) \
 	&& chmod ugo+x $${tmpf} \
 	&& CMK_INTERPRETING=$${CMK_INTERPRETING:-$${fname}} MAKEFILE=$${tmpf} $${tmpf} $${continuation:-}
@@ -2133,7 +2138,7 @@ mk.namespace.filter/%:
 
 mk.require.tool/%:; $(call require.tool, ${*})
 	@# Asserts that the given tool is available in the environment.
-	@# Output is only on stderr, but this shows whereabouts if it's in PATH.
+	@# Output is only on stderr, but this shows whereabouts if it is in PATH.
 	@# If not found, this exits with an error.  Also available as a macro.
 
 mk.run/%:; ${io.shell.isolated} make -f ${*} 
@@ -2258,7 +2263,9 @@ mk.stat:
 mk.supervisor.interrupt mk.interrupt: mk.interrupt/SIGINT
 	@# The default interrupt.  This is shorthand for mk.interrupt/SIGINT
 
-mk.interrupt=${make} mk.interrupt
+# WARNING: do not use ${make} here!
+mk.interrupt=${MAKE} mk.interrupt
+
 ifeq (${CMK_SUPERVISOR},0)
 mk.supervisor.interrupt/% mk.interrupt/%:
 	@# CMK_SUPERVISOR is 0; signals are disabled.
@@ -2292,7 +2299,7 @@ mk.supervisor.pid:
 	esac
 
 mk.supervisor.interrupt/% mk.interrupt/%:
-	@# Sends the given signal to this process-tree's supervisor, then kills this process with SIGKILL.
+	@# Sends the given signal to the process-tree supervisor, then kills this process with SIGKILL.
 	@#
 	@# This is mostly used to short-circuit make's default command-line processing
 	@# so that targets can be greedy about consuming the *whole* CLI, rather than 
@@ -2324,8 +2331,8 @@ endif
 	
 mk.supervisor.enter/%:
 	@# Unconditionally executed by the supervisor program, prior to main pipeline. 
-	@# Argument is always supervisor's PPID.  Not to be confused with 
-	@# the supervisor's pid; See instead 'mk.supervisor.pid'
+	@# Argument is always supervisors PPID.  Not to be confused with 
+	@# the supervisors pid; See instead 'mk.supervisor.pid'
 	@# 
 	$(eval export MAKE_SUPER:=${*}) \
 	$(call log.trace, ${GLYPH_MK} ${@} ${sep} ${red}started pid ${no_ansi}$${MAKE_SUPER})
@@ -2865,9 +2872,8 @@ flux.mux flux.join:
 	&& cat $${tmpf} | ${stream.as.log} \
 	&& bash ${dash_x_maybe} $${tmpf}
 
-flux.mux/%:
+flux.mux/%:; targets="${*}" ${make} flux.mux
 	@# Alias for flux.mux, but accepts arguments directly
-	targets="${*}" ${make} flux.mux
 
 flux.negate/%:; ! ${make} ${*}
 	@# Negates the status for the given target.
@@ -2937,7 +2943,6 @@ flux.retry/%:
 			|| ( $(call log.flux, $${header} (${no_ansi}${yellow}failed.${no_ansi_dim} waiting ${dim_green}${FLUX_POLL_DELTA}s${no_ansi_dim})) \
 				; exit 1) \
 		); do ((--r)) || exit; sleep $${interval:-${FLUX_POLL_DELTA}}; done)
-
 
 .flux.eval.symbol/%:
 	@# This is a very dirty trick and mainly for internal use.
@@ -3365,12 +3370,12 @@ stream.dim:; ${stream.dim}
 	@#   $ echo "logging info" | ./compose.mk stream.dim
 
 stream.echo:; ${stream.stdin}
-	@# Just echoes the input stream.  Mostly used for testing.
-	@# See also `flux.echo`.
+	@# Just echoes the input stream.  Mostly used for testing.  See also `flux.echo`.
+	@# 
 	@# EXAMPLE:
 	@#   echo hello-world | ./compose.mk stream.echo
 
-# Extremely secure and keeping hunter2 out of the public eye
+# Extremely secure, for keeping hunter2 out of the public eye
 stream.grep.safe=grep -iv password | grep -iv passwd
 
 # Run image previews differently for best results in github actions. 
@@ -3395,14 +3400,13 @@ stream.indent:; ${stream.indent}
 	@# Indents the input stream to stdout.  Also available as a macro.
 	@# For a version that works with stderr, see `stream.as.log`
 
-stream.json.array.append:
+stream.json.array.append:; ${stream.stdin} | ${jq} "[.[],\"$${val}\"]"
 	@# Appends <val> to input array
 	@#
 	@# USAGE:
 	@#   echo "[]" | val=1 ./compose.mk stream.json.array.append | val=2 make stream.json.array.append
 	@#   [1,2]
-	@#
-	${stream.stdin} | ${jq} "[.[],\"$${val}\"]"
+	
 
 stream.json.object.append stream.json.append:
 	@# Appends the given key/val to the input object.
@@ -3484,16 +3488,15 @@ stream.nl.to.json.array:
 	&& tmp=`eval $${src}` \
 	&& echo $${tmp}
 
-stream.space.enum:
-	@# Enumerates the space-delimited input list, zipping indexes with values in newline delimited output.
+stream.space.enum:; ${stream.stdin} | ${stream.space.to.nl} | ${stream.nl.enum}
+	@# Enumerates the space-delimited input list, 
+	@# zipping indexes with values in newline delimited output.
 	@#
 	@# USAGE: 
 	@#   printf one two | ./compose.mk stream.space.enum
 	@# 		0	one
 	@# 		1	two
-	@#
-	${stream.stdin} | ${stream.space.to.nl} | ${stream.nl.enum}
-
+	
 stream.space.to.comma=(${stream.stdin} | sed 's/ /,/g')
 
 stream.space.to.nl=xargs -n1 echo
@@ -3631,6 +3634,7 @@ tux.require: ${CMK_COMPOSE_FILE} compose.validate.quiet/${CMK_COMPOSE_FILE}
 			); done \
 			&& exit 0 ) \
 		)
+
 tux.purge:
 	@# Force removal of the base containers for the TUI.
 	$(call log.flux, ${@} ${sep}${no_ansi_dim} Purging the TUI base images..)
@@ -3688,28 +3692,23 @@ tux.callback/%:
 	&& $(call log.trace, tux.callback ${sep} ${no_ansi_dim}Generated layout callback:\n  $${layout}) \
 	&& ${make} $${layout}
 
-tux.layout.horizontal/%:
+tux.layout.horizontal/%:; layout=horizontal ${make} tux.callback/${*}
 	@# Runs a spiral-layout callback for the given targets, automatically assigning them to panes
 	@#
 	@# USAGE: 
 	@#   tux.spiral/<callback>
-	@#
-	layout=horizontal ${make} tux.callback/${*}
-	
-tux.layout.spiral/%:
+
+tux.layout.spiral/%:; layout=spiral ${make} tux.callback/${*}
 	@# Runs a spiral-layout callback for the given targets, automatically assigning them to panes
 	@#
 	@# USAGE: 
 	@#   tux.spiral/<callback>
-	@#
-	layout=spiral ${make} tux.callback/${*}
-tux.layout.vertical/%:
+
+tux.layout.vertical/%:; layout=vertical ${make} tux.callback/${*}
 	@# Runs a spiral-layout callback for the given targets, automatically assigning them to panes
 	@#
 	@# USAGE: 
 	@#   tux.spiral/<callback>
-	@#
-	layout=vertical ${make} tux.callback/${*}
 
 tux.dispatch/%:
 	@# Runs the given target inside the embedded TUI container.
@@ -3862,6 +3861,7 @@ tux.shell.pipe: tux.require
 	&& ${docker.compose} -f ${TUI_COMPOSE_FILE} \
 		$${COMPOSE_EXTRA_ARGS} run -T --rm --remove-orphans \
 		--entrypoint bash $${TUI_SVC_NAME} ${dash_x_maybe} -c "`${stream.stdin}`" $(_compose_quiet)
+
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## END: tux.*' public targets
 ## BEGIN: TUI private targets
@@ -3963,7 +3963,7 @@ tux.shell.pipe: tux.require
 
 .tux.init.buttons:
 	@# Generates tmux-script that configures the buttons for "New Pane" and "Exit".
-	@# This isn't called directly, but is generally used as the post-theme setup hook.
+	@# This is not called directly, but is generally used as the post-theme setup hook.
 	@# See also 'TUI_THEME_HOOK_POST'
 	@#
 	wscf=`${mk.def.read}/_tux.theme.buttons | xargs -I% printf "$(strip %)"` \
@@ -4130,11 +4130,11 @@ endef
 	@#
 	$(call log.tux, ${@} ${sep} killing session )
 	tmux kill-session
-	
+
 .tux.theme:
 	@# Setup for the TUI's tmux theme.
 	@#
-	@# This does nothing directly, and just honors the environment's settings
+	@# This does nothing directly, and just honors the environment settings
 	@# for TUI_THEME_NAME, TUI_THEME_HOOK_PRE, & TUI_THEME_HOOK_POST
 	@#
 	$(trace_maybe) \
@@ -5276,7 +5276,7 @@ flux.post/%:
 
 define .awk.rewrite.targets.maybe 
 {
-  if ($0 ~ /help/ || $0 ~ /mk.interpret/ || $0 ~ /mk.include/) {
+  if ($0 ~ /help/ || $0 ~ /mk.interpret/ || $0 ~ /mk.include/ || $0 ~ /loadf/) {
 	print $0
 	next }
   result = ""

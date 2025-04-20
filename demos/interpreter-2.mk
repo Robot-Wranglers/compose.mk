@@ -7,9 +7,7 @@
 
 include compose.mk
 
-.DEFAULT_GOAL:=__main__
-
-ls:; ls $${MAKE_CLI_EXTRA}; $(call mk.yield, true)
+ls:; $(call mk.yield, ls $${MAKE_CLI_EXTRA})
 
 __main__:
 	${make} ls -- --color=auto

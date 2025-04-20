@@ -7,7 +7,7 @@ Much of what `compose.mk` does is focused on helping you to [generate automation
 
 **In Stand-alone Mode,** you can still use many of those features but skip the usual project integration.  In other words, project Makefiles, project docker-compose files, etc become optional.  This is less powerful and less flexible, but still results in a neat little swiss army knife that has some unique capabilities.  
 
-Oh, and if you're wondering how and why stand-alone mode can work in the first place: as long as `compose.mk` is an executable file, `./compose.mk ...` is roughly equivalent to `make -f compose.mk ...`.
+Oh, and if you're wondering how and why stand-alone mode can work in the first place: since `compose.mk` is executable, `./compose.mk ...` is roughly equivalent to `make -f compose.mk ...`.
 
 ### Use-Cases for Stand Alone Mode
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -18,8 +18,6 @@ Most use-cases for stand-alone mode will fall into one of these categories:
 1. **Interactive-selection for make-targets or compose-containers,** basically a "runner" interface.  See the separate documentation & demos [here]({{mkdocs.site_relative_url}}/selector).
 1. **Loading compose files just-in-time.** Separate [documentation here]({{mkdocs.site_relative_url}}/loadf), but briefly.. this gives access to all of [the scaffolded targets]({{mkdocs.site_relative_url}}/bridge/#dynamic-api), and if no downstream targets are given, the default behaviouir is to open interactive shells for each tool container in a TUI.
 1. **General bash kung-fu,** which might help clean up other scripts or can be used interactively, because in many cases using `compose.mk` idioms are easier to read and write.  This isn't well documented yet, but for some hints see [these examples]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-stream-types-pipes) and refer to the [full target API]({{mkdocs.site_relative_url}}/api).
-
-----------------
 
 {#Additionally, one of the major benefits of using `make` over plain bash scripting is that details for CLI entrypoints are handled automatically.  In fact, *make-targets always do double-duty as CLI entrypoints and as reusable tasks*, or in other words, **the "internal API" is automatically published as a CLI interface.**  
 
