@@ -29,7 +29,7 @@ print('hello world 2')
 # Code bound to a target-as-interpreter.
 # Target must be parametric, then do something with the parameter!
 〚 hello_world4
-hello world3 !
+hello world4 !
 ⟧ with show.file as target
 
 # An example target, as used above.

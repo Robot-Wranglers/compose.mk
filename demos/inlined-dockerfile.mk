@@ -14,7 +14,7 @@ __main__: Dockerfile.build/demo_dockerfile flux.star/test
 # A minimal inlined dockerfile.  You can install anything or nothing here,
 # but let's have the minimal stuff that's required for using target dispatch.
 define Dockerfile.demo_dockerfile
-FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
+FROM alpine:3.21.2
 RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
 endef
 
@@ -27,7 +27,7 @@ test.2.mk.docker.dispatch:
 	$(call log.test_case, mk.docker.dispatch omits image prefix & does target-dispatch)
 	img=demo_dockerfile ${make} mk.docker.dispatch/self.demo.dispatch
 self.demo.dispatch:
-	echo "Testing target from inside the inlined-container: `uname -a`"
+	printf "Testing target from inside the inlined-container: \n`uname -a`\n"
 
 test.3.docker.dispatch:
 	$(call log.test_case, docker.dispatch requires image prefix & does target-dispatch)

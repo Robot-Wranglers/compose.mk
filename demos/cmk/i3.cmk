@@ -4,10 +4,13 @@
 #
 # USAGE: demos/cmk/i3.cmk gui
 
+export APP_DIMS?=1024x500
+export APP_DISPLAY?=:23
+
 __main__:
-	@# Main entrypoint does not actually start the GUI
-	@# because we don't want this run from tests.  
 	@# Print usage info and exit.
+	@# Main entrypoint does not actually start the GUI
+	@# because we don't want this running from tests.  
 	cmk.log(${red}USAGE: ./demos/cmk/i3.cmk gui)
 
 # Begin containerized version of i3 window manager and support files.
@@ -71,7 +74,7 @@ services:
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
       - /tmp/.X11-unix:/tmp/.X11-unix
     environment:
-      DISPLAY: :23
+      DISPLAY: ${APP_DISPLAY}
     configs:
       - source: i3conf
         target: /root/.config/i3/config
@@ -82,23 +85,22 @@ services:
 # Top-level helpers, these require Xephyr 
 # on the host and starts a stand-alone XOrg server.
 xephyr.init: xephyr.require xephyr.start
-
 xephyr.start:
 	@# Start Xephyr in the background.
-	Xephyr -ac -screen 1024x500 -br -reset -terminate :23 &
-
+	Xephyr -ac -screen ${APP_DIMS} -br -reset -terminate ${APP_DISPLAY} &
 xephyr.require:
 	@# Assert Xephyr is available or fail.
-	which Xephyr > /dev/null \
-	&& cmk.log.target(${dim} found Xephyr ${GLYPH_SPARKLE}) \
-	|| (cmk.log.target(${red} Xephyr not found); exit 1)
+	cmk.require.tool(Xephyr, Try installing package 'xserver-xephyr' to continue.)
 
+# Main Entrypoint
 gui: xephyr.init i3.stop i3.build i3.up.detach i3.exec/i3.start_apps 
 	@# Start an XOrg server, rebuild the i3 container if necessary.
-	@# Then start/detach i3 WM, and start a few applications.
+	@# Then start/detach i3 WM, and start a few apps inside.
 
+# Private helpers, intended to run in container.
 i3.start_apps:
-	@# Use I3's RPC tool to drive the display
+	@# Use I3's RPC tool to drive the display.  
+	@# Runs in the container, so using tools unavailable to host is ok.
 	i3-msg exec xeyes
 	i3-msg exec "feh -B black --scale ./demos/data/droste.png"
 	i3-msg exec xeyes
