@@ -46,12 +46,23 @@ Taken together, the facilities for [working]({{mkdocs.site_relative_url}}/bridge
 ### Features & Design Goals
 <hr style="width:100%;border-bottom:3px solid black;">
 
-* **Radically minimal,** in terms of dependencies and conceptual overhead. Out of the box, `make` is expressive but has relatively few core concepts, it's ubiquitous, and it's fast. Building on this, `compose.mk` adds just enough extra concepts to get *a lot* of extra power and flexibility.
-* **Seamless and simple idioms for working with containers in a way that's platform agnostic.** Code that automates tasks in project management should not be locked inside Jenkinsfiles or Github Actions.  Using `compose.mk` tends to [help projects to decouple and run elsewhere]({{mkdocs.site_relative_url}}/container-dispatch), but afterwards running from CI/CD still works.
-* **Generic and easy to extend foundation.**  A major focus for `compose.mk` is what might be summarized as *mapping, dispatch, and interoperability*.  For example you can [map docker containers to `make` targets]({{mkdocs.site_relative_url}}/bridge), or [targets to containers]({{mkdocs.site_relative_url}}/container-dispatch), or [map containers/targets into `tmux` panes]({{mkdocs.site_relative_url}}/embedded-tui).  This makes it easy to quickly put together domain-specific toolkits, regardless of whether that domain happens to be wrangling development tools, documentation tools, or infracode tools.
-* **Clean & carefully curated output** that is [logged to appropriate streams]({{mkdocs.site_relative_url}}/standard-lib/#logging-facilities), aiming to be readable and human-friendly on stderr, while still [remaining machine-friendly for downstream processing]({{mkdocs.site_relative_url}}/standard-lib/#structured-input-output) on stdout.
-* **Basic workflow support is also available.**  Tasks and DAGs are built-ins for `make` naturally, and `compose.mk` adds support for other primitives, [like parallel tasks and task retries]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).
-* **Hacker friendly.** The single-file approach used with `compose.mk` makes it easy to embed alongside existing projects.  The project itself uses [the unlicense](https://unlicense.org/), and the goal is for the base API to eventually become completely frozen.  Rip out the parts you don't need, contribute upstream if you can, but if you don't want to track upstream or if your customizations become too specific to your project, no need to ever look back.
+**Radically minimal, in terms of dependencies and conceptual overhead.** 
+:  Out of the box, `make` is expressive but has relatively few core concepts, it's ubiquitous, and it's fast. Building on this, `compose.mk` adds just enough extra concepts to get *a lot* of extra power and flexibility.
+
+**Seamless and simple idioms for working with containers in a way that's platform agnostic.** 
+:  Code that automates tasks in project management should not be locked inside Jenkinsfiles or Github Actions.  Using `compose.mk` tends to [help projects to decouple and run elsewhere]({{mkdocs.site_relative_url}}/container-dispatch), but afterwards running from CI/CD still works.
+
+**Generic and easy to extend foundation.**  
+:  A major focus for `compose.mk` is what might be summarized as *mapping, dispatch, and interoperability*.  For example you can [map docker containers to `make` targets]({{mkdocs.site_relative_url}}/bridge), or [targets to containers]({{mkdocs.site_relative_url}}/container-dispatch), or [map containers/targets into `tmux` panes]({{mkdocs.site_relative_url}}/embedded-tui).  This makes it easy to quickly put together domain-specific toolkits, regardless of whether that domain happens to be wrangling development tools, documentation tools, or infracode tools.
+
+**Clean & carefully curated output** 
+:  Beyond providing the missing [facilities for logging with `make`]({{mkdocs.site_relative_url}}/standard-lib/#logging-facilities), the general goal is to be readable and human-friendly on stderr, while still [remaining machine-friendly for downstream processing]({{mkdocs.site_relative_url}}/standard-lib/#structured-input-output) on stdout.
+
+**Basic workflow support is also available.**  
+:  Tasks and DAGs are built-ins for `make` naturally, and `compose.mk` adds support for other primitives, [like parallel tasks and task retries]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).
+
+**Hacker friendly.** 
+:  The single-file approach used with `compose.mk` makes it easy to embed alongside existing projects.  The project itself uses [the unlicense](https://unlicense.org/), and the goal is for the base API to eventually become completely frozen.  Rip out the parts you don't need, contribute upstream if you can, but if you don't want to track upstream or if your customizations become too specific to your project, no need to ever look back.
 
 ### Choose Your Path
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -65,3 +76,15 @@ Taken together, the facilities for [working]({{mkdocs.site_relative_url}}/bridge
 🔎 **If you are withholding judgement on just how insane this project is until you see concrete larger-scale use-cases..** skip directly to [some of]({{mkdocs.site_relative_url}}/demos/notebooking) the [larger demos]({{mkdocs.site_relative_url}}/demos/custom-automation-apis). You can also check out a preview of the [sibling project k8s-tools.git]({{jinja.vars.k8stools_docs_url}}), which is still a work in progress.  It's more domain specific, and covers automation specifically for kubernetes cluster lifecycles.
 
 <hr style="width:100%;border-bottom:3px solid black;">
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for MkDocs to fully render the page including ToC
+    setTimeout(function() {
+        document.querySelectorAll('li').forEach(item => {
+            {# item.style.marginBottom = '10px'; // Adjust the spacing as needed #}
+        });
+    }, 100); // Small delay to ensure ToC is already processed
+});
+</script>
+
+margin-top: 24px;

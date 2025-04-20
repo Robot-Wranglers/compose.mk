@@ -29,7 +29,7 @@ services:
     build:
       context: .
       dockerfile_inline: |
-        FROM alpine:3.21.2
+        FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
         RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
 endef 
 

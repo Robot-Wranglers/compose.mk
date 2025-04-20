@@ -34,7 +34,7 @@ services:
     build:
       context: .
       dockerfile_inline: |
-        FROM alpine
+        FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
         RUN apk add -q --update just bash build-base
     entrypoint: just
     working_dir: /workspace

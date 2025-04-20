@@ -3,26 +3,25 @@
 #   CMK-lang translation of demos/inlined-dockerfile.mk
 # USAGE: ./demos/cmk/inlined-dockerfile.cmk
 
-⫻ Dockerfile.some_container
-FROM alpine
+⫻ Dockerfile.my_container
+FROM alpine:3.21.2
 RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
 ⫻
 
 __main__: test.scaffold test.runner test.raw
 
 test.scaffold: \
-	some_container.build \
-	some_container.dispatch/self.dispatch_test \
-	some_container.build.force
+	my_container.build \
+	my_container.dispatch(self.dispatch_test)
 
 test.runner:
 	cmk.log.test_case(Low level access to run commands)
-	entrypoint=sh cmd='-c "pwd"' ${make} some_container.run
+	entrypoint=sh cmd='-c "pwd"' this.my_container.run
 
 test.raw:
 	cmk.log.test_case(Low-level unmediated access to image)
-	docker image inspect compose.mk:some_container > /dev/null
-	docker run --entrypoint sh compose.mk:some_container -x -c "true" > /dev/null
+	docker image inspect compose.mk:my_container > /dev/null
+	docker run --entrypoint sh compose.mk:my_container -x -c "true" > /dev/null
 
 self.dispatch_test:
-	echo "Testing target from inside the inlined-container: `uname -a`"
+	cmk.log(Testing target from inside the inlined-container:\n  `uname -a`)

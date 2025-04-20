@@ -149,6 +149,7 @@ _GLYPH.FLUX=${bold}Φ${no_ansi}
 GLYPH.FLUX=${green}${_GLYPH.FLUX}${dim_green}
 GLYPH_DEBUG=${dim}(debug=${no_ansi}${verbose}${dim})${no_ansi}${dim}(quiet=${no_ansi}$(shell echo $${quiet:-})${dim})${no_ansi}${dim}(trace=${no_ansi}$(shell echo $${trace:-})${dim})
 GLYPH_SPARKLE=✨
+GLYPH_CHECK=✔
 GLYPH_SUPER=${green}ᐂ${dim_green}
 # GLYPH_NUMS=▏ ▎ ▍ ▌ ▋ ▊ ▉ █ █ █ █ █
 GLYPH_NUMS=① ② ③ ④ ⑤ ⑥ ⑦ ⑧ ⑨ ⑩
@@ -202,7 +203,14 @@ stderr_stdout_indent=2> >(sed 's/^/  /') 1> >(sed 's/^/  /')
 stderr_devnull:=2>${devnull}
 all_devnull:=2>&1 > /dev/null
 streams.join:=2>&1 
-# Literal newline and other constants 
+
+# Helper for asserting that tools are available with support for error messages.
+require.tool=$(call log.part1,${GLYPH_IO} Looking for ${1} in path); which ${1} >/dev/null && $(call log.part2,${no_ansi_dim}`which ${1}` ${green}${GLYPH_CHECK}) || ($(call log.part2,${red} missing!);$(call log.io,${no_ansi}${bold}Error:${no_ansi} $(if $(filter undefined,$(origin 2)),Install tool and retry workflow.,$(2))); exit 1)
+
+# Literal newline and other constants
+# See also: https://www.gnu.org/software/make/manual/html_node/Syntax-of-Functions.html#Special-Characters
+empty:=
+space:= $(empty) $(empty)
 define nl
 
 endef
@@ -257,12 +265,12 @@ endef
 define log.trace.loop.item 
 [ "${TRACE}" == "0" ] && true || $(call log.loop.item, ${1})
 endef
+
 # Logger suitable for action logging in 2 parts: <label> <action-result>
 # Call this to show the label
 log.stdout.part1=([ -z "$${quiet:-}" ] && (printf "${log.prefix.makelevel} $(strip $(or $(1),)) ${no_ansi_dim}..${no_ansi}") || true )
 # Call this to show the result
 log.stdout.part2=([ -z "$${quiet:-}" ] && (printf "${no_ansi} $(strip $(or $(1),)) ${no_ansi}\n")|| true)
-
 log.part1=(${log.stdout.part1}>${stderr})
 log.part2=(${log.stdout.part2}>${stderr})
 
@@ -661,8 +669,10 @@ docker.build/% Dockerfile.from.fs/% docker.from.file/%:
 
 .docker.build/%:
 	${trace_maybe} \
-	&& quiet=$${quiet:-1} \
-	&& quiet=`[ -z "$${quiet:-}" ] && true || echo "-q"` \
+	&& case $${quiet:-1} in \
+		0) quiet=;; \
+		*) quiet=-q;; \
+	esac \
 	&& set -x && docker build $${quiet} $${build_args:-} -t $${tag} $${docker_args:-} -f ${*} .
 
 docker.commander:
@@ -991,6 +1001,7 @@ docker.run.sh:
 	&& image_tag="$${img}" \
 	&& entry=`[ "$${entrypoint:-}" == "none" ] && echo ||  echo "--entrypoint $${entrypoint:-bash}"` \
 	&& net=`[ "$${net:-}" == "" ] && echo ||  echo "--net=$${net}"` \
+	&& hostname=`[ "$${hostname:-}" == "" ] && echo "--hostname=$${img}" ||  echo "--hostname=$${hostname}"` \
 	&& cmd="$${cmd:-$${script:-}}" \
 	&& disp_cmd="`echo $${cmd} | sed 's/${MAKE_FLAGS}//g'|${stream.lstrip}`" \
 	&& ( \
@@ -1008,6 +1019,7 @@ docker.run.sh:
 	&& tty=`[ -z $${tty:-} ] && echo \`[ -t 0 ] && echo "-t"|| true\` || echo "-t"` \
 	&& cmd_args="\
 		--rm -i $${tty} $${extra_env} \
+		$${hostname} \
 		-e CMK_INTERNAL=1 \
 		${docker.env.standard} \
 		-v $${workspace:-$${PWD}}:/workspace \
@@ -1126,12 +1138,9 @@ CMK_EXEC=`dirname ${CMK_SRC}`/`basename ${CMK_SRC}`
 
 # This is a hack because charmcli/gum is distroless, but the spinner needs to use "sleep", etc
 # io.gum.alt.dumb=docker run -it -e TERM=dumb --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nRUN apk add -q --update --no-cache bash\nCOPY --from=charmcli/gum:${IMG_GUM} /usr/local/bin/gum /usr/local/bin/gum")`
-
 # Helpers for asserting environment variables are present and non-empty 
 mk.assert.env_var=[[ -z "$${$(strip ${1})}" ]] && { $(call log.io, ${red}Error:${no_ansi_dim} required variable ${no_ansi}${underline}$(strip ${1})${no_ansi_dim} is unset or empty!); exit 39; } || true
 mk.assert.env=$(foreach var_name, ${1}, $(call mk.assert.env_var, ${var_name});)
-mk.assert.env/%:
-	$(call mk.assert.env,$(shell echo ${*}|${stream.comma.to.space}))
 
 io.figlet/%:
 	@# Treats the argument as a label, and renders it with `figlet`. 
@@ -1688,7 +1697,7 @@ mk.docker=${make} mk.docker
 mk.docker:; ${mk.docker}/$${img}
 	@# Like `mk.docker/..` but expects `img` argument is available from environment.
 
-mk.docker.run.sh:; img="compose.mk:$${img}" ${make} docker.run.sh
+mk.docker.run.sh:; hostname="$${img}" img="compose.mk:$${img}" ${make} docker.run.sh
 	@# Like docker.run.sh, but implicitly assumes the 'compose.mk:' prefix.
 
 mk.get/%:; $(info ${${*}})
@@ -1818,6 +1827,10 @@ define cmk.default.dialect
 ]
 endef 
 
+mk.assert.env/%:
+	@# Asserts that the (comma-delimited) environment variables are set and non-empty.
+	@# Also available as a macro.
+	$(call mk.assert.env,$(shell echo ${*}|${stream.comma.to.space}))
 mk.compile mk.compiler:
 	@# This is a transpiler for the CMK language -> Makefile.
 	@# Accepts streaming CMK source on stdin, result on stdout.
@@ -1842,11 +1855,13 @@ mk.compile mk.compiler:
 	&& ${trace_maybe} \
 	&& printf "#!/usr/bin/env -S ./compose.mk mk.interpret\n" \
 	&& ${stream.stdin} \
-	| ${make} io.awker/.awk.main.preprocess 
+	| ${make} io.awker/.awk.main.preprocess \
+	| ${make} io.awker/.awk.dispatch
 define .eval.call
 eval.call=$(eval $(call $(if $(filter undefined,$(origin 1)),,$(1)),$(if $(filter undefined,$(origin 2)),,$(2)),$(if $(filter undefined,$(origin 3)),,$(3)),$(if $(filter undefined,$(origin 4)),,$(4))))
 endef
 mk.preprocess: 
+	@# Runs the CMK input preprocessor on stdin.
 	$(call log.target, starting) \
 	&& $(call io.mktemp) && export inputf=`echo $${tmpf}` \
 	&& ${stream.stdin} > $${inputf} \
@@ -2003,7 +2018,6 @@ mk.interpret/%:
 	&& chmod ugo+x $${tmpf} \
 	&& CMK_INTERPRETING=$${CMK_INTERPRETING:-$${fname}} MAKEFILE=$${tmpf} $${tmpf} $${continuation:-}
 
-# && $(call io.script, CMK_INTERPRETING=$${CMK_INTERPRETING:-$${fname}} MAKEFILE=$${tmpf} $${tmpf} $${continuation:-})
 mk.validate/%:
 	@# Validate the given Makefile (using `make -n`)
 	$(call log.part1, ${GLYPH_MK} mk.validate ${sep} ${dim_ital}${*})
@@ -2035,10 +2049,11 @@ mk.let/%:
 	&& $(call log.part1, $${header} ${dim}Generating code) \
 	&& $(call io.mktemp) \
 	&& src="`printf ${*} | cut -d: -f1`: `printf ${*}|cut -d: -f2-`" \
-	&& printf "$${src}" >  $${tmpf} \
+	&& printf "$${src}" >  $${tmpf} ; cp $${tmpf} tmpf \
 	&& $(call log.part2, ${no_ansi_dim}$${tmpf}) \
-	&& cmd="make ${MAKE_FLAGS} $${MAKEFILE_LIST// / -f} -f $${tmpf} $${MAKE_CLI#*mk.let/${*}}" \
-	&& $(call mk.yield, $${cmd} )
+	&& cmd="${make} -f $${tmpf} $${MAKE_CLI#*mk.let/${*}}" \
+	&& $(call log.target,$${cmd}) \
+	&& $(call mk.yield,$${cmd})
 
 mk.namespace.list help.namespaces:
 	@# Returns only the top-level target namespaces
@@ -2115,6 +2130,11 @@ mk.namespace.filter/%:
 	${trace_maybe} \
 	&& pattern="${*}" && pattern="$${pattern//./[.]}" \
 	&& ${make} mk.parse.targets/${MAKEFILE} | grep -v ^all$$ | grep ^$${pattern}
+
+mk.require.tool/%:; $(call require.tool, ${*})
+	@# Asserts that the given tool is available in the environment.
+	@# Output is only on stderr, but this shows whereabouts if it's in PATH.
+	@# If not found, this exits with an error.  Also available as a macro.
 
 mk.run/%:; ${io.shell.isolated} make -f ${*} 
 	@# A target that runs the given makefile.
@@ -2204,15 +2224,15 @@ mk.self: docker.from.def/makeself
 	@#
 	@# [1]: https://makeself.io/
 	@#
-	header="${GLYPH_IO} ${@}${no_ansi} ${sep}${dim}" \
-	&& $(call log, $${header} Archive for ${no_ansi}${ital}$${archive}${no_ansi_dim} will be released as ${no_ansi}${bold}./$${bin}) \
+	header="${@}${no_ansi} ${sep}${dim}" \
+	&& $(call log.io, $${header} Archive for ${no_ansi}${ital}$${archive}${no_ansi_dim} will be released as ${no_ansi}${bold}./$${bin}) \
 	&& (ls $${archive} >/dev/null || exit 1) \
 	&& $(call io.mktempd) \
 	&& cp -rf $${archive} $${tmpd} \
 	; archive_dir=$${tmpd} \
 	&& file_count=`find $${archive_dir}|${stream.count.lines}` \
-	&& $(call log, $${header} Total files: ${no_ansi}$${file_count}) \
-	&& $(call log, $${header} Entrypoint: ${no_ansi}$${script}) \
+	&& $(call log.io, $${header} Total files: ${no_ansi}$${file_count}) \
+	&& $(call log.io, $${header} Entrypoint: ${no_ansi}$${script}) \
 	&& cmd="--noprogress --quiet --nomd5 --nox11 --notemp $${archive_dir} $${bin} \"$${label:-archive}\" $${script} $${script_args:-}" \
 	img=compose.mk:makeself entrypoint=makeself ${make} docker.run.sh
 	sed -i -e 's/quiet="n"/quiet="y"/' $${bin}
@@ -3145,7 +3165,7 @@ flux.timeout/%:
 	@#
 	timeout=`printf ${*} | cut -d/ -f1` \
 	&& target=`printf ${*} | cut -d/ -f2-` \
-	timeout=$${timeout} cmd="make $${target}" make flux.timeout.sh
+	timeout=$${timeout} cmd="${make} $${target}" ${make} flux.timeout.sh
 
 flux.timeout.sh:
 	@# Runs the given command for the given amount of seconds, then stops it with TERM.
@@ -3288,6 +3308,7 @@ stream.strip:
 stream.ini.pygmentize:; ${stream.stdin} | lexer=ini ${make} stream.pygmentize
 	@# Highlights input stream using the 'ini' lexer.
 
+stream.csv.pygmentize=${make} stream.csv.pygmentize
 stream.csv.pygmentize:
 	@# Highlights the input stream as if it were a CSV.  Pygments actually
 	@# does not have a CSV lexer, so we have to fake it with an awk script.  
@@ -3357,7 +3378,6 @@ stream.grep.safe=grep -iv password | grep -iv passwd
 stream.img=${stream.stdin} | docker run -i --entrypoint chafa compose.mk:tux `[ "$${GITHUB_ACTIONS:-false}" = "true" ] && echo "--size 100x -c full --fg-only --invert --symbols dot,quad,braille,diagonal" || echo "--center on"` /dev/stdin
 
 # Converts multiple sequential newlines to just one.
-# stream.nl.compress=sed -z 's/\n\n/\n/g'
 stream.nl.compress=awk -v RS='\0' '{ gsub(/\n{2,}/, "\n"); printf "%s", $$0 RS }'
 
 stream.chafa=${stream.img}
@@ -4466,7 +4486,7 @@ ${compose_file_stem}.exec/%:
 	&& docker compose -f ${compose_file} \
 		exec `[ -z "$${detach}" ] && echo "" || echo "--detach"` \
 		`printf $${*}|cut -d/ -f1` \
-		${make} `printf $${*}|cut -d/ -f2-`
+		${make} `printf $${*}|cut -d/ -f2-` 2> >(grep -v 'variable is not set' >&2)
 
 ${compose_file_stem}/$(compose_service_name).get_shell:
 	@# Detects the best shell to use with the `$(compose_service_name)` container @ ${compose_file}
@@ -4549,7 +4569,7 @@ $(compose_service_name).dispatch.quiet/%:; quiet=1 ${make} $(compose_service_nam
 $(compose_service_name).exec.detach/%:; detach=1 ${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}
 $(compose_service_name).exec/%:
 	@# Shorthand for ${compose_file_stem}.exec/$(compose_service_name)/<target_name>
-	set -x && ${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}
+	${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}
 
 $(compose_service_name).get_shell: ${compose_file_stem}/$(compose_service_name).get_shell
 	@# Shorthand for ${compose_file_stem}/$(compose_service_name).get_shell
@@ -4650,9 +4670,11 @@ define compose.import.dockerfile.string
 $(eval defname:=$(strip $(1)))
 $(eval img_name:=$(patsubst Dockerfile.%,%,${defname}))
 ${img_name}.build: Dockerfile.build/${img_name}
-${img_name}.shell:; img=compose.mk:${img_name} entrypoint=$${entrypoint:-sh} ${make} docker.run.sh 
+${img_name}.shell:
+	img=compose.mk:${img_name} hostname=${img_name} \
+	entrypoint=$${entrypoint:-sh} ${make} docker.run.sh 
 ${img_name}.build.force:; force=1 ${make} ${img_name}.build 
-${img_name}.dispatch/%:; img=${img_name} ${make} mk.docker.dispatch/$${*}
+${img_name}.dispatch/%:; hostname=${img_name} img=${img_name} ${make} mk.docker.dispatch/$${*}
 ${img_name}.run:; img=compose.mk:${img_name} ${make} docker.run.sh 
 endef
 
@@ -5167,7 +5189,16 @@ function process_text(text, result, pos, method_start, method_name, args_start, 
   line = string_substitute($0)
   if (in_define_block) {print $0} else {print process_text(line)} }
 endef
-
+define .awk.dispatch
+{
+    while (match($$0, /([[:alnum:]_.]+)\.dispatch\(([^)]+)\)/, arr)) {
+        before = substr($$0, 1, RSTART-1)
+        after = substr($$0, RSTART+RLENGTH)
+        $$0 = before arr[1] ".dispatch/" arr[2] after
+    }
+    print
+}
+endef
 define .awk.sugar
 BEGIN {
  if (ARGC < 3) {
@@ -5243,24 +5274,13 @@ flux.post/%:
 		*) $(call log.trace, flux.post ${sep} no such hook: ${*}.post ${MAKE_CLI}) && exit 0;; \
 	esac
 
-# { print $0 }
 define .awk.rewrite.targets.maybe 
 {
-  if ($0 ~ /help/) {
-    print $0  # Print original input unchanged
-    next      # Skip to next record
-  }
-  if ($0 ~ /mk.interpret/) {
-    print $0  # Print original input unchanged
-    next      # Skip to next record
-  }
-  
+  if ($0 ~ /help/ || $0 ~ /mk.interpret/ || $0 ~ /mk.include/) {
+	print $0
+	next }
   result = ""
   for (i=1; i<=NF; i++) {
-    # Skip words that start with "." or contain "/"
-    # Add space separator for non-first elements
-    # Add the transformed word pattern
-    #if ($i ~ /^\./ || $i ~ /\//) result = result " " $i
     if ($i ~ /^\./ || $i ~ /\//) {result = result " " $i; continue}
     if (result != "") result = result " "
     result = result "flux.pre/" $i " " $i " flux.post/" $i

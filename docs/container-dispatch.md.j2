@@ -102,15 +102,21 @@ $ docker compose -f docker-compose.yml \
 ### Other Kinds of Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
 
-So far we've just looked at using dispatch for [imported tool containers]({{mkdocs.site_relative_url}}/bridge) that come from docker compose files.  Target dispatch also works with [stock-images]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-tasks-in-containers), [inlined containers]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile), [inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files),.
+So far we've just looked at using dispatch with [imported tool containers]({{mkdocs.site_relative_url}}/bridge) that come from docker compose files.  Target dispatch comes in other flavors too though, and works
 
----------------------------
+* with [stock-images]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-tasks-in-containers), 
+* with [inlined containers]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile), 
+* with [inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files), 
+* from scripts or [from CLI]({{mkdocs.site_relative_url}}/raw-docker/#other-docker-utilities)
 
-So that's container dispatch.  **This simple pattern for dispatching targets in containers is one of the main features of `compose.mk` as a library, and it's surprisingly powerful.**   
+Whether you're using `compose.mk` as a library, a stand-alone tool, or a framework, **this simple pattern for dispatching targets in containers is one of the main features, and it's surprisingly powerful.**  
 
-From here, if you just want to get started, you might want to skip to more detailed docs on the [arguments for the `compose.import` macro]({{mkdocs.site_relative_url}}/bridge/#import-macro-arguments) , or [the dispatch syntax/semantics](#dispatch-syntaxsemantics), or [the docker-compose.yml boilerplate that supports dispatch](#compose-file-boilerplate).  
+From here, if you just want to get started, you might want to look at more detailed docs for [`compose.import` arguments]({{mkdocs.site_relative_url}}/bridge/#import-macro-arguments), or [the docker-compose.yml boilerplate that supports dispatch](#compose-file-boilerplate).  
 
-On the other hand, if you're still wondering why you should care, check out the [commentary at the end](#but-why) of this page.
+If you're still wondering why you should care, check out the [commentary at the end](#but-why) of this page.  
+
+If you're using dispatch idioms a lot and interested in more advanced topics, you might like to see how [CMK lang cleans up the syntax]({{mkdocs.site_relative_url}}/compiler/#compose-file-example).
+
 
 ### Compose File Boilerplate
 <hr style="width:100%;border-bottom:3px solid black;">

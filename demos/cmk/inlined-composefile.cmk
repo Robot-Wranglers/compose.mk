@@ -23,11 +23,30 @@ services:
     build:
       context: .
       dockerfile_inline: |
-        FROM alpine:3.21.2
+        FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
         RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
 ⋙
 
-__main__: alice.dispatch/self.internal_task bob.dispatch/self.internal_task
+# A private target, intended to run inside containers 
+self.internal_task:; cmk.log(Running inside ${red}`hostname`)
 
-self.internal_task:; echo "Running inside `hostname`"
+# Dispatch demo:
+#  Runs the private target inside containers, using 
+#  syntax that looks like function-invocation.
+__main__: alice.dispatch(self.internal_task) bob.dispatch(self.internal_task)
 
+
+# Equivalent to above.  
+#  Here we have a target-body (not target-prereqs), so "this." prefix is required.
+alternate_style1: 
+	this.alice.dispatch(self.internal_task) 
+	this.bob.dispatch(self.internal_task)
+
+# Equivalents for both of the above.
+#   This is the more "classic" style in pure Makefile,
+#   i.e. what compose.mk supports without any transpilation.
+alternate_style2: alice.dispatch/self.internal_task bob.dispatch/self.internal_task
+
+alternate_style3: 
+	${make} alice.dispatch/self.internal_task 
+	${make} bob.dispatch/self.internal_task

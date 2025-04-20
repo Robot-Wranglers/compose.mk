@@ -3,8 +3,7 @@
 #   Demonstrates user-input with a file selector
 #   USAGE: ./demos/tui/user-input.mk
 include compose.mk 
-.DEFAULT_GOAL := demo
 
-demo:
+__main__:
 	pattern='*.mk' dir=demos \
 		${make} flux.select.file/mk.select
