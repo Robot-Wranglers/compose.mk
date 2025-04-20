@@ -46,39 +46,6 @@ $ ./compose.mk mk.parse/demos/no-include.mk
 
 *Under the hood, the heavy lifting for Makefile-parsing uses a dockerized version of the  [`pynchon` tool]({{jinja.vars.pynchon_repo_url}}).*
 
-#### Dynamic Includes and Targets
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-To a certain extent, `compose.mk` can do experimental *runtime* modification of `make` itself (or at least simulate it).  Under the hood, this works by code-generation to create a new Makefile just in time, and then [turning execution over to it]({{mkdocs.site_relative_url}}/signals/).  
-
-For example, typically `make` cannot define targets dynamically, but here's an example that creates a new target on the fly, assigning it to an existing target that simply returns success.  
-
-After the target is defined, it can be used on the same command line.
-
-```bash 
-./compose.mk mk.let/foo:flux.ok foo
-```
-
---------------------------------
-
-As another example, how about fearlessly mixing `compose.mk` functionality with an existing Makefile that *does not actually `include compose.mk`*?
-
-```bash 
-$ ./compose.mk \
-    mk.include/demos/no-include.mk \
-    mk.let/foo:clean \
-    foo
-```
-
-Pulling apart this command, let's note that the final target `foo` *does not exist* in either `compose.mk` or in the simple `demos/no-include.mk` Makefile.  And the `clean` target does not exist in `compose.mk`.  The command above basically creates and runs this (non-existant) Makefile just in time:
-
-```Makefile
-include compose.mk
-include demos/no-include.mk
-foo: clean 
-```
-<br/>
-
 #### Reading Defines
 <hr style="width:95%;border-bottom:1px dashed black;">
 
@@ -90,6 +57,18 @@ Related targets include:
 
 Currently, if you want to embed data that includes tokens like "endef", you are sadly out of luck!
 
+#### Grabbing Symbols
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Reading defines is the most common need, but you can also get the expanded value of arbitrary symbols using `mk.get`.  This is sometimes useful for previewing what macros actually do.. for example to show the implementation of `${stream.nl.to.comma}`:
+
+```bash 
+$ ./compose.mk mk.get/stream.nl.to.comma
+( cat /dev/stdin | awk 'BEGIN{ORS=","} {print}' | sed 's/,$//' )
+```
+
+For a more practical example, see [this section]({{mkdocs.site_relative_url}}/compiler/#about-dialects) of the compiler docs.
+
 #### Pattern-Matching on Targets
 <hr style="width:95%;border-bottom:1px dashed black;">
 
@@ -99,5 +78,32 @@ One nice thing about this is the ability to easily dispatch *all targets matchin
 
 ```Makefile 
 {{open('demos/inlined-dockerfile.mk','r').read()}}
+```
+<br/>
+
+#### Dynamic Includes and Targets
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+To a certain extent, `compose.mk` can do experimental *runtime* modification of `make` itself (or at least simulate it).  Under the hood, this works by using code-generation to create a new Makefile just in time, and then [turning execution over to it]({{mkdocs.site_relative_url}}/signals/).
+
+For example, here's an example that creates a new target on the fly, assigning it to an existing target that simply returns success.  After the target is defined, it can be used on the same command line.
+
+```bash 
+./compose.mk mk.let/foo:flux.ok foo
+```
+
+--------------------------------
+
+As another example, how about mixing `compose.mk` functionality with an existing Makefile that *does not actually `include compose.mk`*?
+
+```bash 
+$ ./compose.mk mk.include/demos/no-include.mk flux.timer/clean
+```
+
+Pulling apart this command, note that `compose.mk` has no `clean` target, and `demos/no-include.mk` has no `flux.timer` target. The command above basically creates and this Makefile just in time, and proxies commands to it.
+
+```Makefile
+include compose.mk
+include demos/no-include.mk
 ```
 <br/>

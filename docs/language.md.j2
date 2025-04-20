@@ -3,31 +3,28 @@
 ## Language Overview
 <hr style="width:100%;border-bottom:3px solid black;">
 
-You might already be aware that `compose.mk` offers a [standard library for working with `make`]({{mkdocs.site_relative_url}}/standard-lib), a sort of stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview), and [a TUI framework]({{mkdocs.site_relative_url}}/embedded-tui), but now you've reached the page that will finally reveal the shocking secret truth: **compose.mk is actually a programming language!** 😮 
+You might already be aware that `compose.mk` offers a [standard library for working with `make`]({{mkdocs.site_relative_url}}/standard-lib), a sort of stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview), and [a TUI framework]({{mkdocs.site_relative_url}}/embedded-tui), but now you've reached the page that will finally reveal the shocking secret truth: **compose.mk is actually a programming language!** 😮  More specifically, `compose.mk` is a matrioshka language, and maybe the *first one that's actually intended to be useful*.  See the [matrioshka automata page]({{mkdocs.site_relative_url}}/matrioshka) to get more information about patterns for packing programs inside of programs.  
 
-More to the point though, `compose.mk` is a matrioshka language, and maybe the *first one that's actually intended to be useful*.  See the [matrioshka automata page]({{mkdocs.site_relative_url}}/matrioshka) to get more information about patterns for packing programs inside of programs.  
-
-This page focuses on other language-related features and **also serves as an alternate to the [main landing page]({{mkdocs.site_relative_url}}/overview)** for people who prefer their overviews to focus less on applications and more on **theory, architecture, and patterns**.
+This page focuses on other language-related features and serves as an alternate to the [main landing page]({{mkdocs.site_relative_url}}/overview). If you prefer overviews to focus less on applications and more on **theory, architecture, and patterns**, you've come to the right place.
 
 ### Language Properties
 <hr style="width:100%;border-bottom:3px solid black;">
 
 **As a language,** you could say that `compose.mk` is multi-paradigm and has the following properties:
 
-* Inherits macros, declarative style, and basic DAGs[^2] from `make`
-* Inherits tacit programming[^3] from the unix shell and [uses lots of pipes & streams]({{mkdocs.site_relative_url}}/standard-lib#structured-io-stream-types-pipes)
-* Supports [structured data]({{mkdocs.site_relative_url}}/standard-lib#structured-io)
+* Inherits macros, declarative style, incremental computing[^1], and basic DAGs[^2] from `make`
+* Inherits tacit programming[^3] and a preference for [pipes & streams]({{mkdocs.site_relative_url}}/standard-lib#structured-io-stream-types-pipes) from the unix shell
+* Very untyped, but supports some [structured data]({{mkdocs.site_relative_url}}/standard-lib#structured-io)
 * Supports extensible programming[^5]
     * via container support generally, but also 
-    * via [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and 
-    * via [dynamically]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch) [assigned syntax]({{mkdocs.site_relative_url}}/compiler/#user-defined-extensions)
+    * via [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [dynamically]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch) [assigned syntax]({{mkdocs.site_relative_url}}/compiler/#user-defined-extensions)
 * Supports functional programming[^6] and data flow programming[^7] 
-    * via [flux]({{mkdocs.site_relative_url}}/api#api-flux) generally, and via [flux workflows]({{mkdocs.site_relative_url}}/demos/workflows), [etc]({{mkdocs.site_relative_url}}/demos/platform)
+    * via [flux]({{mkdocs.site_relative_url}}/standard-lib/#workflow-rationale) generally, and via [flux workflows]({{mkdocs.site_relative_url}}/demos/workflows), [etc]({{mkdocs.site_relative_url}}/demos/platform)
 * Supports reflective programming[^4] and lightweight aspect-oriented programming[^10]
-    * via e.g. [mk.*]({{mkdocs.site_relative_url}}/standard-lib/#reflection) and [pre/post hooks]({{mkdocs.site_relative_url}}/signals/pre-post-hooks)
+    * via e.g. [mk.*]({{mkdocs.site_relative_url}}/standard-lib/#reflection-support) and [pre/post hooks]({{mkdocs.site_relative_url}}/signals/#pre-post-hooks)
 * Inclines towards concatenative style[^8] and stack-oriented programming[^9]
     * partly via default `make` target execution semantics
-    * partly via [compose.mk stage-stacks]({{mkdocs.site_relative_url}}/stage)
+    * partly via [compose.mk stage-stacks]({{mkdocs.site_relative_url}}/stages)
 * Supports *some* OOP implicitly 
     * via container layers, or via yaml inheritance in composefiles
     * via make-includes, via target-chaining, via syntax conventions for target names, etc
@@ -53,9 +50,9 @@ In the [workflow docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-suppo
 
 * {{macros.api_link('flux.wrap',mkdocs,arg='targets')}} is a n-ary target that accepts nullary targets as arguments.
 * Meanwhile.. {{macros.api_link('flux.ok',mkdocs)}} and {{macros.api_link('flux.fail',mkdocs)}} are examples of nullary targets.
-* But invocation, like say `flux.wrap/flux.ok,flux.fail`, is itself also a (nullary) target.
+* But invocation, like say `flux.or/flux.ok,flux.fail`, is itself also a (nullary) target.
 
-Of course, no matter how easily you can incorporate foreign tools.. at some point, you might also need to write **task implementations** rather than just glue, *i.e. actual target bodies in shell, or polyglots in foreign languages*.  Nevertheless.. you'll probably be surprised by how infrequently that's actually necessary, and when it is, how small the task-implementations you need actually are.  For a quick example of how much you can accomplish with no target bodies at all, see also the docs for [low config TUIs]({{mkdocs.site_relative_url}}/low-config-tuis/).
+Of course, no matter how easily you can incorporate foreign tools.. at some point, you might also need to write **task implementations** rather than just glue, *i.e. actual target bodies in shell, or polyglots in foreign languages*.  Still.. you'll probably be surprised by how infrequently that's actually necessary, and when it is, how small the task-implementations you need actually are.  For a quick example of how much you can accomplish with no target bodies at all, see also the docs for [low config TUIs]({{mkdocs.site_relative_url}}/low-config-tuis/).
 
 ### Interpreters & Transpilation
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -64,19 +61,19 @@ By the way, since the claim is that something like `flux.wrap/flux.ok,flux.fail`
 
 ```bash 
 # program as target
-$ make -f compose.mk flux.wrap/flux.ok,flux.fail
+$ make -f compose.mk flux.or/flux.ok,flux.fail
 
 # program as subcommand
-$ ./compose.mk flux.wrap/flux.ok,flux.fail
+$ ./compose.mk flux.or/flux.ok,flux.fail
 
 # program as code
-$ echo flux.wrap/flux.ok,flux.fail | ./compose.mk mk.kernel
+$ echo flux.or/flux.ok,flux.fail | ./compose.mk mk.kernel
 ```
 
 The example above is simplistic, but there are other ways that `compose.mk` can [act as an interpreter]({{mkdocs.site_relative_url}}/signals/#inheritance-interpreters), and even support transpilation for a *syntactically different* language that transforms to classical Makefile.  For more details, see the [Compiler & Dialects docs]({{mkdocs.site_relative_url}}/compiler).
 
 <hr style="width:95%;border-bottom:1px dashed black;">
-
+[^1]: [https://en.wikipedia.org/wiki/Incremental_computing](https://en.wikipedia.org/wiki/Incremental_computing)
 [^2]:  [https://en.wikipedia.org/wiki/Directed_acyclic_graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph)
 [^3]:  [https://en.wikipedia.org/wiki/Tacit_programming](https://en.wikipedia.org/wiki/Tacit_programming)
 [^4]:  [https://en.wikipedia.org/wiki/Reflective_programming](https://en.wikipedia.org/wiki/Reflective_programming)

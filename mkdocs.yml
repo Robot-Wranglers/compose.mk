@@ -74,7 +74,7 @@ nav:
     - 'Platform Lifecycle Example': demos/platform.md
     - 'Notebooking & Ensembles': demos/notebooking.md
     - 'RAG Demo / Obligatory AI': demos/RAG.md
-    # - 'Lean Prover': demos/notebooking.md
+    - 'Theorem Proving': demos/lean.md
   - Misc Features:
       - 'CLI Help': cli-help.md
       - 'Stacks & Stages': stages.md

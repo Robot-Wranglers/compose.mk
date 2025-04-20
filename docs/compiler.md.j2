@@ -10,11 +10,7 @@ Other related documentation includes: The [more basic interpreter usage]({{mkdoc
 ### Introducing CMK
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Whether you love `make` or passionately hate it, you'll probably agree that default syntax can be very annoying.  Since `compose.mk` goes to great lengths to fix the *other* big problems with practical general usage, syntax is the only the problem left!  This actually matters a lot, not just for adoption or usage as a daily driver, but because [notation is part of how we think.](https://dl.acm.org/doi/pdf/10.1145/1283920.1283935)
-
-We'll dive into examples soon, but first some preliminaries.
-
---------------------------
+We'll dive into examples soon, but first some preliminaries:
 
 1. The `compose.mk` language is called **CMK** or **CMK-lang**, to differentiate it from tool/library mode.
 1. CMK is compiled into legal classic Makefile.  Source files use the `.cmk` extension by convention.
@@ -22,11 +18,14 @@ We'll dive into examples soon, but first some preliminaries.
 1. The compiler is completely contained inside `compose.mk`, and there are no other tools.
 1. The compiler itself is extensible, effectively enabling a family of related CMK / Makefile dialects with user-defined configuration.
 
-You could say that `CMK = Makefile + compose.mk standard library + extra syntax`.  
+You could say that `CMK = Makefile + compose.mk standard library + optional extra syntax`.  
 
 --------------------
 
 Crucially, writing code in the CMK language **does not add new core capabilities** to the stuff that `compose.mk` already does *without* CMK.  In broad strokes, the point of CMK is to **eliminate lots of pesky dollar-signs and curly brackets** while it also **elevates various existing [container]({{mkdocs.site_relative_url}}/demos/matrioshka) and [polyglot]({{mkdocs.site_relative_url}}/demos/polyglots) idioms to native syntax.**  For more background about the compilation process itself, see [the implementation details section](#implementation-details).
+
+
+Whether you love `make` or passionately hate it, you'll probably agree that default syntax can be very annoying.  Since `compose.mk` goes to great lengths to fix the *other* big problems with practical general usage, syntax is the only the problem left!  This actually matters a lot, not just for adoption or usage as a daily driver, but because [notation is part of how we think.](https://dl.acm.org/doi/pdf/10.1145/1283920.1283935)
 
 -------------------
 
@@ -37,7 +36,7 @@ You can run the examples directly as `./demos/cmk/foo.cmk`, or using `./compose.
 ### Basic Example
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Let's revisit the JSON emit/consume that's part of the [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics).  
+Let's revisit the JSON emit/consume example that's part of the [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics).  
 
 The original code was simple, but rewriting this in CMK is even better and much more pretty:
 
@@ -54,7 +53,7 @@ We'll get to the odd arrow syntax at the end of this section, but start with mos
 :  When using the interpreter, a line like `include compose.mk` is always implied, and of course this brings with it full access to the [standard library]({{mkdocs.site_relative_url}}/standard-lib).
 
 **Function Calls Rewritten:**
-:  Awkward stuff like `$(call log.target, ...)` can be written as `cmk.log.target(..)` instead.  Although we don't use it here, every ugly `$(eval $(call ..))` usage that enables the [compose.import statements]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) can be rewritten as simply `compose.import(..)`
+:  Awkward stuff like `$(call log.target, ...)` can be written as `cmk.log.target(..)` instead.  Additionally, although we don't use it here,  [compose.import statements]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) previously written as `$(eval $(call ..))` can be rewritten as simply `compose.import(..)`
 
 **Recursive Calls Rewritten:**
 :  Awkward stuff like `${make} foo` can be written as `this.foo` instead.  Recursive invocation of the current context is common, and absolutely critical for code-reuse.[^2] And the choice of `this` for a new keyword is actually configurable.. we'll get to that in the next section.
@@ -100,7 +99,7 @@ $ ./compose.mk mk.get/cmk.default.dialect
   ],
   [
     "this.",
-    "make -rs --warn-undefined-variables -f./compose.mk "
+    "make -rs --warn-undefined-variables -f ./compose.mk -f <your_makefile_here> "
   ],
   ...
 ]
@@ -113,7 +112,7 @@ Fallback works as advertised, and you can also see that there's actually yet ano
 
 Let's revisit the code from the [inlined compose-file demo]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files), and port it to CMK.
 
-Like the original demo, this embeds a compose file, creates scaffolding for the containers involved, and demonstrates task-dispatch for them.  But this time we introduce the `⋘ name ..body.. ⋙` syntax for compose files.  *(NB: This is unicode and `⋘` isn't `<<<` !)*
+Like the original demo, this embeds a compose file, creates target-scaffolding for the containers involved, and demonstrates task-dispatch for them.  But this time we introduce the `⋘ name ..body.. ⋙` syntax for compose files.  *(NB: This is unicode and `⋘` isn't `<<<` !)*
 
 ```Makefile 
 {{open('demos/cmk/inlined-composefile.cmk','r').read().strip()}}
@@ -121,10 +120,10 @@ Like the original demo, this embeds a compose file, creates scaffolding for the 
 
 Most of the differences here with the original demo are pretty obvious, and alternate equivalents are shown to make what's happening more clear, but let's walk through it.
 
-1. As discussed in the [basic example](#basic-example) our CMK port does **not** need an `include compose.mk`.  1. Here we skip the [`compose.import.string(..)`]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) that the original code used to create [service target scaffolding]({{mkdocs.site_relative_url}}/bridge), and after declaration of services with `⋘ name ..body.. ⋙` all target handles are available immediately.  
+1. As discussed in the [basic example](#basic-example) our CMK port does **not** need an `include compose.mk`.  1. Here we skip the [`compose.import.string(..)`]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) that the original code used to create [target scaffolding for services]({{mkdocs.site_relative_url}}/bridge), and after declaration of services with `⋘ name ..body.. ⋙` all target handles are available immediately.  
 1. We replaced a more naive *"echo ..."* command with a call to `cmk.log` that's using some color.  
 
-Most interestingly though, `<container_name>.dispatch(<target_name>)` now looks like a normal function invocation.  Also notice that `alternate_style1` shows that stacking up *multiple rewrite rules* for transpiler substition works the way you'd expect, since resolution there requires 2 rewrites for resolving `this` and `dispatch(..)`.
+Most interestingly though, `<container_name>.dispatch(<target_name>)` now looks like a normal function invocation.  Also notice that `alternate_style1` shows that stacking up *multiple rewrite rules* for transpiler substition works the way you'd expect.
 
 ### About Sugar
 <hr style="width:100%;border-bottom:3px solid black;">
