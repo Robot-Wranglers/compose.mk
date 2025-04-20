@@ -149,6 +149,7 @@ _GLYPH.FLUX=${bold}Φ${no_ansi}
 GLYPH.FLUX=${green}${_GLYPH.FLUX}${dim_green}
 GLYPH_DEBUG=${dim}(debug=${no_ansi}${verbose}${dim})${no_ansi}${dim}(quiet=${no_ansi}$(shell echo $${quiet:-})${dim})${no_ansi}${dim}(trace=${no_ansi}$(shell echo $${trace:-})${dim})
 GLYPH_SPARKLE=✨
+GLYPH_CHECK=✔
 GLYPH_SUPER=${green}ᐂ${dim_green}
 # GLYPH_NUMS=▏ ▎ ▍ ▌ ▋ ▊ ▉ █ █ █ █ █
 GLYPH_NUMS=① ② ③ ④ ⑤ ⑥ ⑦ ⑧ ⑨ ⑩
@@ -202,7 +203,14 @@ stderr_stdout_indent=2> >(sed 's/^/  /') 1> >(sed 's/^/  /')
 stderr_devnull:=2>${devnull}
 all_devnull:=2>&1 > /dev/null
 streams.join:=2>&1 
-# Literal newline and other constants 
+
+# Helper for asserting that tools are available with support for error messages.
+require.tool=$(call log.part1,${GLYPH_IO} Looking for ${1} in path); which ${1} >/dev/null && $(call log.part2,${no_ansi_dim}`which ${1}` ${green}${GLYPH_CHECK}) || ($(call log.part2,${red} missing!);$(call log.io,${no_ansi}${bold}Error:${no_ansi} $(if $(filter undefined,$(origin 2)),Install tool and retry workflow.,$(2))); exit 1)
+
+# Literal newline and other constants
+# See also: https://www.gnu.org/software/make/manual/html_node/Syntax-of-Functions.html#Special-Characters
+empty:=
+space:= $(empty) $(empty)
 define nl
 
 endef
@@ -257,12 +265,12 @@ endef
 define log.trace.loop.item 
 [ "${TRACE}" == "0" ] && true || $(call log.loop.item, ${1})
 endef
+
 # Logger suitable for action logging in 2 parts: <label> <action-result>
 # Call this to show the label
 log.stdout.part1=([ -z "$${quiet:-}" ] && (printf "${log.prefix.makelevel} $(strip $(or $(1),)) ${no_ansi_dim}..${no_ansi}") || true )
 # Call this to show the result
 log.stdout.part2=([ -z "$${quiet:-}" ] && (printf "${no_ansi} $(strip $(or $(1),)) ${no_ansi}\n")|| true)
-
 log.part1=(${log.stdout.part1}>${stderr})
 log.part2=(${log.stdout.part2}>${stderr})
 
@@ -993,6 +1001,7 @@ docker.run.sh:
 	&& image_tag="$${img}" \
 	&& entry=`[ "$${entrypoint:-}" == "none" ] && echo ||  echo "--entrypoint $${entrypoint:-bash}"` \
 	&& net=`[ "$${net:-}" == "" ] && echo ||  echo "--net=$${net}"` \
+	&& hostname=`[ "$${hostname:-}" == "" ] && echo "--hostname=$${img}" ||  echo "--hostname=$${hostname}"` \
 	&& cmd="$${cmd:-$${script:-}}" \
 	&& disp_cmd="`echo $${cmd} | sed 's/${MAKE_FLAGS}//g'|${stream.lstrip}`" \
 	&& ( \
@@ -1010,6 +1019,7 @@ docker.run.sh:
 	&& tty=`[ -z $${tty:-} ] && echo \`[ -t 0 ] && echo "-t"|| true\` || echo "-t"` \
 	&& cmd_args="\
 		--rm -i $${tty} $${extra_env} \
+		$${hostname} \
 		-e CMK_INTERNAL=1 \
 		${docker.env.standard} \
 		-v $${workspace:-$${PWD}}:/workspace \
@@ -1128,12 +1138,9 @@ CMK_EXEC=`dirname ${CMK_SRC}`/`basename ${CMK_SRC}`
 
 # This is a hack because charmcli/gum is distroless, but the spinner needs to use "sleep", etc
 # io.gum.alt.dumb=docker run -it -e TERM=dumb --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nRUN apk add -q --update --no-cache bash\nCOPY --from=charmcli/gum:${IMG_GUM} /usr/local/bin/gum /usr/local/bin/gum")`
-
 # Helpers for asserting environment variables are present and non-empty 
 mk.assert.env_var=[[ -z "$${$(strip ${1})}" ]] && { $(call log.io, ${red}Error:${no_ansi_dim} required variable ${no_ansi}${underline}$(strip ${1})${no_ansi_dim} is unset or empty!); exit 39; } || true
 mk.assert.env=$(foreach var_name, ${1}, $(call mk.assert.env_var, ${var_name});)
-mk.assert.env/%:
-	$(call mk.assert.env,$(shell echo ${*}|${stream.comma.to.space}))
 
 io.figlet/%:
 	@# Treats the argument as a label, and renders it with `figlet`. 
@@ -1690,7 +1697,7 @@ mk.docker=${make} mk.docker
 mk.docker:; ${mk.docker}/$${img}
 	@# Like `mk.docker/..` but expects `img` argument is available from environment.
 
-mk.docker.run.sh:; img="compose.mk:$${img}" ${make} docker.run.sh
+mk.docker.run.sh:; hostname="$${img}" img="compose.mk:$${img}" ${make} docker.run.sh
 	@# Like docker.run.sh, but implicitly assumes the 'compose.mk:' prefix.
 
 mk.get/%:; $(info ${${*}})
@@ -1820,6 +1827,10 @@ define cmk.default.dialect
 ]
 endef 
 
+mk.assert.env/%:
+	@# Asserts that the (comma-delimited) environment variables are set and non-empty.
+	@# Also available as a macro.
+	$(call mk.assert.env,$(shell echo ${*}|${stream.comma.to.space}))
 mk.compile mk.compiler:
 	@# This is a transpiler for the CMK language -> Makefile.
 	@# Accepts streaming CMK source on stdin, result on stdout.
@@ -2007,7 +2018,6 @@ mk.interpret/%:
 	&& chmod ugo+x $${tmpf} \
 	&& CMK_INTERPRETING=$${CMK_INTERPRETING:-$${fname}} MAKEFILE=$${tmpf} $${tmpf} $${continuation:-}
 
-# && $(call io.script, CMK_INTERPRETING=$${CMK_INTERPRETING:-$${fname}} MAKEFILE=$${tmpf} $${tmpf} $${continuation:-})
 mk.validate/%:
 	@# Validate the given Makefile (using `make -n`)
 	$(call log.part1, ${GLYPH_MK} mk.validate ${sep} ${dim_ital}${*})
@@ -2039,10 +2049,11 @@ mk.let/%:
 	&& $(call log.part1, $${header} ${dim}Generating code) \
 	&& $(call io.mktemp) \
 	&& src="`printf ${*} | cut -d: -f1`: `printf ${*}|cut -d: -f2-`" \
-	&& printf "$${src}" >  $${tmpf} \
+	&& printf "$${src}" >  $${tmpf} ; cp $${tmpf} tmpf \
 	&& $(call log.part2, ${no_ansi_dim}$${tmpf}) \
-	&& cmd="make ${MAKE_FLAGS} $${MAKEFILE_LIST// / -f} -f $${tmpf} $${MAKE_CLI#*mk.let/${*}}" \
-	&& $(call mk.yield, $${cmd} )
+	&& cmd="${make} -f $${tmpf} $${MAKE_CLI#*mk.let/${*}}" \
+	&& $(call log.target,$${cmd}) \
+	&& $(call mk.yield,$${cmd})
 
 mk.namespace.list help.namespaces:
 	@# Returns only the top-level target namespaces
@@ -2119,6 +2130,11 @@ mk.namespace.filter/%:
 	${trace_maybe} \
 	&& pattern="${*}" && pattern="$${pattern//./[.]}" \
 	&& ${make} mk.parse.targets/${MAKEFILE} | grep -v ^all$$ | grep ^$${pattern}
+
+mk.require.tool/%:; $(call require.tool, ${*})
+	@# Asserts that the given tool is available in the environment.
+	@# Output is only on stderr, but this shows whereabouts if it's in PATH.
+	@# If not found, this exits with an error.  Also available as a macro.
 
 mk.run/%:; ${io.shell.isolated} make -f ${*} 
 	@# A target that runs the given makefile.
@@ -2208,15 +2224,15 @@ mk.self: docker.from.def/makeself
 	@#
 	@# [1]: https://makeself.io/
 	@#
-	header="${GLYPH_IO} ${@}${no_ansi} ${sep}${dim}" \
-	&& $(call log, $${header} Archive for ${no_ansi}${ital}$${archive}${no_ansi_dim} will be released as ${no_ansi}${bold}./$${bin}) \
+	header="${@}${no_ansi} ${sep}${dim}" \
+	&& $(call log.io, $${header} Archive for ${no_ansi}${ital}$${archive}${no_ansi_dim} will be released as ${no_ansi}${bold}./$${bin}) \
 	&& (ls $${archive} >/dev/null || exit 1) \
 	&& $(call io.mktempd) \
 	&& cp -rf $${archive} $${tmpd} \
 	; archive_dir=$${tmpd} \
 	&& file_count=`find $${archive_dir}|${stream.count.lines}` \
-	&& $(call log, $${header} Total files: ${no_ansi}$${file_count}) \
-	&& $(call log, $${header} Entrypoint: ${no_ansi}$${script}) \
+	&& $(call log.io, $${header} Total files: ${no_ansi}$${file_count}) \
+	&& $(call log.io, $${header} Entrypoint: ${no_ansi}$${script}) \
 	&& cmd="--noprogress --quiet --nomd5 --nox11 --notemp $${archive_dir} $${bin} \"$${label:-archive}\" $${script} $${script_args:-}" \
 	img=compose.mk:makeself entrypoint=makeself ${make} docker.run.sh
 	sed -i -e 's/quiet="n"/quiet="y"/' $${bin}
@@ -3292,6 +3308,7 @@ stream.strip:
 stream.ini.pygmentize:; ${stream.stdin} | lexer=ini ${make} stream.pygmentize
 	@# Highlights input stream using the 'ini' lexer.
 
+stream.csv.pygmentize=${make} stream.csv.pygmentize
 stream.csv.pygmentize:
 	@# Highlights the input stream as if it were a CSV.  Pygments actually
 	@# does not have a CSV lexer, so we have to fake it with an awk script.  
@@ -4653,9 +4670,11 @@ define compose.import.dockerfile.string
 $(eval defname:=$(strip $(1)))
 $(eval img_name:=$(patsubst Dockerfile.%,%,${defname}))
 ${img_name}.build: Dockerfile.build/${img_name}
-${img_name}.shell:; img=compose.mk:${img_name} entrypoint=$${entrypoint:-sh} ${make} docker.run.sh 
+${img_name}.shell:
+	img=compose.mk:${img_name} hostname=${img_name} \
+	entrypoint=$${entrypoint:-sh} ${make} docker.run.sh 
 ${img_name}.build.force:; force=1 ${make} ${img_name}.build 
-${img_name}.dispatch/%:; img=${img_name} ${make} mk.docker.dispatch/$${*}
+${img_name}.dispatch/%:; hostname=${img_name} img=${img_name} ${make} mk.docker.dispatch/$${*}
 ${img_name}.run:; img=compose.mk:${img_name} ${make} docker.run.sh 
 endef
 
@@ -5257,7 +5276,7 @@ flux.post/%:
 
 define .awk.rewrite.targets.maybe 
 {
-  if ($0 ~ /help/ || $0 ~ /mk.interpret/) {
+  if ($0 ~ /help/ || $0 ~ /mk.interpret/ || $0 ~ /mk.include/) {
 	print $0
 	next }
   result = ""
