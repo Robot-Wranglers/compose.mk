@@ -302,7 +302,7 @@ docker.run.base:=docker run --rm -i
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 export COMPOSE_IGNORE_ORPHANS?=True
-export CMK_AT_EXIT_TARGETS=flux.noop
+export CMK_AT_EXIT_TARGETS?=flux.noop
 export CMK_COMPOSE_FILE?=.tmp.compose.mk.yml
 export CMK_DIND?=0
 export verbose:=$(shell [ "$${quiet:-0}" == "1" ] && echo 0 || echo $${verbose:-1})
@@ -327,6 +327,7 @@ endif
 export DEBIAN_CONTAINER_VERSION?=debian:bookworm
 export ALPINE_VERSION?=3.21.2
 IMG_CARBONYL?=fathyb/carbonyl
+# IMG_CARBONYL?=fathyb/carbonyl@sha256:77b3686f46a16375004985b522cef8f66e27fabc4a7d80209609bbb20fdfb362
 IMG_IMGROT?=robotwranglers/imgrot:07abe6a
 IMG_MONCHO_DRY=moncho/dry@sha256:6fb450454318e9cdc227e2709ee3458c252d5bd3072af226a6a7f707579b2ddd
 
@@ -1269,6 +1270,27 @@ io.bash:; env bash -l
 	@# Starts an interactive shell with all the environment variables set
 	@# by the parent environment, plus those set by this Makefile context.
 
+io.browser/%:
+	@# Like `io.browser`, but accepts a variable-name as an argument.
+	@# Variable will be dereferenced and stored as 'url' before chaining.
+	@# NB: This requires python on the host and can not run from docker.
+	@#
+	url="`${make} mk.get/${*}`" ${make} io.browser
+
+io.browser:
+	@# Tries to open the given URL in a browser.
+	@# NB: This requires python on the host and can not run from docker.
+	@#
+	@# USAGE: 
+	@#  url="..." ./compose.mk io.browser
+	@#
+	$(call log.target, ${red}opening $${url})
+	python3 -c"import webbrowser; webbrowser.open(\"$${url}\")" \
+		|| $(call log.target, ${red}could not open browser!)
+
+io.echo:; ${stream.stdin}
+	@# Echos data from input stream. Alias for the `stream.stdin` macro.
+
 io.env:
 	@# Dumps a relevant subset of environment variables for the current context.
 	@# No arguments.  Pipe-safe since this is just filtered output from 'env'.
@@ -1430,7 +1452,6 @@ io.script=script -qefc --return --command "${1}" /dev/null
 io.script.trace=sh -x -c "script -qefc --return --command \"${1}\" /dev/null"
 endif
 
-
 io.selector/%: 
 	@# Uses the given targets to generate and then handle choices.
 	@# The 1st argument should be a nullary target; the 2nd must be unary.
@@ -1493,8 +1514,19 @@ io.tail/%:
 io.terminal.cols=$(shell which tput >/dev/null 2>/dev/null && echo `tput cols 2> /dev/null` || echo 50)
 
 io.term.width=$(shell echo $$(( $${COLUMNS:-${io.terminal.cols}}-6)))
-io.echo:; ${stream.stdin}
-io.time.wait/% io.wait/%:
+
+io.timestamp=`date '+%T'`
+
+io.user_exit:
+	@# Wait for user-input, then exit cleanly.
+	@# This explicitly uses `mk.supervisor.exit`, 
+	@# thus honoring `CMK_AT_EXIT_TARGETS`.
+	$(call log.io, ${@} ${sep} $${label:-Waiting for user input} ${sep} ${yellow} Press enter to exit...)
+	read -p "" _ignored \
+	; CMK_DISABLE_HOOKS=1 ${make} mk.supervisor.exit/0
+io.user_exit=label="${1}" ${make} io.user_exit
+
+io.wait/% io.time.wait/%:
 	@# Pauses for the given amount of seconds.
 	@#
 	@# USAGE:
@@ -1503,28 +1535,8 @@ io.time.wait/% io.wait/%:
 	$(call log.io, ${@}${no_ansi} ${sep} ${dim}Waiting for ${*} seconds..) \
 	&& sleep ${*}
 
-io.timestamp=`date '+%T'`
-
 io.wait io.time.wait: io.time.wait/1
 	@# Pauses for 1 second.
-
-io.browser/%:
-	@# Like `io.browser`, but accepts a variable-name as an argument.
-	@# Variable will be dereferenced and stored as 'url' before chaining.
-	@# NB: This requires python on the host and can not run from docker.
-	@#
-	url="`${make} mk.get/${*}`" ${make} io.browser
-
-io.browser:
-	@# Tries to open the given URL in a browser.
-	@# NB: This requires python on the host and can not run from docker.
-	@#
-	@# USAGE: 
-	@#  url="..." ./compose.mk io.browser
-	@#
-	$(call log.target, ${red}opening $${url})
-	python3 -c"import webbrowser; webbrowser.open(\"$${url}\")" \
-		|| $(call log.target, ${red}could not open browser!)
 
 io.with.file/%:
 	@# Context manager.
@@ -2525,9 +2537,9 @@ flux.apply.later.sh/%:
 	@# USAGE:
 	@#   cmd="..." ./compose.mk flux.apply.later.sh/<seconds>
 	@#
-	header="flux.apply.later${no_ansi_dim} ${sep} ${dim_green}$${target} ${sep}" \
+	header="${@} ${sep} ${dim_green}$${target} ${sep}" \
 	&& time=`printf ${*}| cut -d/ -f1` \
-	&& ([ -z "$${quiet:-}" ] && true || printf "\n$${header} ${sep} after ${dim_green}$${time}s\n" > ${stderr}) \
+	&& ([ -z "$${quiet:-}" ] && true || $(call log.flux, ${@} ${sep} after ${yellow}$${time}s)) \
 	&& ( \
 		$(call log.flux, $${header} ${dim_cyan}callback scheduled for ${yellow}$${time}s) \
 		&& ${make} io.wait/$${time} \
@@ -3184,7 +3196,7 @@ flux.timeout.sh:
 	&& $(trace_maybe) \
 	&& trap "set -x && echo bye" EXIT INT TERM \
 	&& signal=$${signal:-TERM} \
-	&& eval "$${cmd} &" \
+	&& eval "$${cmd} &" 2> >(grep -v Terminated$$ >/dev/stderr) \
 	&& export command_pid=$$! \
 	&& sleep $${timeout} \
 	&& $(call log, ${dim}${GLYPH_IO} flux.timeout.sh${no_ansi_dim} (${yellow}$${timeout}s${no_ansi_dim}) ${sep} ${no_ansi}${yellow}finished) \
@@ -3573,13 +3585,14 @@ export TUI_SVC_BUILD_ORDER?=dind_base,tux
 export TUX_LAYOUT_CALLBACK?=.tux.commander.layout
 export TMUXP:=.tmp.tmuxp.yml
 
-tux.browser:
+tux.browser: .tux.browser.require
 	@# Launches carbonyl browser in a docker container.
 	@# See also: https://github.com/fathyb/carbonyl/blob/main/Dockerfile
 	@#
 	${trace_maybe} && tty=1 entrypoint=/carbonyl/carbonyl \
 	cmd="--no-sandbox --disable-dev-shm-usage --user-data-dir=/carbonyl/data $${url}" \
-	net=host ${make} docker.image.run/${IMG_CARBONYL}
+	net=$${net:-host} ${make} docker.image.run/${IMG_CARBONYL}
+.tux.browser.require:; docker pull ${IMG_CARBONYL} >/dev/null
 
 tui.demo tux.demo:
 	@# Demonstrates the TUI.  This opens a 4-pane layout and blasts them with tte[1].
@@ -4471,7 +4484,7 @@ ${compose_file_stem}.dispatch/%:
 	${make} $${compose_file_stem}/`printf $${*}|cut -d/ -f1`
 
 ${compose_file_stem}/$(compose_service_name).logs:
-	@# Logs for this service.  Uses "follow" mode, so this is blocking
+	@# Logs for this service.  NB: Uses "follow" mode by default, so this is blocking
 	${make} docker.logs.follow/`${make} ${compose_file_stem}/$(compose_service_name).ps | ${jq} -r .ID` \
 	|| $$(call log.docker, ${compose_file_stem}/$(compose_service_name).logs ${sep} ${red} failed${no_ansi} showing logs for ${bold}${compose_service_name}${no_ansi}.. could not find id?)
 
@@ -4566,10 +4579,18 @@ $(compose_service_name).dispatch/%:
 	@# Shorthand for ${compose_file_stem}.dispatch/$(compose_service_name)/<target_name>
 	${make} ${compose_file_stem}.dispatch/$(compose_service_name)/$${*}
 $(compose_service_name).dispatch.quiet/%:; quiet=1 ${make} $(compose_service_name).dispatch/$${*}
-$(compose_service_name).exec.detach/%:; detach=1 ${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}
+$(compose_service_name).exec.detach/%:
+	$$(call log.docker, ${dim_green}${target_namespace} ${sep} ${no_ansi}${green}$(compose_service_name) ${sep} ${dim_cyan}exec.detach ${sep} `printf $${*}|cut -d/ -f1-`)
+	docker compose -f ${compose_file} \
+		exec --detach $(compose_service_name) \
+		${make} `printf $${*}|cut -d/ -f1-` 2> >(grep -v 'variable is not set' >&2)
 $(compose_service_name).exec/%:
 	@# Shorthand for ${compose_file_stem}.exec/$(compose_service_name)/<target_name>
 	${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}
+
+$(compose_service_name).exec.shell:
+	@# Shorthand for ${compose_file_stem}.exec/$(compose_service_name)/<target_name>
+	set -x && docker exec -it `${make} $(compose_service_name).ps |${jq} -e -r .ID` `${make} $(compose_service_name).get_shell`
 
 $(compose_service_name).get_shell: ${compose_file_stem}/$(compose_service_name).get_shell
 	@# Shorthand for ${compose_file_stem}/$(compose_service_name).get_shell
