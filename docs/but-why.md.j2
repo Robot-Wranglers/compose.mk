@@ -85,17 +85,15 @@ That's because `make` is *just too good to ignore*, and there are several major 
 1. It's the lingua franca for javascript, python, or golang enthusiasts who need to be able to somehow work together.
 1. Most importantly: `make` is probably the *least* likely thing in your toolkit to ever be affected by externalities like pypi or npm breakage, package updates, or changing operating systems completely;  `make` won't care if you run it from your laptop, or Github Actions, or Airflow.
 
-If you need something *outside* of docker that you want stability & ubiquity from, it's hard to find a better choice.  As a bonus, most likely tab-completion for make-targets already works out of the box with your OS and shell, and to a certain extent, `make` can even support plan/apply workflows (via `--dry-run`) and parallel execution (via `--jobs`).  
+If you need something *outside* of docker that you want stability & ubiquity from, it's hard to find a better choice.  As a bonus, most likely tab-completion for make-targets already works out of the box with your OS and shell, and to a certain extent, `make` can even support plan/apply workflows (via `--dry-run`) and parallel execution (via `--jobs`).  Did someone say that they hate tabs?  You'll be excited to learn that you can use `.RECIPEPREFIX` and probably surprised that support for using space instead is available for  about 15 years now.  See [this discussion](https://stackoverflow.com/questions/2131213/can-you-make-valid-makefiles-without-tab-characters/21920142#21920142) for more details.
 
-The [language overview]({{mkdocs.site_relative_url}}/language#language-properties) compares `make` to a [gadget](https://en.wikipedia.org/wiki/Gadget_(computer_science)).  Besides being ubiquitous, it's actually the **unique minimal gadget** that supports macros and [DAGs](#DAGs-Rule-Everything-Around-Me).  Staying close to shell for offloading complexity to other tools is just a bonus.  
-
--------------------------------
+In short, the language agnostic all purpose incredible makefile[^6] was pretty great before, and with `compose.mk` it's almost unstoppable =P
 
 The biggest single problem for many modern use-cases is just that *Makefiles have nothing like native support for running tasks in containers*, **but this is exactly what *`compose.mk`* fixes.**  Makefiles are already pretty good at describing task execution, but describing the containers themselves is far outside of that domain.  Meanwhile, docker-compose is exactly the opposite, and easily handles runtime specs while it struggles with tasks.  Since both are defacto standards for the mutually exclusive stuff that they specialize in, this means [make/compose is a perfect combination]({{mkdocs.site_relative_url}}/bridge).
 
 Returning to the question of what `make` really *is*, it's true that it's not a task runner, but it's also not a build tool.  It's a [metalanguage](https://en.wikipedia.org/wiki/Metalanguage).  And `compose.mk` organizes and generalizes that potential to the extent that, while it is backwards compatible if you're into that, it is best thought of as [a different kind of language altogether]({{mkdocs.site_relative_url}}/language).  In other words if you love `make` you'll love `compose.mk`, but even if you truly despise `make`, there's actually some reason to believe that you might like `compose.mk` anyway.
 
-Did someone say that they hate tabs?  You'll be excited to learn that you can use `.RECIPEPREFIX` and probably surprised that support for using space instead is available for  about 15 years now.  See [this discussion](https://stackoverflow.com/questions/2131213/can-you-make-valid-makefiles-without-tab-characters/21920142#21920142) for more details.
+As an extension to vanilla Makefile, [CMK-lang]({{mkdocs.site_relative_url}}/language#language-properties) is worth considering, although adopting it is not required.  In that overview, `make` is compared to a [gadget](https://en.wikipedia.org/wiki/Gadget_(computer_science)), and besides being ubiquitous, it's actually the **unique minimal gadget** that supports macros and [DAGs](#DAGs-Rule-Everything-Around-Me).  Putting it in this light, there's really no equivalent alternative available; staying close to shell/containers for offloading complexity to other tools is just a bonus.  
 
 ## Obligatory Compare/Contrast
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -279,4 +277,5 @@ Bonus reference material:
 [^2]: [Non-recursive Make Considered Harmful](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/03/hadrian.pdf)
 [^3]: [Unreasonable effectiveness of Makefiles](https://matt-rickard.com/the-unreasonable-effectiveness-of-makefiles)
 [^4]: [make vs just](https://github.com/casey/just?tab=readme-ov-file#what-are-the-idiosyncrasies-of-make-that-just-avoids)
-[^5]: Contrary to popular belief, art doesn't need to be beautiful, especially if it's helping the viewer to examine their own sense of what beauty is.  And sometimes art is about demonstrating mastery of materials.
+[^5]: Contrary to popular belief, art doesn't need to be beautiful, especially if it's helping the viewer to examine their own sense of what beauty is.  Sometimes art is also about demonstrating mastery of materials.
+[^6]: [The language agnostic all purpose incredible makefile](https://web.archive.org/web/20230322145821/https://blog.mindlessness.life/2019/11/17/the-language-agnostic-all-purpose-incredible-makefile.html)

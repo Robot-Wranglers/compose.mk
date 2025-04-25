@@ -14,8 +14,9 @@ Jinja macros used in building docs (not make macros :)
 
 {%macro badge_from_val(val, label)%}<a href="env-vars.md"><img alt="{{label}}:{{val}}" src="https://img.shields.io/badge/{{url_quote((label and (label + ':')) + val)}}-blue"></a>{%- endmacro -%}
 
-{% macro img_link(fname, mkdocs, width="90%",align="center") -%}
-{%if align!='none'%}<p align="{{align}}">{%endif%}<a href="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"><img width="{{width}}" src="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"></a>{%if align!='none'%}</p>{%endif%}
+{% macro img_link(fname, mkdocs, width="90%",align="center",link='') -%}
+{%set default_link=mkdocs.site_relative_url+"/"+img_base+"/"+fname%}
+{%if align!='none'%}<p align="{{align}}">{%endif%}<a href="{{link or default_link}}"><img width="{{width}}" src="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"></a>{%if align!='none'%}</p>{%endif%}
 {%- endmacro -%}
 {% macro img_(fname, mkdocs, width="90%",align="center") -%}
 <a href="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"><img width="{{width}}" src="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"></a>

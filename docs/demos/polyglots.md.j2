@@ -2,9 +2,9 @@
 ## Polyglots & Working with Foreign Languages
 <hr style="width:100%;border-bottom:3px solid black;">
 
-This section collects several demos of working with foreign languages.  Polyglots in `compose.mk` are roughly comparable to [justfile shebang recipes](https://github.com/casey/just?tab=readme-ov-file#shebang-recipes), but perhaps more similar in spirit to [graal polyglots](https://www.graalvm.org/latest/reference-manual/polyglot-programming/) with way less bootstrap and baggage.
+This section collects several demos of working with foreign languages.  Polyglots in `compose.mk` are roughly comparable to justfile shebang recipes[^6], but perhaps more similar in spirit to graal polyglots[^7] with less bootstrap and baggage.
 
-Because `compose.mk` also adds native support for docker, [including inlined Dockerfiles]({{mkdocs.site_relative_url}}/raw-docker), you can super-charge polyglots with *arbitrary containerized interpreters*, with or without customizing stock images.  There's also some support for communication *between* polyglots.  For details see the [section on pipes](#exotic-targets-and-pipes) and/or the [stages documentation]({{mkdocs.site_relative_url}}/stages).  For topics related to yielding control to polyglots, see the [signals and supervisors docs]({{mkdocs.site_relative_url}}/signals/#advanced-examples).
+Because `compose.mk` also adds native support for docker, [including inlined Dockerfiles]({{mkdocs.site_relative_url}}/raw-docker), you can use polyglots with *arbitrary containerized interpreters*, with or without customizing stock images.  There's also some support for communication *between* polyglots.  For details see the [section on pipes](#exotic-targets-and-pipes) and/or the [stages documentation]({{mkdocs.site_relative_url}}/stages).  For topics related to yielding control to polyglots, see the [signals and supervisors docs]({{mkdocs.site_relative_url}}/signals/#advanced-examples).
 
 ------------
 
@@ -18,7 +18,7 @@ Polyglots come in a few basic types and this page tries to cover all the main ca
 * [Foreign Code as First Class](#foreign-code-as-first-class)
 * [Templating](#templating-languages)
 
-All of these examples are in plain Makefile.  For a cleaner and **much more elegant approach**, see [the equivalent idiom in CMK-lang]({{mkdocs.site_relative_url}}/compiler/#polyglot-example).
+All of these examples are in plain Makefile.  **For a cleaner and much more elegant approach**, see [the equivalent idiom in CMK-lang]({{mkdocs.site_relative_url}}/compiler/#polyglot-example).
 
 ### Local Interpreters, No Containers
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -28,6 +28,8 @@ Simple polyglots where you want to *assume the interpreter is already available*
 ```Makefile
 {{open('demos/local-interpreter.mk','r').read().strip()}}
 ```
+<br/>
+
 ### Containerized Interpreters 
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -102,7 +104,7 @@ For simple use-case *without* FFI and letting someone else handle the "compile o
 {{open('demos/tinycc.mk','r').read().strip()}}
 ```
 
-Above, the crucial part is the mysterious usage of `polyglot.bind.target`.  Read on in the next section for more details.
+<br/>
 
 ### Foreign Code as First Class
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -190,3 +192,5 @@ This also means the **content is fairly static**, and not typically amenable to 
 [^3]: Yeah, sorry, you might be out of luck if your language of choice actually uses `define` and `endef` keywords.  If you think you have a reasonable use-case, please do [create an issue describing it]({{github.repo_url}}/issues).
 [^4]: For minimal basic templating  *without* an extra container, you could use [the local-interpreter strategy](#local-interpreters-no-containers) with [`m4`](https://en.wikipedia.org/wiki/M4_(computer_language)), which is usually present anywhere `make` is.
 [^5]: [Foreign_function_interface](https://en.wikipedia.org/wiki/Foreign_function_interface)
+[^6]: [justfile shebang recipes](https://github.com/casey/just?tab=readme-ov-file#shebang-recipes)
+[^7]: [graal polyglots](https://www.graalvm.org/latest/reference-manual/polyglot-programming/)
