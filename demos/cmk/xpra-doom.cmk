@@ -1,0 +1,52 @@
+#!/usr/bin/env -S stdbuf -i0 -o0 -e0 ./compose.mk mk.interpret!
+# demos/cmk/xpra-doom.cmk: 
+#   Demonstrating GUI capabilities with dockerized XPra,
+#   plus a dockerized app, served via HTTP / HTML5 and 
+#   accessed via a host browser.
+#
+# USAGE: ./demos/cmk/xpra-doom.cmk serve
+
+export XPRA_PORT_INTERNAL?=14500
+export XPRA_ARGS?=--mdns=no --printing=no --speaker=no --sharing=yes --audio=no --pulseaudio=no --webcam=no --microphone=off --html=on --daemon=no --window-close=disconnect --file-transfer=no --tray=no --system-tray=no --exit-with-children=yes --terminate-children=yes 
+export XPRA_PORT_EXTERNAL?=9091
+export CMK_AT_EXIT_TARGETS=doom.stop
+export DISPLAY=:10
+
+⋘ gui.services
+services:
+  doom:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${IMG_UBUNTU_BASE:-ubuntu:noble}
+        ENV DEBIAN_FRONTEND=noninteractive
+        RUN apt-get update -qq 
+        RUN apt-get install -qq -y wget apt-transport-https software-properties-common ca-certificates
+        RUN wget -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc
+        RUN wget -O "/etc/apt/sources.list.d/xpra.sources" https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra-lts.sources
+        RUN apt-get update -qq 
+        RUN apt-get install -qq -y xpra woof-doom
+        RUN apt-get install -qq -y make procps
+    command: >-
+      xpra start ${DISPLAY} --bind-tcp=0.0.0.0:${XPRA_PORT_INTERNAL:-14500}
+        ${XPRA_ARGS} --start-child /usr/games/boom
+    ports:
+      - "${XPRA_PORT_EXTERNAL:-9091}:${XPRA_PORT_INTERNAL:-14500}"
+    environment:
+      - DISPLAY=${DISPLAY}
+    working_dir: /workspace
+    volumes:
+      - ${PWD}:/workspace
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+⋙
+
+serve: doom.stop doom.build doom.up.detach doom.logs
+	@# Start an XOrg server, rebuild the i3 container if necessary.
+	@# Then start/detach i3 WM, and start a few apps inside.
+
+
+__main__:
+	@# Print usage info and exit.
+	@# Main entrypoint does not actually start the GUI
+	@# because we don't want this running from tests.  
+	cmk.log(${red}USAGE: ./demos/cmk/xpra-doom.cmk serve)
