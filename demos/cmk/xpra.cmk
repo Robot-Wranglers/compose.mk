@@ -1,0 +1,103 @@
+#!/usr/bin/env -S stdbuf -i0 -o0 -e0 ./compose.mk mk.interpret!
+# demos/cmk/xpra.cmk: 
+#   Demonstrating GUI capabilities with XPra and i3, served via HTML5.
+#
+# USAGE: demos/cmk/xpra.cmk serve
+
+export APP_DIMS?=1024x500
+export APP_DISPLAY?=:23
+export CMK_AT_EXIT_TARGETS=xpra.stop
+
+export XPRA_ARGS?=--mdns=no --printing=no --speaker=no --sharing=yes --audio=no --pulseaudio=no --webcam=no --microphone=off --html=on --exit-with-children=yes --terminate-children=yes --daemon=no --window-close=disconnect --file-transfer=no --tray=no --system-tray=no --resize-display="1200x768"
+export XPRA_PORT_INTERNAL?=14500
+export XPRA_SOURCES=https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra-lts.sources
+export XPRA_PORT_EXTERNAL=9090
+
+# Begin containerized version of i3 window manager and support files.
+⋘ gui.services
+configs:
+  # See https://i3wm.org/docs/userguide.html for a complete reference
+  i3conf:
+    content: |
+      # Set mod key to Alt (Mod1)
+      set $$mod Mod1
+      font pango:Monaco 10
+      # Use Mouse+$mod to drag floating windows
+      floating_modifier $$mod
+      # Kill focused window
+      bindsym $$mod+Shift+q kill
+      # Change focus between windows
+      bindsym $$mod+h focus left
+      bindsym $$mod+j focus down
+      bindsym $$mod+k focus up
+      bindsym $$mod+l focus right
+      # Split window
+      bindsym $$mod+v split v
+      bindsym $$mod+b split h
+      # Toggle fullscreen
+      bindsym $$mod+f fullscreen toggle
+      # Layout toggle (stacked, tabbed, default)
+      bindsym $$mod+s layout stacking
+      bindsym $$mod+w layout tabbed
+      bindsym $$mod+e layout toggle split
+      # Floating toggle
+      bindsym $$mod+Shift+space floating toggle
+      exec i3-layouts
+      set $$i3l spiral
+services:
+  xpra:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ubuntu:24.04
+        ENV DEBIAN_FRONTEND=noninteractive
+        RUN apt-get update -qq 
+        RUN apt-get install -y make procps
+        RUN apt-get install -y wget apt-transport-https software-properties-common ca-certificates
+        RUN wget -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc
+        RUN wget -O "/etc/apt/sources.list.d/xpra.sources" ${XPRA_SOURCES}
+        RUN apt-get update -qq 
+        RUN apt-get install -qq -y xpra i3 i3status xterm x11-apps mesa-utils
+        # Requires for i3-layouts 
+        RUN apt-get install -qq -y python3-pip xdotool
+        RUN pip3 install --break-system-packages i3-layouts
+        # We'll volume-mount this later, swap out the default splash screen
+        RUN rm /usr/share/xpra/www/background.png
+    ports:
+      - "${XPRA_PORT_EXTERNAL:-9090}:${XPRA_PORT_INTERNAL:-14500}"
+    environment:
+      - DISPLAY=:10
+      - XDG_RUNTIME_DIR=/tmp
+    command: >-
+      xpra start-desktop :10 --bind-tcp=0.0.0.0:${XPRA_PORT_INTERNAL:-14500} \
+        ${XPRA_ARGS} --start-child=i3 
+    working_dir: /workspace
+    volumes:
+      - ${PWD}:/workspace
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - ${PWD}/docs/img/icon.png:/usr/share/xpra/www/background.png
+    configs:
+      - source: i3conf
+        target: /root/.config/i3/config
+⋙
+
+# Starts an XOrg server, rebuilding the xpra container if necessary.
+# Then start/detach i3 WM, and start a few apps inside.  
+# Tail the logs for a while, wait for user-input, exit cleanly.
+serve: xpra.stop xpra.build xpra.up.detach xpra.exec/i3.start_apps flux.timeout/5/xpra.logs
+	cmk.io.user_exit(Serving: http://localhost:${XPRA_PORT_EXTERNAL})
+
+# Use I3's RPC tool to drive the display.  
+# Runs in the container, so using tools unavailable to host is ok.
+i3.start_apps: io.wait/5
+	i3-msg exec 'glxgears 2>&1 > /dev/null'
+	i3-msg exec 'glxgears 2>&1 > /dev/null'
+	i3-msg exec 'glxgears 2>&1 > /dev/null'
+	i3-msg exec 'glxgears 2>&1 > /dev/null'
+	i3l spiral
+
+# Print usage info and exit.
+# Main entrypoint does not actually start the GUI
+# because we don't want this running from tests.  
+__main__:
+	cmk.log(${red}USAGE: ./demos/cmk/xpra.cmk gui)
