@@ -6,11 +6,12 @@
 #
 # USAGE: ./demos/cmk/xpra-doom.cmk serve
 
+export DISPLAY=:10
 export XPRA_PORT_INTERNAL?=14500
 export XPRA_ARGS?=--mdns=no --printing=no --speaker=no --sharing=yes --audio=no --pulseaudio=no --webcam=no --microphone=off --html=on --daemon=no --window-close=disconnect --file-transfer=no --tray=no --system-tray=no --exit-with-children=yes --terminate-children=yes 
 export XPRA_PORT_EXTERNAL?=9091
+export XPRA_SOURCES=https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra-lts.sources
 export CMK_AT_EXIT_TARGETS=doom.stop
-export DISPLAY=:10
 
 ⋘ gui.services
 services:
@@ -23,10 +24,9 @@ services:
         RUN apt-get update -qq 
         RUN apt-get install -qq -y wget apt-transport-https software-properties-common ca-certificates
         RUN wget -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc
-        RUN wget -O "/etc/apt/sources.list.d/xpra.sources" https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra-lts.sources
+        RUN wget -O "/etc/apt/sources.list.d/xpra.sources" ${XPRA_SOURCES}
         RUN apt-get update -qq 
         RUN apt-get install -qq -y xpra woof-doom
-        RUN apt-get install -qq -y make procps
     command: >-
       xpra start ${DISPLAY} --bind-tcp=0.0.0.0:${XPRA_PORT_INTERNAL:-14500}
         ${XPRA_ARGS} --start-child /usr/games/boom
@@ -40,9 +40,10 @@ services:
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
 ⋙
 
-serve: doom.stop doom.build doom.up.detach doom.logs
+serve: doom.stop doom.build doom.up.detach flux.timeout/5/doom.logs
 	@# Start an XOrg server, rebuild the i3 container if necessary.
 	@# Then start/detach i3 WM, and start a few apps inside.
+	cmk.io.user_exit(Serving: http://localhost:${XPRA_PORT_EXTERNAL})
 
 
 __main__:

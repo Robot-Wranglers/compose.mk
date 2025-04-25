@@ -6,9 +6,11 @@
 
 export APP_DIMS?=1024x500
 export APP_DISPLAY?=:23
+export CMK_AT_EXIT_TARGETS=xpra.stop
+
 export XPRA_ARGS?=--mdns=no --printing=no --speaker=no --sharing=yes --audio=no --pulseaudio=no --webcam=no --microphone=off --html=on --exit-with-children=yes --terminate-children=yes --daemon=no --window-close=disconnect --file-transfer=no --tray=no --system-tray=no --resize-display="1200x768"
 export XPRA_PORT_INTERNAL?=14500
-export CMK_AT_EXIT_TARGETS=xpra.stop
+export XPRA_SOURCES=https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra-lts.sources
 export XPRA_PORT_EXTERNAL=9090
 
 # Begin containerized version of i3 window manager and support files.
@@ -53,7 +55,7 @@ services:
         RUN apt-get install -y make procps
         RUN apt-get install -y wget apt-transport-https software-properties-common ca-certificates
         RUN wget -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc
-        RUN wget -O "/etc/apt/sources.list.d/xpra.sources" https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra-lts.sources
+        RUN wget -O "/etc/apt/sources.list.d/xpra.sources" ${XPRA_SOURCES}
         RUN apt-get update -qq 
         RUN apt-get install -qq -y xpra i3 i3status xterm x11-apps mesa-utils
         # Requires for i3-layouts 

@@ -4,9 +4,10 @@
 #
 # USAGE: demos/cmk/xpra-net.cmk gui
 
+export CMK_AT_EXIT_TARGETS=xscreensaver.stop
 export XPRA_PORT_INTERNAL?=14500
 export XPRA_ARGS?=--mdns=no --printing=no --speaker=no --sharing=yes --audio=no --pulseaudio=no --webcam=no --microphone=off --html=on --daemon=no --window-close=disconnect --file-transfer=no --tray=no --system-tray=no --exit-with-children=yes --terminate-children=yes
-export CMK_AT_EXIT_TARGETS=xscreensaver.stop
+export XPRA_SOURCES=https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra-lts.sources
 
 ⋘ gui.services
 services:
@@ -17,11 +18,10 @@ services:
         FROM ubuntu:24.04
         ENV DEBIAN_FRONTEND=noninteractive
         RUN apt-get update -qq 
-        RUN apt-get install -y wget make procps python3-pip 
-        RUN apt install -y apt-transport-https software-properties-common ca-certificates
+        RUN apt install -y wget apt-transport-https software-properties-common ca-certificates
         RUN wget -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc
-        RUN wget -O "/etc/apt/sources.list.d/xpra.sources" https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra-lts.sources
-        RUN apt-get update -qq 
+        RUN wget -O "/etc/apt/sources.list.d/xpra.sources" ${XPRA_SOURCES}
+        RUN apt-get update -qq
         RUN apt-get install -qq -y xpra xterm xscreensaver
     command: >-
       xpra start-desktop :10 --bind-tcp=0.0.0.0:${XPRA_PORT_INTERNAL} ${XPRA_ARGS} 
