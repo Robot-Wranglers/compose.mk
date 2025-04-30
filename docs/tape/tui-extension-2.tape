@@ -9,7 +9,7 @@ Set Height 1250
 Set CursorBlink false
 Set PlaybackSpeed .9
 Show 
-Type "make -f demos/tui/extension-2.mk"
+Type "./demos/tui/extension-2.mk"
 Enter
 Sleep 40s
 Screenshot img/tui-extension-2.png

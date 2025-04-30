@@ -2,14 +2,13 @@
 # demos/tui/extension-2.mk: 
 #   Second TUI extension.  This keeps the yazi file-browser from
 #   the first version, and adds a target-selector and a web browser.
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.
+#   Part of the `compose.mk` repo. This file runs as part of the test-suite.
 #
 #   USAGE: ./demos/tui/extension-2.mk
 #   See the docs for more discussion: https://robot-wranglers.github.io/compose.mk/advanced-tuis
 
 # Pickup where the first extension left off 
 include demos/tui/extension-1.mk
-.DEFAULT_GOAL := demo.dashboard2
 
 # Starts a webbrowser as a widget.
 widget.browser:; url='http://www.wikipedia.com' ${make} tux.browser
@@ -49,4 +48,4 @@ task.6th:; label=${@} ${make} io.draw.banner
 # including basic information about the backend `tmux` session.
 # We opt for horizontal layout, and reference the widgets so far.
 widgets:=widget.yazi,widget.browser,widget.chooser,widget.logo
-demo.dashboard2: docker.from.def/yazi tux.open.spiral/${widgets}
+__main__: docker.from.def/yazi tux.open.spiral/${widgets}

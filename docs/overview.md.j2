@@ -9,7 +9,7 @@ Typical use-cases include **general project automation**, especially decoupling 
 
 ------------------------------
 
-{{macros.img_link("docker.commander.gif", mkdocs, "90%")}}
+{{macros.img_link("docker.commander.gif", mkdocs, "90%", class=" ")}}
 
 ### Introduction
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -22,25 +22,21 @@ Whether `compose.mk` is a tool, a library, a language, or a framework depends on
 
 * **As a stand-alone tool,** `compose.mk` requires no project-level integration, and still does [lots of practical stuff]({{mkdocs.site_relative_url}}/tool-overview) with *no dependencies beyond `make` and `docker`*.  Because `make` targets always do double-duty as CLI entrypoints and as reusable task units, the "internal API" is automatically published as a CLI interface.
 
-* **As a language,** `compose.mk` remains completely backwards compatible with classical Makefile, but also *[extends it]({{mkdocs.site_relative_url}}/signals), [generalizes it]({{mkdocs.site_relative_url}}/language/#homoiconic), and adds new kinds of [idioms]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support) and [patterns]({{mkdocs.site_relative_url}}/matrioshka)*.  Additionally `compose.mk` can function as both a Makefile interpreter and as a transpiler— this allows you to write code in [`CMK`]({{mkdocs.site_relative_url}}/compiler), which is a *syntactically distinct language* that exposes the `compose.mk` library and primitives for containers and polyglots, and compiles to Makefile on the backend.
+* **As a language,** `compose.mk` remains completely backwards compatible with classical Makefile, but also *[extends it]({{mkdocs.site_relative_url}}/signals), [generalizes it]({{mkdocs.site_relative_url}}/language/#homoiconic), and adds new kinds of [idioms]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support) and [patterns]({{mkdocs.site_relative_url}}/matrioshka)*.  Additionally `compose.mk` can function as both a Makefile interpreter and as a transpiler— this allows you to potentially write code in [`CMK`]({{mkdocs.site_relative_url}}/compiler), which is a *syntactically distinct language* that exposes the `compose.mk` library and primitives for containers and polyglots, and compiles to Makefile on the backend.
 
 ### Not the Makefiles of Your Ancestors 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-**Working with `compose.mk` makes `make` hit different.**  The demo above shows an example of combining docker support with TUI elements, using 3 different containers as "widgets". &nbsp;&nbsp;*(Under the hood, `tmux` is used as a geometry manager, but since it's also dockerized, it won't become a host dependency.)*
+**Working with `compose.mk` makes `make` hit different.**  The demo above shows an example of combining docker support with TUI elements, using 3 different containers as "widgets". &nbsp;&nbsp;*(Under the hood, `tmux` is used as a geometry manager, but since it's also dockerized, it won't become a host dependency.)*  
 
-{#
-As another improvement over classical `make`, note that help not only *works,* it goes beyond simply listing available targets, and actually parses and displays documentation per target and per target-namespace. *(Under the hood, a dockerized version of [charmbracelete/glow](https://github.com/charmbracelet/glow) renders markdown.)*.
-{{macros.img_link("cli-help.gif", mkdocs, "90%")}}
-#}
+{#{macros.img_link("gui4.gif", mkdocs, "100%", align='center',link=mkdocs.site_relative_url+'/guis/#hermetic-guis')}#}
 
-Capabilities like [interactivity]({{mkdocs.site_relative_url}}/selector), [online help]({{mkdocs.site_relative_url}}/cli-help), and [working with TUIs]({{mkdocs.site_relative_url}}/embedded-tui) all show a major break with traditional use-cases and create some attention-grabbing demos.  But making console application development easy is just one of the places where `compose.mk` shines, and <strong>average use-cases will probably look more like automation</strong>.
-
+Capabilities like [interactivity]({{mkdocs.site_relative_url}}/selector), [online help]({{mkdocs.site_relative_url}}/cli-help), and [working with TUIs]({{mkdocs.site_relative_url}}/embedded-tui) and [even GUIs]({{mkdocs.site_relative_url}}/guis) all show a major break with traditional use-cases and create some [attention-grabbing]({{mkdocs.site_relative_url}}/guis/#hermetic-guis) demos.  You may be asking yourself: can it run DOOM?  And it really [kind of does]({{mkdocs.site_relative_url}}/guis/#doom).  But making weird new kinds of application development easy is just one of the places where `compose.mk` shines, and <strong>average use-cases will probably look more like automation</strong>.
 
 {#There's a lot of hate for `make` (especially for "creative" usage of it!), but you'll quickly find that `compose.mk` is [a different kind of animal]({{mkdocs.site_relative_url}}/compiler).  While `compose.mk` remains completely backwards compatible with classic `make`, it also *extends it, generalizes it, and adds new kinds of idioms and patterns*.
 -------------------------------
-
 #}
+
 Taken together, the facilities for [working]({{mkdocs.site_relative_url}}/bridge) [with]({{mkdocs.site_relative_url}}/container-dispatch) [containers]({{mkdocs.site_relative_url}}/raw-docker) and [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) actually suggest that `compose.mk` is best thought of as a **new kind of meta-language** that makes it easier to [aggressively]({{mkdocs.site_relative_url}}/advanced-tuis/#understanding-widgets) [reuse]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/#hijacking-ansible) [existing]({{mkdocs.site_relative_url}}/demos/just/) [tools,]({{mkdocs.site_relative_url}}/demos/polyglots) and to think of groups of tools as a single logical unit or [cohesive ensemble]({{mkdocs.site_relative_url}}/demos/notebooking).  Easy access to containers, multiple programming languages, and [workflows]({{mkdocs.site_relative_url}}/demos/workflows) are things that we usually associate with microservices and distributed systems like Kubernetes, Airflow, or Jenkins.  What happens if it is suddenly very easy to design *undistributed* applications, tools, and pipelines with similar architectures?
 
 ### Features & Design Goals
@@ -58,7 +54,7 @@ Taken together, the facilities for [working]({{mkdocs.site_relative_url}}/bridge
 **Clean & carefully curated output** 
 :  Beyond providing the missing [facilities for logging with `make`]({{mkdocs.site_relative_url}}/standard-lib/#logging-facilities), the general goal is to be readable and human-friendly on stderr, while still [remaining machine-friendly for downstream processing]({{mkdocs.site_relative_url}}/standard-lib/#structured-input-output) on stdout.
 
-**Basic workflow support is also available.**  
+{{macros.small_bullseye()}}  **&nbsp;Basic workflow support is also available.**  
 :  Tasks and DAGs are built-ins for `make` naturally, and `compose.mk` adds support for other primitives, [like parallel tasks and task retries]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).
 
 **Hacker friendly.** 
@@ -86,5 +82,3 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100); // Small delay to ensure ToC is already processed
 });
 </script>
-
-margin-top: 24px;

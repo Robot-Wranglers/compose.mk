@@ -1,8 +1,9 @@
 {% import 'macros.j2' as macros -%}
 
 ## Pipelining & Workflow Basics
+<hr style="width:100%;border-bottom:3px solid black;">
 
-In other sections, referred to the [**`flux.*` target namespace**]({{mkdocs.site_relative_url}}/api#api-flux), and discussed how it [provides basic tooling for workflows]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).  
+We've previously met the [**`flux.*` target namespace**]({{mkdocs.site_relative_url}}/api#api-flux), and discussed how it [provides basic tooling for workflows]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).  
 
 This demo builds on those ideas and introduces `flux.pipeline` with some scripting to describe a miniature ETL. For this exercise we'll also use some of the idioms for [Structured IO]({{mkdocs.site_relative_url}}/standard-lib/#structured-input-output) and [Logging]({{mkdocs.site_relative_url}}/standard-lib/#logging-facilities) so that what we build is friendly reading for both people and machines.
 
@@ -11,36 +12,27 @@ This demo builds on those ideas and introduces `flux.pipeline` with some scripti
 
 Consider the following Makefile for describing a miniature ETL:
 
------------------------------------
+{{macros.embed_demo('demos/etl-json.mk', github=github)}}
 
-{# The rest of this section will walk through a few examples.  After the first one, we'll omit the boilerplate at the top. #}
-
-```Makefile
-{{open('demos/etl-json.mk','r').read().strip()}}
-```
-
------------------------------------
-
-So basically this works the way you'd expect, and we can execute the ETL end-to-end with `make etl`, or with error-handling using `make etl.safe`.  As a bonus, developers retain the ability to execute individual pipeline components or cleanup piecewise, or individually.  
+Basically this works the way you'd expect, and we can execute the ETL end-to-end with `make etl`, or with error-handling using `make etl.safe`.  As a bonus, developers retain the ability to execute individual pipeline components or cleanup piecewise, or individually.  
 
 One benefit of `flux.pipeline` is getting previews of the results at different stages.  Running the example so far looks like this:
 
 {{macros.img_link("etl-json.png", mkdocs, "90%")}}
 
-*( Despite appearances, this is actually pipe-safe: the final output of `{"stage":"loaded"}` is the only thing on stdout, the rest is stderr)*
+Despite appearances, this is actually pipe-safe: the final output of `{"stage":"loaded"}` is the only thing on stdout, the rest is stderr.
 
-For more information, see the API docs for {{macros.api_link('flux.pipeline',mkdocs,arg='t1>,..<tn')}}.
+!!! road_map "Road Map"
+    See also the API docs for {{macros.api_link('flux.pipeline',mkdocs, arg='t1>,..<tn')}}.
 
-Also related, the [Platform Lifecycle Demo]({{mkdocs.site_relative_url}}/demos/platform) shows flow control with {{macros.api_link('flux.pipe.fork',mkdocs,arg='t1>,..,<tn')}}
+    The [platform lifecycle demo]({{mkdocs.site_relative_url}}/demos/platform) shows flow control with {{macros.api_link('flux.pipe.fork',mkdocs,arg='t1>,..,<tn')}}
 
 ### Extending the Pipeline
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Maybe any example passing around fake JSON looks tight and tidy, but.. it's really easy to extend this.  Let's sketch small changes that can actually turn this into an image pipeline, using docker idioms from `compose.mk` to leverage external tools.  
 
-```Makefile
-{{open('demos/etl-img.mk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/etl-img.mk', github=github)}}
 
 For more information, see the api docs for [`docker.run.image`]({{mkdocs.site_relative_url}}/api/#dockerrunimagearg) and the docs for [raw docker support]({{mkdocs.site_relative_url}}/vanilla-docker).
 
@@ -49,8 +41,10 @@ For more information, see the api docs for [`docker.run.image`]({{mkdocs.site_re
 
 {# <hr style="width:95%;border-bottom:1px dashed black;"> #}
 
-It's a neat party trick that `compose.mk` has some features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.  Actually `flux.*` is more similar in spirit to things like declarative pipelines in Jenkins[^1].  For other related documentation, see also the [workflow rationale docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-rationale) and the [Platform Lifecycle Demo]({{mkdocs.site_relative_url}}/demos/platform).
+It's a neat trick that `compose.mk` has some features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.
+
+Actually `flux.*` is more similar in spirit to things like declarative pipelines in Jenkins[^1].  For other related documentation, see also the [workflow rationale docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-rationale) and the [Platform Lifecycle Demo]({{mkdocs.site_relative_url}}/demos/platform).
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-[^1]: https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline
+[^1]: [declarative pipelines in jenkins](https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline)

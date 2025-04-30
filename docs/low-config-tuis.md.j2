@@ -12,12 +12,9 @@ In the end though, the CLI starts to get pretty clunky, and it's better to have 
 
 Let's revisit [a previous example]({{mkdocs.site_relative_url}}/zero-config-tuis/#working-with-makefiles) in a less adhoc way, basically extending the classic *clean/build/test* project Makefile with a TUI as before, but using code this time.  As before, the goal is to loop the *test* task, and run the *clean/build* tasks sequentially-- in separate panes at the same time.  
 
-```Makefile
-{{open('demos/dashboarding.mk','r').read().strip()}}
-```
-Look, **no target bodies!**  The declarative flavor is nice, and this is frequently the case for TUI customization: mostly we just need declare groups of existing targets and/or flow between them. We've seen that this frequently involves `compose.mk::flux` targets, like {{macros.api_link('flux.loopf',mkdocs,arg='target_name')}} and {{macros.api_link('flux.and',mkdocs,arg='targets')}}.  
+{{macros.embed_demo('demos/dashboarding.mk', github=github)}}
 
----------------------------
+Look, **no target bodies!**  The declarative flavor is nice, and this is frequently the case for TUI customization: mostly we just need declare groups of existing targets and/or flow between them. We've seen that this frequently involves `compose.mk::flux` targets, like {{macros.api_link('flux.loopf',mkdocs,arg='target_name')}} and {{macros.api_link('flux.and',mkdocs,arg='targets')}}.  
 
 Running it looks like this:
 
@@ -34,17 +31,13 @@ One powerful technique is to run a container inside a dedicated pane as a "widge
 
 Adding a new "middle" pane using this container image only changes two lines, and doesn't break the declarative style:
 
-```Makefile
-{{open('demos/tui/dashboarding-widgets.mk','r').read().strip()}}
-```
-
----------------------
+{{macros.embed_demo('demos/tui/dashboarding-widgets.mk', github=github)}}
 
 You might recognize the new widget, since we just recreated part of the `docker.commander` TUI mentioned in [docs for zero-config TUIs]({{mkdocs.site_relative_url}}/zero-config-tuis).  Our work so far looks like this:
 
-{{macros.img_link("tui-containers-as-widgets.png", mkdocs, "350px")}}
+{{macros.img_link("tui-containers-as-widgets.png", mkdocs, "78%")}}
 
-Above, the {{macros.api_link('docker.start.tty',mkdocs,arg='img')}} target does the heavy lifting for us, and depending on your exact use-case you might have to write a target-body, or use other related targets like {{macros.api_link('docker.start',mkdocs,arg='img')}} , {{macros.api_link('docker.dispatch/<arg>',mkdocs)}} , or {{macros.api_link('docker.run.sh', mkdocs)}}.
+Above, the {{macros.api_link('docker.start.tty', mkdocs, arg='img')}} target does the heavy lifting for us, and depending on your exact use-case you might have to write a target-body, or use other related targets like {{macros.api_link('docker.start',mkdocs,arg='img')}} , {{macros.api_link('docker.dispatch/<arg>',mkdocs)}} , or {{macros.api_link('docker.run.sh', mkdocs)}}.
 
 Crucially, the `docker.*` targets are designed to launch tool containers, so they [**always share the working directory and the docker socket by default**]({{mkdocs.site_relative_url}}/raw-docker#tool-container-defaults).  You can always launch a dockerized "widget" by writing any target-body that directly calls `docker run ...`, but if you do it this way you probably need to remember add volume-mounts.
 
@@ -55,7 +48,8 @@ Eagle-eyed readers will have noticed that our fake *clean/build/test* targets do
 
 Of course, if your automation fails to run inside the embedded TUI container, then it would probably also fail to run inside any fresh environment... or in other words, your automation is already broken =P
 
-So regardless of whether you want to use the TUI, the way to begin to address this problem may involve some combination of [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) with internal or externally-defined Dockerfiles, compose-files, etc.  In many cases though, tool containers are already available, and already ship with basics like `make` and `bash`.  For this situation, we can again get away with very minimal changes.
+!!! info "Info"
+    Regardless of whether you want to use the TUI, the way to begin to address this problem may involve some combination of [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) with internal or externally-defined Dockerfiles, compose-files, etc.  In many cases though, tool containers are already available, and already ship with basics like `make` and `bash`.  For this situation, we can again get away with very minimal changes.
 
 To see what it looks like, let's suppose for the next example that we need golang tools available for *clean/build* phases.  
 
@@ -63,11 +57,10 @@ The tightest way to describe this is very functional, but not very pretty.  We'l
 
 -----------------------------
 
-```Makefile
-{{open('demos/tui/dashboarding-dispatch.mk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/tui/dashboarding-dispatch.mk', github=github)}}
 
-The magic line above uses `docker.image.dispatch/<image>/<target>`, and in this case the image is `golang:1.24-bookworm`.  (To stick with the declarative style, we have to escape the colon to declare a legal prerequisite target.)
+!!! closer_look "Closer Look"
+    The magic line above uses `docker.image.dispatch/<image>/<target>`, and in this case the image is `golang:1.24-bookworm`.  (To stick with the declarative style, we have to escape the colon to declare a legal prerequisite target.)
 
 Above, we've also changed the *clean/build* targets to actually *use* golang tools.  And we changed `flux.and` arguments to include `io.bash` at the end so that the interactive shell we're left with in that pane is *running inside the golang container*, and not the TUI container.
 
@@ -77,11 +70,8 @@ As with the zero-config TUI examples before, this is getting somewhat unwieldy a
 
 For demonstrating that, we'll include the last example and just change the `bottom` target.  Typically for something like this you just need to introduce 1 or more intermediate targets:
 
-```Makefile 
-{{open('demos/tui/dashboarding-dispatch-2.mk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/tui/dashboarding-dispatch-2.mk', github=github)}}
 
------------------------------
 
 That's pretty much it for the basics of low-config TUIs.  In the [next section]({{mkdocs.site_relative_url}}/advanced-tuis), we'll cover more advanced usage.
 

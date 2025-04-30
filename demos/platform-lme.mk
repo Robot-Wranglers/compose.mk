@@ -4,7 +4,7 @@
 #  We use namespace-style dispatch here to run commands in docker, and use `compose.mk`
 #  workflows to describe data-flow. 
 #
-# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # See the main docs:  http://robot-wranglers.github.io/compose.mk/demos/platform/
 # USAGE: ./demos/platform-lme.mk
 
@@ -34,5 +34,6 @@ self.events:
 downstream_handlers: flux.pipe.fork/logging,metrics,events
 
 # Send the `platform.setup.basic` output into a handler-target for each LME backend
-platform.setup.observable: flux.pipeline/platform.setup.basic,downstream_handlers
+platform.setup.observable: \
+	flux.pipeline/platform.setup.basic,downstream_handlers
 

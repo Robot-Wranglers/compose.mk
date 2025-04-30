@@ -1,7 +1,7 @@
 #!/usr/bin/env -S make -f
 # demos/double-dispatch.mk: 
 #   Demonstrates the container dispatch idiom using "namespace" style invocation.
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 #
 #   USAGE: ./demos/double-dispatch.mk 
 

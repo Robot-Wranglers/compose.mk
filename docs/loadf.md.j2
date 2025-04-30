@@ -7,7 +7,7 @@ For simple use-cases where you have a compose-file, and want some of the `compos
 
 The general usage looks like this:
 
-```bash
+```bash  {.cli_example} 
 $ ./compose.mk loadf <path_to_compose_file> <other_instructions>
 ```
 <br/>
@@ -36,27 +36,31 @@ Note that despite all the output **this is pipe-safe**, in case the commands inv
 
 As another example, you can use the [`<svc_name>.pipe` target]({{mkdocs.site_relative_url}}/bridge/#svc_nameshellpipe) to push data *into* a container with a command like this:
 
-```bash
-$ echo hostname | ./compose.mk loadf demos/data/docker-compose.yml debian.shell.pipe
+```bash  {.cli_example} {.line-numbers}
+
+$ echo hostname | ./compose.mk loadf \
+    demos/data/docker-compose.yml debian.shell.pipe
+
 debian
 ```
 
 Ultimately though, using the TUI for quick and convenient inspection is probably the main use case.  Here's a few more examples along those lines:
 
-```bash 
+```bash  {.cli_example}
+
 # Opens 3 panes with container-shells
 $ ./compose.mk loadf demos/data/docker-compose.yml \
-    tux.open.service_shells/debian,alpine,debian
+       tux.open.service_shells/debian,alpine,debian
 
 # Equivalently, using lower-level generic targets
 $ ./compose.mk loadf demos/data/docker-compose.yml \
-    tux.open/debian.shell,alpine.shell,debian.shell
+       tux.open/debian.shell,alpine.shell,debian.shell
 
 # Opens 2 panes of bash-shells for the TUI container itself
-$ ./compose.mk loadf demos/data/docker-compose.yml tux.open/io.bash,io.bash
+$ ./compose.mk loadf demos/data/docker-compose.yml \
+       tux.open/io.bash,io.bash
 ```
-
-See also the [Embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui/#zero-config-tuis) docs for other examples that are using `loadf`, discussion of default pane layouts, etc.
+!!! tip "Related Links"
+    See also the [Embedded TUI docs]({{mkdocs.site_relative_url}}/embedded-tui/#zero-config-tuis) for other examples that are using `loadf`, discussion of default pane layouts, etc.
 
 <hr style="width:100%;border-bottom:3px solid black;">
-

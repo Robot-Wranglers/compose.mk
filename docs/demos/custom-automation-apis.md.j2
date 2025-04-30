@@ -5,7 +5,7 @@
 
 This demo describes one way to very quickly expose custom automation APIs using `compose.mk`.  But *what does that even mean?*
 
-{{macros.img_link('escher-birds.jpg',mkdocs,'90%')}}
+{{macros.img_link('escher-birds.jpg',mkdocs,'90%',class=" ")}}
 
 When it comes to automation, combining different tools that might be in different containers together is part of the job, but at the end of the day you always want a *coherent vocabulary of verbs that operate on your domain.*  
 
@@ -21,7 +21,12 @@ The rest of this page is a tutorial about how to do that, but the involvement of
 ### Hijacking Ansible
 <hr style="width:100%;border-bottom:3px solid black;">
 
-**The problem:** Ansible is neat for lots of stuff, but it comes with a lot of baggage.  Depending on how you're using it.. you'll need a playbook, maybe a config file and an inventory file, not to mention a python stack, and you'll need the ansible version itself pinned.  It's a whole stack and it has to be layed out in a certain way; command line invocations are long, tedious, and easy to get wrong.  Simple stuff can be a lot of drama, especially if you're trying to make sure it's reproducible. And things gets worse if you need to run it from different contexts, or if you're trying to keep your work small and self-contained.  
+Ansible is neat for lots of stuff, but it comes with a lot of baggage.
+
+!!! question "The Problem"
+    Depending on how you're using it.. you'll need a playbook, maybe a config file and an inventory file, not to mention a python stack, and you'll need the ansible version itself pinned.  
+    
+    It's a whole stack and it has to be layed out in a certain way; command line invocations are long, tedious, and easy to get wrong.  Simple stuff can be a lot of drama, especially if you're trying to make sure it's reproducible. And things gets worse if you need to run it from different contexts, or if you're trying to keep your work small and self-contained.  
 
 As an exercise.. let's look at what `compose.mk` can bring to adress some of that.  
 
@@ -32,10 +37,11 @@ As an exercise.. let's look at what `compose.mk` can bring to adress some of tha
 
 [Ansible's adhoc mode](https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html) already gives some direct access to ansible-modules and lets you skip a playbook.  For our first trick, we'll try to expose access to those modules.  Here are the basic goals:
 
-1. No ansible-dependency on our host (of course we'll use docker)
-1. Full access to ansible-modules via the command line 
-1. Full access to ansible-modules in `make` world, for use as composable target prerequisites, etc
-1. Ensure that output is *always* JSON, in case we want to use it downstream
+!!! goals "Goals"
+    * No ansible-dependency on our host (of course we'll use docker)
+    * Full access to ansible-modules via the command line
+    * Full access to ansible-modules in `make` world, e.g. as composable target prerequisites
+    * Ensure that output is *always* JSON, in case we want to use it downstream
 
 Typically, you would want to begin by sketching out an ansible container inside a docker-compose file, then use `compose.import` to [autogenerate related targets]({{mkdocs.site_relative_url}}/bridge).  Just to keep things simple though and to demonstrate [raw docker support in compose.mk]({{mkdocs.site_relative_url}}/raw-docker) at the same time, we'll embed the ansible container directly.
 
@@ -44,29 +50,26 @@ Without further delay, here's some well-commented code that achieves the goals.
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-``` Makefile
-{{open('demos/ansible-adhoc.mk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/ansible-adhoc.mk', github=github)}}
 
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-Not exactly *beautiful* to read, but the implementation is small and the result is powerful. 
+Maybe not *beautiful* to read, but the implementation is small and the result is powerful. 
 
 As mentioned above, `make ansible.adhoc/ping` works as expected to call the [ping module](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/ping_module.html), and to call the [docker_host_info](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_host_info_module.html) module with arguments, we can write `echo images=yes | make ansible.adhoc.args/docker_host_info`.  The argument-passing is somewhat awkward for *people*, but it supports JSON, so this is already fairly usable from/for other automation. For common use-cases, you just make a more friendly alias, as is done with `list_images` above. 
 
-As an aside, the eagle-eyed reader will have noticed that `docker_host_info` actually returns data, i.e. it is using the **host docker socket**, because under the hood, {{macros.api_link("docker.dispatch",mkdocs,arg='target')}} [shares the socket and the working directory automatically]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults).  So effectively the ansible container can orchestrate tasks on the host in many respects, even though the host doesn't have ansible.
-
+!!! closer_look "Closer Look"
+    The eagle-eyed reader will have noticed that `docker_host_info` actually returns data, i.e. it is using the **host docker socket**, because under the hood, {{macros.api_link("docker.dispatch",mkdocs,arg='target')}} [shares the socket and the working directory automatically]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults).  Effectively the ansible container can orchestrate tasks on the host in many respects, even though the host doesn't have ansible.
 
 ### Discussion
 <hr style="width:100%;border-bottom:3px solid black;">
 
 The examples for this demo might feel contrived, but the [technique itself is more important]({{mkdocs.site_relative_url}}/matrioshka#matrioshka-bridge-pattern) than the involvement of ansible. 
 
-Actually though, `ansible` has lots of random cool utilities, even if the friction involved to actually use them might feel daunting.  But our new targets now make it easy to pull in a discrete chunk of ansible very quickly without having to "ansible all the things".  As a more practical example, one can imagine raiding the [kubernetes.core.k8s module](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_module.html) for useful stuff:
+Actually, `ansible` has lots of random cool utilities, even if the friction involved to actually use them might feel daunting.  But our new targets now make it easy to pull in a discrete chunk of ansible very quickly without having to "ansible all the things".  As a more practical example, one can imagine raiding the [kubernetes.core.k8s module](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_module.html) for useful stuff:
 
-```Makefile
+```Makefile {.snippet .language-makefile}
 
 # Set your KUBECONFIG first
+
 k8s: ansible.adhoc.args/kubernetes.core.k8s
 cluster.purge:; echo namespace=testing kind=Deployment delete_all=true | make k8s
 ```
@@ -79,8 +82,9 @@ Although `Makefile` isn't anyone's favorite programming language, notice how the
 
 Really, `compose.mk` is a foundation to build on, and it doesn't make assumptions about your domain.  But combining `compose.mk` with your own toolkit and building a *new* vocabulary is where it really starts to shine.  
 
-Again, if you want to see a similar demo with different base technology, you can another bridge-building project like this [in the justfile demo]({{mkdocs.site_relative_url}}/demos/just), or a larger bridge-building project with jupyter in [the notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).
+!!! tip "Related links"
+    For a similar demo with different base technology, see another bridge-building project like this [in the justfile demo]({{mkdocs.site_relative_url}}/demos/just), or a larger bridge-building project with `jupyter` in [the notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).
 
-For a deeper dive into a much larger example of this kind where `compose.mk` is used for orchestrating kubernetes tools, see a preview of the [sibling project at k8s-tools.git]({{jinja.vars.k8stools_docs_url}}).  (Among other things, it actually ships with the ansible tooling we've built here.)  See also the [packaging demo]({{mkdocs.site_relative_url}}/demos/packaging), which bundles this demo into a frozen release / stand-alone tool.
+    For a deeper dive into a much larger example of this kind where `compose.mk` is used for orchestrating kubernetes tools, see a preview of the [sibling project at k8s-tools.git]({{jinja.vars.k8stools_docs_url}}).  (Among other things, it actually ships with the ansible tooling we've built here.)  See also the [packaging demo]({{mkdocs.site_relative_url}}/demos/packaging), which bundles this demo into a frozen release / stand-alone tool.
 
 <hr style="width:100%;border-bottom:3px solid black;">

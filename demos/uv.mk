@@ -5,7 +5,7 @@
 #   No caching! Note that this implicitly pulls not only dependencies but even 
 #   the python version is also lazy and built just in time, immediately prior to use.
 #
-# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
 # USAGE: ./demos/uv.mk
 
@@ -26,7 +26,9 @@ define uv.hello_world
 # ]
 # ///
 import requests
-r = requests.get('https://httpbin.org/basic-auth/user/pass', auth=('user', 'pass'))
+r = requests.get(
+  'https://httpbin.org/basic-auth/user/pass', 
+  auth=('user', 'pass'))
 print(r.status_code)
 endef
 
@@ -41,6 +43,8 @@ __main__:
 ## More idiomatic approach: using target partials
 demo.uv.alt: uv.script/uv.hello_world
 
-uv.script/%:; set -a; cmd="run --script"; ${mk.def.read}/${*} | ${make} uv
+uv.script/%:
+	set -a; cmd="run --script"\
+	; ${mk.def.read}/${*} | ${make} uv
 
 uv:; ${stream.to.docker}/${uv.img},${uv.interpreter}

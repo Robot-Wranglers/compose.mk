@@ -7,8 +7,8 @@ The [language overview page]({{mkdocs.site_relative_url}}/language) discusses ho
 
 --------------
 
-Matrioshka language
-:  Matrioshka languages can be identified by their program forms, which will have multiple, distinct 'phases' with different syntactic and semantic rules. There are often two phases; the first gives a set of rules, and the second provides objects on which those rules are to be applied. *[--esolangs wiki](https://esolangs.org/wiki/Matrioshka_language)*
+!!! quote "Matrioshka Language"
+    Matrioshka languages can be identified by their program forms, which will have multiple, distinct 'phases' with different syntactic and semantic rules. There are often two phases; the first gives a set of rules, and the second provides objects on which those rules are to be applied. *[--esolangs wiki](https://esolangs.org/wiki/Matrioshka_language)*
 
 --------------
 
@@ -41,7 +41,7 @@ More involved matrioshkas usually have [inlined containers or data]({{mkdocs.sit
 
 Of course, any place you can use embedded stuff with `compose.mk` is a special case, and nothing prevents you from using an external file.  But a determined individual can make a mess of anything, so it's probably worth pointing out that there are reasons for matrioshka-dolling that aren't totally insane.
 
-{{macros.img_link("mad-science.png", mkdocs, "90%")}}
+{{macros.img_link("mad-science.png", mkdocs, "90%",class=" ")}}
 
 Here's a few arguments that suggest matrioshka-dolling has some legitimate use-cases:
 
@@ -60,7 +60,7 @@ The previous section on [idiom basics](#matrioshka-idiom-basics) links several d
 
 -------------------------------
 
-{{macros.img_link("escher-birds.jpg", mkdocs, "90%",align="center")}}
+{{macros.img_link("escher-birds.jpg", mkdocs, "90%",align="center", class=" ")}}
 
 -------------------------------
 
@@ -87,7 +87,7 @@ The answer is *yes!*, because besides better options for structuring code and at
 
 -------------------------------
 
-{{macros.img_link("escher-stairs.jpg", mkdocs,"90%")}}
+{{macros.img_link("escher-stairs.jpg", mkdocs,"90%", class=" ")}}
 
 -------------------------------
 
@@ -95,9 +95,11 @@ As one example, [stage stacks]({{mkdocs.site_relative_url}}/stages) allow target
 
 Since `compose.mk` tool-container invocations [default to volume-mounts for the working directory and the docker socket automatically]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults), things like [structured io]({{mkdocs.site_relative_url}}/standard-lib#structured-io) can work reliably anywhere.  One consequence of this is a kind of "late binding" style, where basically you don't necessarily have to think much about whether tasks run on the host, or run on containers.
 
-As a pretty extreme example of "fluency" across matrioshka layers, check out the [makeception demo]({{mkdocs.site_relative_url}}/demos/makeception), where we use `compose.mk` to embed 2 container definitions and to build and steer them.  What's really unusual about this example though, is that even *the build process* itself is encapsulated inside the same file: rather than monolithic top-to-bottom bash in the Dockerfile, provisioning tasks can be expressed as normal targets which are executed as usual, may call other targets, etc.  Besides allowing for "subroutines" and code-reuse, this also [tends to minimize and clean shell code in other ways]({{mkdocs.site_relative_url}}/standard-lib/#workflow-rationale)
 
-For an advanced example in service of a more conventional use-case, you might want to take a look at the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking), which uses 3 different containers (a formal-methods toolkit) to augment the behaviour of a 4th container (a jupyter lab server).
+!!! tip "Related Links"
+    For an extreme example of "fluency" across matrioshka layers, check out the [makeception demo]({{mkdocs.site_relative_url}}/demos/makeception), where we use `compose.mk` to embed 2 container definitions and to build and steer them.  What's really unusual about this example though, is that even *the build process* itself is encapsulated inside the same file: rather than monolithic top-to-bottom bash in the Dockerfile, provisioning tasks can be expressed as normal targets which are executed as usual, may call other targets, etc.  Besides allowing for "subroutines" and code-reuse, this also [tends to minimize and clean shell code in other ways]({{mkdocs.site_relative_url}}/standard-lib/#workflow-rationale)
+    
+    For an advanced example in service of a more conventional use-case, you might want to take a look at the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking), which uses 3 different containers (a formal-methods toolkit) to augment the behaviour of a 4th container (a jupyter lab server).")}}
 
 {#
 This might not seem like much, but we're already far beyond the flexibility of things like [bash heredocs](https://en.wikipedia.org/wiki/Here_document) or most libraries that do docker hand-holding.  ^[2]

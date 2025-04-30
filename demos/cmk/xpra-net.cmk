@@ -1,8 +1,8 @@
-#!/usr/bin/env -S stdbuf -i0 -o0 -e0 ./compose.mk mk.interpret!
+#!/usr/bin/env -S ./compose.mk mk.interpret!
 # demos/cmk/xpra-net.cmk: 
 #   Demonstrating GUI capabilities with XPra and carbonyl, served via HTML5.
 #
-# USAGE: demos/cmk/xpra-net.cmk gui
+# USAGE: ./demos/cmk/xpra-net.cmk gui
 
 export CMK_AT_EXIT_TARGETS=xscreensaver.stop
 export XPRA_PORT_INTERNAL?=14500
@@ -53,6 +53,6 @@ app.open:
 __main__:
 	@# Print usage info and exit.
 	@# Main entrypoint does not actually start the GUI
-	@# because we don't want this running from tests.  
-	cmk.log(${red}USAGE: ./demos/cmk/xpra.cmk gui)
+	@# because we don't want this running from main test-suite
+	cmk.log(${red}USAGE: ${__file__} gui)
 

@@ -11,4 +11,6 @@ main_target.pre:; echo hello pre-hook
 main_target:; echo hello main
 main_target.post:; echo hello post-hook
 
-__main__:; $(call log,${red} USAGE: ./demos/interpreter-4.mk main_target)
+flux.ok.pre:; echo look, hooking a builtin works too
+
+__main__:; $(call log,${red} USAGE: ${__file__} main_target)

@@ -1,7 +1,7 @@
 #!/usr/bin/env -S make -f
 # demos/section-dividers.mk: 
 #   Shows some of the compose.mk logging capabilities.
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 #
 #   USAGE: ./demos/section-dividers.mk clean build test
 

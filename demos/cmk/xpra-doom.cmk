@@ -1,4 +1,4 @@
-#!/usr/bin/env -S stdbuf -i0 -o0 -e0 ./compose.mk mk.interpret!
+#!/usr/bin/env -S ./compose.mk mk.interpret!
 # demos/cmk/xpra-doom.cmk: 
 #   Demonstrating GUI capabilities with dockerized XPra,
 #   plus a dockerized app, served via HTTP / HTML5 and 
@@ -45,9 +45,8 @@ serve: doom.stop doom.build doom.up.detach flux.timeout/5/doom.logs
 	@# Then start/detach i3 WM, and start a few apps inside.
 	cmk.io.user_exit(Serving: http://localhost:${XPRA_PORT_EXTERNAL})
 
-
 __main__:
 	@# Print usage info and exit.
 	@# Main entrypoint does not actually start the GUI
-	@# because we don't want this running from tests.  
-	cmk.log(${red}USAGE: ./demos/cmk/xpra-doom.cmk serve)
+	@# because we don't want this running from main test-suite
+	cmk.log(${red}USAGE: ${__file__} serve)

@@ -5,79 +5,67 @@
 
 This demo allows you to chat with `compose.mk` documentation (or any other files) using a small RAG pipeline implemented with ollama [^1] and langchain.  [^2]
 
-```bash
+```bash {.cli_example}
 $ query='describe polyglot capabilities as if you are a pirate' \
     glob='docs/*.md' ./demos/cmk/rag.cmk ask
 ```
 
-```markdown
-  Ahoy mateys! Arr, in this world o' languages, I be savvy enough to juggle 'em 
-  like yer ol' bottle collection— each one perfect for its own purpose. With me 
-  trusted compose.mk and some clever splicin', even the most bewilderin tasks 
-  gets done easy as pie. Be it leveragin language just right or summonin matrix golf 
-  with APL, I command these languages better than any captain commands his ship! 
-  Now that be a mighty fine skill to have in this treacherous sea o' code, see?
-  
-  CITATIONS:
-  
-  - /workspace/docs/demos/polyglots.md ("Part of the be...")
-  - /workspace/docs/style.md ("Explicit polyglot in...")
-  - /workspace/docs/but-why.md ("Polyglots Considered...")
+```markdown {.cli_output .language-markdown}
+Ahoy mateys! Arr, in this world o' languages, I be savvy enough to juggle 'em 
+like yer ol' bottle collection— each one perfect for its own purpose. With me 
+trusted compose.mk and some clever splicin', even the most bewilderin tasks 
+gets done easy as pie. Be it leveragin language just right or summonin matrix golf 
+with APL, I command these languages better than any captain commands his ship! 
+Now that be a mighty fine skill to have in this treacherous sea o' code, see?
+
+CITATIONS:
+
+- /workspace/docs/demos/polyglots.md ("Part of the be...")
+- /workspace/docs/style.md ("Explicit polyglot in...")
+- /workspace/docs/but-why.md ("Polyglots Considered...")
 ```
 
 --------------
 
 The way this demo works is that you specify a corpus with a file pattern glob, and then provide a verb like `summarize`, `ask` or `chat` to select how you want to interact with the corpus.  You can override the models used by the backend, but the default models are `phi3:mini` for the LLM and `all-MiniLM-L6-v2` for the embeddings.  
 
-This demo is **local only**, **CLI-friendly**, and as long as you have `make` and `docker` it will bootstrap itself.  Users can therefore enjoy: *no daemons required, no installation of python dependencies, no API tokens, and no admonitions to "open this thing in your web browser", no open ports.*  And the pirates of course.  Pirates describing [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots).
+This demo is **local only**, **CLI-friendly**, and as long as you have `make` and `docker` it will bootstrap itself.  Users can therefore enjoy: *no daemons required, no manual installation of python dependencies, no API tokens, and no admonitions to "open this thing in your web browser", no open ports.*  And the pirates of course.  Pirates describing [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots).
 
 Citations are provided for `ask` interactions and are pretty reasonable, but citations are not implemented for `chat`.  As for the actual answers there are, of course, frequently very strange hallucinations and quality varies.  Consider reading the actual project documentation =)
 
-All support code is included in [the appendix](#appendix-support-code).  Quick links for the moving parts:
+All support code is included in [the appendix](#appendix-support-code).  
+!!! outline "Quick Links for the Appendix"
+    1. [Langchain driver](#appendix-langchain-code) *(Python)*
+    1. [Ollama container](#appendix-ollama-container) plus python reqs *(Docker-Compose)*
+    1. [Thin wrapper](#orchestration) to combine / orchestrate the pieces above *(compose.mk script)*
 
-1. [Langchain driver](#appendix-langchain-code) *(Python)*
-1. [Ollama container](#appendix-ollama-container) plus python reqs *(Docker-Compose)*
-1. [Thin wrapper](#orchestration) to combine / orchestrate the pieces above *(compose.mk script)*
-
-### Background
+### Background & Caveats
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Jump ahead if you're waiting for examples and code, but since [the appendix](#appendix-support-code) is big, let's front-load the discussion.  Besides the fact that the default corpus is this project documentation.. you might be wondering whether this is even *remotely* related to `compose.mk` core competencies.  Fair.  
+Jump ahead if you're waiting for [examples](#example-output) and [usage](#usage), but since [the support code appendix](#appendix-support-code) is big, let's front-load the discussion.  Besides the fact that the default corpus is this project documentation.. you might be wondering whether this is even *remotely* related to `compose.mk` core competencies.  Fair.  
 
----------------------
+This is just a toy, and no doubt there is a better way to [embed ollama in an application](https://github.com/Mozilla-Ocho/llamafile), indeed [llamafile also has a RAG demo](https://github.com/Mozilla-Ocho/llamafile-rag-example).  This demo is demanding in terms of available space and CPU.  Poor quality and relatively slow summaries of a few paragraphs in only ~40 markdown files will cost you a ~4gb download of `phi3:mini` if you're not holding it already.  In a lot of ways, you might as well just grep!  GPU acceleration is even explicitly *disabled* too, in the interest of portability[^3].  But it takes a "obviously service and/or system" type of problem and makes it refreshingly "local-first and CLI friendly" instead.  By handling (conditional) startup, shutdown, and not actually forwarding ports.. **orchestration abstracts the lifecycle stuff and effectively turns a *system* into an application / tool**, and that's the sort of thing `compose.mk` is good at.  To try and make sure that this idea is more than wishful thinking.. we'll also use `compose.mk` [packaging features](#packaging-it) to wrap all the moving parts and the documents <u>into a single self-extracting executable</u>.
 
-Python does all the LLM work, but the compose file handles the dependencies, including both Ollama and Python requirements.  The need for at least minimal orchestration comes in because *we may not need the containerized ollama server at all* if one is available locally already, and in that case we just use it.  Meanwhile **if no local ollama server is available,** we start a containerized one and use that instead.  
+!!! tip "Road Map"
+    Python does all the LLM work here, but the compose file handles the dependencies, including both Ollama and Python requirements.  Orchestration comes in because *we may not need the containerized ollama server at all* if one is available locally already, and in that case we just use it.  **If no local ollama server is running, we start a containerized one and use that instead.**  In that case, we forward no ports, leverage existing models via volumes if they are available on the host or download them if necessary, and finally ensure the containerized daemon is shut down after use.
 
-For a containerized server:
+Toy or not, there's some potential here especially when other services are added.  (This demo started in a way that would make that more obvious, using dockerized ollama, multiple agents, all connected by dockerized ircd and a web-based client.  But then it's becoming project-sized rather demo-sized. =) Another idea that's not explored here is tool-use.  Currently `compose.mk` simply drives the LLM components.. but via tool execution, access that goes from the LLM *back* to `compose.mk` and [uses polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) could be interesting.  Hmm, a project for some other time.
 
-* We forward no ports, 
-* Leverage existing models via volumes if they are available on the host, or 
-* Download them just in time if necessary, and finally
-* Ensure the containerized daemon is shut down after use
-
-By handling (conditional) startup, shutdown, and not actually forwarding ports.. **orchestration abstracts the lifecycle stuff and effectively turns a *system* into an application / tool.**
-
-To try and make sure that this idea is more than wishful thinking.. we'll also use `compose.mk` [packaging features](#packaging-it) to wrap all the moving parts and the documents <u>into a single self-extracting executable</u>.
-
------------------------
-
-Like the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking), this one is weighty. Poor quality and relatively slow summaries of a few paragraphs in only ~40 markdown files will cost you a ~4gb download of `phi3:mini` if you're not holding it already.  In a lot of ways, you might as well just grep!  GPU acceleration is even explicitly *disabled* too, in the interest of portability[^3].
-
-This just a toy, and no doubt there is a better way to [embed ollama in an application](https://github.com/Mozilla-Ocho/llamafile), probably even a better way to embed ollama+python+etc all at once.  Indeed [llamafile also has a RAG demo](https://github.com/Mozilla-Ocho/llamafile-rag-example).  Still, the PoC is doing something interesting here since it's fast to slap it together and ship it and it has some potential.  Like the notebooking demo, it takes a "*obviously service and/or system*" type of problem and makes it refreshingly "*local-first and CLI friendly*" instead, and the result is [very self-contained](#packaging-it), yet it opens no ports, uses local cache if it's available, etc.  One idea that's not explored here is tool-use.  Currently `compose.mk` simply drives the LLM components.. but via tool execution, access that goes from the LLM *back* to `compose.mk` and [uses polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) could be interesting.  Hmm, a project for some other time.
-
-Without further delay, let's get into it.
+Anyway, without further delay, let's get into it.
 
 ### Usage
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Usage for [the orchestration script](#orchestration) is just a very thin wrapper on usage for [the python script](#appendix-langchain-code).
 
-```bash 
+```bash {.cli_example}
 # Ask a question about files that match the given pattern.
-$ glob='docs/*.md' query='what is this project about?' ./demos/cmk/rag.cmk ask
+$ glob='docs/*.md' query='what is this project about?' \
+    ./demos/cmk/rag.cmk ask
 
 # Summarize files that match the given pattern.
-$ glob='docs/*.md' query='what is this project about?' ./demos/cmk/rag.cmk summarize
+$ glob='docs/*.md' query='what is this project about?' \
+    ./demos/cmk/rag.cmk summarize
 
 # Interactive chat about files that match the given pattern.
 $ glob='docs/*.md' ./demos/cmk/rag.cmk chat
@@ -93,67 +81,71 @@ $ model='phi3:mini' ./demos/cmk/rag.cmk init
 # Pass everything that's needed and you can do it in one shot
 $ model=.. glob=.. query=.. ./demos/cmk/rag.cmk ask
 ```
-<br/>
 
 ### Example Output
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Note that in the examples below the file glob covers all the `docs/*.md` markdown, but skips `docs/demos/*.md`.  Using a double-splat like `**.md` for recursive descent in subdirs is also supported.  Output below is *lightly edited to remove actual errors* in some cases, but otherwise model answers are quoted verbatim.
 
-``` bash 
+```bash {.cli_example}
 $ query='why use this project' glob='docs/*.md' ./demos/cmk/rag.cmk ask
-  ⇄  ask // Answering query for corpus: docs/*.md (40 files total) 
-  
-  Use it for decoupling CI/CD processes from platform lock-in and rapidly 
-  incorporating external tools or code into your projects. It fosters an 
-  environment that encourages experimentation in component design, prototyping 
-  systems, and building console applications.
+```
+```markdown {.cli_output .language-markdown}
+⇄  ask // Answering query with corpus: docs/*.md (40 files total) 
 
-  CITATIONS:
-  
-  - docs/overview.md ("Typical use-cases in...")
-  - docs/index.md ("Typical use-cases in...")
-  - docs/but-why.md ("Motivation & Design...")
+Use it for decoupling CI/CD processes from platform lock-in and rapidly 
+incorporating external tools or code into your projects. It fosters an 
+environment that encourages experimentation in component design, prototyping 
+systems, and building console applications.
 
+CITATIONS:
+
+- docs/overview.md ("Typical use-cases in...")
+- docs/index.md ("Typical use-cases in...")
+- docs/but-why.md ("Motivation & Design...")
 ```
 
 ------------------
 
 Fuzzy search is marginally practical considering citations, but yeah.. might as well grep.
 
-```bash
+```bash {.cli_example}
 $ query='which demos are related to justfiles' \
     glob='docs/demos/*.md' ./demos/cmk/rag.cmk ask
-  ⇄  ask // Answering query for corpus: docs/demos/*.md (13 files total) 
-  
-  The Justfile demo is directly related to using and wrapping just-runners with 
-  the make recipe system, as well as exposing different interfaces. This 
-  demonstrates interoperability between the two systems by showing how compose.mk 
-  can incorporate a foreign tool like justfiles.
-  result: 
-  
-  CITATIONS:
-  - docs/demos/just.md ("Interoperability wit...")
+```
+```raw {.cli_output}
+⇄  ask // Answering query with corpus: docs/demos/*.md (13 files total) 
+
+The Justfile demo is directly related to using and wrapping just-runners with 
+the make recipe system, as well as exposing different interfaces. This 
+demonstrates interoperability between the two systems by showing how compose.mk 
+can incorporate a foreign tool like justfiles.
+result: 
+
+CITATIONS:
+- docs/demos/just.md ("Interoperability wit...")
 ```
 
 ------------------
 
 Besides pirate-support, you can ask it to speak to you like a child.  This might be useful for 'explain like I'm a python programmer' or similar, but you'll probably need switch from `phi3:mini` to something bigger (and slower).
 
-```bash 
+```bash {.cli_example}
 $ query='whats the best way to get started with compose.mk? explain like i am 5' \
     glob='docs/overview.md' ./demos/cmk/rag.cmk ask
-  ⇄  ask // Answering query for corpus: docs/overview.md (1 files total) 
-  
-  Hey there! Think of compose.mk as a toolbox that helps you build things faster 
-  and in more ways than just using regular make commands. Since it is kind of like 
-  adding extra fun new tools to your workshop, here are simple steps for beginners on 
-  how to start with compose.mk:
-  
-  1. Get the Toolkit! First off, remember this toolbox is not something you can 
-  hold; that means we need a computer and internet connection because everything 
-  starts online through GitHub where they share their awesome tools like 
-  compose.mk.
+```
+```raw {.cli_output}
+⇄  ask // Answering query with corpus: docs/overview.md (1 files total) 
+
+Hey there! Think of compose.mk as a toolbox that helps you build things faster 
+and in more ways than just using regular make commands. Since it is kind of like 
+adding extra fun new tools to your workshop, here are simple steps for beginners on 
+how to start with compose.mk:
+
+1. Get the Toolkit! First off, remember this toolbox is not something you can 
+hold; that means we need a computer and internet connection because everything 
+starts online through GitHub where they share their awesome tools like 
+compose.mk.
 ```
 
 <br/>
@@ -165,11 +157,9 @@ The orchestration script isn't *short* but it's very basic.  This is mostly just
 
 To spice it up, this file is written in [CMK-lang]({{mkdocs.site_relative_url}}/compiler), interpreted by `compose.mk`, and transpiled to Makefile on demand, which allows for cleaner syntax in some places.
 
-**Via: {{macros.repo_link('demos/cmk/rag.cmk', github)}}**
+{#**Via: {{macros.repo_link('demos/cmk/rag.cmk', github=github)}}**#}
 
-```Makefile
-{{open('demos/cmk/rag.cmk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/cmk/rag.cmk', type='cmk', github=github)}}
 
 The most interesting and important parts above are really just startup (determining an appropriate value for `OLLAMA_HOST`) and shutdown (`ollama_server.stop`).
 
@@ -178,58 +168,55 @@ The most interesting and important parts above are really just startup (determin
 
 As mentioned at the beginning, we want to additionally generate a frozen version of the work so far.  See the [main packaging docs]({{mkdocs.site_relative_url}}/demos/packaging) for more details, but this one-liner is enough to build the executable archive that we need.
 
-```bash 
+```bash {.cli_example}
 $ archive='docs demos' bin=docs.agent ./demos/cmk/rag.cmk mk.pkg.root
 ```
 
 This command creates a new executable called `./docs.agent`, and packages up all of the following:
 
-* The documentation corpus
-* The compose file (and thus effectively ollama/langchain dependencies)
-* The python script that defines the LLM operations 
-* The `rag.cmk` orchestration script, and `compose.mk` itself
+1. The documentation corpus
+1. The compose file (and thus effectively ollama/langchain dependencies)
+1. The python script that defines the LLM operations 
+1. The `rag.cmk` orchestration script, and `compose.mk` itself
 
 To use this self-contained version, we still need to specify arguments and entrypoints, which is similar but slightly different from the [main usage described earlier](#usage).  As before, verbs like `init` and interactive `chat` are also available, and below you can see another example using `ask`.
 
-```bash 
+```bash {.cli_example}
 $ query='which features are related to interactivity' \
     glob='docs/*.md' ./docs.agent  -- ask
-  
-  The interactive task selector feature mentioned in the context is directly 
-  related to interactivity, as it allows users to select tasks interactively 
-  within a TUI environment using compose.mk capabilities.
-  [snip]
+```
+```raw {.cli_output}
+The interactive task selector feature mentioned in the context is directly 
+related to interactivity, as it allows users to select tasks interactively 
+within a TUI environment using compose.mk capabilities.
+[snip]
 ```
 
 This example should now be able to run almost anywhere, including places where ollama is not available, where ports cannot be opened, where models are not yet available, and where python is not even installed, but there are a few caveats.  It does require `make` and `docker`, and on OSX [you'll probably need gnu awk]({{mkdocs.site_relative_url}}/compiler/#status-info-limitations-other-advice).  It downloads ~4gb of LLM models if you don't have them already (which is the only reason this test case doesn't run in github actions, like the other demos).  But it won't pester you about running any other installation or setting up API keys.  
 
-You can download the agent [here]({{mkdocs.site_relative_url}}/artifacts/docs.agent).
+You can download the agent [here]({{mkdocs.site_relative_url}}/artifacts/docs.agent), use `chmod +x docs.agent`, and you should be able to try it out.
 
 ### Appendix: Support Code
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.img_link("gears.jpg", mkdocs, "85%", align='center')}}
+{{macros.img_link("gears.jpg", mkdocs, "85%", align='center',class=" ")}}
 
 #### Appendix: LangChain Code
 <hr style="width:100%;border-bottom:3px solid black;">
 
-**Via: {{macros.repo_link('demos/data/rag.py', github)}}**
+{#**Via: {{macros.repo_link('demos/data/rag.py', github=github)}}**#}
 
-```python
-{{open('demos/data/rag.py','r').read().strip()}}
-```
+{{macros.embed_demo('demos/data/rag.py', type='python', github=github)}}
 
 #### Appendix: Ollama Container
 <hr style="width:100%;border-bottom:3px solid black;">
 
-**Via: {{macros.repo_link('demos/data/docker-compose.rag.yml', github)}}**
+{#**Via: {{macros.repo_link('demos/data/docker-compose.rag.yml', github=github)}}**#}
 
-```python
-{{open('demos/data/docker-compose.rag.yml','r').read().strip()}}
-```
+{{macros.embed_demo('demos/data/docker-compose.rag.yml', type='python', github=github)}}
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-[^1]: https://ollama.com/
-[^2]: https://python.langchain.com/docs/introduction/
+[^1]: [https://ollama.com](https://ollama.com/)
+[^2]: [https://python.langchain.com/docs/introduction](https://python.langchain.com/docs/introduction/)
 [^3]: See the compose file for hints about enabling GPUs

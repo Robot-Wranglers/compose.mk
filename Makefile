@@ -38,6 +38,8 @@ build: tux.require
 	${jb} foo=bar | ${jq} .
 
 normalize: # NOP
+# nord-darker
+pygments.css/%:; pygmentize -S ${*} -f html 
 
 test: validate integration-test demos smoke-test 
 itest integration-test:; ./demos/itest.mk
@@ -46,6 +48,7 @@ stest smoke-test:
 
 demos demos.test demo-test:
 	set -x && ls demos/*.mk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
+	#  set -x && ls demos/*.mk |grep -v lean| xargs -I% bash -x -c "./% || exit 255"
 demos/cmk:
 	set -x && ls demos/cmk/*.cmk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 
@@ -69,6 +72,24 @@ services:
     volumes:
       - ${PWD}:/workspace
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+    
+  csscomb: 
+    <<: *base
+    hostname: csscomb
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM node:18-alpine
+        RUN npm install -g csscomb
+        RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
+        RUN apk add -q --update --no-cache git
+        RUN git clone https://github.com/StfBauer/old-fashioned.git /tmp/old-fashioned
+        RUN cd /tmp/old-fashioned && npm install && npm run build 
+        # && npm test
+        # WORKDIR /app
+        # CMD ["csscomb", "."]
+        # COPY /app/csscomb /usr/local/csscomb
+    entrypoint: csscomb
   mmd:
     hostname: mmd
     build:

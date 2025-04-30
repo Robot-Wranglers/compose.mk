@@ -5,26 +5,26 @@
 
 This is a pretty extreme example of the capabilities of `compose.mk` to communicate [across matrioshka layers]({{mkdocs.site_relative_url}}/matrioshka/#advanced-matrioshka-idioms).  Consider the following code, which we might call "makeception".  It's well-commented, but it takes a minute to wrap your head around, so let's prime the intuition.
 
-In this example, we'll use `compose.mk` to embed 2 container definitions and to build and steer them.  What's unusual about this example is that even *the build process* itself is encapsulated inside the same as file, and rather than jamming bash in the Dockerfile, it runs as a normal task/target.  We'll also see some practical examples of how to communicate across matrioshka layers, using the stage-stacks.
+!!! tip "Road Map"
+    In this example, we'll use `compose.mk` to embed 2 container definitions and to build and steer them.  What's unusual about this example is that even *the build process* itself is encapsulated inside the same as file, and rather than jamming bash in the Dockerfile, it runs as a normal task/target.  We'll also see some practical examples of how to communicate across matrioshka layers, using the stage-stacks.
 
 ### The Code 
 <hr style="width:100%;border-bottom:3px solid black;">
 
 As usual, it's harder to explain what it does than to actually build it. 😵‍💫
 
-```Makefile 
-{{open('demos/matrioshka.mk','r').read()}}
-```
-
-<br/>
+{{macros.embed_demo('demos/matrioshka.mk', github=github)}}
 
 ### The Output
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Abbreviated output looks something like this:
 
+```bash {.cli_example .language-bash}
+$ ./demos/matrioshka.mk
 ```
-╔═════════════════════════════════════════════════════╗                                                   
+```raw {.cli_output}
+╔═════════════════════════════════════════════════════╗
 ║                         RUN                         ║
 ╚═════════════════════════════════════════════════════╝
 Running inside alice
@@ -49,7 +49,8 @@ The "makeception" demo above is mainly just to demonstrate control, but since we
 
 The main trouble with this example is that layer-caching does makes it impractical for component-oriented usage (like say, [as a widget in the TUI]({{mkdocs.site_relative_url}}/advanced-tuis/#understanding-widgets)).  But this isn't necessarily a problem if you're using it for automating container *build/test/push* work flows.
 
-The eagle-eyed reader will also notice that this uses `docker:dind` as a base image, which is ultimately how JSON can move via `flux.stage.push`, even though tools like `jq` and `jb` are not actually installed.  If you can't use a base with docker in it, then you'll have to explicitly install `jq` and `jb` to use the stack.
+!!! closer_look "Closer Look"
+    The eagle-eyed reader will also notice that this uses `docker:dind` as a base image, which is ultimately how JSON can move via `flux.stage.push`, even though tools like `jq` and `jb` are not actually installed.  If you can't use a base with docker in it, then you'll have to explicitly install `jq` and `jb` to use the stack.
 
 Going further, one might also wonder whether the stage-stack could be used for **bidirectional communication during the build-phase** as well.  This is *also* actually possible, but left as an exercise for the reader.  (As a hint, this does require being "outside" of the finished build-phase currently, and then faking it with a `docker copy` call to concatenate  internal / external stacks.  There's an [open issue](https://github.com/docker/buildx/issues/1991) about allowing bind-mounts during build though, which would remove the special case and give stack access to *both* the build/run stages for the container.
 

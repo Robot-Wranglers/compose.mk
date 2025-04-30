@@ -2,7 +2,7 @@
 # demos/stages-idiom.mk: 
 #
 #   Demonstrating stages, stacks, and artifact-related features of compose.mk
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 #   See the docs for more discussion: https://robot-wranglers.github.io/compose.mk/stages
 #
 #   USAGE: ./demos/stages-idiom.mk

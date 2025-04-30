@@ -5,7 +5,7 @@
 
 Stages **add support for persistent data via a named stack**, plus basic *`push/pop/peek`* operators.
 
-{{macros.img_link("escher-babel.png", mkdocs, "58%",align='center')}}
+{{macros.img_link("escher-babel.png", mkdocs, "58%",align='center', class=" ")}}
 
 Any task associated with `compose.mk` should be able to use a stack just by mentioning it, regardless of whether it is inside or outside of a container.  Stacks live on the filesystem usually at the project root, and are JSON-backed.  Ultimately the *push/pop/etc* operators are implemented with `jq` and `jb`, using local tools if available but falling back to docker for a portable implementation.  *(For more background, see the docs on [structured IO ]({{mkdocs.site_relative_url}}/standard-lib#structured-io) and [proxy wrappers]({{mkdocs.site_relative_url}}/tool-overview#tool-wrappers).)*
 
@@ -35,7 +35,7 @@ Stack-operations are logged by default to stderr, so it's easy for users or devs
 
 **Creating a stack** is just mentioning it.
 
-```bash 
+```bash {.cli_example}
 $ ./compose.mk flux.stage.enter/BUILD
 
 ╔═══════════════════════════════════════════════════════════╗
@@ -51,7 +51,7 @@ $ ./compose.mk flux.stage.enter/BUILD
 
 **Pushing data** works with pipes:
 
-```bash
+```bash {.cli_example}
 $ echo '{"data":789}' | ./compose.mk flux.stage.push/BUILD
 
 Φ flux.stage.push // BUILD 
@@ -61,7 +61,7 @@ $ echo '{"data":789}' | ./compose.mk flux.stage.push/BUILD
 
 You can also use the builtin wrapper for `jb` like this:
 
-```bash 
+```bash {.cli_example}
 $ ./compose.mk jb foo=bar | ./compose.mk flux.stage.push/BUILD
 ```
 
@@ -69,7 +69,7 @@ $ ./compose.mk jb foo=bar | ./compose.mk flux.stage.push/BUILD
 
 **Popping data** is pipe-safe JSON for downstream, but stderr is annotated for humans.
 
-```bash 
+```bash {.cli_example}
 $ ./compose.mk flux.stage.pop/BUILD
 Φ flux.stage.pop // BUILD
 ⇄ io.stack.pop // stack@.flux.stage.BUILD ⋙⋙⋙
@@ -95,21 +95,15 @@ $ ./compose.mk flux.stage.exit/BUILD
 
 If you're scripting with stages, the main difference is that `flux.stage.enter` and `flux.stage.exit` can be used like function decorators:
 
-```Makefile
-{{open('demos/stages-idiom.mk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/stages-idiom.mk', github=github)}}
 
 In this case when `validate` succeeds, there stage file is cleaned like we'd expect, and if there's a crash then partial results can be inspected.  There are various ways to write this, like replacing calls to `./compose.mk` with `${make}` expansions, or using macros instead of targets, but the idea is the same.  
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-**Using an implicit context manager** is an alternative style.  The example below shows that, plus overriding the banner-printing mechanism to use the (dockerized) `figlet` tool instead of using `gum`.
+**Using an implicit context manager** with {{macros.api_link('flux.stage.wrap',mkdocs,arg='target')}} is an alternative style.  The example below shows that, plus overriding the banner-printing mechanism to use the (dockerized) `figlet` tool instead of using `gum`. 
 
-{{macros.api_link('flux.stage.wrap',mkdocs,arg='target')}}:
-
-```Makefile
-{{open('demos/stage-wrapper.mk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/stage-wrapper.mk', github=github)}}
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
@@ -117,9 +111,7 @@ Another source of usage hints about stages is the test-suite, so it's included b
 
 If you are scripting, note that using `${@}` as shorthand for "current target name" is a good thing to organize around, since it reduces typing and typos.  Another idea is to parse out a *prefix* from the current target name, thus ensuring that related targets all use the same stack.
 
-```Makefile
-{{open('demos/stages.mk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/stages.mk', github=github)}}
 
 See the the implementation details below for quick links to the full API.
 
@@ -148,7 +140,7 @@ Nothing prevents further downstream slicing with `jq`, so stacks as presented th
 Eventually, the basic stack-operators might expand to include lightweight pattern matching and/or a simple tuple-space flavored interface. In the meantime though, you already got some new superpowers that might not be obvious:
 #}
 
-**Practically speaking, tools ike `terraform`, `helm`, `kubectl` and `ansible` all spit JSON,** and then one frequently needs the output for one as the input of another.  Without stages, `compose.mk` still makes that relatively easy, but pure pipelining means it's hard to reuse values, or you need to track a temp file, etc. 
+*Practically speaking, tools ike `terraform`, `helm`, `kubectl` and `ansible` all spit JSON,* then frequently needs the output for one as the input of another.  Without stages, `compose.mk` still makes that relatively easy, but pure pipelining means it's hard to reuse values, or you need to track a temp file, etc. 
 
 More philosophically, native support for stacks gives `compose.mk` a new capability, in terms of stuff like [programming](https://en.wikipedia.org/wiki/Tacit_programming) [paradigms](https://en.wikipedia.org/wiki/Stack-oriented_programming).  The stack is also a convenient way to communicate [between polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [across matrioshka layers]({{mkdocs.site_relative_url}}/matrioshka/#advanced-matrioshka-idioms).  And, for what it's worth, now you can pretty directly architect your automation in terms of [pushdown automata](https://en.wikipedia.org/wiki/Pushdown_automaton) or [queue machines](https://en.wikipedia.org/wiki/Queue_automaton) :)
 

@@ -1,0 +1,932 @@
+/* PrismJS 1.30.0
+https://prismjs.com/download#themes=prism-coy&languages=markup+css+clike+javascript+awk+bash+docker+elixir+factor+hcl+makefile+markdown+python */
+/**
+ * prism.js Coy theme for JavaScript, CoffeeScript, CSS and HTML
+ * Based on https://github.com/tshedor/workshop-wp-theme (Example: http://workshop.kansan.com/category/sessions/basics or http://workshop.timshedor.com/category/sessions/basics);
+ * @author Tim  Shedor
+ */
+
+.cli_example code[class*='language-'],
+pre[class*='language-'] {
+    line-height: 1;
+    /* font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace; */
+    /* font-size: smaller; */
+    text-align: left;
+    white-space: pre;
+    word-spacing: normal;
+    word-wrap: normal;
+    word-break: normal;
+    -moz-tab-size: 4;
+      -o-tab-size: 4;
+         tab-size: 4;
+    -webkit-hyphens: none;
+       -moz-hyphens: none;
+            hyphens: none;
+    color: whitesmoke;
+    background: black;
+    -ms-hyphens: none;
+}
+.define_block {
+    background-color:rgb(43, 41, 41);
+    margin-left:15px solid red;
+}
+
+/* Code blocks */
+pre[class*='language-']
+{
+    position: relative;
+    overflow: visible;
+    margin: .5em 0;
+    padding: 1px;
+}
+
+code[class*='language-']
+{
+    display: block;
+    overflow: auto;
+
+    height: inherit;
+    max-height: inherit;
+    padding: 0 1em;
+}
+
+/* Margin bottom to accommodate shadow */
+:not(pre) > code[class*='language-'],
+pre[class*='language-']
+{
+    -webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
+    margin-bottom: 1em;
+    background-color: #fdfdfd;
+}
+
+/* Inline code */
+:not(pre) > code[class*='language-']
+{
+    position: relative;
+
+    display: inline;
+
+    padding: .2em;
+
+    white-space: normal;
+
+    color: #c92c2c;
+    border: 1px solid rgba(0, 0, 0, .1);
+    border-radius: .3em;
+}
+
+pre[class*='language-']:before,
+/* pre[class*="language-"]:after {
+	content: '';
+	display: block;
+	position: absolute;
+	bottom: 0.75em;
+	left: 0.18em;
+	width: 40%;
+	height: 20%;
+	max-height: 13em;
+	box-shadow: 0px 13px 8px #979797;
+	-webkit-transform: rotate(-2deg);
+	-moz-transform: rotate(-2deg);
+	-ms-transform: rotate(-2deg);
+	-o-transform: rotate(-2deg);
+	transform: rotate(-2deg);
+} */
+
+pre[class*='language-']:after
+{
+    right: .75em;
+    left: auto;
+
+    -webkit-transform: rotate(2deg);
+       -moz-transform: rotate(2deg);
+        -ms-transform: rotate(2deg);
+         -o-transform: rotate(2deg);
+            transform: rotate(2deg);
+}
+div.cli_example {
+margin-bottom:1em;
+}
+div.cli_example span.token.comment span.hljs-comment
+{
+    font-size: larger;
+    /* color:rgba(204, 137, 109, 0.833); 
+    background-color: rgb(3, 4, 4);  */
+    font-weight: 1200;
+}
+span.hljs-string
+{
+    color: rgb(198, 248, 250);
+}
+span.hljs-attr
+{
+    font-size: bigger;
+    font-weight: bolder;
+    color: skyblue;
+}
+.cli_example .token.block-comment,
+.cli_example .token.prolog,
+.cli_example .token.doctype,
+.cli_example .token.cdata
+{
+    color: #7d8b99;
+}
+span.se { color:mediumturquoise; font-weight:bolder; }
+.token.punctuation { 
+    font-weight:bolder; font-size: 105%; 
+    color: white; }
+
+.cli_example .token.property,
+.cli_example .token.tag,
+.cli_example .token.boolean,
+.cli_example .token.number,
+.cli_example .token.function-name,
+.cli_example .token.constant,
+.cli_example .token.symbol,
+.cli_example .token.deleted{
+    color: #c92c2c;
+}
+
+span.cmk-recursion span.n,
+span.token.cmk-recursion {
+    color: #abbd51;
+    font-style: italic;
+}
+.cli_example .token.selector,
+.cli_example .token.attr-name,
+.cli_example .token.string,
+.cli_example .token.char,
+.cli_example .token.function,
+.cli_example .token.builtin,
+.cli_example .token.inserted
+{
+    color: whitesmoke;
+}
+.cli_example .token.builtin {
+    color: blue;
+}
+.cli_example .token.operator,
+span.p {
+    font-size: 105%;
+    font-weight: bolder;
+    color: rgba(72, 209, 205, 0.802);
+}
+.cli_example .token.entity,
+.cli_example .token.url
+{
+    font-weight: italic;
+
+    color: red;
+    /* background: rgba(255, 255, 255, 0.5); */
+}
+.cli_example .token.variable
+{
+    color: skyblue;
+    /* background: rgba(255, 255, 255, 0.5); */
+}
+
+.cli_example .token.atrule,
+.cli_example .token.attr-value,
+.cli_example .token.keyword,
+.cli_example .token.class-name
+{
+    color: #1990b8;
+}
+
+.cli_example .token.regex,
+.cli_example .token.important
+{
+    color: #e90;
+}
+
+.cli_example .language-css .token.string,
+.cli_example .style .token.string
+{
+    color: #a67f59;
+    background: rgba(255, 255, 255, .5);
+}
+
+.cli_example .token.important
+{
+    font-weight: normal;
+}
+
+.cli_example .token.bold
+{
+    font-weight: bold;
+}
+.cli_example .token.italic
+{
+    font-style: italic;
+}
+
+.cli_example .token.entity
+{
+    cursor: help;
+}
+
+.cli_example .token.namespace
+{
+    opacity: .7;
+}
+
+@media screen and (max-width: 767px)
+{
+    pre[class*='language-']:before,
+    pre[class*='language-']:after
+    {
+        bottom: 14px;
+
+        box-shadow: none;
+    }
+}
+
+/* Plugin styles: Line Numbers */
+.cli_example pre[class*='language-'].line-numbers.line-numbers
+{
+    padding-left: 0;
+}
+
+.cli_example pre[class*='language-'].line-numbers.line-numbers code
+{
+    padding-left: 3.8em;
+}
+
+.cli_example pre[class*='language-'].line-numbers.line-numbers .line-numbers-rows
+{
+    left: 0;
+}
+
+/* Plugin styles: Line Highlight */
+.cli_example pre[class*='language-'][data-line]
+{
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+}
+.cli_example pre[data-line] code
+{
+    position: relative;
+
+    padding-left: 4em;
+}
+.cli_example pre .line-highlight
+{
+    margin-top: 0;
+}
+.command-line-prompt
+{
+    font-size: 100%;
+
+    display: block;
+    float: left;
+
+    margin-right: 1em;
+
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+            user-select: none;
+    text-align: right;
+    letter-spacing: -1px;
+    pointer-events: none;
+
+    border-right: 1px solid #999;
+}
+
+.command-line-prompt > span:before
+{
+    display: block;
+
+    padding-right: .8em;
+
+    content: ' ';
+
+    opacity: .7;
+}
+
+.command-line-prompt > span[data-user]:before
+{
+    content: '[' attr(data-user) '@' attr(data-host) '] $';
+}
+
+.command-line-prompt > span[data-user='root']:before
+{
+    content: '[' attr(data-user) '@' attr(data-host) '] #';
+}
+
+.command-line-prompt > span[data-prompt]:before
+{
+    content: attr(data-prompt);
+}
+
+.command-line-prompt > span[data-continuation-prompt]:before
+{
+    content: attr(data-continuation-prompt);
+}
+
+.command-line span.token.output
+{
+    /* Make shell output lines a bit lighter to distinguish them from shell commands */
+    opacity: .7;
+}
+/* DEFAULTS, effecting embedded files and unspecified tokens for command-lines, etc */
+.hll { background-color: #3B4252 }
+.c { 
+    color: #616E87; 
+    /* color: #9D9681; */
+    /* color: #BEC25795;  */
+    font-style: bold } /* Comment */
+/* Error */
+.err { 
+    /* color: #BF616A;  */
+} 
+.esc { color: #D8DEE9 } /* Escape */
+.g { color: #D8DEE9 } /* Generic */
+.k { color: #81A1C1; font-weight: bold } /* Keyword */
+.l { color: #c3f3f9e7 ; } /* Literal */
+.n { color: lightblue; } /* Name */
+.o { color: #81A1C1; font-weight: bold } /* Operator */
+.x { color: #D8DEE9 } /* Other */
+.p { color: #ECEFF4 } /* Punctuation */
+.ch { color: #616E87; font-style: italic } /* Comment.Hashbang */
+.cm { color: #616E87; font-style: italic } /* Comment.Multiline */
+.cp { color: #b3ddab; font-style: italic } /* Comment.Preproc */
+.cpf { color: #616E87; font-style: italic } /* Comment.PreprocFile */
+/* Comment.Single */
+.c1, .c { 
+    /* color:#B6CADFD6; */
+    color: #CBCFD3D6;
+    /* font-style: italic; */
+    /* color: #BEC257;  */
+    /* color: #585448; */
+    font-size:100%;
+    /* color: #9D9681; */
+    /* color: #BEC25795;  */
+    font-style: bold } /* Comment */
+
+.cli_example .c1, .cli_example .c { 
+    /* color: #616E87;  */
+    /* font-style: italic; */
+    color: #fdefa4b8;
+    font-size: 110%;
+}
+.language-makefile .c .token.operator { 
+    /* color: #616E87;  */
+    /* font-style: italic; */
+    color:snow; 
+    /* opacity:50%; */
+    font-size: 130%;
+}
+
+.cs { color: #616E87; font-style: italic } /* Comment.Special */
+.gd { color: #BF616A } /* Generic.Deleted */
+.ge { color: #D8DEE9; font-style: italic } /* Generic.Emph */
+.ges { color: #D8DEE9 } /* Generic.EmphStrong */
+.gr { color: #BF616A } /* Generic.Error */
+.gh { color: #88C0D0; font-weight: bold } /* Generic.Heading */
+.gi { color: #A3BE8C } /* Generic.Inserted */
+.go { color: #D8DEE9 } /* Generic.Output */
+.gp { color: #616E88; font-weight: bold } /* Generic.Prompt */
+.gs { color: #D8DEE9; font-weight: bold } /* Generic.Strong */
+.gu { color: #88C0D0; font-weight: bold } /* Generic.Subheading */
+.gt { color: #BF616A } /* Generic.Traceback */
+.kc { color: #81A1C1; font-weight: bold } /* Keyword.Constant */
+.kd { color: #81A1C1; font-weight: bold } /* Keyword.Declaration */
+.kn { color: #81A1C1; font-weight: bold } /* Keyword.Namespace */
+.kp { color: #81A1C1 } /* Keyword.Pseudo */
+.kr { color: #81A1C1; font-weight: bold } /* Keyword.Reserved */
+.kt { color: #81A1C1 } /* Keyword.Type */
+.ld { color: #D8DEE9 } /* Literal.Date */
+.m { color: #90dd73; } /* Literal.Number */
+.s { color: #A3BE8C } /* Literal.String */
+.na { color: #8FBCBB } /* Name.Attribute */
+.nb { color: #81A1C1; } /* Name.Builtin */
+.language-makefile .nb {
+    color: #c8d2dc;
+    font-size: larger;
+    font-weight: lighter;
+}
+.nc { color: #8FBCBB } /* Name.Class */
+.no { color: #93e4ff } /* Name.Constant */
+.nd { color: #D08770 } /* Name.Decorator */
+.ni { color: #D08770 } /* Name.Entity */
+.ne { color: #BF616A } /* Name.Exception */
+.nf {
+  /* color:#39ADE6F2;  */
+  font-weight:bolder; 
+  font-size:larger;
+} /* Name.Function */
+/*.nl { color: #D8DEE9 }  Name.Label */
+.nn { color: #8FBCBB } /* Name.Namespace */
+.nx { color: #D8DEE9 } /* Name.Other */
+.py { color: #D8DEE9 } /* Name.Property */
+.nt { color:rgba(255, 250, 250, 0.783) ; font-weight: bolder;} /* Name.Tag */
+.nv { color: #c0f4c4 } /* Name.Variable */
+.token.function .nv { 
+    color: #ffa700bf;
+    font-weight:bolder; 
+    font-size:larger;
+}
+
+.ow { color: #81A1C1; font-weight: bold } /* Operator.Word */
+.pm { color: #ECEFF4 } /* Punctuation.Marker */
+.w { color: #D8DEE9 } /* Text.Whitespace */
+.mb { color: #B48EAD } /* Literal.Number.Bin */
+.mf { color: #B48EAD } /* Literal.Number.Float */
+.mh { color: #B48EAD } /* Literal.Number.Hex */
+.mi { color: #B48EAD } /* Literal.Number.Integer */
+.mo { color: #B48EAD } /* Literal.Number.Oct */
+.sa { color: #A3BE8C } /* Literal.String.Affix */
+.sb { color: #A3BE8C } /* Literal.String.Backtick */
+.sc { color: #A3BE8C } /* Literal.String.Char */
+.dl { color: #A3BE8C } /* Literal.String.Delimiter */
+.sd { color: #616E87 } /* Literal.String.Doc */
+.s2 { color: #b3b3b3 } /* Literal.String.Double */
+.se { color: #EBCB8B } /* Literal.String.Escape */
+.sh { color: #A3BE8C } /* Literal.String.Heredoc */
+.si {  } /* Literal.String.Interpol */
+.sx { color: #A3BE8C } /* Literal.String.Other */
+.sr { color: #EBCB8B } /* Literal.String.Regex */
+.s1 { color: #A3BE8C } /* Literal.String.Single */
+.ss { color: #A3BE8C } /* Literal.String.Symbol */
+.bp { color: #81A1C1 } /* Name.Builtin.Pseudo */
+.fm { color: #88C0D0 } /* Name.Function.Magic */
+.vc { color: #D8DEE9 } /* Name.Variable.Class */
+.vg { color: #D8DEE9 } /* Name.Variable.Global */
+.vi { color: #D8DEE9 } /* Name.Variable.Instance */
+.vm { color: #D8DEE9 } /* Name.Variable.Magic */
+.il { color: #B48EAD } /* Literal.Number.Integer.Long */
+
+
+/**
+
+ * a11y-dark theme for JavaScript, CSS, and HTML
+ * Based on the okaidia theme: https://github.com/PrismJS/prism/blob/gh-pages/themes/prism-okaidia.css
+ * @author ericwbailey
+ */
+ code[class*="language-"],
+ pre[class*="language-"] {
+     color: #f8f8f2;
+     background: none;
+     font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+     text-align: left;
+     white-space: pre;
+     word-spacing: normal;
+     word-break: normal;
+     word-wrap: normal;
+     line-height: 1.5;
+ 
+     -moz-tab-size: 4;
+     -o-tab-size: 4;
+     tab-size: 4;
+ 
+     -webkit-hyphens: none;
+     -moz-hyphens: none;
+     -ms-hyphens: none;
+     hyphens: none;
+ }
+ 
+ /* Code blocks */
+ pre[class*="language-"] {
+     padding: 1em;
+     margin: 0.5em 0;
+     overflow: auto;
+     border-radius: 0.3em;
+ }
+ 
+ :not(pre) > code[class*="language-"],
+ pre[class*="language-"] {
+     background: #2b2b2b;
+ }
+ 
+ /* Inline code */
+ :not(pre) > code[class*="language-"] {
+     padding: 0.1em;
+     border-radius: 0.3em;
+     white-space: normal;
+ }
+ 
+ .token.comment,
+ .token.prolog,
+ .token.doctype,
+ .token.cdata {
+     color: #d4d0ab;
+ }
+ 
+ .token.punctuation {
+     /* color: #fefefe; */
+     color: #f8ff79;
+    }
+ 
+.token.property{
+    color: #ffa07a;
+    }
+.token.tag{
+    color: #ffa07a;
+    }
+.token.constant{
+    color: #ffa07a;
+    }
+
+.token.symbol {
+    color: #ffa07a;
+}
+.token.target.inside_define {
+    color: #9ae152;
+}
+
+.token.deleted { color: #ffa07a;
+}
+ 
+
+ .token.boolean,
+ .token.number {
+     color: #00e0e0;
+ }
+ 
+ .token.string{ 
+    color: rgb(144, 122, 122); }
+.token.selector,
+ .token.attr-name,
+ .token.char,
+ .token.builtin,
+ .token.inserted {
+     color: #abe338;
+ }
+ 
+.o,
+.token.operator,
+ .token.entity,
+ .token.url,
+ .language-css .token.string,
+ .style .token.string,
+ .token.variable {
+     /* color: gray; */
+     color: #d8e6fb;
+ }
+ 
+ /* .token.atrule,
+ .token.attr-value,
+ .token.function {
+     color: #ffd700;
+ } */
+ 
+ .token.keyword {
+     color: #00e0e0;
+ }
+ 
+ .token.regex,
+ .token.important {
+     color: #ffd700;
+ }
+ 
+ .token.important,
+ .token.bold {
+     font-weight: bold;
+ }
+ 
+ .token.italic {
+     font-style: italic;
+ }
+ 
+ .token.entity {
+     cursor: help;
+ }
+ 
+ @media screen and (-ms-high-contrast: active) {
+     code[class*="language-"],
+     pre[class*="language-"] {
+         color: windowText;
+         background: window;
+     }
+ 
+     :not(pre) > code[class*="language-"],
+     pre[class*="language-"] {
+         background: window;
+     }
+ 
+     .token.important {
+         background: highlight;
+         color: window;
+         font-weight: normal;
+     }
+ 
+     .token.atrule,
+     .token.attr-value,
+     .token.function,
+     .token.keyword,
+     .token.operator,
+     .token.selector {
+         font-weight: bold;
+     }
+ 
+     .token.attr-value,
+     .token.comment,
+     .token.doctype,
+     .token.function,
+     .token.keyword,
+     .token.operator,
+     .token.property,
+     .token.string {
+         color: highlight;
+     }
+ 
+     .token.attr-value,
+     .token.url {
+         font-weight: normal;
+     }
+ }
+/* PrismJS 1.30.0
+https://prismjs.com/download.html#themes=prism-okaidia&languages=markup+css+clike+javascript+awk+bash+makefile+yaml&plugins=line-numbers+keep-markup+data-uri-highlight */
+/**
+ * okaidia theme for JavaScript, CSS and HTML
+ * Loosely based on Monokai textmate theme by http://www.monokai.nl/
+ * @author ocodia
+ */
+div .snippet {
+    /* border-left: 3px solid rgba(241, 168, 32, 0.806); */
+    position: relative;
+
+    width: 100%;
+    /* margin:-1em -1em -1em -1em; */
+    margin-top: -10px;
+    margin-bottom: 1em;
+
+    align: center;
+}
+.snippet code[class*='language-'],
+.snippet pre[class*='language-']
+{
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+
+    text-align: left;
+    white-space: pre;
+    word-spacing: normal;
+    word-wrap: normal;
+    word-break: normal;
+    -moz-tab-size: 4;
+      -o-tab-size: 4;
+         tab-size: 4;
+    -webkit-hyphens: none;
+       -moz-hyphens: none;
+            hyphens: none;
+
+    color: whitesmoke;
+    background: black;
+    /* border-left: 4px solid #f0b37e; */
+    text-shadow: 0 1px rgba(0, 0, 0, .3);
+
+        -ms-hyphens: none;
+}
+.token.url-link {
+    font-size:90%;
+    font-weight:bolder;
+    color:snow;
+}
+.token.cmk-syntax , .token.cmk-syntax .err {
+    color: #00e0e0;
+    opacity:100%;
+    font-weight:bolder;
+    font-size: 115%;
+    /* color:rgba(199, 205, 162, 0.883); */
+}
+.token.cmk-dunder {
+    color: snow;
+    font-size: larger;
+    font-weight: bolder;
+    /* color:rgba(199, 205, 162, 0.883); */
+}
+.inside_define {
+    font-size:smaller;
+    color: snow;
+    font-weight:bolder;
+    opacity:70%;
+    /* background-color: rgba(25, 24, 4, 0.526); */
+}
+.test_suite{
+    background-color: red;
+}
+/* Code blocks */
+.snippet pre[class*='language-']
+{
+    /* padding: 1em; */
+    /* margin: .5em 0; */
+    overflow: auto;
+
+    border-radius: .3em;
+}
+
+:not(pre) > code[class*='language-'],
+.snippet pre[class*='language-']
+{
+    background: #272822;
+}
+
+/* Inline code */
+:not(pre) > code[class*='language-']
+{
+    padding: .1em;
+    white-space: normal;
+    border-radius: .3em;
+}
+.token.cmk-cli-token{ color:lightcyan;}
+.token.cmk-fxn span.n, .token.cmk-fxn { 
+    /* color:rgba(37, 189, 146, 0.88);*/
+    color: rgba(125, 200, 223, 0.88);
+    /* color:rgba(73, 187, 212, 0.883); */
+    font-weight:bolder;
+}
+
+span.token.cmk-fxn span.nv
+{ 
+    color: rgba(255, 149, 149, 0.88);
+    font-weight:bolder;}
+span.token.cmk-fxn span.p
+{ 
+    /* color:rgba(199, 205, 162, 0.883);  */
+    color: rgba(206, 225, 88, 0.88);
+    font-weight:bolder;
+}
+
+/* DOCSTRING style comments  */
+.c .token.comment{
+    /* color: #00ffdba6; */
+    color: snow;
+    /* background-color: #31314b; */
+    opacity: 60%;
+  }}
+.token.comment,
+.snippet .token.prolog,
+.snippet .token.doctype,
+.snippet .token.cdata
+{
+    color: #86c1fc;
+}
+.highlight.language-markdown pre code {
+    color: #cad0dd;
+}
+.snippet .token.punctuation
+{
+    font-size: larger;
+    font-weight: bold;
+
+    color: #ffff2a;
+}
+.snippet .token.namespace
+{
+    opacity: .7;
+}
+
+.snippet .token.property,
+.snippet .token.tag,
+.snippet .token.constant,
+.snippet .token.symbol,
+.snippet .token.deleted
+{
+    color: #efefef;
+}
+.token.target:not(.inside_define){
+    /* color: rgb(62, 213, 251); */
+    color: rgba(86, 231, 255, 0.83);
+    /* color:snow; */
+}
+.snippet .token.boolean,
+.snippet .token.number
+{
+    color: #ae81ff;
+}
+
+.snippet .token.selector,
+.snippet .token.attr-name,
+.snippet .token.string,
+.snippet .token.char,
+.snippet .token.builtin,
+.snippet .token.inserted
+{
+    color: #efefef;
+}
+
+.snippet .token.operator,
+.snippet .token.entity,
+.snippet .token.url,
+.snippet .language-css .token.string,
+.snippet .style .token.string,
+.snippet .token.variable
+{
+    color: #f8f8f2;
+}
+
+.snippet .token.atrule,
+.snippet .token.attr-value,
+.token.function,
+.snippet .token.class-name
+{
+    color: #e6db74;
+}
+
+.token.keyword{
+    color: #66d9ef;
+    font-size:larger;
+}
+{ color: deeppink; }
+.snippet .token.key
+{
+    color: #66d9ef;
+}
+.token.important,.token.important .nv {
+    color: lightgreen;
+    background-color:#272822;
+}
+.token.string .s2 { color:rgb(232, 215, 215);}
+
+.token.selector,
+.token.attr-name,
+.token.char,
+.token.builtin {
+	color: aliceblue;
+}
+
+/* .token.atrule,
+.token.attr-value,
+.token.keyword { font-size:larger; 
+    font-weight:larger; 
+    color:burlywood;
+    } */
+.nt {
+/* color: #c4d7e8; */
+font-size: larger;
+color: #a9cae8;
+}
+
+
+.snippet .token.regex,
+.snippet .token.important
+{
+    color: #fd971f;
+    background: darkslategray;
+}
+
+.snippet .token.important,
+.snippet .token.bold
+{
+    font-weight: bold;
+}
+.snippet .token.italic
+{
+    font-style: italic;
+}
+
+.snippet .token.entity
+{
+    cursor: help;
+}
+
+.snippet pre[class*='language-'].line-numbers
+{
+    position: relative;
+
+    padding-left: 3.8em;
+
+    counter-reset: linenumber;
+}
+
+.snippet pre[class*='language-'].line-numbers > code
+{
+    position: relative;
+
+    white-space: inherit;
+}
+.line-numbers .line-numbers-rows
+{
+    font-size: 100%;
+    position: absolute;
+    top: 0;
+    left: -3.8em;
+    width: 3em; /* works for line-numbers below 1000 lines */
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+            user-select: none;
+    letter-spacing: -1px;
+    pointer-events: none;
+    border-right: 1px solid #999;
+}
+.line-numbers-rows > span
+{
+    display: block;
+    counter-increment: linenumber;
+}
+
+.line-numbers-rows > span:before
+{
+    display: block;
+    padding-right: .8em;
+    content: counter(linenumber);
+    text-align: right;
+    color: #999;
+}

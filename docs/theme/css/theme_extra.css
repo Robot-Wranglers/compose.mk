@@ -1,4 +1,313 @@
-/*
+
+/* Base admonition styling */
+.rst-content .admonition,
+.rst-content .admonition-todo,
+.rst-content .attention,
+.rst-content .caution,
+.rst-content .error,
+.rst-content .hint,
+.rst-content .important,
+.rst-content .note,
+.rst-content .seealso,
+.rst-content .tip,
+.rst-content .warning,
+.wy-alert {
+  /* padding: 10px; */
+  line-height: 24px;
+  /* margin: 14px; */
+}
+.rst-content .admonition-title,
+.wy-alert-title {
+  /* font-weight: 700; */
+  display: block;
+  /* color: #fff; */
+  background: #6ab0de;
+  /* padding: 6px 12px; */
+  margin: -12px -12px 12px;
+}
+
+span .code_table_2{
+}
+.code_table_1 {
+  font-weight:bold;
+  font-size:smaller;
+  text-align: left;
+  /* color:#0db7ed; */
+  color:black;
+}
+
+.rst-content .highlight:not(.cli_output):not(.cli_example):not(.api_docs) pre code {
+  font-size:100%;
+}
+
+.rst-content .api_docs pre code
+{
+  /* background-color:unset; */
+  /* color: rgb(54, 51, 54); */
+  color: rgb(0, 0, 0);
+  background-color: rgb(233, 238, 242);
+  white-space: pre;  white-space: pre;
+  word-wrap: normal;
+  display: block;
+  /* padding: 12px; */
+  padding-left: 1em;
+  font-size: 90%;
+}
+.api_module_help.highlight.language-markdown pre code{
+  border: 1px solid black;
+  font-size:90%;
+  /* font-size: 14.4px; */
+}
+.api_docs .o {
+  opacity:95%;
+  color:black;
+  font-size:110%;
+  }
+.api_docs .code_table_1 {
+  font-size:large;
+}
+/* arity */
+.api_docs .code_table_2 { 
+  font-weight:bolder;
+  text-align: right;
+  font-size:smaller;
+  /* font-weight:; */
+  /* font-style: italic; */
+  color:black;
+  flex: 1;
+  vertical-align: text-bottom;
+  margin-top:.5em;
+}
+.api_docs .code_table_3 {
+  /* font-size:smaller; */
+  font-weight:bolder;
+  color:black;
+  text-decoration: none;
+}
+
+.api_docs_header {
+  /* border-top:5px solid rgb(255, 255, 255);
+  background-color: rgb(0, 0, 0);
+  color:green; */
+}
+
+.api_docs code .k {
+  color:unset;
+}
+.api_docs code .s1,
+.api_docs code .s2,
+.api_docs code .nv {
+  color:green;
+}
+.api_docs_target {
+  display:flex; 
+  background-color: rgb(0, 0, 0);
+  color:green;
+}
+div.api_docs {
+  border-bottom: 2px solid black;
+  background-color: rgb(0, 0, 0);
+  color:snow;
+}
+span.code_table_2 {
+  text-align: center;
+  flex: 1;
+}
+.rst-content .cli_output code{
+  color:snow;
+  font-size:smaller;
+}
+.code_table_3 {
+  font-weight: bold;
+  text-align: right;
+}
+.wy-nav-content {
+  /* background-color: rgba(236, 236, 236, 0.69); */
+  /* background-color: #a694943d; */
+  /* background-color: #deddff42; */
+  /* rgba(235, 143, 143, 0.685) */
+  /* background-color:#faf0e640; */
+  /* border-left: 5px dotted #6495ed82; */
+  margin-left:-1em;
+  }
+.rst-content {
+  /* background-color: #c1ced317; */
+  background-color:transparent;
+}
+.rst-content h2 {
+  /* position:relative;
+  left:-1em;
+  margin-top: 3em;
+  margin-bottom: 0px; */
+}
+.smaller_font span {
+  font-size:86%;
+  background-color:transparent;
+}
+.rst-content h3 {
+  /* position:relative;
+  left:-1em;
+  margin-top: 2em; 
+  margin-bottom: 0px;*/
+}
+/* .rst-content {
+  background-color: red;
+} */
+
+div .code_table_top_snippet {
+  height:2.2em; 
+  background-color: rgba(85, 165, 217, 0.87);
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  border:2px solid black;
+  /* margin-bottom: 0px; */
+  display: flex;
+  align:center;
+  align-items: center;     /* vertical alignment */
+  justify-content: center; /* horizontal alignment */
+  justify-content: space-between;
+  align-items: center;
+  /* margin-bottom:1em; */
+  width: 100%;
+}
+.code_table_top_snippet span {
+  /* background-color: red; */
+  font-weight: bolder;
+}
+
+.code_table_1 a {
+  color:black; }
+div .highlight.api_docs {
+  margin-top: -1em;}
+div .code_table_top.api_docs {
+  background-color: transparent;
+  /* border-top-left-radius: 10px;
+  border-top-right-radius: 10px; */
+  align:center;
+  align-items: center;     /* vertical alignment */
+  justify-content: center; /* horizontal alignment */
+  border-bottom:1px dotted black;
+  margin-bottom: 0px;
+  margin-top: -1.5em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+
+.code_table_top:not(.api_docs) {
+  /* background-color: rgb(240, 241, 231); */
+  background-color: #b8b8b84f;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  align:center;
+  align-items: center;     /* vertical alignment */
+  justify-content: center; /* horizontal alignment */
+  border:2px solid black;
+  margin-bottom: 0px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+div .cli_output img {
+  padding: 1em;
+}
+.cli_output {
+  position:relative;
+  top:-1.0em; 
+  background-color: #24241d;
+  /* border-top:7px dotted #358ccb;  */
+  /* color:snow; */
+  margin-bottom:2em;
+  /* position: relative; */
+  margin-bottom:3em;
+  z-index: 1;
+  border-left: 8px solid #358ccb;
+  background-color: #2d3233;
+  /* background-image: linear-gradient(transparent 50%, rgba(69, 142, 209, .04) 50%); */
+  background-attachment: local;
+  background-origin: content-box;
+  background-size: 3em 3em;
+  box-shadow: -1px 0 0 0 #358ccb, 0 0 0 1px #dfdfdf;
+}
+.cli_example{
+  position: relative;
+  z-index: 1;
+  border-left: 8px solid #358ccb;
+  /* background-color: #0db7ed; */
+  background-image: linear-gradient(transparent 50%, rgba(69, 142, 209, .04) 50%);
+  background-attachment: local;
+  background-origin: content-box;
+  background-size: 3em 3em;
+  box-shadow: -1px 0 0 0 #358ccb, 0 0 0 1px #dfdfdf;
+}
+.cli_output.img_container {
+    position: relative;
+    top: -1.5em;
+    background-color:red;
+}
+
+.img_container {
+  /* border-left: 8px solid #68b16d;*/
+  /* border-left: 8px solid #8785d0; */
+  background-color: #4f4a4a;
+  padding: 2em;
+  align-items: center;     /* vertical alignment */
+  justify-content: center; /* horizontal alignment */
+  justify-content: space-between;
+}
+.img_container img { 
+  /* width: 100%;  */
+  /* width:70%;
+  align-self: center; */
+}
+div .code_table_bottom {
+  background-color: rgb(240, 241, 231);
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  align-items: center;     /* vertical alignment */
+  border:2px solid black;
+  position: relative;
+  top: -2em;
+  align:center;
+  display: flex; justify-content: space-between; width: 100%;
+}
+.jump_down {
+  position:relative;
+  padding:0px;
+  margin-left:5px;
+  margin-right:5px;
+  margin-top:5px;
+}
+.github_svg {
+    position:relative;
+    padding:0px;
+    /* margin-left:5px; */
+    margin-right:5px;
+    margin-top:2px;
+  }
+  div .cli_table{
+    border:1px solid grey;
+    background-color: #efefef;
+    align:center;
+    margin-bottom: 0px;
+    display: flex; justify-content: space-between; width: 100%;
+  }
+  div .cli_table svg {
+    position:relative;
+    padding:0px;
+    margin-bottom:-10px;
+  }
+  
+.token.keyword .cp {
+    color:#66d9ef
+}
+svg.small_bullseye {
+  /* padding:5px; */
+}
+  /*
  * Wrap inline code samples otherwise they shoot of the side and
  * can't be read at all.
  *
@@ -7,11 +316,16 @@
  * https://github.com/mkdocs/mkdocs/issues/834
  */
 .rst-content code {
-    white-space: pre-wrap;
+  white-space: pre-wrap;
     word-wrap: break-word;
     padding: 2px 5px;
 }
-
+.rst-content strong code {
+  /* font-size:1.1em; */
+  /* font-size:smaller;  */
+  /* font-weight:bolder;
+  background-color:#d3d0d078; */
+}
 /**
  * Make code blocks display as blocks and give them the appropriate
  * font size and padding.
@@ -21,35 +335,86 @@
  * https://github.com/mkdocs/mkdocs/issues/233
  */
 .rst-content pre code {
+    /* color: thistle; */
+    color: #b6b0f7d9;
+    background-color: #24241d;
     white-space: pre;
     word-wrap: normal;
     display: block;
     padding: 12px;
-    font-size: 12px;
+    font-size: 14.4px;
+}
+/* .goal-list {
+  list-style: none;
+  padding-left: 1.5em;
 }
 
+.goal-list li {
+  position: relative;
+  margin-bottom: 0.5em;
+}
+
+.goal-list li::before {
+  content: "🎯"; 
+  /* background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='%23FF4136' stroke-width='2'/%3E%3Ccircle cx='12' cy='12' r='6' fill='none' stroke='%23FF4136' stroke-width='2'/%3E%3Ccircle cx='12' cy='12' r='2' fill='%23FF4136'/%3E%3C/svg%3E"); */
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  
+  position: absolute;
+  left: -1.5em;
+  width: 1.5em;
+  display: inline-block;
+  text-align: center;
+} */
+
+/* Optional: Preserve numbering for ordered lists while showing icons */
+/* ol.goal-list {
+  counter-reset: goal-counter;
+} */
+
+/* ol.goal-list li::after {
+  counter-increment: goal-counter;
+  content: " " counter(goal-counter) ".";
+  color: #666;
+  font-weight: bold;
+} */
 /**
  * Fix code colors
  *
  * https://github.com/mkdocs/mkdocs/issues/2027
  */
-.rst-content code {
-    color: darkgreen;
-    background: #f8f8f8;
-    font-weight:bold;
+
+/* API-PAGE fix */
+.rst-content h5 code {
+  background-color: unset;
 }
 
-/* .rst-content pre code {
-    color: #000;
-    font-weight:bold;
-    background: rgb(163, 34, 34);
-} */
-code.hljs {
-    /* background:unset; */
-    /* color:unset; */
+.rst-content code {
+  /* color: black;
+  background: #efefef; */
+  /* background: rgba(217, 217, 217, 0.974); */
+  background: rgba(217, 217, 217, 0.71);
+  font-weight: bolder;
+  padding:.35em;
+  /* font-weight:bold; */
+}
+/* .code { background: black;} */
+/* code.hljs {
     background: #011627;
     color: #d6deeb;
-    }
+} */
+div .highlight {
+  margin:0px;
+  background: #000000;
+}
+/* .rst-content a:visited code 
+.rst-content a:hover code 
+.rst-content a:active code 
+.rst-content a:focus code 
+{ text-decoration: none; } */
+
+/* .highlight .nv { rgba(245, 235, 160, 0.83);} */
 /* .highlight pre code {
     color: rgb(155, 241, 155);
     background: #011627;
@@ -94,7 +459,6 @@ pre .cs, pre .c {
     color: #333;
 }
 
-
 /*
  * Additions specific to the search functionality provided by MkDocs
  */
@@ -118,6 +482,9 @@ form .search-query {
     padding: 6px 12px;
     border-color: #D1D4D5;
 }
+body {
+  color: #0c0c0c;
+}
 
 /*
  * Improve inline code blocks within admonitions.
@@ -139,15 +506,93 @@ form .search-query {
  * https://github.com/mkdocs/mkdocs/issues/834
  * https://github.com/mkdocs/mkdocs/pull/1034
  */
+.wy-table-responsive {
+  margin-bottom: 2em;
+  max-width: 100%;
+  width:100%;
+  /* width:66%; */
+  overflow: auto;
+  /* border:3px solid red; */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* height: 100vh;  */
+}
+.wy-table-responsive table {
+  margin-bottom: 0 !important;
+  margin-left: auto;
+  margin-right: auto;
+}
+.wy-table-responsive table td,
+.wy-table-responsive table th {
+  white-space: nowrap;
+}
+
+table .docutils.api_docs th { 
+  font-size:larger;
+  background-color: #1d3339fb;
+  /* background-color: snow; */
+  font-weight:bolder;
+}
+/* html.writer-html5 .rst-content table.docutils th {
+  border: 1px solid #e1e4e5;
+} */
+table.docutils tr,
+.rst-content table.docutils:not(.field-list) tr:nth-child(2n-1) td,
+.docutils td {
+  border:2px solid rgb(67, 62, 62);
+  background-color: #32bfea31;
+}
+.docutils tr {
+  background-color: #32bfea11;
+  /* background-color: transparent; */
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+.docutils tr a{ 
+  color:black;
+}
+/* table .docutils.api_docs {
+  width: 100%;
+  border:1px solid red;
+  overflow: auto;
+  margin: auto;
+  display: block;
+ } */
+ .rst-content table.docutils td {
+  font-weight: bolder;
+  padding-left:3em;
+}
+.rst-content table.docutils th {
+  background-color: snow;
+  font-size:113%;
+  background-color: #32bfea31;
+  border: 3px solid snow;
+  margin: 1em;
+  padding: 1em;
+}
+
+.rst-content .section .docutils.api_table {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 .rst-content .section .docutils {
-    width: 100%;
+    min-width:66%;
+    /* width: 100%; */
     overflow: auto;
-    display: block;
-    border: none;
+    /* margin: auto; */
+    /* display: block; */
+      margin-left: 1em;
+      margin-right: 1em;
+    /* border: 3px dotted rgba(30, 143, 255, 0.387); */
+}
+.rst-content table.docutils{
+  border:0px;
 }
 
 td, th {
-    border: 1px solid #e1e4e5 !important;
+    /* border: 1px solid #e1e4e5 !important; */
     border-collapse: collapse;
 }
 

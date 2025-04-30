@@ -2,7 +2,7 @@
 # demos/code-objects-2.mk: 
 #   Demonstrating first-class support for foreign code-blocks in `compose.mk`.
 #
-# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # USAGE: ./demos/code-objects-2.mk
 
 include compose.mk
@@ -20,7 +20,8 @@ define hello_world_2.py
 print('hello world 2')
 endef
 
-# Bind multiple code-blocks, creating additional target scaffolding for each
+# Bind multiple code-blocks, 
+# creating additional target scaffolding for each
 $(eval $(call polyglots.bind.container, \
 	[.]py, ${python.img}, ${python.interpreter}))
 

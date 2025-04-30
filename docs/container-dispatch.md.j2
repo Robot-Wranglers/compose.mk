@@ -3,9 +3,9 @@
 ## Container Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Having [imported services with `compose.import`]({{mkdocs.site_relative_url}}/bridge), let's look at an idiom that allows us to dispatch tasks (i.e. make-targets) into those tool containers.  
+If you've [imported services]({{mkdocs.site_relative_url}}/bridge) already using [`compose.import`]({{mkdocs.site_relative_url}}/bridge/#other-import-statements), let's look at an idiom that allows us to dispatch tasks (i.e. make-targets) into those tool containers.  
 
-{{macros.img_link("escher-reptiles.jpg", mkdocs, width="70%", align='center')}}
+{{macros.img_link("escher-reptiles.jpg", mkdocs, width="70%", align='center', class=" ")}}
 
 Later in this page, we'll get into more details about [how/when container dispatch is useful](#but-why), and a [typical setup](#compose-file-boilerplate)  with `docker-compose.yml` that supports it.  For now, let's start with what the idiom looks like and how it's used.
 
@@ -16,11 +16,7 @@ Later in this page, we'll get into more details about [how/when container dispat
 
 To illustrate the idea, consider the following project Makefile:
 
-```Makefile
-{{open('demos/container-dispatch.mk','r').read().strip()}}
-```
-
----------------
+{{macros.embed_demo('demos/container-dispatch.mk', github=github)}}
 
 Calling the top-level `demo` target looks something like this:
 
@@ -30,7 +26,7 @@ Calling the top-level `demo` target looks something like this:
 
 You could say that what we have so far is a kind of notation where the following are roughly equivalent:
 
-```bash
+```bash {.cli_example}
 # pithy invocation with compose.mk
 $ ./demo
 
@@ -48,9 +44,7 @@ The example above uses the simplest dispatch style, but we plan to stay organize
 
 In such cases name-collisions might be inevitable, and you'll want fine-grained controls over namespacing to get something closer to an "absolute path" for the dispatch mechanics.  The next example is equivalent to the first, and begins to shed light on how the [`compose.import` macro arguments]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) can be used to create user-defined [syntactic sugar](https://en.wikipedia.org/wiki/Syntactic_sugar).
 
-```Makefile
-{{open('demos/container-dispatch-2.mk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/container-dispatch-2.mk', github=github)}}
 
 Similar to "private" targets with a `self.*` naming convention, using a blocky unicode symbol like `▰` isn't *actually* required, and of course you can call your namespace anything you want.  There's a few reasons this weird looking style is a good idea though, and docs and demos will stick to it as a convenient naming convention. 
 
@@ -61,13 +55,12 @@ This convention also has a more subtle property that it's *hard to use from the 
 
 If your targets *that actually run inside containers* are frequently used from the top-level.. that's a good indication that it's actually **a project-level verb that's important enough to deserve an aliased entrypoint**.
 
---------------------------------
+### Toolboxes & Multiple Compose Files
+<hr style="width:100%;border-bottom:3px solid black;">
 
 Putting it together, imagine that your project uses so many tool containers that it becomes useful to separate them into different "tool boxes" by using different compose files.  By using `compose.import.as`, we can import to a namespace *without* cluttering the root.
 
-```Makefile
-{{open('demos/container-dispatch-3.mk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/container-dispatch-3.mk', github=github)}}
 
 This way of arranging things makes it clear that there are a few distinct toolboxes at play, and that while you can always call things like `self.docs.gen` directly for testing, the syntax helps make it clear that your host isn't actually guaranteed to have all the tools involved.
 
@@ -76,9 +69,7 @@ This way of arranging things makes it clear that there are a few distinct toolbo
 
 Let's add another target to our project Makefile, demonstrating dispatching one target to multiple containers:
 
-```Makefile
-{{open('demos/double-dispatch.mk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/double-dispatch.mk', github=github)}}
 
 Again, the *`self`* prefix and the `▰/` namespace is just a convention, you can see discussion in the previous section.  The above looks pretty tidy though, and hopefully this helps to illustrate how the target / container / callback association works.  Running `demo.double.dispatch` looks like this:
 
@@ -86,11 +77,11 @@ Again, the *`self`* prefix and the `▰/` namespace is just a convention, you ca
 
 Meanwhile, the equivalent-but-expanded pure bash version below is getting cluttered.  Eagle-eyed readers will note that even the verbose version is *actually abbreviated*, because this doesn't mention [the volume-mount necessary for tool containers to get at project files]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults).
 
-```bash
-# clean, simple invocation with compose.mk
+```bash {.cli_example}
+# Clean, simple invocation with compose.mk
 $ ./demos/double-dispatch.mk
 
-# verbose, fragile alternative
+# Verbose, fragile alternative
 $ docker compose -f docker-compose.yml \
     run --entrypoint bash debian -c "make self.demo" \
   && docker compose -f docker-compose.yml \
@@ -102,20 +93,23 @@ $ docker compose -f docker-compose.yml \
 ### Other Kinds of Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
 
-So far we've just looked at using dispatch with [imported tool containers]({{mkdocs.site_relative_url}}/bridge) that come from docker compose files.  Target dispatch comes in other flavors too though, and works
+So far we've just looked at using dispatch with [imported tool containers]({{mkdocs.site_relative_url}}/bridge) that come from docker compose files.  
 
-* with [stock-images]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-tasks-in-containers), 
-* with [inlined containers]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile), 
-* with [inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files), 
-* from scripts or [from CLI]({{mkdocs.site_relative_url}}/raw-docker/#other-docker-utilities)
+Target dispatch comes in other flavors too though, from scripts or [from CLI]({{mkdocs.site_relative_url}}/raw-docker/#other-docker-utilities), and works with:
+
+* External compose files as we saw above 🍦
+* [Inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) 🍰
+* [Stock-images]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-tasks-in-containers) 🍭
+* [Inlined containers]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile) 🍓
 
 Whether you're using `compose.mk` as a library, a stand-alone tool, or a framework, **this simple pattern for dispatching targets in containers is one of the main features, and it's surprisingly powerful.**  
 
 From here, if you just want to get started, you might want to look at more detailed docs for [`compose.import` arguments]({{mkdocs.site_relative_url}}/bridge/#import-macro-arguments), or [the docker-compose.yml boilerplate that supports dispatch](#compose-file-boilerplate).  
 
-If you're still wondering why you should care, check out the [commentary at the end](#but-why) of this page.  
+!!! road_map "Road Map"
+    If you're still wondering why you should care, check out the [commentary at the end](#but-why) of this page.  
 
-If you're using dispatch idioms a lot and interested in more advanced topics, you might like to see how [CMK lang cleans up the syntax]({{mkdocs.site_relative_url}}/compiler/#compose-file-example).
+    If you're using dispatch idioms a lot and interested in more advanced topics, you might like to see how [CMK lang cleans up the syntax]({{mkdocs.site_relative_url}}/compiler/#compose-file-example).
 
 
 ### Compose File Boilerplate
@@ -125,9 +119,9 @@ In practice the containers you use might be already compatible with the dispatch
 
 Below you can see a typical example of a compose file that supports dispatch, leaning more towards pedantic than minimal.  See the [integration docs]({{mkdocs.site_relative_url}}/integration/#docker-compose-integration) for more detailed discussion, 
 
-```yaml
-{{open('demos/data/docker-compose.yml','r').read()}}
-```
+{{macros.embed_demo('demos/data/docker-compose.yml', type='yaml', github=github)}}
+
+
 ### But Why? 🤔
 <hr style="width:100%;border-bottom:3px solid black;">
 

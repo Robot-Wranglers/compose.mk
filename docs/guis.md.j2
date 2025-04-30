@@ -1,114 +1,134 @@
 {% import 'macros.j2' as macros -%}
 
-## Bonus: GUIs!
+## Bonus: GUIs
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Given the power and flexibility that we've seen so far in quickly putting together TUI applications, you might wonder.. what about GUIs?  Although it's less portable and not "baked in" like the TUI capabilities are, working with GUIs is also possible, and this section has a growing collection of small demos.  
+!!! warning "WIP: **This page is under construction.**"
+    Capabilities are less portable and not as "baked in" as the TUI capabilities are, but working with GUIs is also  possible  Docker+GUIs is a complex topic.. this page is under construction.
+    
+This section has a growing collection of small demos for working with GUIs.
 
-{{macros.img_link("gui1.gif", mkdocs, "95%", align='center')}}
+{{macros.img_link("gui1.gif", mkdocs, "95%", align='center',class="")}}
 
-GUIs + docker is a complex topic.  <font color=red>This page is under construction.</font>  See the next section for more detailed information about background and caveats.  A quick overview though: 
+See the next section for more detailed information about background and caveats.  A quick overview though: 
 
 * Jump to [the Xephyr Demo](#xephyr-demo) if you're cool with **linux only functionality**, and looking for something with a native feel.
-* Jump to [the Xpra Demos](#xpra-demo) if you're looking for something **cross-platform and web-based**.
-* For a native feel with MacOS, the [XQuartz Demo](#xquartz-demo) is planned but incomplete, but tracking some resources that might be useful.
+* Jump to [the Xpra Demos](#xpra-demo) if you're looking for something **cross-platform and web-based**.  
+* Jump to [the hermetic GUI](#hermetic-guis) if you're interested in isolation and portability.  It's technically a combination of text + web UIs for graphics, but it can run most GUIs, the graphics are surprisingly good, and the implementation is very clean.
+* For a native feel with MacOS, the [XQuartz Demo](#xquartz-demo) is planned but incomplete.  For now it's just tracking some resources that might be useful.
 
 ### Background & Caveats
 <hr style="width:100%;border-bottom:3px solid black;">
+
+**Demos here are so far mainly targeting Linux, and sometimes x11 and/or system packages might be required.**
 
 Despite amazing work with projects like x11docker[^1], Xephyr[^2], xquartz[^3], and xpra[^4] .. working with GUIs tends to be fragile, fiddly, and less portable than terminal apps.  Any or all of those projects can in principle be combined with `compose.mk`, but the right approach to "batteries included" is much harder to land on.
 
 All the projects mentioned are about **solving the issue of getting a stand-alone XOrg server,** but after you have one, you still need to decide how exactly to use it.  Options here include stuff like forwarding graphics via a browser, VNC, ssh, sockets, etc.  Searching for any combination of these tools + docker gives lots of results for this sort of thing, but much of the related work is old, archived, or unmaintained.  Many tutorials along these lines will have lots of different files, and invite you to do lots of copy/paste.  As usual with `compose.mk` we'll aim for something self-contained and try to minimize dependencies!  
 
-<font color=red>Demos here are so far mainly targeting Linux, and sometimes x11 and/or system packages might be required.</font>
 
 Just for fun, we'll also use [CMK-lang]({{mkdocs.site_relative_url}}/compiler#compose-file-example) for the examples here, which is a [separate language]({{mkdocs.site_relative_url}}/language) that tends to clean up syntax, and is compiled to Makefile on demand.  
 
 ### Xephyr Demo
 <hr style="width:100%;border-bottom:3px solid black;">
 
-This example only works on linux, requires x11 to be already started, and requires *`Xephyr`* on the host.  *(In debian-based distros, you can install it with something like `apt-get install -y xserver-xephyr`.)*  
+!!! danger Caveats
+    This example only works on linux, requires x11 to be already started, and requires *`Xephyr`* on the host.  *(In debian-based distros, you can install it with something like `apt-get install -y xserver-xephyr`.)*  
 
 The goal for this demo is a "composite" kind of application, similar to what many of the TUI demos are showing.  We want to throw together "widgets" that might consist of smaller applications that are themselves dockerized, or are already available on the host.  The feel should be "native", i.e. no port-forwarding, no browsers.
 
 Similar to how we've already seen `compose.mk` leveraging *`tmux`* to get a geometry manager for console, we'll piggyback on *`i3`* for a tiling window manager.  As with *`tmux`*, we don't want to assume *`i3`* is actually available on the host.  Even if it is available on the host.. we want a sandboxed configuration for it that ships as part of the rest of the composite app we're building.
 
-You can see the code for this below, it is complete and runs as-is.  Code is also in the repository at *{{macros.repo_link('demos/cmk/xephyr.cmk', github)}}*.
+You can see the code for this below, it is complete and runs as-is.  {#Code is also in the repository at *{{macros.repo_link('demos/cmk/xephyr.cmk', github=github)}}*.#}
 
-```Makefile
-{{open('demos/cmk/xephyr.cmk','r').read().strip()}}
+{{macros.embed_demo('demos/cmk/xephyr.cmk', github=github)}}
+
+We've already seen what it looks like:
+
+```bash {.cli_example .language-bash}
+$ ./demos/cmk/xephyr.cmk 
 ```
+{{macros.img_link("gui1.gif", mkdocs, "95%", align='center',class="cli_output")}}
 
 Running the demo just opens *`xeyes`*, uses *`feh`* to display an image, and starts *`glxgears`*.  These tools and the window manager itself run inside the i3 container, but the environment is also accessible from other containers, or from your host.  *(To see this, you can try running something like* `DISPLAY=:23 xeyes` *from the host to test one way mix in other components.)*
 
-See the screenshot at the [top of the page](#bonus-guis) for a screenshot. This is more of a "skeleton" than anything with real meat on the bones.  But what's accomplished here is all about **quickly shipping a whole environment as an application**, and several aspects of the skeleton are carefully chosen for convenient extension:
+#### Application Skeleton 
+<hr style="width:95%;border-bottom:1px dashed black;">
 
-**Lifecycle:** 
+This is more of a "skeleton" than anything with real meat on the bones.  But what's accomplished here is all about **quickly shipping a whole environment as an application**, and several aspects of the skeleton are carefully chosen for convenient extension:
+
+**🎯 Lifecycle:** 
 :  The way this launches Xephyr and i3, the xorg server depends on the window manager, and the window manager depends on the xorg server.  In case either one exits, the other will as well.  Despite multiple blocking components, launching is nonblocking, and doesn't require additional thought about piecewise shut down for backgrounded stuff.  As with other demos, it's possible to zip this into a completely self-contained application, [using the packaging features]({{mkdocs.site_relative_url}}/demos/packaging).
 
-**Scriptable:**
+**🎯 Scriptable:**
 :  See the usage of `i3-msg exec` ?  Good support for RPC in *`i3`* makes this very scriptable.  If *`i3`* is available on the host, you can drive the GUI from "outside" using a shared socket.  And in addition to controlling the window-manager *via* make-targets, you can also have it *run* targets, [which might represent other containers, etc]({{mkdocs.site_relative_url}}/language#homoiconic).  Since *`i3`* has many language bindings[^5], you can also drive this thing via [compose.mk polyglots]({{mkdocs.site_relative_url}}/demos/polyglots).
 
-**Configurable:** 
-:  The config for i3 and its status bar that's embedded above could easily be an external file, and might seem like an unnecessary distraction for a small demo.  For *actual use-cases* this is pretty nice though, because it makes it easy to offload the complexity of customized application startup and shortcuts somewhere else, without creating all the code for that from scratch.
+**🎯 Configurable:** 
+:  The config for i3 and its status bar that's embedded above could easily be an external file, and might seem like an unnecessary distraction for a small demo.  For *actual use-cases* this is pretty nice though, because it makes it easy to offload the complexity of customized application startup and shortcuts somewhere else, without creating all the code for that from scratch.  
+
+For further extensions and creating project-specific dashboards or IDEs, you might want to consider combinations of other tools that are small, fast and focused.  Ideally tools that are themselves scriptable and embeddable, like `yazi`, `surf`, `vim`, etc.
 
 ### XPra Demo
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Rather than the "native app" look and feel in the [Xephyr demo](#xephyr-and-i3), another approach is to expose x11 via a webbrowser.  The main benefit of this approach is that it doesn't require external packages or even x11 on the host since we **dockerize the xorg server itself**.  Xpra has lots of options, and we won't cover all those details here; see instead the main docs [^4].
+Rather than the "native app" look and feel in the [Xephyr demo](#xephyr-and-i3), another approach is to expose x11 via a webbrowser.  The main benefit of this is that it doesn't require external packages or even x11 on the host since we **dockerize the xorg server itself**.  Xpra has lots of options, and we won't cover all those details here; see instead the main docs [^4].
 
 #### DOOM 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 The traditional thing here is to run doom, which is definitely kind of pixelated at the best of times!, but is pretty useful for basic latency testing, mouse/keyboard events, etc.  Although there are many ways to run doom in a browser.. this is something different: **a dockerized x11 app that's now been *webified*.**
 
-Here's what it looks like:
+```bash {.cli_example .language-bash}
+$ ./demos/cmk/xpra_doom.cmk 
+```
+{{macros.img_link("gui3.gif", mkdocs, "60%", align='center',class="cli_output")}}
 
-{{macros.img_link("gui3.gif", mkdocs, "60%", align='center')}}
+---------------------------------
 
 And here's the code:
 
-```Makefile
-{{open('demos/cmk/xpra-doom.cmk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/cmk/xpra-doom.cmk', github=github)}}
 
 This example uses the 'seamless' mode for xpra instead of the desktop mode.
 
 #### Back to I3
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-With the doom example out of the way.. the structure of our [earlier xephyr demo](#xephyr-demo) is more practical in terms of combining multiple apps, providing tiling geometry with `i3`, and shipping with enough configuration so that it is ready to be configured and extended.
+With the doom example out of the way.. the structure of our [earlier xephyr demo](#xephyr-demo) is more practical in terms of combining multiple apps, providing tiling geometry with `i3`, and shipping with enough structure so that it is easily configured and extended.
 
 This example returns to `i3` and adds a few variations: we'll drop the status-bar config from the previous example, and add usage of `i3-layout` [^6] (very similar to the `dwindle` tool[^7] that handles spiral layouts with the embedded TUI).
 
-```Makefile
-{{open('demos/cmk/xpra.cmk','r').read().strip()}}
+```bash {.cli_example .language-bash}
+$ ./demos/cmk/xpra.cmk gui 
 ```
+{{macros.img_link("gui2.gif", mkdocs, "95%", align='center',class="cli_output")}}
+
+{{macros.embed_demo('demos/cmk/xpra.cmk', github=github)}}
 
 By default this opens a webserver at [http://localhost:9090](http://localhost:9090).  Running it looks like this:
 
-{{macros.img_link("gui2.gif", mkdocs, "95%", align='center')}}
 
 Note that server authentication is disabled by default for all these demos. See the XPra docs for setting user/password details.  Other differences with this demo are that we do *not* share the X11 socket with the host, so by default you *cannot* launch applications in this environment by simply exporting `DISPLAY`.  Besides sharing the unix socket, it's also possible to use XPra from the host and share the TCP socket.
+
+Besides auth, this example is rough in terms of proper daemonization, clean logging, and clean exits.  Rather than backgrounding the server and hoping you remember to kill it, it runs in the foreground to make debugging changes easier.  When you're done with the server, just press enter on the console to exit and you should see a clean exit.  But note that **Ctrl-C may not stop the server.**  You can use `./demos/cmk/xpra.cmk xpra.stop` to ensure shutdown or use {{macros.api_link('docker.stop.all',mkdocs)}} to kill everything indiscriminately.
 
 #### Hermetic GUIs
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 One last variation on XPra usage.  The [xephyr demo](#xephyr-demo) shares X11 sockets and leverages `DISPLAY` variables for the basic functionality, which is a pretty good level of isolation.  The trouble is that it does explicitly require that `Xephyr` is available as a package on the host, and implicitly requires the host is already running x11.  Meanwhile.. the XPra demos so far are working around both of these requirements, but now we have the new requirement for *daemonization and port sharing*.
 
-You might wonder.. is this kind of breakdown in isolation strictly required?  After all.. the [embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui) which is a more "core" feature of `compose.mk` does manage to avoid servers and daemonization.  For GUIs though, and setting aside X11.. most obvious transport options still have some kind local server in the middle[^10].  Networking trickery with containers is a way around this, but then things like DNS and virtual addresses begin to complicate matters and make cross-platform harder.  
+You might wonder.. is this kind of breakdown in isolation strictly required?  After all.. the [embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui) which is a more "core" feature of `compose.mk` does manage to avoid servers and daemonization.  For GUIs though, and setting aside X11.. most of the obvious transport options still have some kind local server in the middle[^10].  Networking trickery with containers is a way around this, but then things like DNS and virtual addresses begin to complicate matters and make cross-platform harder.  
 
 The simplest thing that might work here reuses a trick from [the notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking), but does involve a **tactical retreat back towards TUIs instead of GUIs.**  In the example below, we use a console-friendly browser *(i.e. carbonyl [^8])* that can be dockerized, then use a private docker network between the X11 server and the browser to show the display.  Running the example looks like this:
 
-{{macros.img_link("gui4.gif", mkdocs, "95%", align='center')}}
+```bash {.cli_example .language-bash}
+$ ./demos/cmk/xpra-net.cmk gui 
+```
+{{macros.img_link("gui4.gif", mkdocs, "95%", align='center', class="cli_output")}}
 
 The corresponding code is below.  Look, no open ports!  We use `xscreensaver`[^9], running in xpra's "desktop" mode.  Note also that rather than embedding `carbonyl` directly in the docker compose file, we use {{macros.api_link('tux.browser',mkdocs)}} and specify the network the container should join.
 
-```Makefile
-{{open('demos/cmk/xpra-net.cmk','r').read().strip()}}
-```
-
-<br/>
+{{macros.embed_demo('demos/cmk/xpra-net.cmk', github=github)}}
 
 ### XQuartz Demo
 <hr style="width:100%;border-bottom:3px solid black;">

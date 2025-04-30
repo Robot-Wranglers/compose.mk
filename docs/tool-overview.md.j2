@@ -49,9 +49,11 @@ A few examples of tools that `compose.mk` wraps in one way or another include:
 #### Proxy Wrappers
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The first 3 tools `jq`, `jb`, and `yq` are the most generally useful.  They all have extensive documentation elsewhere to cover what they do and how to use them, and mostly `compose.mk` tries to stay out the way. Remember, the main point is to use the tool if possible, and transparently falls back to docker if the tool is missing.  Calling them with `compose.mk` looks like this:
+The first 3 tools `jq`, `jb`, and `yq` are the most generally useful.  They all have extensive documentation elsewhere to cover what they do and how to use them, and mostly `compose.mk` tries to stay out the way. 
 
-```bash 
+For tools like these, `compose.mk` generally takes the approach of **using it directly if possible,** and then **transparently falls back to docker if the tool is missing.**.  Calling them with `compose.mk` looks like this:
+
+```bash  {.cli_example} {.command-line}
 # Generate JSON with jb
 $ ./compose.mk jb key=val
 {"key":"val"}
@@ -64,7 +66,7 @@ $ echo key=val | ./compose.mk jb
 $ ./compose.mk jb key=val | ./compose.mk jq .key
 "val"
 
-# Passing arguments to jq works, so lets go raw and unquote it
+# Passing arguments to jq works, here is an unquoted result
 ./compose.mk jb key=val | ./compose.mk jq -r .key
 val
 
@@ -72,13 +74,14 @@ val
 $ echo "key: val" | ./compose.mk yq .key
 ```
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+The "wrapper" part is easy enough to see from the examples above, just wrapping familiar invocations with `compose.mk`.  But what exactly is being "proxied" here?  Well, the eagle-eyed reader will have noticed that it's kind of crazy that this actually works, because behind the scenes running `./compose.mk ...` is roughly the same as `make -f compose.mk ...`, and so you'd expect that the tail part of the command line is *arguments to make*.  And yet.. there is no make-target called `.key`.
 
-So far so good, what's a "*proxy wrapper*" anyway? Well, the eagle-eyed reader will have noticed that it's kind of crazy that this actually works, because behind the scenes running `./compose.mk ...` is roughly the same as `make -f compose.mk ...`, and so you'd expect that the tail part of the command line is *arguments to make*.  And yet.. there is no make-target called `.key`.
 
-Under the hood, invocations for proxy-wrappers begin with an actual make-target, but before `make` parses beyond that, execution is short-circuited, and the rest of the command-line is consumed and passed on to the tool.  For details about how this works, see the [documentation for signals]({{mkdocs.site_relative_url}}/signals).
+Under the hood, invocations for proxy-wrappers begin with an actual `make` target, but before `make` parses beyond that, execution is short-circuited, and the rest of the command-line is consumed and passed on to the tool.  For details about how this works, see the [documentation for signals]({{mkdocs.site_relative_url}}/signals).
 
-Proxy-wrappers are very useful for simple stuff, but the wrapped tools `jq`, `yq`, and `jb` all have big surface area with a lot of edge-cases for optional arguments, loading files, with or without pipes.  **If your use-case involves lots of flags or nested quotes or something, *maybe don't assume that the wrapped invocation is 1:1 with the original tool*.**  There's only so much that can be done here for the standalone-mode for `compose.mk`, but note that [library-style usage is more flexible]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics).
+!!! danger "Caveats"
+
+    Proxy-wrappers are very useful for simple stuff, but the wrapped tools `jq`, `yq`, and `jb` all have big surface area with a lot of edge-cases for optional arguments, loading files, with or without pipes.  **If your use-case involves lots of flags or nested quotes or something, *maybe don't assume that the wrapped invocation is 1:1 with the original tool*.**  There's only so much that can be done here for the standalone-mode for `compose.mk`, but note that [library-style usage is more flexible]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics).
 
 #### Other Wrappers 
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -87,11 +90,7 @@ Setting aside the big 3 tools that use [proxy-wrappers](#proxy-wrappers), other 
 
 You can see a few examples below, but this isn't an exhuastive list.  See also the documentation for [streams and pipes]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-stream-types-pipes).
 
-```bash 
-{{open('tests/tool-wrappers.sh','r').read().strip()}}
-```
-
---------------------------------
+{{macros.embed_demo('tests/tool-wrappers.sh', github=github, type='bash', extra_label='')}}
 
 Many of these targets are also available as macros, and might have more documentation available as part of the [library overview]({{mkdocs.site_relative_url}}/standard-lib).  All targets are documented in [the full API]({{mkdocs.site_relative_url}}/api).  
 

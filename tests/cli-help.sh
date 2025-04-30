@@ -1,6 +1,6 @@
 #!/usr/bin/env -S bash -x -euo pipefail
 #
-# This demo ships with the `compose.mk` repository and runs as part of the test-suite.
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.
 #
 # USAGE: ./tests/cli-help.sh
 

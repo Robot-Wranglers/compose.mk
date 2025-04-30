@@ -5,17 +5,25 @@
 
 [Reflective programming](https://en.wikipedia.org/wiki/Reflective_programming) is the ability of a process to examine, introspect, and modify its own structure and behavior.
 
-As a simple example of why this is practical, features like [CLI help](#) and [automatically generated API docs](#) require that `compose.mk` has at least *some* ability to parse its own contents.  And if we need that kind of ability, why not allow for parsing of other Makefiles?  Most of the meta-tooling that's available for stuff like this is somewhere in the [`mk.*` target namespace](#).
+Features like [CLI help]({{mkdocs.site_relative_url}}/cli-help) and [automatically generated API docs]({{mkdocs.site_relative_url}}/api) require that `compose.mk` has at least *some* ability to parse its own contents.  
+
+And if we need that kind of ability, why not allow for parsing of other Makefiles?  As another applied example, see the [zero-config TUI documentation]({{mkdocs.site_relative_url}}/zero-config-tuis/), which makes use of {{macros.api_link('mk.include',mkdocs,arg='fpath')}}.  
+
+Most of the meta-tooling that's available is somewhere in the [`mk.*` target namespace]({{mkdocs.site_relative_url}}/api-mk).
 
 #### Makefile Metadata 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 For metadata parsing, you can use the `mk.parse/<fname>` target, and get back targets, target chains, target docs, etc.  
 
+{{macros.api_link_many('mk.parse',mkdocs)}}
+
 For testing, there is a super lightweight `demos/no-includes.mk` Makefile included in the repository for situations like this. Like the name suggests, it doesn't actually include or use `compose.mk` in any way.
 
-```bash
+```bash {.cli_example}
 $ ./compose.mk mk.parse/demos/no-include.mk
+```
+```json {.cli_output}
 {
   "clean": {
     "file": "demos/no-include.mk",
@@ -46,23 +54,41 @@ $ ./compose.mk mk.parse/demos/no-include.mk
 
 *Under the hood, the heavy lifting for Makefile-parsing uses a dockerized version of the  [`pynchon` tool]({{jinja.vars.pynchon_repo_url}}).*
 
+
+#### Validation and Planning
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Validation of external Makefiles is used as part of code-generation and [compilation]({{mkdocs.site_relative_url}}/compiler), but it's also exposed for general use.
+
+```bash {.cli_example}
+$ ./compose.mk mk.validate/Makefile mk.validate/compose.mk
+```
+```bash {.cli_output}
+ ✱ mk.validate // Makefile .. ok 
+ ✱ mk.validate // compose.mk .. ok 
+```
+
 #### Reading Defines
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 Reading `define ... endef` blocks from makefiles is important for several different `compose.mk` features that rely on embedded data.  And crucially, the contents of those blocks **must not be mangled**, escaped, interpolated, etc.  This feature is the foundation that all sorts of other stuff is built on, including support for [polyglots](#) and [the embedded tui](#) as well as [inlined Dockerfiles](#), etc.
 
-Related targets include: 
+```bash {.cli_example}
+$ ./compose.mk mk.def.read/Dockerfile.stream.pygmentize
+```
+```Dockerfile {.language-dockerfile .cli_output}
+FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
+RUN apk add -q --update py3-pygments
+```
 
 {{macros.api_link_many('mk.def',mkdocs)}}
-
-Currently, if you want to embed data that includes tokens like "endef", you are sadly out of luck!
 
 #### Grabbing Symbols
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 Reading defines is the most common need, but you can also get the expanded value of arbitrary symbols using `mk.get`.  This is sometimes useful for previewing what macros actually do.. for example to show the implementation of `${stream.nl.to.comma}`:
 
-```bash 
+```bash {.cli_example}
 $ ./compose.mk mk.get/stream.nl.to.comma
 ( cat /dev/stdin | awk 'BEGIN{ORS=","} {print}' | sed 's/,$//' )
 ```
@@ -72,38 +98,44 @@ For a more practical example, see [this section]({{mkdocs.site_relative_url}}/co
 #### Pattern-Matching on Targets
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-There are various ways to enumerate available targets for the current runtime, either restricting it to targets defined in the local file, or also adding targets from includes.  
+There are various ways to enumerate available targets for the current runtime, either restricting it to targets defined in the local file, or adding targets from `include` as well.  
 
 One nice thing about this is the ability to easily dispatch *all targets matching a given pattern*.  See the API for {{macros.api_link('flux.star',mkdocs,arg='pattern')}}, or the following example of how it's used in the test suite:
 
-```Makefile 
-{{open('demos/inlined-dockerfile.mk','r').read()}}
-```
-<br/>
+{{macros.embed_demo('demos/inlined-dockerfile.mk', github=github)}}
 
 #### Dynamic Includes and Targets
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-To a certain extent, `compose.mk` can do experimental *runtime* modification of `make` itself (or at least simulate it).  Under the hood, this works by using code-generation to create a new Makefile just in time, and then [turning execution over to it]({{mkdocs.site_relative_url}}/signals/).
+To a certain extent, `compose.mk` can do experimental *runtime* modification of `make` itself (or at least simulate it).  Under the hood, this works by using code-generation to create a new Makefile just in time, and then [turning execution over to it]({{mkdocs.site_relative_url}}/signals/).  Also somewhat related is [the interpreter]({{mkdocs.site_relative_url}}/signals/#inheritance-interpreters), and [the CMK compiler]({{mkdocs.site_relative_url}}/compiler).
 
-For example, here's an example that creates a new target on the fly, assigning it to an existing target that simply returns success.  After the target is defined, it can be used on the same command line.
+**Create a new target dynamically.** Here's an example that creates a new target on the fly, assigning it to an existing target that simply returns success.  After the new target is defined, it can be used on the same command line.
 
-```bash 
+```bash {.cli_example}
 ./compose.mk mk.let/foo:flux.ok foo
+```
+```bash {.cli_output}
+ ✱ mk.let // foo:flux.ok // Generating code .. ./.tmp.5xdPP3008 
+ Φ flux.ok // succeeding as requested! 
 ```
 
 --------------------------------
 
-As another example, how about mixing `compose.mk` functionality with an existing Makefile that *does not actually `include compose.mk`*?
+**Dynamic includes.** Suppose you want to script with `compose.mk`, but the project makefile does not `include compose.mk`.  You can mix together automation APIs like this:
 
-```bash 
+```bash {.cli_example}
 $ ./compose.mk mk.include/demos/no-include.mk flux.timer/clean
 ```
+``` bash {.cli_output}
+cleaning
+Φ flux.timer // clean // done in 0.000000000s 
+```
 
-Pulling apart this command, note that `compose.mk` has no `clean` target, and `demos/no-include.mk` has no `flux.timer` target. The command above basically creates and this Makefile just in time, and proxies commands to it.
+What just happened?  Pulling apart this command, note that `compose.mk` offers no `clean` target, and `demos/no-include.mk` has no `flux.timer` target.  
 
-```Makefile
+The command above is similar to `make -f .. -f .. ` but retains the compose.mk API and signal-handling.  Or to put it another way, it executes the following Makefile just in time, then proxies commands to it:
+
+```Makefile {.snippet} {.language-Makefile}
 include compose.mk
 include demos/no-include.mk
 ```
-<br/>

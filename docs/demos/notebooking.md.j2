@@ -4,8 +4,12 @@
 <table><tr><td>{{macros.img_link("notebooking-pipeline.gif", mkdocs, "95%",align='left')}}</td>
 <td>{{macros.img_link("notebooking-ui.gif", mkdocs, "95%",align='left')}}</td></tr></table>
 #}
-## Notebooking & Ensembles
+## Notebooking & Pipelining
 <hr style="width:100%;border-bottom:3px solid black;">
+
+!!! danger "Advanced Demo"
+    * **This is an advanced example** with lots of moving pieces, leaning into pretty idiomatic code style for `compose.mk` and looking less like classical `make`.  Explaining *every detail* isn't a priority, and some familiarity with the other demos is assumed.
+    * The problem we're solving is itself messy, and the implementation can't be extremely pretty!  The main point here is to achieve deep integration with a completely foreign tool chain in a remarkably small amount of code, and other aspects take a back seat.  See instead the [platform lifecycle demo]({{mkdocs.site_relative_url}}/demos/platform/) for a clean and practical example on a simpler problem.
 
 This example demonstrates how you can describe, automate, and release a highly customized [jupyter lab](https://docs.jupyter.org/en/latest/) server and pipeline, which includes custom kernels on demand and several notebooks.  
 
@@ -21,10 +25,8 @@ It's an advanced example using "idiomatic" `compose.mk`, and it's ambitious so w
 
 Other background info about this demo before we dive in:
 
-* **This is an advanced example** with lots of moving pieces, leaning into pretty idiomatic code style for `compose.mk` and looking less like classical `make`.  Explaining *every detail* isn't a priority, and some familiarity with the other demos is assumed.
-* The problem we're solving is itself messy, and the implementation can't be extremely pretty!  The main point here is to achieve deep integration with a completely foreign tool chain in a remarkably small amount of code, and other aspects take a back seat.  See instead the [platform lifecycle demo]({{mkdocs.site_relative_url}}/demos/platform/) for a clean and practical example on a simpler problem.
 * This example illustrates the [matrioshka bridge pattern]({{mkdocs.site_relative_url}}/matrioshka#matrioshka-bridge-pattern).  There are [other]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/) [examples]({{mkdocs.site_relative_url}}/demos/just) of this pattern, but this is one by far the most involved.
-* Unlike other demos, we need several external files for this demo, including notebooks, and can't lean on [tricks with embedded resources]({{mkdocs.site_relative_url}}/demos/matrioshka).  Rather than inlining we'll use files inside the {{macros.repo_link('demos/data/jupyter/notebooks', github)}} folder, but in the end we'll **still [generate a frozen release](#project-as-tool) that's self-contained**.  You can also browse the related containers/notebooks [at the bottom of this page](#appendix-main-jupyter-container)
+* Unlike other demos, we need several external files for this demo, including notebooks, and can't lean on [tricks with embedded resources]({{mkdocs.site_relative_url}}/demos/matrioshka).  Rather than inlining we'll use files inside the {{macros.repo_link('demos/data/jupyter/notebooks', github=github)}} folder, but in the end we'll **still [generate a frozen release](#project-as-tool) that's self-contained**.  You can also browse the related containers/notebooks [at the bottom of this page](#appendix-main-jupyter-container)
 * Unlike other demos, this example also **involves a server** as well as automation and pipelines i.e. the jupyter lab front-end.  Side-effects like port-forwarding would usually mean the loss of statelessness that makes complex automation practical, but despite the involvement of a server / interactive frontend here we'll see several unique ways that `compose.mk` still manages to keep things *fully-specified and completely reproducible*, and remains remarkably amenable to automation and pipelines.
 
 Without further delay, let's get into it.
@@ -32,38 +34,37 @@ Without further delay, let's get into it.
 ### Goals
 <hr style="width:100%;border-bottom:3px solid black;">
 
-#### Basic Goals
----------------------
+{#### Basic Goals#}
+!!! goals "Basic Goals"
+    **Configuration:** 
+    :  We want Jupyter lab minimally preconfigured, mostly to demonstrate the capability.  See {{macros.repo_link('demos/data/jupyter/lab/settings/overrides.json',github=github)}}.  Including kernels and support tooling, the configuration surface for server-side jupyter is so large that beyond a simple `pip install`, it actually has the characteristics of a **distribution**.  The challenges of how to manage, encapsulate, and then automate that in a "local first" way are actually a pretty good fit for `compose.mk`.
 
-**Configuration:** 
-:  We want Jupyter lab minimally preconfigured, mostly to demonstrate the capability.  See {{macros.repo_link('demos/data/jupyter/lab/settings/overrides.json',github)}}.  Including kernels and support tooling, the configuration surface for server-side jupyter is so large that beyond a simple `pip install`, it actually has the characteristics of a **distribution**.  The challenges of how to manage, encapsulate, and then automate that in a "local first" way are actually a pretty good fit for `compose.mk`.
+    **Lifecycle Management:**
+    :  We need to daemonize the front-end, but we need to be smart about it.  One use-case is letting users interact with notebooks and detached-daemonization is an option, but as potential kernel developers we might want it foregrounded for logs.  Notebooks and kernels can run without the webserver being live via stuff like `jupyter console`, but we also might want automation *over* the webserver, for example with `nbclient` [^1].
 
-**Lifecycle Management:**
-:  We need to daemonize the front-end, but we need to be smart about it.  One use-case is letting users interact with notebooks and detached-daemonization is an option, but as potential kernel developers we might want it foregrounded for logs.  Notebooks and kernels can run without the webserver being live via stuff like `jupyter console`, but we also might want automation *over* the webserver, for example with `nbclient` [^1].
+    **Custom, containerized kernels:**
+    :  Adding/removing jupyter kernels is hard and requires a handful of files in exactly the right spot to specify the behaviour, possibly with a lot of custom code.  We want to remove as much of that friction as possible at the same time as making the whole process more dynamic, basically allowing users to **expose arbitrary commands in arbitrary containers as jupyter kernels directly, and without custom code**.
 
-**Custom, containerized kernels:**
-:  Adding/removing jupyter kernels is hard and requires a handful of files in exactly the right spot to specify the behaviour, possibly with a lot of custom code.  We want to remove as much of that friction as possible at the same time as making the whole process more dynamic, basically allowing users to **expose arbitrary commands in arbitrary containers as jupyter kernels directly, and without custom code**.
+{#### Interface Goals#}
 
-#### Interface Goals
----------------------
+!!! goals "Interface Goals"
+    **WUI Mode**: 
+    :  Also known as the standard Jupyter web interface, accessible as usual from the docker host and the browser of your choice.  This of course involves port-forwarding, and we disable auth for brevity and convenience, so *don't leave this running on the internet!*
 
-**WUI Mode**: 
-:  Also known as the standard Jupyter web interface, accessible as usual from the docker host and the browser of your choice.  This of course involves port-forwarding, and we disable auth for brevity and convenience, so *don't leave this running on the internet!*
+    **TUI Mode**: 
+    :  Building on the [embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui), we'll expose 2 dedicated content-panes: one for webserver-launch & log-tailing, and one for viewing that webserver with a full-featured browser that's console-friendly[^4]
 
-**TUI Mode**: 
-:  Building on the [embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui), we'll expose 2 dedicated content-panes: one for webserver-launch & log-tailing, and one for viewing that webserver with a full-featured browser that's console-friendly[^4]
+    **Pipeline Mode:** 
+    :  A serverless or completely network-sandboxed mode that's more directly amenable to automation, running all notebooks end to end.
 
-**Pipeline Mode:** 
-:  A serverless or completely network-sandboxed mode that's more directly amenable to automation, running all notebooks end to end.
+    **CLI Mode:** 
+    :  Basically offering fine-grained lifecycle control and individual entrypoints for all the primitive actions that enable the above, i.e. verbs like *server.stop / server.start / notebook.run / notebook.preview*, etc.
 
-**CLI Mode:** 
-:  Basically offering fine-grained lifecycle control and individual entrypoints for all the primitive actions that enable the above, i.e. verbs like *server.stop / server.start / notebook.run / notebook.preview*, etc.
+{#### Notebook Goals#}
 
-#### Notebook Goals
----------------------
-
-**We insist on [jupytext](https://jupytext.readthedocs.io/en/latest/):**
-:  Because version-control for ipynb's can be annoying, e.g. with deltas that are just timestamp-changes without output-changes, and other stuff that makes diffs a pain.  Jupytext fixes this, and also lets us store [notebooks-as-markdown](#appendix-jupytext-notebooks), thus solving the problem of editing notebooks *outside* of jupyter.  Since `jupytext` also supports bidirectional sync between raw .ipynb's and the markdown-equivalent, we will retain the ability to edit notebooks *inside* jupyter as well.
+!!! goals "Notebook Goals"
+    **We insist on [jupytext](https://jupytext.readthedocs.io/en/latest/):**
+    :  Because version-control for ipynb's can be annoying, e.g. with deltas that are just timestamp-changes without output-changes, and other stuff that makes diffs a pain.  Jupytext fixes this, and also lets us store [notebooks-as-markdown](#appendix-jupytext-notebooks), thus solving the problem of editing notebooks *outside* of jupyter.  Since `jupytext` also supports bidirectional sync between raw .ipynb's and the markdown-equivalent, we will retain the ability to edit notebooks *inside* jupyter as well.
 
 ### Choosing a Use-Case 
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -131,7 +132,7 @@ Besides the included and scaffolded targets, there's a clear and coherent projec
 
 Here's a few highlights:
 
-```bash
+```bash {.cli_example}
 # Bootstraps everything, building containers, generating kernels, etc.
 $ ./demos/notebooking.mk lab.init
 
@@ -174,7 +175,7 @@ Since the carbonyl browser is just another container and can also share the netw
 ### WUI Mode
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The web UI for jupyter is mostly stock, except for add-ons created by install jupytext, [annoying announcements](https://jupyterlab.readthedocs.io/en/stable/user/announcements.html) disabled by default, etc.  See the folder at {{macros.repo_link('demos/data/jupyter/lab', github)}} for more details.
+The web UI for jupyter is mostly stock, except for add-ons created by install jupytext, [annoying announcements](https://jupyterlab.readthedocs.io/en/stable/user/announcements.html) disabled by default, etc.  See the folder at {{macros.repo_link('demos/data/jupyter/lab', github=github)}} for more details.
 
 ### Project As Tool
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -183,7 +184,7 @@ The web UI for jupyter is mostly stock, except for add-ons created by install ju
 
 Skipping over the details, all we really need to do is use {{macros.api_link('mk.pkg',mkdocs,arg='target')}}, provide an entrypoint, and ensure that the `demos/` folder is archived.
 
-```bash 
+```bash {.cli_example}
 $ archive=demos ./demos/notebooking.mk mk.pkg/lab.pipeline
 ```
 
@@ -224,60 +225,59 @@ Now that we've effectively created a recipe for mapping **containers** -> **targ
 ### Appendix: Support Code
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.img_link("gears.jpg", mkdocs, "85%", align='center')}}
+{{macros.img_link("gears.jpg", mkdocs, "85%", align='center',class=" ")}}
 
 #### Appendix: Main Jupyter Container
 <hr style="width:100%;border-bottom:3px solid black;">
 
-**Via: {{macros.repo_link('demos/data/jupyter/docker-compose.jupyter.yml', github)}}**
+{#**Via: {{macros.repo_link('demos/data/jupyter/docker-compose.jupyter.yml', github)}}**#}
 
-```yaml
-{{open('demos/data/jupyter/docker-compose.fmtk.yml').read()}}
-```
+{{macros.embed_demo(
+    'demos/data/jupyter/docker-compose.jupyter.yml',
+    class='.language-yaml', type='yaml', github=github)}}
 
 #### Appendix: FMTK Containers
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Below you can see the definitions for all the containers involved the formal-methods toolkit.  Due to size constraints, TLA+ integration is left as an exercise to the reader [but here's a hint](https://github.com/kevinsullivan/TLAPlusDocker/blob/main/.devcontainer/Dockerfile)^[3] =)
 
-**Via: {{macros.repo_link('demos/data/jupyter/docker-compose.fmtk.yml', github)}}**
+{#**Via: {{macros.repo_link('demos/data/jupyter/docker-compose.fmtk.yml', github)}}**#}
 
-```yaml
-{{open('demos/data/jupyter/docker-compose.fmtk.yml').read()}}
-```
+{{macros.embed_demo('demos/data/jupyter/docker-compose.fmtk.yml', class='.language-yaml', type='yaml {data-lang="yaml"}', github=github)}}
 
 #### Appendix: Jupyter Kernel Shims
 <hr style="width:100%;border-bottom:3px solid black;">
 
 We need a base kernel to extend, so this is a version of the official jupyter example that defers to the environment for most of it's configuration.  With this in place, we only need to override a few key values to use a `compose.mk` task (or anything else really).  See the usage of `.kernel.json.template` in the main code for more details.
 
-**Via: {{macros.repo_link('demos/data/jupyter/kernel.base/basek.py', github)}}**
+{#**Via: {{macros.repo_link('demos/data/jupyter/kernel.base/basek.py', github)}}**#}
 
-```python
-{{open('demos/data/jupyter/kernel.base/basek.py').read()}}
-```
+{{macros.embed_demo('demos/data/jupyter/kernel.base/basek.py', type='python',github=github)}}
 
 ----------------------------
 
 And the template JSON used with overrides for each of the individual kernels:
 
-**Via: {{macros.repo_link('demos/data/jupyter/kernel.base/kernel.json.template', github)}}**
+{#**Via: {{macros.repo_link('demos/data/jupyter/kernel.base/kernel.json.template', github)}}**#}
 
-```yaml
+{{macros.embed_demo('demos/data/jupyter/kernel.base/kernel.json.template', type='json',github=github)}}
+
+{#
+```json {.language-json}
 {{open('demos/data/jupyter/kernel.base/kernel.json.template').read()}}
 ```
-
+#}
 #### Appendix: Jupytext Notebooks
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The notebooks being used to exercise the kernels are nothing very fancy, but since we [use jupytext](https://jupytext.readthedocs.io/en/latest/) and notebooks-as-code instead of notebooks-as-JSON.. there is the benefit that we can render most of them below directly. You can also see all the individual notebooks at {{macros.repo_link('demos/data/jupyter/notebooks', github)}}.
+The notebooks being used to exercise the kernels are nothing very fancy, but since we [use jupytext](https://jupytext.readthedocs.io/en/latest/) and notebooks-as-code instead of notebooks-as-JSON.. there is the benefit that we can render most of them below directly. You can also see all the individual notebooks at {{macros.repo_link('demos/data/jupyter/notebooks', github=github)}}.
 
-If your own vibes are everywhere continuous but nowhere differentiable, then you might enjoy some demos of the Weierstrass function.  The "vibes coding" notebook @ {{macros.repo_link('demos/data/jupyter/notebooks/vibes.md', github)}} is AI-generated, breaks with our main "formal methods toolkit" theme, and is ommitted from inclusion below for brevity. The purpose of that notebook is to generate some test-images with standard matplotlib for [checking out the results of rendering them]({{mkdocs.site_relative_url}}/img/notebooking-pipeline.png) using pipeline mode.  
+If your own vibes are everywhere continuous but nowhere differentiable, then you might enjoy some demos of the Weierstrass function.  The "vibes coding" notebook @ {{macros.repo_link('demos/data/jupyter/notebooks/vibes.md', github=github)}} is AI-generated, breaks with our main "formal methods toolkit" theme, and is ommitted from inclusion below for brevity. The purpose of that notebook is to generate some test-images with standard matplotlib for [checking out the results of rendering them]({{mkdocs.site_relative_url}}/img/notebooking-pipeline.png) using pipeline mode.  
 
 {%for fname in bash('ls demos/data/jupyter/notebooks/*md|grep -v vibe').split()%}
 
 <hr style="width:95%;border-bottom:1px dashed black;">
-{#**Via: {{macros.repo_link(fname,github)}}**#}
+{#**Via: {{macros.repo_link(fname,github=github)}}**#}
 
 {{bash('cat '+fname+"| awk 'BEGIN {in_header=0; header_count=0} /^---$/ && header_count==0 {in_header=1; header_count=1; next} /^---$/ && in_header==1 {in_header=0; next} !in_header {print}'").replace('###','#####')}}
 {%endfor%}

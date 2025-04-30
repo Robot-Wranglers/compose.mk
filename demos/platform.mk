@@ -4,12 +4,13 @@
 #   We use namespace-style dispatch here to run commands in docker-compose managed 
 #   containers, and use `compose.mk` workflows to to describe data-flow.
 #
-# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # See also: http://robot-wranglers.github.io/compose.mk/demos/platform
 # USAGE: ./demos/platform.mk
 
 include compose.mk
-.DEFAULT_GOAL := platform.setup.basic
+
+__main__: platform.setup.basic
 
 # Import the platform compose file.
 # This generates target-scaffolding for terraform and ansible, 
@@ -22,17 +23,19 @@ $(eval $(call compose.import, demos/data/docker-compose.platform.yml, ▰))
 #   3. Both tasks emit JSON events (simulating terraform state output, etc)
 
 # Map targets to containers.  A public, top-level target. 
-platform.setup.basic: ▰/terraform/self.infra.setup ▰/ansible/self.app.setup
+platform.setup.basic: \
+	▰/terraform/self.infra.setup \
+	▰/ansible/self.app.setup
 
 # Simulate the setup tasks for app and infrastructure.
 # Note usage of `jb` to emit JSON, and `self.` prefix to hint 
 # these targets are "private" / not intended to run from the host. 
 self.infra.setup:
-	# pretending to do stuff with terraform..
+	@# pretending to do stuff with terraform..
 	${jb} log="infra setup done" metric=123 \
 		event="terraform container task" 
 
 self.app.setup:
-	# pretending to do stuff with ansible..
+	@# pretending to do stuff with ansible..
 	${jb} log="app setup done" metric=456 \
 		event="ansible container task"

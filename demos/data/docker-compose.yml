@@ -1,22 +1,23 @@
 ##
 # demos/data/docker-compose.yml: 
-#  Typical compose file that works with target dispatch.
-#  (For more discussion, see the installation docs)
-##
+#  Typical compose file with container-bases that are preconfigured to 
+#  work with target dispatch, default workspaces, volume sharing for
+#  tools, yaml inheritance, etc
 services:
   debian: &base
     hostname: debian
+    entrypoint: bash
+    working_dir: /workspace
+    volumes:
+      # optional, but required for docker-in-docker
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      # standard, so tools can access project files
+      - ${PWD}:/workspace
     build:
       context: .
       dockerfile_inline: |
         FROM ${IMG_DEBIAN_BASE:-debian:bookworm}
         RUN apt-get update -qq && apt-get install -qq -y make procps 
-    entrypoint: bash
-    working_dir: /workspace
-    volumes:
-      - ${PWD}:/workspace
-      # optional, but required for docker-in-docker
-      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
 
   ubuntu: 
     <<: *base

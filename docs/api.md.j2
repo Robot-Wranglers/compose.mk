@@ -39,14 +39,8 @@ Some important notes about how these targets work:
 | [*`stream.*`* targets:]({{mkdocs.site_relative_url}}/api#api-stream)   | Support for IO streams, including basic stuff with JSON, newline-delimited, and space-delimited formats.   |
 #}
 
-{% set help_extra="Docs below typically refer to `compose.mk` as the executable involved, but if you're using integrated rather than stand-alone mode, you should use `make` instead to work with your own project's context!" %}
 
-#### API: io
-<hr style="width:100%;border-bottom:3px solid black;">
-
-{{macros.parse_module_help('compose.mk', 'io')}}
-
-{{macros.parse_help('compose.mk', 'io', github)}}
+{% include "api/io.md.j2" %}
 
 #### API: compose
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -69,14 +63,8 @@ Some important notes about how these targets work:
 
 {{macros.parse_help('compose.mk', 'Dockerfile', github)}}
 
-#### API: flux
-<hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.parse_module_help('compose.mk', 'flux')}}
-
-See especially the [Platform Setup Example]({{mkdocs.site_relative_url}}/demos/platform) for a more complete walk-through of motivation, starting from an example use-case.
-
-{{macros.parse_help('compose.mk','flux', github)}}
+{% include "api/flux.md.j2" %}
 
 #### API: mk
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -97,20 +85,4 @@ See especially the [Platform Setup Example]({{mkdocs.site_relative_url}}/demos#d
 {{macros.parse_help('compose.mk', 'stream', github)}}
 
 
-#### API: tux
-<hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.parse_module_help('compose.mk','tux')}}
-
-{#See the [TUI documentation]({{mkdocs.site_relative_url}}/embedded-tui) for a high-level overview of what this is and how it works.  For more details, [see the main TUI docs]({{mkdocs.site_relative_url}}/embedded-tui), read on into the API, or see the [tux container spec in compose.mk]({{macros.search_link('compose.mk', 'tux', github)}})#}
-
-{{macros.parse_help('compose.mk', 'tux', help_extra)}}
-
-#### API: tux (internal)
-<hr style="width:100%;border-bottom:3px solid black;">
-
-{#The [public API for `tux.*` targets]({{mkdocs.site_relative_url}}/api#api-tux) describes several lower-level operations that can safely be performed inside or outside of the TUI (i.e. on the docker host).
-
-There's also a "private" API, which targets are under the namespace `.tux.*`, and which is characterized by actually issuing commands to tmux directly.  The private API is intended to be used from *inside* the `tux` container or containers that extend it.  This ensures that your host doesn't actually require a tmux stack, and also ensures that usage of the TUI is always relatively stateless.  (It's not extensively tested yet, but in theory it should be generally safe to run multiple copies of the TUI, and embed TUIs in TUIs, etc.)#}
-
-{{macros.parse_help('compose.mk', '.tux', include_private=True)}}

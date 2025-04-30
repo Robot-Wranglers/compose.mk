@@ -96,8 +96,9 @@ samp {
 }
 pre {
   white-space: pre;
-  margin-left:10px;
-  margin-right:10px; 
+  margin-top:0px;
+  margin-bottom:0px; 
+  /* border:1px solid black;  */
 }
 q {
   quotes: none;
@@ -3199,33 +3200,6 @@ a .wy-menu-vertical li button.toctree-expand {
   font-size: 14px;
   vertical-align: -15%;
 }
-.rst-content .admonition,
-.rst-content .admonition-todo,
-.rst-content .attention,
-.rst-content .caution,
-.rst-content .danger,
-.rst-content .error,
-.rst-content .hint,
-.rst-content .important,
-.rst-content .note,
-.rst-content .seealso,
-.rst-content .tip,
-.rst-content .warning,
-.wy-alert {
-  padding: 12px;
-  line-height: 24px;
-  margin-bottom: 24px;
-  background: #e7f2fa;
-}
-.rst-content .admonition-title,
-.wy-alert-title {
-  font-weight: 700;
-  display: block;
-  color: #fff;
-  background: #6ab0de;
-  padding: 6px 12px;
-  margin: -12px -12px 12px;
-}
 .rst-content .danger,
 .rst-content .error,
 .rst-content .wy-alert-danger.admonition,
@@ -4694,7 +4668,7 @@ hr {
 code {
   white-space: nowrap;
   max-width: 100%;
-  border: 1px solid #e1e4e5;
+  /* border: 1px solid #e1e4e5; */
   font-size: 75%;
   padding: 0 5px;
   font-family:
@@ -4928,6 +4902,7 @@ footer hr { display:none;}
 }
 .wy-menu-vertical li.current {
   background: #e3e3e3;
+  /* border:1em solid #343131; */
 }
 .wy-menu-vertical li.current a {
   color: grey;
@@ -5127,6 +5102,7 @@ li.toctree-l2 {
   margin-bottom: 0;
   color: #d9d9d9;
   font-weight: 400;
+  
 }
 .wy-menu-vertical a {
   line-height: 18px;
@@ -5157,7 +5133,7 @@ li.toctree-l2 {
   padding: 0.809em;
   margin-bottom: 0.809em;
   z-index: 200;
-  background-color: #2980b9;
+  background-color: #0db7ed;
   text-align: center;
   color: #fcfcfc;
 }
@@ -5264,6 +5240,7 @@ li.toctree-l2 {
   min-height: 100%;
   color: #9b9b9b;
   background: #343131;
+  /* background: black; */
   z-index: 200;
 }
 .wy-side-scroll {
@@ -5619,7 +5596,8 @@ footer span.commit code {
 .rst-content h4,
 .rst-content h5,
 .rst-content h6 {
-    margin-bottom: 2px;
+  margin-top: 44px;
+  margin-bottom: 0px;
 }
 .rst-content img {
   max-width: 100%;
@@ -5681,10 +5659,14 @@ footer span.commit code {
 }
 .rst-content div[class^="highlight"],
 .rst-content pre.literal-block {
-  border: 1px solid #e1e4e5;
+  /* border: 1px solid #e1e4e5; */
   overflow-x: auto;
-  margin: 1px 0 24px;
+  /* margin: 1px 0 24px; */
+  width:100%;
+  /* border:2px solid black; */
 }
+
+
 .rst-content div[class^="highlight"] div[class^="highlight"],
 .rst-content pre.literal-block div[class^="highlight"] {
   padding: 0;
@@ -5713,7 +5695,7 @@ footer span.commit code {
 .rst-content div[class^="highlight"] pre {
   white-space: pre;
   margin: 0;
-  padding: 12px;
+  /* padding: 12px; */
   display: block;
   overflow: auto;
 }

@@ -1,8 +1,8 @@
-#!/usr/bin/env -S stdbuf -i0 -o0 -e0 ./compose.mk mk.interpret!
+#!/usr/bin/env -S ./compose.mk mk.interpret!
 # demos/cmk/xpra.cmk: 
 #   Demonstrating GUI capabilities with XPra and i3, served via HTML5.
 #
-# USAGE: demos/cmk/xpra.cmk serve
+# USAGE: ./demos/cmk/xpra.cmk serve
 
 export APP_DIMS?=1024x500
 export APP_DISPLAY?=:23
@@ -53,7 +53,8 @@ services:
         ENV DEBIAN_FRONTEND=noninteractive
         RUN apt-get update -qq 
         RUN apt-get install -y make procps
-        RUN apt-get install -y wget apt-transport-https software-properties-common ca-certificates
+        RUN apt-get install -y wget apt-transport-https \
+          software-properties-common ca-certificates
         RUN wget -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc
         RUN wget -O "/etc/apt/sources.list.d/xpra.sources" ${XPRA_SOURCES}
         RUN apt-get update -qq 
@@ -81,23 +82,23 @@ services:
         target: /root/.config/i3/config
 ⋙
 
-# Starts an XOrg server, rebuilding the xpra container if necessary.
-# Then start/detach i3 WM, and start a few apps inside.  
-# Tail the logs for a while, wait for user-input, exit cleanly.
 serve: xpra.stop xpra.build xpra.up.detach xpra.exec/i3.start_apps flux.timeout/5/xpra.logs
-	cmk.io.user_exit(Serving: http://localhost:${XPRA_PORT_EXTERNAL})
+	@# Starts an XOrg server, rebuilding the xpra container if necessary.
+	@# Then start/detach i3 WM, and start a few apps inside.  
+	@# Tail the logs for a while, wait for user-input, exit cleanly.
+	cmk.io.user_exit(Serving: http://localhost:${XPRA_PORT_EXTERNAL}\nPress any key to exit.)
 
-# Use I3's RPC tool to drive the display.  
-# Runs in the container, so using tools unavailable to host is ok.
 i3.start_apps: io.wait/5
+	@# Use I3's RPC tool to drive the display.  
+	@# Runs in the container, so using tools unavailable to host is ok.
 	i3-msg exec 'glxgears 2>&1 > /dev/null'
 	i3-msg exec 'glxgears 2>&1 > /dev/null'
 	i3-msg exec 'glxgears 2>&1 > /dev/null'
 	i3-msg exec 'glxgears 2>&1 > /dev/null'
 	i3l spiral
 
-# Print usage info and exit.
-# Main entrypoint does not actually start the GUI
-# because we don't want this running from tests.  
 __main__:
-	cmk.log(${red}USAGE: ./demos/cmk/xpra.cmk gui)
+	@# Print usage info and exit.
+	@# Main entrypoint does not actually start the GUI
+	@# because we don't want this running from tests.  
+	cmk.log(${red}USAGE: ${__file__} serve)

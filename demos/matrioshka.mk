@@ -1,11 +1,12 @@
 #!/usr/bin/env -S make -f
 # demos/matrioshka.mk: 
 #   To demonstrate matrioshka-language features, we use `compose.mk`
-#   to embed a compose service, that embeds a docker container description, 
-#   where the container build and run stages both defer back to the matrioshka.
-#   This also demonstrates passing data between container layers using stage-stacks[1].
+#   to embed a compose service, that embeds a docker container 
+#   description, where the container build and run stages both defer
+#   back to the matrioshka. This also demonstrates passing data between
+#   container layers using stage-stacks[1].
 #
-# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # See the main docs: https://robot-wranglers.github.io/compose.mk/matrioshka
 # See also: https://robot-wranglers.github.io/compose.mk/stages
 #
@@ -13,10 +14,10 @@
 
 
 include compose.mk
-.DEFAULT_GOAL := __main__
 export BUILD_TARGET?=none
 
-# Look it's an embedded compose file.  This defines services `alice` & `bob`.
+# Look it's an embedded compose file.  
+# This defines services `alice` & `bob`.
 define inlined.services
 services:
   alice: &base
@@ -25,11 +26,12 @@ services:
       context: .
       dockerfile_inline: |
         FROM docker:dind
-        RUN apk add -q --update --update --no-cache coreutils build-base bash procps-ng
+        RUN apk add -q --update --update --no-cache \
+          coreutils build-base bash procps-ng
         COPY . /app
         RUN cd /app && make -f ${MAKEFILE} ${BUILD_TARGET}
     working_dir: /workspace
-    environment: 
+    environment:
       DOCKER_HOST_WORKSPACE: ${DOCKER_HOST_WORKSPACE:-${PWD}}
     volumes:
       - ${PWD}:/workspace

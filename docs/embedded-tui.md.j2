@@ -4,17 +4,21 @@
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The TUI capabilities of `compose.mk` are best thought of as an **interface-builder rather than a specific interface.**  As usual and despite appearances, support for the TUI requires *no dependencies except for `make` and `docker`*.  It aims for low-config and sane defaults, so for high level usage it [requires no configuration at all]({{mkdocs.site_relative_url}}/zero-config-tuis).  Under the hood, the TUI uses a dockerized version of [tmux](https://github.com/tmux/tmux) for core drawing and geometry.
+First things first: a TUI is a *text-based user interface*. Not to be confused with a CLI, a TUI implies something more like a "console application".  
 
-There's a few ways to describe what the TUI actually *does*.  
+!!! info "Overview"
+    The TUI capabilities of `compose.mk` are best thought of as an **interface-builder rather than a specific interface.**  Support for the TUI requires no dependencies except for `make` and `docker`.  It aims for low-config and sane defaults, so for high level usage it [requires no configuration at all]({{mkdocs.site_relative_url}}/zero-config-tuis).  Under the hood, the TUI uses a dockerized version of [tmux](https://github.com/tmux/tmux) for core drawing and geometry.
 
-* One way to look at it is, the TUI is just a way of **mapping `make` targets into tmux panes**.   
-* But since [`compose.import`]({{mkdocs.site_relative_url}}/compose.mk) allows you to *map docker-compose services onto `make` targets*, yet another way to think of the TUI is that it allows you to **map containers onto tmux panes**.  
-* And if you're already using `compose.mk` to [build custom]({{mkdocs.site_relative_url}}/demos/just/) [automation APIs]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/), you can map those onto tmux panes too.
 
+There's a few ways to describe what the TUI actually *does*.
+
+* Map `make` targets onto `tmux` panes.
+* Map containers (inlined, or from external compose files) onto `make` targets
+* Map *containers* on to panes.
+
+And if you're already using `compose.mk` to [build custom]({{mkdocs.site_relative_url}}/demos/just/) [automation APIs]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/), you can map those onto tmux panes too.
 
 ### TUI Gallery
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 For the impatient, here's a small gallery that show-cases the type of stuff you can do with the TUI capabilities that `compose.mk` offers.  
@@ -47,48 +51,50 @@ Besides a dockerized `tmux`, the basic pre-configured components of the TUI are 
 
 These components are configurable, but not something that you necessarily have to think about.  Some notable effects of the "sane defaults" policy include:
 
-* Leave the TUI by hitting the escape key
-* Click to open a new pane
+* Click to open a new pane, or click to exit
+* Leave the TUI by hitting the escape key *(if the embedded apps don't intercept the key)*
 * Advanced layouts like spiral & fibbonacci, using [dwindle](https://github.com/sunaku/home/blob/master/bin/tmux-layout-dwindle)
 * Status bar including details like user, pid, & working-dir 
 
 These elements, plus access to other tools like [gum](https://github.com/charmbracelet/gum) and [chafa](https://hpjansson.org/chafa/), are all setup in the embedded `compose.mk:tux` container, which is built and used only on demand.
 
 #### Default Keybindings
-
 <hr style="width:100%;border-bottom:3px solid black;">
+!!! danger "Limitations"
+    Keybindings are easy to change, but there's no way guarantee that such defaults won't collide with whatever existing applications you're trying to stitch together.  See the previous section for more details.
 
 The TUI ships with some default keybindings that are aimed at keeping things pretty user-friendly even for those who are not already familiar with tmux.  
 
-{{bash("pattern='*Keybindings*' make mk.parse.block/compose.mk")}}
-
-These are configurable of course, since there's no way guarantee that such defaults won't collide with whatever existing applications you're trying to stitch together.  See the previous section for more details.
+{{bash("pattern='*Keybindings*' make mk.parse.block/compose.mk") }}
 
 ### Layout Basics
 <hr style="width:100%;border-bottom:3px solid black;">
 
 We'll start by showing **how to map targets onto a specific pane orientation**, using the [`tux.open`]({{mkdocs.site_relative_url}}/api/#tuxopenarg) target-family.  For mapped targets, we'll use `flux.ok`, which has no arguments and simply succeeds without doing anything.
 
-```bash 
+```bash {.cli_example}
 # Specify a horizontal layout and pass in 3 targets
 $ ./compose.mk tux.open.horizontal/flux.ok,flux.ok,flux.ok
-
-# Other equivalent forms
-$ layout=horizontal ./compose.mk tux.open/flux.ok,flux.ok,flux.ok
-$ layout=h ./compose.mk tux.open/flux.ok,flux.ok,flux.ok
 ```
+{{macros.img_link("tux.open-h.png", mkdocs, "400px",class="cli_output")}}
 
 Running this command shows some log messages detailing the startup process and the first time it runs you'll see the TUI bootstrapping itself (i.e. building the necessary support containers for running `tmux`).  (Afterwards it will be cached, so startup is much faster.)
 
 After it starts, you'll see an interface like this, and it ran the `flux.ok` target for you, once in each pane.
 
-{{macros.img_link("tux.open-h.png", mkdocs, "400px")}}
 
+```bash {.cli_example}
+# Other equivalent forms
+$ layout=horizontal ./compose.mk tux.open/flux.ok,flux.ok,flux.ok
+$ layout=h ./compose.mk tux.open/flux.ok,flux.ok,flux.ok
+```
+
+#### Vertical Orientation
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 For controlling the default orientation, `tux.open.vertical` of course works in a similar manner as you can see below.
 
-```bash 
+```bash {.cli_example}
 # Specifies a vertical layout, and pass in 2 targets
 $ ./compose.mk tux.open.vertical/flux.ok,flux.ok
 
@@ -96,16 +102,17 @@ $ ./compose.mk tux.open.vertical/flux.ok,flux.ok
 $ layout=vertical ./compose.mk tux.open/flux.ok,flux.ok
 $ layout=v ./compose.mk tux.open/flux.ok,flux.ok
 ```
-{{macros.img_link("tux.open-v.png", mkdocs, "400px")}}
+{{macros.img_link("tux.open-v.png", mkdocs, "400px",class="cli_output")}}
 
+#### Spiral Orientation
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 The main alternative to "horizontal" and "vertical" is called "spiral", and it looks like this:
 
 {{macros.img_link("tux.open-s.png", mkdocs, "400px")}}
 
+#### Up Next
 <hr style="width:95%;border-bottom:1px dashed black;">
-
 
 These 3 layouts are enough for most use-cases, but `compose.mk` actually supports whatever `tmux` does and also whatever [dwindle](https://github.com/sunaku/home/blob/master/bin/tmux-layout-dwindle) supports.
 

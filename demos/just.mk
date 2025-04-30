@@ -1,10 +1,11 @@
 #!/usr/bin/env -S make -f
 # demos/just.mk: 
 #   Demonstrates some interoperability with `just`.
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
 #
-#   USAGE: ./demos/just.mk
-#   USAGE: ./demos/just.mk justfile.target.selector
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+#
+# USAGE: ./demos/just.mk
+# USAGE: ./demos/just.mk justfile.target.selector
 #
 
 include compose.mk
@@ -15,10 +16,10 @@ __main__: \
   just.recipe just.another.recipe
 
 # No official container (https://github.com/casey/just/issues/1497), 
-# so we'll build one.  We could use external files, but to keep the demo self-contained,
-# we'll embed a docker-compose spec for a container here, as well as a copy of the official 
-# justfile example.  Note that a bind-map or volume would be faster and more practical here,
-# but we won't need it.
+# so we'll build one.  We could use external files, but to keep the 
+# demo self-contained,we'll embed a docker-compose spec for a container
+# here, as well as a copy of the official justfile example.  Note that a
+# volume or bind-map be faster and more practical here.
 define just.services
 configs:
   justfile:

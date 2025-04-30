@@ -5,16 +5,7 @@
 
 One goal for `compose.mk` is to enable program output that is clean, curated, and human-friendly on stderr, and machine-friendly on stdout.  There are a few features available in support of this.  In general `compose.mk` prefers make-targets over make-functions and macros, because targets are more reusable.[^2]  Logging is a special case though, and might use all 3.
 
-#### Log Functions 
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-First lets look at the **`log.*` functions** that are suitable for use from your project Makefile.  The following example demonstrates basic logging, logging with formatting, and trace-logging.  
-
-```Makefile
-{{open('demos/logging.mk','r').read().strip()}}
-```
-
-A few other things that are worth mentioning:
+#### Logging Basics
 
 * **Logging always goes to stderr so that targets remain pipe-safe**, including the `log.json` output.
 * **Log-messages have a prefix which is based on the call-depth**, which can help visually parse complex traces.
@@ -22,43 +13,60 @@ A few other things that are worth mentioning:
 
 Tools for working with JSON are also discussed in more detail in the section on [Structured IO](#structured-io-basics).
 
+#### Log Functions 
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Lets look at the **`log.*` functions** that are suitable for use from your project Makefile.  
+
+The following example demonstrates basic logging, logging with formatting, and trace-logging.
+
+{{macros.embed_demo('demos/logging.mk', github=github)}}
+
 #### File and Stream Previews
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-Whether you're working on build processes, data-pipelines, or infrastructure deployments, it's convenient to have the ability to "preview" things like files, streams, or intermediate representations.  [Docs for compose.mk's built-in tool wrappers]({{mkdocs.site_relative_url}}/tool-overview/#other-wrappers) cover this topic also, but let's look at some more programmatic usage.
+Whether you're working on build processes, data-pipelines, or infrastructure deployments, it's convenient to have the ability to "preview" things like files, streams, or intermediate representations.  The previous section covers some simple cases.  
 
-------------------------------------------
+The [docs for compose.mk's built-in tool wrappers]({{mkdocs.site_relative_url}}/tool-overview/#other-wrappers) are also related here, so here's a look at some of the tests that are exercising that code:
 
-```Makefile
-{{open('tests/tool-wrappers.sh','r').read().strip()}}
-```
-<br/>
+{{macros.embed_demo(
+    'tests/tool-wrappers.sh', 
+    github=github, type="bash", 
+    class="language-makefile language-bash")}}
 
 #### Visual Dividers
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-**Visually separating stages with some kind of output divider** is something that is nice to have to for otherwise messy output.  Here's an example of several different ways of using `io.print.banner` to get labeled or timestamped dividers that are shown between clean/build/test stages.  
+!!! info "Note"
+    If you want to make extensive use of these kinds of banners, you can organize around [stages]({{mkdocs.site_relative_url}}/stages) to get them implicitly.  
 
-```Makefile
-{{open('demos/section-dividers.mk','r').read().strip()}}
-```
+**Visually separating stages with some kind of output divider** is something that is nice to have for otherwise messy output.  Here's an example of several different ways of using `io.print.banner` to get labeled or timestamped dividers that are shown between clean/build/test stages.  
 
-In the `build` task above, you can see one way to call `io.print.banner` explicitly, which uses `${make}` as shorthand for "*the right way to call `make` recursively*".  As an equivalent, you can always use an invocation like `./compose.mk io.print.bannerider` instead, and this works from anywhere.  Inspecting usage from the command line:
+{{macros.embed_demo('demos/section-dividers.mk', github=github)}}
 
+    In the `build` task above, you can see one way to call `io.print.banner` explicitly, which uses `${make}` as shorthand for "*the right way to call `make` recursively*".  As an equivalent, you can always use an invocation like `./compose.mk io.print.banner` instead, and this works from anywhere.  
+    
 {{macros.img_link("demo-io.gif", mkdocs, "90%")}}
 
------------------------------------
+##### Use Gum for Banners 
+---------------------------------------------
 
-Even though [`io.print.banner`]({{mkdocs.site_relative_url}}/api/#ioprintdiv) detects terminal width, it isn't fancy otherwise.  A related utility is `io.gum.style`, which can print dividers with [charmbracelet/gum](https://github.com/charmbracelet/gum).  *If you have a local copy of `gum` then it is used, otherwise, we fall back to docker.*
+Even though {{macros.api_link('io.print.banner',mkdocs,arg='label')}} detects terminal width, it isn't fancy otherwise.  A related target is {{macros.api_link('io.draw.banner',mkdocs,arg='label')}}, which prints dividers with [charmbracelet/gum](https://github.com/charmbracelet/gum).  *If you have a local copy of `gum` then it is used, otherwise, we fall back to docker.*
 
 {{macros.img_link("demo-gum.gif", mkdocs, "90%")}}
 
-If you want to make extensive use of these kinds of banners, you can organize around [stages]({{mkdocs.site_relative_url}}/stages) to get them implicitly.  You can use figlet too, like this:
 
-```bash
+##### Banners with Figlet
+-----------------------------
+
+You can also use a (dockerized) version of the `figlet` tool, like this:
+
+```bash {.cli_example .language-bash}
+
 # or, ./compose.mk io.figlet/banner
 $ label=banner ./compose.mk io.figlet
-
+```
+```markdown {.cli_output}
  ██                                                
 ░██                                                
 ░██       ██████   ███████  ███████   █████  ██████
@@ -71,7 +79,7 @@ $ label=banner ./compose.mk io.figlet
 
 To add color, you can use a context manager and any of the colors that `compose.mk` natively understands.
 
-```bash 
+```bash {.cli_example} 
 ./compose.mk io.with.color/red,io.figlet/banner
 ```
 

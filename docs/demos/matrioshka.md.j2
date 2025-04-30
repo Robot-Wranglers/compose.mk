@@ -3,11 +3,10 @@
 ## Embedded Containers & Data
 <hr style="width:100%;border-bottom:3px solid black;">
 
+!!! danger "<small>Reasonable people might consider this stuff to be mad science.</small>"
+    See [this section]({{mkdocs.site_relative_url}}/matrioshka/#has-science-gone-too-far) for more discussion on that point, and if you're more interested in patterns and theory, then you might prefer to start [here]({{mkdocs.site_relative_url}}/matrioshka).
+
 Sometimes it's useful to declare **inlined containers and data** alongside the same automation that is making use of those containers.  You'll have to exercise some judgement about when and where that is a *good idea*, but since tool containers tend to be small and change infrequently, **being self-contained reduces change-related friction and context-switching** that's associated with external repositories, external registries, and external files.
-
-Still.. reasonable people might consider this stuff to be mad science.  See [this section]({{mkdocs.site_relative_url}}/matrioshka/#has-science-gone-too-far) for more discussion on that point, and if you're more interested in patterns and theory, then you might prefer to start [here]({{mkdocs.site_relative_url}}/matrioshka).
-
--------------------------------
 
 **Basic Examples** are all on this page.  Quick links: [Inlined docker files](#inlined-dockerfiles), [Extending inline docker files](#extending-inlined-dockerfiles), [Inlined compose files](#inlined-compose-files), [Passing inlined data structures](#passing-inlined-data-structures)
 
@@ -18,13 +17,11 @@ Still.. reasonable people might consider this stuff to be mad science.  See [thi
 ### Inlined Compose Files
 <hr style="width:100%;border-bottom:3px solid black;">
 
-
-```Makefile
-{{open('demos/inlined-composefile.mk','r').read().strip()}}
-```
-
-**Note:** For a more elegant version, see also [the equivalent demo in CMK]({{mkdocs.site_relative_url}}/compiler/#compose-file-example)
-
+{{macros.embed_demo('demos/inlined-composefile.mk', 
+    github=github, 
+    bottom_right=macros.link_mirror(
+        'demos/cmk/inlined-composefile.cmk',
+        base=mkdocs.site_relative_url+"/compiler#"))}}
 
 {% include "demos/inlined-dockerfiles.md.j2"%}
 
@@ -33,9 +30,7 @@ Still.. reasonable people might consider this stuff to be mad science.  See [thi
 
 Inlined containers can actually be extended with other inlines, but notice again the `compose.mk:` prefix which is used as a repository.
 
-```Makefile
-{{open('demos/extend-inlined-dockerfile.mk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/extend-inlined-dockerfile.mk', github=github)}}
 
 ### Passing Inlined Data-Structures
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -44,9 +39,7 @@ Inlined containers can actually be extended with other inlines, but notice again
 
 Building on the [Custom Automation APIs demo]({{mkdocs.site_relative_url}}/demos/custom-automation-api), let's embed an ansible playbook, then pass it into an embeddded container.
 
-```Makefile
-{{open('demos/ansible-playbook.mk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/ansible-playbook.mk', github=github, extra_label='<a href='+mkdocs.site_relative_url+'/demos/custom-automation-apis/>Related Demo</a>')}}
 
 <hr style="width:100%;border-bottom:3px solid black;">
 

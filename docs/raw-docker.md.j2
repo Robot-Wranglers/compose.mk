@@ -7,7 +7,8 @@ Usually it's a good idea to separate task-definitions from the containers runtim
 
 However.. `compose.mk` sometimes needs more direct and low-level access to docker primitives for internal use, and this functionality is exposed for external use as well.  
 
-**Note that functionality here is *use-case driven*** and so the [`docker.*` target api]({{mkdocs.site_relative_url}}/api/#api-docker) interface is not intended to be 1:1 with the docker CLI.  Using the docker CLI directly is still [idiomatic compose.mk]({{mkdocs.site_relative_url}}/style), so we're not looking to replace it.  Instead, the offerings here are all building on top of it or making common interactions somewhat smoother.
+!!! Info "Info"
+    **Note that functionality here is *use-case driven*** and so the [`docker.*` target api]({{mkdocs.site_relative_url}}/api/#api-docker) interface is not intended to be 1:1 with the docker CLI.  Using the docker CLI directly is still [idiomatic compose.mk]({{mkdocs.site_relative_url}}/style), so we're not looking to replace it.  Instead, the offerings here are all building on top of it or making common interactions somewhat smoother.
 
 {#**For use-cases related to cleaning and refactoring bash-script or Makefiles that are already using the docker CLI,** there are various utility functions that are available as part of the [`docker.*` namespace of the API]({{mkdocs.site_relative_url}}/api/#api-docker).#}
 
@@ -28,7 +29,7 @@ Dispatch for [imported tool containers from compose files]({{mkdocs.site_relativ
 
 The situation is similar though for any other kind of **unmodified stock image**, as long as that image actually ships with `make`.  One of the smallest images preconfigured with `make` seems to be `debian/buildd`, so we'll use that here.  
 
-```bash
+```bash  {.cli_example}
 # Run the trivial `flux.ok` target inside the given image
 $ img=debian/buildd:bookworm ./compose.mk docker.dispatch/flux.ok
 ```
@@ -37,9 +38,7 @@ $ img=debian/buildd:bookworm ./compose.mk docker.dispatch/flux.ok
 
 If you're doing something like the above frequently, then you can also use `compose.import.docker_image` to generate scaffolded targets that do the same thing:
 
-```Makefile
-{{open('demos/import-image.mk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/import-image.mk', github=github)}}
 
 As mentioned in [the installation docs]({{mkdocs.site_relative_url}}/integration/#docker-compose-integration), lots of your daily-driver images probably have `make` by default, including images for stuff like gcc, golang, maven, etc.
 
@@ -48,22 +47,23 @@ As mentioned in [the installation docs]({{mkdocs.site_relative_url}}/integration
 
 The [polyglot demos]({{mkdocs.site_relative_url}}/demos/polyglots) and [these mad-science demos]({{mkdocs.site_relative_url}}/demos/matrioshka) show various use-cases for working with embedded images.  Below you can see test-cases that are exercising related raw docker support.
 
-```Makefile
-{{open('demos/inlined-dockerfile.mk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/inlined-dockerfile.mk', github=github,
+    bottom_right=macros.link_mirror(
+      'demos/cmk/code-objects.cmk',
+      link=mkdocs.site_relative_url+'/compiler/#dockerfile-example'))}}
 
+{#
 For an approach with better style and more native syntax, see also [this example in CMK-lang]({{mkdocs.site_relative_url}}/compiler/#dockerfile-example)
-
+#}
 
 ### Other Docker Utilities
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Most of the use-cases for raw docker support are related to scripting with `compose.mk`.  Sometimes though the raw docker support has more of a [stand-alone / tool mode]({{mkdocs.site_relative_url}}/tool-overview) vibe. For usage hints along those lines, see the test cases below.
 
-```Makefile
-{{open('tests/docker-utils.sh','r').read().strip()}}
-```
-<br/>
+{{macros.embed_demo(
+    'tests/docker-utils.sh', type='bash',
+    class='language-bash language-shell test_suite', github=github)}}
 
 ### Full Docker API 
 <hr style="width:100%;border-bottom:3px solid black;">

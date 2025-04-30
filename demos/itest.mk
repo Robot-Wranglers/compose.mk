@@ -13,18 +13,16 @@
 # otherwise exercise base-targets that are provided by the lib
 include compose.mk
 
-.DEFAULT_GOAL := all 
-
 # Load all services from 1 compose file, *not* into the root namespace.
 # $(eval $(call compose.import.as, ▰, demos/data/docker-compose.cm-tools.yml))
 
 # Load all services from 2 compose files into 1 namespace.
 $(eval $(call compose.import, demos/data/docker-compose.yml, ▰))
 
-all: flux.star/test.* 
+__main__: flux.star/test.*
 
 test.mk.assert_env_var:
-	$(call log.test_case, Testing assert.env_var)
+	$(call log.test, Testing assert.env_var)
 	my_var=1; $(call mk.assert.env_var, my_var)
 	! $(call mk.assert.env_var, my_var) ${stderr_devnull}
 	another_var=2; my_var=1; $(call mk.assert.env, my_var another_var)
@@ -34,27 +32,27 @@ test.mk.assert_env_var:
 	! foo=1 ./compose.mk mk.assert.env/foo,bar ${stderr_devnull}
 
 test.mk.reflection:
-	$(call log.test_case, Testing reflection)
+	$(call log.test, Testing reflection)
 	./compose.mk \
 		mk.set/foo/bar mk.get/foo \
 		mk.ifdef/foo mk.ifndef/baz
 
 test.flux.if.then:
-	$(call log.test_case, Test a few kinds of if/then flows)
+	$(call log.test, Test a few kinds of if/then flows)
 	set -x \
 	&& ./compose.mk flux.if.then/flux.ok,flux.ok \
 	&& ./compose.mk flux.if.then/flux.fail,flux.ok 
 
 test.flux.do.when:
-	$(call log.test_case, Test a few kinds of do/when flows)
+	$(call log.test, Test a few kinds of do/when flows)
 	set -x \
 	&& ./compose.mk flux.do.when/flux.ok,flux.ok \
 	&&	./compose.mk flux.negate/flux.do.when/flux.fail,flux.ok
 
 test.signals:
-	$(call log.test_case, mk.interrupt should throw an error)
+	$(call log.test, mk.interrupt should throw an error)
 	! ./compose.mk mk.interrupt
-	$(call log.test_case, Signal handler should not be installed for library usage)
+	$(call log.test, Signal handler should not be installed for library usage)
 	! make mk.parse.local | grep mk.interrupt
 	
 demo: ▰/debian/self.demo
@@ -78,21 +76,28 @@ demo.double.dispatch: ▰/debian/self.demo ▰/alpine/self.demo
 # 	cmd='sleep 2' label='testing gum spinner inside container' make io.gum.spin
 
 test.main.bridge:
-	$(call log.test_case, main bridge)
+	$(call log.test, main bridge)
 	make io.print.banner label="${cyan}${@}${no_ansi}"
-	$(call log.test_case, Test service enumeration\nTarget @ <compose_file>.services)
+	$(call log.test, Test service enumeration\nTarget @ <compose_file>.services)
 	${make} docker-compose.services
-	$(call log.test_case, Test detection\nTarget @ <compose_file>.get_shell)
+	$(call log.test, Test detection\nTarget @ <compose_file>.get_shell)
 	${make} docker-compose/alpine.get_shell
+	$(call log.test, Test pulling configuration data)
+	${make} docker-compose/alpine.get_config
+	${make} docker-compose/alpine.get_config/build.context
 
 test.dispatch.retvals:
-	$(call log.test_case, Checking dispatch return codes)
+	$(call log.test, Checking dispatch return codes)
 	! (echo exit 1 | ${make} docker-compose/debian.shell.pipe 2>/dev/null)
 	echo exit  | ${make} docker-compose/debian.shell.pipe
 
+test.flux.map:
+	$(call log.test, Checking flux.map dispatches for each input)
+	make flux.map/flux.echo,foo,bar | grep foo
+	make flux.map/flux.echo,foo,bar | grep bar
 
 test.flux.try.except.finally:
-	$(call log.test_case, testing try.except.finally)
+	$(call log.test, testing try.except.finally)
 	make flux.try.except.finally/flux.fail,flux.ok,flux.ok
 	! make flux.try.except.finally/flux.ok,flux.ok,flux.fail
 	# except fails, but try succeeds so it never runs
@@ -101,7 +106,7 @@ test.flux.try.except.finally:
 	make flux.try.except.finally/flux.ok,flux.ok,flux.ok
 
 test.flux.finally:
-	$(call log.test_case, testing flux.finally)
+	$(call log.test, testing flux.finally)
 	# demo of using finally/always functionality in a pipeline.  touches a tmpfile 
 	# somewhere in the middle of a failing pipeline without getting to the cleanup 
 	# task, and it should be cleaned up anyway.
@@ -117,46 +122,46 @@ test.flux.finally:
 	rm .tmp.test.flux.finally
 
 test.flux.loop:
-	$(call log.test_case, Testing..)
+	$(call log.test, Testing..)
 	./compose.mk flux.loop/2/io.time.wait/1
 
 test.flux.each:
-	$(call log.test_case, Testing flux.each)
+	$(call log.test, Testing flux.each)
 	printf "one\ntwo"|./compose.mk flux.each/flux.echo
 test.flux.pipe.fork:
-	$(call log.test_case, Testing flux.pipe.fork)
+	$(call log.test, Testing flux.pipe.fork)
 	echo hello-world | targets="stream.echo,stream.echo" ./compose.mk flux.pipe.fork
 	echo hello-world | ./compose.mk flux.pipe.fork/stream.echo,stream.echo
 
 test.flux.pipe:
-	$(call log.test_case, Testing flux.pipe.fork)
+	$(call log.test, Testing flux.pipe.fork)
 	echo hello-world | targets="stream.echo,stream.echo" ./compose.mk flux.pipe.fork
 	echo hello-world | ./compose.mk flux.pipe.fork/stream.echo,stream.echo
 
 test.flux.retry:
-	$(call log.test_case, Testing..)
+	$(call log.test, Testing..)
 	! interval=1 make flux.retry/3/flux.fail
 
 test.flux.apply:
-	$(call log.test_case, Testing..)
+	$(call log.test, Testing..)
 	./compose.mk flux.apply/flux.echo,THUNK ${stream.obliviate}
 
 test.flux.starmap:
-	$(call log.test_case, Testing..)
+	$(call log.test, Testing..)
 	./compose.mk flux.starmap/flux.echo,flux.echo/bonk ${stream.obliviate}
 
 test.flux.apply.later:
-	$(call log.test_case, Testing..)
+	$(call log.test, Testing..)
 	./compose.mk flux.apply.later/2/io.time.wait/1 ${stream.obliviate}
 
 test.flux.mux:
-	$(call log.test_case, Testing..)
+	$(call log.test, Testing..)
 	targets="io.time.wait,io.time.wait,io.time.wait/4" ./compose.mk flux.mux  | jq .
 	targets="io.time.wait,io.time.wait,io.time.wait/2" ./compose.mk flux.join | jq .
 	./compose.mk flux.mux/io.time.wait
 
 test.docker.run:
-	$(call log.test_case, Checking)
+	$(call log.test, Checking)
 	img=debian/buildd:bookworm ./compose.mk docker.dispatch/flux.ok
 	echo hello-python-docker1 | ${make} .test.docker.run.def
 	echo hello-python-docker2 | entrypoint=cat cmd=/dev/stdin img=python:3.11-slim-bookworm make docker.run.sh

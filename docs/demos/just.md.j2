@@ -5,24 +5,24 @@
 
 Given the feature sets of each, `compose.mk` isn't *really* a competitor to tools like `just`, but since the comparison will come up there might as well be discussion[^1] and a demo. =)  
 
-Actually the *specific* involvement of `just` and justfiles as used here is not that important.  What this demo *really* shows is the ability of `compose.mk` to embrace foreign tools, and to translate across very different systems.
 
-{{macros.img_link('escher-birds.jpg',mkdocs,'90%')}}
+{{macros.img_link('escher-birds.jpg',mkdocs,'90%',class=" ")}}
+
+Actually the *specific* involvement of `just` and justfiles as used here is not that important.  What this demo *really* shows is the ability of `compose.mk` to embrace foreign tools, and to translate across very different systems.
 
 {# <hr style="width:95%;border-bottom:1px dashed black;">} #}
 
-If you want to see a similar demo with different base technology, check out the [ansible demo]({{mkdocs.site_relative_url}}/demos/custom-automation-apis).  
+!!! tip "Related Links"
+    If you want to see a similar demo with different base technology, check out the [ansible demo]({{mkdocs.site_relative_url}}/demos/custom-automation-apis).  
 
-This is a concrete example of the [matrioshki bridge pattern]({{mkdocs.site_relative_url}}/matrioshka/#matrioshka-bridge-pattern), so if you prefery theory *before* looking at applications, read those docs first.  
+    This is a concrete example of the [matrioshki bridge pattern]({{mkdocs.site_relative_url}}/matrioshka/#matrioshka-bridge-pattern), so if you prefery theory *before* looking at applications, read those docs first.  
 
-Also related are the [many]({{mkdocs.site_relative_url}}/demos/matrioshka) [other]({{mkdocs.site_relative_url}}/demos/lean) demos that use inlined data and container-definitions.
+    Also related are the [many]({{mkdocs.site_relative_url}}/demos/matrioshka) [other]({{mkdocs.site_relative_url}}/demos/lean) demos that use inlined data and container-definitions.
 
 ### Justfile Demo
 <hr style="width:100%;border-bottom:3px solid black;">
 
-```Makefile
-{{open('demos/just.mk','r').read().strip()}}
-```
+{{macros.embed_demo('demos/just.mk', github=github)}}
 
 <hr style="width:100%;border-bottom:3px solid black;">
 

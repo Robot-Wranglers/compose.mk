@@ -8,8 +8,7 @@ Set Width 1200
 Set Height 1400
 Set CursorBlink false
 Show 
-Type "make -f demos/tui/extension-1.mk"
+Type "./demos/tui/extension-1.mk"
 Enter
 Sleep 14s
 Screenshot img/tui-extension-1.png
-# Screenshot img/tui-extension-2.png

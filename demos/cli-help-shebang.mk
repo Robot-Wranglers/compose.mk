@@ -1,13 +1,18 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret
 # demos/cli-help-shebang.mk: 
-#   Demonstrates compose.mk usage as a wrapper, which amongst other things enables full support for online help.
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#   Demonstrates compose.mk usage as an interpreter, 
+#   which amongst other things enables full support for online help.
 #
-# USAGE:  demos/cli-help-shebang.mk
+# See the docs: https://robot-wranglers.github.io/compose.mk/cli-help/  
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+#
+# USAGE:  
+#   ./demos/cli-help-shebang.mk help my-target
+#   ./demos/cli-help-shebang.mk help my-parametric-target
 
 include compose.mk 
 
-__main__: # no-op
+__main__: my-target my-parametric-target/FOO
 
 my-target:
 	@# Comment line one

@@ -1,9 +1,9 @@
 #!/usr/bin/env -S make -f
 # demos/cli-help.mk: 
 #   Demonstrates CLI-help and supported syntax for docstrings.
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 #
-# USAGE:  demos/cli-help.mk
+# USAGE:  ./demos/cli-help.mk
 
 include compose.mk 
 

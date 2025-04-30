@@ -5,16 +5,24 @@
 
 The flux module, aka the [**`flux.*` target namespace**]({{mkdocs.site_relative_url}}/api#api-flux), provides a tiny but powerful workflow/pipelining API, roughly comparable to something like declarative pipelines in Jenkins[^1], providing concurrency, retry operators, etc.  You can also think of it as "target algebra" for `make`, similar to how bash provides process algebra.
 
-What `flux.*` targets add is flow-control constructs and higher-level join / loop / map instructions over *other make targets*, taking inspiration from functional programming and threading libraries. Alternatively, one may think of flux as a programming language where all primitives are the objects that make understands (e.g. targets, defines, and variables). Since every target in make is a DAG, you might say that task-DAGs are also primitives. Since `compose.import` [maps containers onto targets](#), *containers are primitives too*. Since tux targets map targets onto TUI panes, *UI elements are also effectively primitives*.^[7]
+What `flux.*` targets add is basic flow-control constructs and higher-level join / loop / map instructions over *other make targets*, taking inspiration from functional programming and threading libraries. 
+
+
+Alternatively: You can think of flux as a programming language where all primitives are the objects that `make` understands (e.g. targets, defines, and variables). Since every target in `make` is a DAG, you might say that task-DAGs are also primitives. Since `compose.import` [maps containers onto targets]({{mkdocs.site_relative_url}}/container-dispatch), *containers are primitives too*. Since tux targets [map targets onto TUI panes]({{mkdocs.site_relative_url}}/embedded-tui), *UI elements are also effectively primitives*  too.
+
+!!! info "See also"
+    For more background, see the [style docs]({{mkdocs.site_relative_url}}/style) and specifically the [targets-as-functions docs]({{mkdocs.site_relative_url}}/style#targets-as-functions).
 
 #### Workflow Rationale 🤔
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-Internally, the flux module was started in support of the [the embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui), but it's also useful in general.  To some extent **you can refactor existing bash using flux primitives [without any project integration]({{mkdocs.site_relative_url}}/tool-overview)**, and the next section starts by introducing concepts from the CLI.  
+Internally, the flux module was started in support of the [the embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui), but it's also useful in general.  
+
+This sections starts by introducing concepts from the CLI.  Besides using workflows in your existing automation, you can also **refactor existing bash using flux primitives [without any project integration]({{mkdocs.site_relative_url}}/tool-overview)**.  
 
 As an example of this, here's a few quick one-liners: 
 
-```bash 
+```bash {.cli_example}
 # Terminal friendly preview for all the project images
 $ ls docs/img/*png | ./compose.mk flux.each/io.preview.img
 
@@ -25,11 +33,13 @@ $ ls demos/*mk | ./compose.mk flux.each/io.preview.file
 $ ls demos/*mk | ./compose.mk flux.each/mk.validate
 ```
 
+Above, {{macros.api_link('flux.each',mkdocs,arg='fxn')}} takes a newline-separated stream for input, then runs the named (unary) target on each word.
+
 One-liners aren't really the point though, and **the main use-case for `flux` is scripting on top of it in your own projects**.  But why bother?  Well, by lifting flow-control and iteration out of *bash/make primitives* and up into `flux`, it tends to *completely eliminate a major source of errors, readability issues, and downright brutal syntax* to end up with **an elegant alternative that actually encourages good design**.
 
 To illustrate, consider this snippet of [the mini-ETL demo]({{mkdocs.site_relative_url}}/demos/workflows) that uses flux:
 
-```Makefile 
+```Makefile {.snippet .language-makefile}
 # Declare an ETL pipeline, using `flux.pipeline` to bind tasks together.
 # This is roughly equivalent to => `make extract | make transform | make load`, 
 # but additionally shows result-previews for all the intermediate stages.
@@ -39,30 +49,37 @@ etl: flux.pipeline/extract,transform,load
 etl.safe: flux.try.except.finally/etl,etl.failed,etl.cleanup
 ```
 
-See the demo for the full context, but let's notice how clean and declarative this is.  Individual targets like *extract/transform/load* cannot be *perfectly* flat like this of course, and at some point you have to dip into bash. But when targets inevitably become complex, the sheer simplicy of `flux` syntax over make/bash idioms provides a healthy incentive to break things up, which in turn not only improves readability, but improves composability at the same time.  Meanwhile targets like `flux.each` and even `flux.apply` also show a bias towards functional-style, which tends encourage clean loops, heavy usage of streams instead of temporary files or variables, etc.
+See the demo for the full context, but let's notice how clean and declarative this is.  Individual targets like *extract/transform/load* cannot be *perfectly* flat like this of course, and at some point you have to dip into bash. But when targets inevitably become complex, the sheer simplicy of `flux` syntax over make/bash idioms provides a healthy incentive to break things up, which in turn not only improves readability, but improves composability at the same time.  Meanwhile targets like `flux.each` and even `flux.apply` also show a bias towards [functional style](#functional-style), which tends encourage clean loops, heavy usage of streams instead of temporary files or variables, etc.
 
 #### Workflow Basics
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 Before we get into code examples, let's introduce basic principles with the command line.
 
-```bash 
+```bash {.cli_example}
 # Introducing the `flux.ok` target:
 $ ./compose.mk flux.ok
-
+```
+```markdown {.cli_output}
 flux.ok // succceeding as requested!
+```
 
+```bash {.cli_example}
 # Introducing the `flux.fail` target:
 $ ./compose.mk flux.fail
-
+```
+```markdown {.cli_output}
 flux.fail // failing as requested!
 make: *** [compose.mk:..: flux.fail] Error 1
+```
 
+```bash {.cli_example}
 # Since using compose.mk is the same as using `make`, 
 # creating simple task DAGs works the way you expect.
 # below, the 2nd target never runs, and the command fails.
 $ ./compose.mk flux.fail flux.ok
-
+```
+```markdown {.cli_output}
 flux.fail // failing as requested!
 make: *** [compose.mk:1677: flux.fail] Error 1
 ```
@@ -71,50 +88,59 @@ Above, `flux.ok` and `flux.fail` are just make-targets that exit with success an
 
 Another target that's useful for testing is `flux.echo`, which accepts one argument. 
 
-```bash
+```bash {.cli_example}
 # Introducing the `flux.echo` target:
 $ ./compose.mk flux.echo/BANG
-
+```
+```markdown {.cli_output}
 BANG
 ```
-<br/>
 
-##### **Dispatch:**
+#### **Dispatch**
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 For a more advanced example, let's use `flux.ok` with the autogenerated-targets for [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch), and [use loadf to avoid a project Makefile]({{mkdocs.site_relative_url}}).  The following command loads the "debian" container from `demos/data/docker-compose.yml`, then runs the `flux.ok` target inside that tool container.
 
-```bash 
-
-$ ./compose.mk loadf demos/data/docker-compose.yml debian.dispatch/flux.ok
-
+```bash {.cli_example}
+$ ./compose.mk \
+    loadf demos/data/docker-compose.yml \
+        debian.dispatch/flux.ok
+```
+```markdown {.cli_output}
 loadf // demos/data/docker-compose.yml // debian.dispatch/flux.ok
-loadf // demos/data/docker-compose.yml // Validating services .. ok (3 services total)
+loadf // demos/data/docker-compose.yml // Validating services .. ok
+loadf // demos/data/docker-compose.yml // Validated 3 services total
 loadf // demos/data/docker-compose.yml // Starting downstream targets
 flux.ok // succeeding as requested!
 ```
 
------------------------------
+<br>
 
-##### **Flow Control:**
+#### **Flow Control**
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 As seen in the [scaffolded `<service_name>.dispatch` target]({{mkdocs.site_relative_url}}/bridge/#svc_namedispatch) from the last example, **most targets in the `flux` module accept other targets as arguments**.  
 
 Let's introduce `flux.try.except.finally` as a simple idiom for flow-control.  This target accepts 3 comma-separated arguments for a `<try_target>`, `<fail_handler>`, and a `<always_handler>`.  Since we have `flux.ok` and `flux.fail` in hand, we'll fill in the blanks with that.
 
-```bash 
+```bash {.cli_example}
 # Demonstrate `flux.try.except`, passing in 3 comma-separated target-names as arguments.
 $ ./compose.mk flux.try.except.finally/flux.fail,flux.ok,flux.ok
-
+```
+```markdown {.cli_output}
 flux.try.except.finally // flux.fail,flux.ok,flux.ok 
 flux.fail // failing as requested!
 make[1]: *** [compose.mk:..: flux.fail] Error 1
 flux.ok // succceeding as requested!
 flux.ok // succceeding as requested!
+```
 
-# The semantics are what you'd expect from try/except/finally construct, 
-# so the exit status is zero for success
+The semantics are what you'd expect from try/except/finally construct, so the exit status is zero for success.
+
+```bash {.cli_example}
 $ echo $?
-
+```
+```markdown {.cli_output}
 0
 ```
 
@@ -135,13 +161,15 @@ two
 ```
 #}
 
-##### **Iteration, Pipelining, & Looping:**
+#### **Iteration, Pipelining, & Looping**
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 Introducing {{macros.api_link('flux.each',mkdocs,arg='target')}} using `flux.echo`:
 
-```bash 
+```bash {.cli_example .language-bash}
 $ printf 'one\ntwo' | ./compose.mk flux.each/flux.echo
-
+```
+```bash {.cli_output}
 one
 two
 ```
@@ -150,14 +178,18 @@ two
 
 Introducing {{macros.api_link('flux.and',mkdocs,arg='t1>,<t2>,..<tn')}} and {{macros.api_link('flux.or',mkdocs,arg='t1>,<t2>,..<tn')}}:
 
-```bash
+```bash {.cli_example}
 $./compose.mk flux.and/flux.ok,flux.ok
-
+```
+```markdown {.cli_output}
 flux.ok // succeeding as requested!
 flux.ok // succeeding as requested!
+```
 
+```bash {.cli_example .language-bash}
 $ ./compose.mk flux.or/flux.fail,flux.ok
-
+```
+```markdown {.cli_output}
 flux.fail // failing as requested!
 make[1]: *** [..: flux.fail] Error 1
 flux.ok // succeeding as requested!
@@ -167,23 +199,88 @@ flux.ok // succeeding as requested!
 
 Introducing {{macros.api_link('flux.loop.until',mkdocs,arg='test_target')}}:
 
-```bash
+```bash {.cli_example .language-bash}
 # Runs forever 
 $ ./compose.mk flux.loop.until/flux.fail
-
+```
+```bash {.cli_output}
 flux.loop.until // flux.fail (until success)
 flux.loop.until // flux.fail (until success)
 ...
 ```
-----
 
-#### Workflow Demos 
+#### Functional Style
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+We've already met several concepts borrowed from functional programming constructs.  Frequently aliases are in place to make this more clear, for example, the `flux.and` and `flux.or` are actually aliased to `flux.all` and `flux.any`.  A version of `flux.each` that works directly with args instead of streaming input is called `flux.for.each`, aka {{macros.api_link('flux.map', mkdocs, arg='args')}}.  
+
+##### Apply, Map, Starmap
+---------------------------------------
+
+Functional friends like **apply, starmap, etc** are available:
+
+```bash {.cli_example .language-bash}
+$ ./compose.mk flux.map/flux.echo,hello,world
+```
+```markdown {.cli_output}
+hello
+world
+```
+
+```bash {.cli_example .language-bash}
+$ ./compose.mk flux.apply/flux.echo,hello-world
+```
+```markdown {.cli_output}
+hello-world
+```
+
+The {{macros.api_link('flux.starmap', mkdocs, arg='<fxn>,<generator>')}} takes 2 arguments, then applies the function to each value generated by generator.  Demonstrating this with *only other builtins* isn't very practical.. but one of the things you can do is unpack `flux.map`.
+
+```bash {.cli_example .language-bash}
+# Itertools-ish or generators
+$ ./compose.mk flux.starmap/flux.echo,flux.map/flux.echo,hello,world
+```
+```markdown {.cli_output}
+hello
+world
+```
+
+An analog to **function composition** can be achieved with {{macros.api_link('flux.pipeline',mkdocs,arg='<targets>')}}, but the functions involved downstream (in our case {{macros.api_link('stream.echo',mkdocs)}}) need to accept pipes.
+
+```bash {.cli_example .language-bash}
+# Pipelines are function composition.
+#
+# By default there are mid-stream result previews
+# between pipeline-components, so silence it with `quiet=1`
+$ quiet=1 ./compose.mk \
+    flux.pipeline/flux.echo/hello,stream.echo
+```
+```markdown {.cli_output}
+hello
+```
+
+##### Partial Functions
+----------------------------------------------
+Partials are not very difficult to get with vanilla `make`, and that approach is generally better.
+
+However `__flux.partial__` adds another kind of support focused on quick partials for binary functions.  See the snippet below:
+
+{{macros.embed_demo('demos/partials.mk', github=github)}}
+
+##### Other Operators
+----------------------------------------------
+Sorry, **reduce and fold operators** are deliberately ommitted as they don't find many use-cases in automation.  If this fills you with sadness, there is the consolation prize that [signals in compose.mk]({{mkdocs.site_relative_url}}/signals) are somewhat like **call/cc** =P  Topics related to **currying** are explored a bit in the discussion [of style]({{mkdocs.site_relative_url}}/style/#performance-and-currying) for lack of a better place.  
+
+<br/>
+
+#### Workflow Demos
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 What's covered on this page isn't exhaustive, see also the [full API]({{mkdocs.site_relative_url}}/api#api-flux).  For examples of other idioms, see {{macros.api_link('flux.loop/arg',mkdocs)}}, {{macros.api_link('flux.retry/arg',mkdocs)}}, {{macros.api_link('flux.timer/arg',mkdocs)}}, {{macros.api_link('flux.mux/arg',mkdocs)}}, {{macros.api_link('flux.timeout/arg',mkdocs)}}, etc. 
 
-For more fleshed-out examples using workflows, see also:
+!!! tip "Related Links"
+    For more fleshed-out examples using workflows, see also:
 
-* [Miniature ETL demo]({{mkdocs.site_relative_url}}/demos/workflows) 
-* [Platform lifecycle demo]({{mkdocs.site_relative_url}}/demos/platform)
+    * [Miniature ETL demo]({{mkdocs.site_relative_url}}/demos/workflows) 
+    * [Platform lifecycle demo]({{mkdocs.site_relative_url}}/demos/platform)
 

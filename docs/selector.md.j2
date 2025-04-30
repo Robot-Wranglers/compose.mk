@@ -15,30 +15,25 @@ For lower-level programmatic usage see instead the [user-input section of the st
 
 Given any random Makefile, `compose.mk` can wrap it with runner that offers target-selection using the {{macros.api_link("mk.select", mkdocs, arg='path_to_makefile')}} target.
 
-For testing in situations like this, there is a lightweight Makefile included in the repository, aka {{macros.repo_link('demos/no-includes.mk',github)}}. Like the name suggests, it doesn't actually include or use `compose.mk` in any way.  You can launch this target-selector once, or use {{macros.api_link('flux.loopf', mkdocs, arg='target_name')}} for a simple looping runner.
+For testing in situations like this, there is a lightweight Makefile included in the repository, aka {{macros.repo_link('demos/no-includes.mk', github=github)}}. Like the name suggests, it doesn't actually include or use `compose.mk` in any way.  You can launch this target-selector once, or use {{macros.api_link('flux.loopf', mkdocs, arg='target_name')}} for a simple looping runner.
 
-```bash
-# select target and run once
+```bash {.cli_example}
+# Select target and run once
 $ ./compose.mk mk.select/demos/no-include.mk
 
-# looping runner
+# Looping runner
 $ ./compose.mk flux.loopf/mk.select/demos/no-include.mk
 ```
-
--------------
-
-Using it looks like this:
-
-{{macros.img_link("user-input.gif", mkdocs, "60%")}}
+{{macros.img_link("user-input.gif", mkdocs, "60%",class="cli_output")}}
 
 ### Interactive Container-Selection
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Given any random docker compose file, `compose.mk` can wrap it with runner that offers container-selection, using {{macros.api_link('compose.select',mkdocs,arg='path_to_compose_file')}}.  
 
-For testing in situations like this the repo ships with a sample compose file, aka {{macros.repo_link('demos/data/docker-compose.minimal.yml',github)}}, so we'll use that here.
+For testing in situations like this the repo ships with a sample compose file, aka {{macros.repo_link('demos/data/docker-compose.minimal.yml',github=github)}}, so we'll use that here.
 
-```bash
+```bash {.cli_example}
 $ ./compose.mk compose.select/demos/data/docker-compose.minimal.yml
 ```
 
@@ -48,7 +43,7 @@ This should work for most containers regardless of their default entrypoint, and
 
 As with the `mk.select` example above, we can use {{macros.api_link('flux.loopf',mkdocs,arg='target_name')}} to easily turn this into a a simple looping interface:
 
-```bash
+```bash {.cli_example}
 $ ./compose.mk flux.loopf/compose.select/demos/data/docker-compose.minimal.yml
 ```
 

@@ -1,9 +1,9 @@
-### Inlined DockerFile
+{% import 'macros.j2' as macros -%}
+
+### Inlined Dockerfile
 <hr style="width:100%;border-bottom:3px solid black;">
 
-```Makefile
-{{open('demos/inlined-dockerfile.mk','r').read().strip()}}
-```
-
-**Note:** For a more elegant version, see also [the equivalent demo in CMK]({{mkdocs.site_relative_url}}/compiler/#dockerfile-example)
-
+{{macros.embed_demo('demos/inlined-dockerfile.mk', 
+    bottom_right=macros.link_mirror('demos/cmk/inlined-dockerfile.cmk',
+        base=mkdocs.site_relative_url+'/compiler'),
+    github=github)}}

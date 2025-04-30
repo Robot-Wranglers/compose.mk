@@ -2,7 +2,7 @@
 # demos/etl-img.mk:
 #   Describes an image pipeline with `compose.mk`.
 #
-# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # USAGE: ./demos/etl-img.mk 
 
 include compose.mk

@@ -5,7 +5,7 @@
 #   exposing a new opinionated interface that is is versioned,
 #   slim, stateless, and defaults to JSON IO.
 #
-# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # USAGE: ./demos/ansible-adhoc.mk
 include compose.mk
 .DEFAULT_GOAL := __main__
@@ -26,9 +26,9 @@ endef
 # This declares a top-level target `ansible.adhoc` that takes one parameter,
 # which is the name of the ansible module to call.  We mention the prereq
 # target `Dockerfile.build/Ansible`, which ensures that the container 
-# described above is ready.  This target runs on the host, so we don't actually 
-# have access to ansible here, and so this target dispatches to the private target 
-# defined at `self.ansible.adhoc/<module_name>`.
+# described above is ready.  This target runs on the host, so we don't 
+# actually have access to ansible here, and so this target dispatches 
+# to a private target defined at `self.ansible.adhoc/<module_name>`.
 #
 # [1] https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html
 ansible.adhoc/%:
@@ -60,16 +60,19 @@ ansible.adhoc.pipe/%:
 	export ansible_args="--args `${stream.stdin}`" \
 	&& env=ansible_args ${make} ansible.adhoc/${*}
 
-# Another way to call the parametric target, accepting argument from env-variable
+# Another way to call the parametric target, 
+# this time accepting argument from env-variable
 ansible.adhoc.pipe:; ${make} ansible.adhoc.pipe/$${module}
 
-# Putting it all together, here's a simple new target for the verb 'list_images'.
-# This returns the currently available docker images by using Ansible's 
-# `docker_host_info` module[3] and calling it with the `images=yes` flag.
+# Putting it all together, here's a simple new target for 
+# the verb 'list_images'.  This returns the currently available
+# docker images by using Ansible's `docker_host_info` module[3] 
+# and calling it with the `images=yes` flag.
 #
 # [3] https://docs.ansible.com/ansible/2.8/modules/docker_host_info_module.html
 list_images:
 	echo images=yes | ${make} ansible.adhoc.pipe/docker_host_info | ${jq} .images
 
-# Main entrypoint, this exercises a few possibilities for our new custom automation API.
+# Main entrypoint. 
+# Exercise a few possibilities for our new custom automation API.
 __main__: Dockerfile.build/Ansible ansible.adhoc/ping list_images

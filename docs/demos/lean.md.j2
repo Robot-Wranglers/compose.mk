@@ -11,9 +11,9 @@ For the purposes of this demo, we'll use `compose.mk` to take the [Lean4 prover]
 
 It's fun, self-contained, and marginally practical!  Partly because more academic tools like lean frequently do not have official containers =P, but mostly because this is part of a [larger demo about notebooking]({{mkdocs.site_relative_url}}/demos/notebooking).  **Note that this demo is big,** so if you're not interested in running the notebooking demo later then you may not want to run this one.  Lean/lake/mathlib toolchain here takes significant time to build, and the image on disk afterwards is ~10gb.
 
---------------
 
-This demo is really just a variation on many others that are [using inlined data and container-definitions]({{mkdocs.site_relative_url}}/demos/matrioshka) and [working with foreign languages]({{mkdocs.site_relative_url}}/demos/polyglots) but this case is an instance of [a custom containerized interpreter]({{mkdocs.site_relative_url}}/demos/polyglots/#custom-containerized-interpreters), and also demonstrates *custom interpreter invocations*.
+!!! tip "Tip"
+    This demo is really just a variation on many others that are [using inlined data and container-definitions]({{mkdocs.site_relative_url}}/demos/matrioshka) and [working with foreign languages]({{mkdocs.site_relative_url}}/demos/polyglots) but this case is an instance of [a custom containerized interpreter]({{mkdocs.site_relative_url}}/demos/polyglots/#custom-containerized-interpreters), and also demonstrates *custom interpreter invocations*.
 
 
 The lean demo comes in 2 flavors. The [first one](#lean-demo) is using `compose.mk` as a library, i.e. pure Makefile. The [second version](#lean-demo-cmk) uses `compose.mk` as an interpreter, i.e. [CMK-lang]({{mkdocs.site_relative_url}}/compiler), which helps to clean up the syntax a bit and clarify intent.  Otherwise the two demos are exactly the same.
@@ -22,18 +22,18 @@ The lean demo comes in 2 flavors. The [first one](#lean-demo) is using `compose.
 <hr style="width:100%;border-bottom:3px solid black;">
 
 
-```Makefile
-{{open('demos/lean.mk','r').read().strip()}}
-```
-<br/>
+{{macros.embed_demo('demos/lean.mk', 
+    bottom_right=macros.link_mirror(
+        "demos/cmk/lean.cmk",link="#lean-demo-cmk"),
+    github=github)}}
 
 ### Lean Demo (CMK)
 <hr style="width:100%;border-bottom:3px solid black;">
 
-```Makefile
-{{open('demos/cmk/lean.cmk','r').read().strip()}}
-```
-<br/>
+{{macros.embed_demo('demos/cmk/lean.cmk',
+    bottom_right=macros.link_mirror(
+        "demos/lean.mk",link="#lean-demo"),
+    github=github)}}
 
 <hr style="width:100%;border-bottom:3px solid black;">
 

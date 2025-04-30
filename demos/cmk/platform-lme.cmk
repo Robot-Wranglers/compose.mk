@@ -10,14 +10,17 @@
 #   3. Both infra/app setup emits JSON events (simulating terraform state output, etc)
 #   4. JSON from both is routed to all interested handlers
 #
-# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # USAGE: ./demos/cmk/platform-lme.mk
 
-compose.import(demos/data/docker-compose.platform.yml, ▰)
 .DEFAULT_GOAL=platform.setup.observable
 
+compose.import(demos/data/docker-compose.platform.yml, ▰)
+
 # Map targets to containers.  A public, top-level target. 
-platform.setup.basic: ▰/terraform/self.infra.setup ▰/ansible/self.app.setup
+platform.setup.basic: \
+	▰/terraform/self.infra.setup \
+	▰/ansible/self.app.setup
 
 # Two "private" targets below, bound to specific containers by the target above.
 # These emit JSON events using the arrow operator.
@@ -53,5 +56,6 @@ self.events:
 # Bind all handlers into a single pipe
 # Send the `platform.setup.basic` output into a handler for each LME backend
 downstream_handlers: flux.pipe.fork/logging,metrics,events
-platform.setup.observable: flux.pipeline/platform.setup.basic,downstream_handlers
+platform.setup.observable: \
+	flux.pipeline/platform.setup.basic,downstream_handlers
 

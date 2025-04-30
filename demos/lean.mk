@@ -5,7 +5,7 @@
 #   Included is a script and a theorem that we'll test with, but of course external files 
 #   are supported as well.
 #
-# This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # See also: http://robot-wranglers.github.io/compose.mk/demos/lean
 #           http://robot-wranglers.github.io/compose.mk/demos/polyglots
 #
@@ -19,14 +19,19 @@ define Dockerfile.Lean
 FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
 SHELL ["/bin/bash", "-x", "-c"]
 RUN apt-get -qq update && apt-get install -qq -y git make curl sudo procps
-RUN curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf > /usr/local/bin/elan-init.sh
-RUN bash /usr/local/bin/elan-init.sh -y --default-toolchain leanprover/lean4:v4.17.0
+RUN curl -sSf \
+  https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+    > /usr/local/bin/elan-init.sh
+RUN bash /usr/local/bin/elan-init.sh -y \
+  --default-toolchain leanprover/lean4:v4.17.0
 RUN cp /root/.elan/bin/lean /usr/local/bin 
 RUN cp /root/.elan/bin/lake /usr/local/bin 
 ENV PATH="$PATH:/root/.elan/bin/"
 RUN lean --help
 RUN lake new default
-RUN cd default && printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' >> lakefile.toml
+RUN cd default && \
+  printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' \
+    >> lakefile.toml
 RUN cd default && lake update && lake build
 RUN elan --version; lean --version; leanc --version; lake --version; 
 ENTRYPOINT ["lean"]
@@ -60,7 +65,10 @@ endef
 
 # Main entrypoint.  Ensures the container is ready, 
 # then dispatches execution of both script and theorem
-__main__: Dockerfile.build/Lean lean.run.script/my.script lean.run.theorem/my.theorem
+__main__: \
+	Dockerfile.build/Lean \
+	lean.run.script/my.script \
+	lean.run.theorem/my.theorem
 
 # Top-level helpers. 
 # These write embedded script/theorem to disk before use, 
@@ -71,4 +79,4 @@ lean.run.generic/% lean.run.theorem/%:
 	${io.mktemp} \
 	&& ${make} mk.def.to.file/${*}/$${tmpf} \
 	&& img=Lean cmd="$${lean_args:-} $${tmpf}" \
-      ${make} mk.docker
+		${make} mk.docker

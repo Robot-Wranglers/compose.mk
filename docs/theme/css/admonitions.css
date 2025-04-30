@@ -1,0 +1,410 @@
+
+div .admonition { 
+    /* width:96%;margin-left:2%;margin-right:2%;  */
+    width:100%;
+  }
+  .admonition {
+      /* margin: 1.5625em 0; */
+      /* padding: 0 .6rem; */
+      overflow: hidden;
+      page-break-inside: avoid;
+      border-left: .2rem solid;
+      border-radius: .1rem;
+      /* box-shadow: 0 .6rem .5rem rgba(0,0,0,.05), 0 0 .05rem rgba(0,0,0,.1); */
+      /* width: 96%; */
+      /* align-self: center; */
+    }
+    
+    .admonition p {
+      margin: .8rem 0;
+    }
+    
+  .admonition-title {
+    margin: 0 -0.6rem;
+    padding: .3rem .5rem .3rem .6rem;
+    /* font-weight: 700; */
+    border-bottom: 1px solid rgba(68,138,255,.1);
+    /* font-weight: 600; */
+    /* margin: -1em -1.2em 0.6em -1.2em; */
+    /* padding: 0.5em 1.2em; */
+    background-color: red;
+    /* font-size: 1em; */
+    display: flex;
+    /* align-items: center; */
+  }
+    
+  .admonition {
+    margin: 1.5em 0;
+    padding: 1em 1.2em;
+    border-left: 4px solid;
+    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.03);
+    color: rgba(0, 0, 0, 0.75);
+    font-size: 0.95em;
+    line-height: 1.5;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+  }
+    
+  .admonition-title::before {
+    left: .6rem;
+    margin-right: .6rem;
+    width: 1rem;
+    height: 1rem;
+    text-rendering: auto;
+    line-height: 1;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    content: "";
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin-right: 0.5em;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    opacity: 0.75;
+  }
+  
+  /* outline admonition */
+  .admonition.outline {
+    border-left-color: #efefef;
+    border: 1px dotted;
+    background-color: #efefef;
+  }
+  .admonition.outline .admonition-title {
+    background-color: lightskyblue;
+    color: black;
+    font-family: Lato, proxima-nova, Helvetica Neue, Arial, sans-serif;;
+    font-weight:500;
+    font-size: 1.2em;
+  }
+  .admonition.outline .admonition-title:before {
+    content: "⠀";
+    margin-right: 10px;
+    background-image: url('data:image/svg+xml,<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-baseline-density-small"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 3h16" /><path d="M4 9h16" /><path d="M4 15h16" /><path d="M4 21h16" /></svg>');
+  } 
+  
+/* goal admonitions */
+.admonition.goals {
+  border-left-color: #efefef;
+  border: 1px dotted;
+  background-color: rgba(68, 138, 255, 0.1);
+}
+.admonition.goals .admonition-title {
+  background-color: rgba(68, 138, 255, 0.1);
+  color: #black;
+  font-size: 1.2em;
+}
+.admonition.goals .admonition-title:before {
+  /* content: "🎯";
+  margin-right: 10px; */
+  content: "⠀";
+  margin-right: 10px;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M20.172 6.75h-1.861l-4.566 4.564a1.874 1.874 0 1 1-1.06-1.06l4.565-4.565V3.828a.94.94 0 0 1 .275-.664l1.73-1.73a.249.249 0 0 1 .25-.063c.089.026.155.1.173.191l.46 2.301 2.3.46c.09.018.164.084.19.173a.25.25 0 0 1-.062.249l-1.731 1.73a.937.937 0 0 1-.663.275Z"></path><path d="M2.625 12A9.375 9.375 0 0 0 12 21.375 9.375 9.375 0 0 0 21.375 12c0-.898-.126-1.766-.361-2.587A.75.75 0 0 1 22.455 9c.274.954.42 1.96.42 3 0 6.006-4.869 10.875-10.875 10.875S1.125 18.006 1.125 12 5.994 1.125 12 1.125c1.015-.001 2.024.14 3 .419a.75.75 0 1 1-.413 1.442A9.39 9.39 0 0 0 12 2.625 9.375 9.375 0 0 0 2.625 12Z"></path><path d="M7.125 12a4.874 4.874 0 1 0 9.717-.569.748.748 0 0 1 1.047-.798c.251.112.42.351.442.625a6.373 6.373 0 0 1-10.836 5.253 6.376 6.376 0 0 1 5.236-10.844.75.75 0 1 1-.17 1.49A4.876 4.876 0 0 0 7.125 12Z"></path></svg>');
+}
+/* important admonitions */
+.admonition.important {
+  border-left-color: #efefef;
+  border: 1px dotted;
+  background-color: rgba(68, 138, 255, 0.1);
+}
+.admonition.important .admonition-title {
+  background-color: rgba(68, 138, 255, 0.1);
+  color: #black;
+  font-size: 1.2em;
+}
+.admonition.important .admonition-title:before {
+  content: ">";
+  margin-right: 10px;
+} 
+    /* Note admonition */
+    .admonition.note {
+      border-left-color: #efefef;
+      border: 1px dotted;
+      background-color: rgba(68, 138, 255, 0.1);
+    }
+    .admonition.note .admonition-title {
+      background-color: rgba(68, 138, 255, 0.1);
+      color: #black;
+      font-size: 1.2em;
+    }
+    .admonition.note .admonition-title:before {
+      content: "📌";
+      margin-right: 10px;
+    }
+    
+    /* ABSTRACT admonition */
+    .admonition.abstract {
+      border-left-color: #00b0ff;
+      border: 1px dotted;
+      background-color: rgba(0, 176, 255, 0.1);
+    }
+    .admonition.abstract .admonition-title {
+      background-color: rgba(0, 176, 255, 0.1);
+      color: #00b0ff;
+    }
+    .admonition.abstract .admonition-title:before {
+      content: "📋"; /* Checklist symbol */
+      margin-right: 10px;
+    }
+    
+    /* INFO admonition */
+    .admonition.info {
+      border-left-color: #efefef;
+      border: 1px dotted;
+      background-color: rgba(68, 138, 255, 0.1);
+    }
+    .admonition.info .admonition-title {
+      background-color: rgba(0, 184, 212, 0.1);
+      border: 1px dotted;
+      /* color: #00b8d4; */
+      font-size: 1.2em;
+    }
+    .admonition.info .admonition-title:before {
+      /* content: "📌";  */
+      content: "⠀"; /* Squirrel symbol */
+      margin-right: 10px;
+      background-image: url('data:image/svg+xml,<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-pinned"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 4v6l-2 4v2h10v-2l-2 -4v-6" /><path d="M12 16l0 5" /><path d="M8 4l8 0" /></svg>');
+    }
+    
+    
+    /* TIP admonition related */
+    .admonition.tip { 
+      border-left-color: #efefef;
+      border: 1px dotted;
+      font-size: 17px;
+      font-weight: unset;
+      background-color: rgba(68, 138, 255, 0.1);
+    }
+    .admonition.tip .admonition-title {
+      background-color: rgba(0, 184, 212, 0.1);
+      border: 1px dotted;
+      color: rgb(64, 62, 62);
+      font-size: 1.2em;
+    }
+    .admonition.tip .admonition-title:before {
+      content: "⠀"; 
+      margin-right: 10px;
+      background-image: url('data:image/svg+xml,<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-pinned"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 4v6l-2 4v2h10v-2l-2 -4v-6" /><path d="M12 16l0 5" /><path d="M8 4l8 0" /></svg>');
+      /* transform: rotate(30deg); */
+    }
+    .admonition.road_map { 
+      border-left-color: #efefef;
+      border: 1px dotted;
+      font-size: 17px;
+      font-weight: unset;
+      background-color: rgba(68, 138, 255, 0.1);
+    }
+    .admonition.road_map .admonition-title {
+      background-color: rgba(0, 184, 212, 0.1);
+      border: 1px dotted;
+      color: rgb(64, 62, 62);
+      font-size: 1.2em;
+    }
+    .admonition.road_map .admonition-title:before {
+      content: "⠀"; 
+      margin-right: 10px;
+      background-image: url('data:image/svg+xml,<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-map-2"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 18.5l-3 -1.5l-6 3v-13l6 -3l6 3l6 -3v7.5" /><path d="M9 4v13" /><path d="M15 7v5.5" /><path d="M21.121 20.121a3 3 0 1 0 -4.242 0c.418 .419 1.125 1.045 2.121 1.879c1.051 -.89 1.759 -1.516 2.121 -1.879z" /><path d="M19 18v.01" /></svg>');
+      /* transform: rotate(30deg); */
+    }
+   
+    /* Success admonition */
+    .admonition.success {
+      border-left-color: #00c853;
+      border: 1px dotted;
+      background-color: rgba(0, 200, 83, 0.1);
+    }
+    .admonition.success .admonition-title {
+      background-color: rgba(0, 200, 83, 0.1);
+      color: #00c853;
+      font-size: 1.2em;
+    }
+    .admonition.success .admonition-title:before {
+      content: "✅"; /* Check symbol */
+      margin-right: 10px;
+    }
+    
+    /* Question admonition */
+    .admonition.question {
+      border-left-color: rgb(87, 87, 40);
+      border: 1px dotted;
+      background-color:#ffe;
+    }
+    .admonition.question .admonition-title {
+      background-color: #ffc;
+      color: #1f1e1e;
+      font-size: 1.2em;
+    }
+    .admonition.question .admonition-title:before {
+      content: "🤔"; 
+      margin-right: 10px;
+    }
+  
+    p.admonition-title code {
+      background-color: #f5f5f5;
+      padding: 0.25em 0.5em;
+      border-radius: 4px;
+      font-family: monospace;
+      font-color:red;
+    }
+
+  /* WARNING admonition */
+  .admonition.warning {
+    border-left-color: #ff9100;
+    border: 1px dotted;
+    background-color: rgba(255, 145, 0, 0.1);
+  }
+  .admonition.warning .admonition-title {
+    background-color: rgba(255, 145, 0, 0.1);
+    color: #252521;
+    font-size: 1.2em;
+  }
+  .admonition.warning .admonition-title:before {
+    content: "⠀";
+    margin-right: 10px;
+    background-image: url('data:image/svg+xml,<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-info-triangle"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></svg>');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+  }
+  
+  
+  /* GOTCHA admonition */
+  .admonition.gotcha {
+    border-left-color: #ff9100;
+    border: 1px dotted;
+    background-color: rgba(255, 145, 0, 0.1);
+  }
+  .admonition.gotcha .admonition-title {
+    background-color: rgba(255, 145, 0, 0.1);
+    color: #3e3c3c;
+    font-size: 1.2em;
+  }
+  .admonition.gotcha .admonition-title:before {
+    content: "⠀"; /* Alert symbol */ ⚠️
+    margin-right: 10px;
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zm0-384c13.3 0 24 10.7 24 24l0 112c0 13.3-10.7 24-24 24s-24-10.7-24-24l0-112c0-13.3 10.7-24 24-24zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+  }
+  
+  /* CLOSER-LOOK admonition */
+  .admonition.closer_look {
+    border-left-color: #ff9100;
+    border: 1px dotted;
+    background-color: rgba(255, 145, 0, 0.1);
+  }
+  .admonition.closer_look .admonition-title {
+    background-color: rgba(255, 145, 0, 0.1);
+    color: #423939;
+    font-size: 1.2em;
+  }
+  .admonition.closer_look .admonition-title:before {
+    content: "⠀"; /* Alert symbol */ ⚠️
+    margin-right: 10px;
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z"></path></svg>');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+  }
+  
+  
+  /* FAILURE admonition */
+  .admonition.failure {
+    border-left-color: #ff5252;
+    border: 1px dotted;
+    background-color: rgba(255, 82, 82, 0.1);
+  }
+  .admonition.failure .admonition-title {
+    background-color: rgba(255, 82, 82, 0.1);
+    color: #ff5252;
+    font-size: 1.2em;
+  }
+  .admonition.failure .admonition-title:before {
+    content: "❌"; /* X-circle symbol */
+    margin-right: 10px;
+  }
+  
+  /* Danger admonition */
+  .admonition.danger {
+    border-left-color: #ff1744;
+    border: 1px dotted;
+    background-color: rgba(255, 23, 68, 0.1);
+  }
+  .admonition.danger .admonition-title {
+    background-color: rgba(172, 34, 61, 0.1);
+    color: #360711;
+    font-size: 1.2em;
+  }
+  .admonition.danger .admonition-title:before {
+    content: "⠀"; /* Alert symbol */ ⚠️
+    margin-right: 0px;
+    background-image: url('data:image/svg+xml,<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-message-2-exclamation"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 9h8" /><path d="M8 13h6" /><path d="M15 18l-3 3l-3 -3h-3a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v5.5" /><path d="M19 16v3" /><path d="M19 22v.01" /></svg>');
+  }
+  
+  /* Bug admonition */
+  .admonition.bug {
+    border-left-color: #3e1221;
+    border: 1px dotted;
+  }
+  .admonition.bug .admonition-title {
+    background-color: rgba(245, 0, 87, 0.1);
+    color: #440f22;
+    font-size: 1.2em;
+  }
+  .admonition.bug .admonition-title:before {
+    content: "🐜"; /* Bug symbol */
+    margin-right: 10px;
+  }
+  
+  /* Example admonition */
+  .admonition.example {
+    border-left-color: #651fff;
+    background-color: rgba(101, 31, 255, 0.1);
+  }
+  .admonition.example .admonition-title {
+    background-color: rgba(101, 31, 255, 0.1);
+    color: #651fff;
+    font-size: 1.2em;
+  }
+  .admonition.example .admonition-title:before {
+    content: "💭";
+    margin-right: 10px;
+  }
+  span.hljs-attr {
+    color: #00b0ff;
+  }
+
+/* Quote admonition */
+.admonition.quote {
+  border-left-color: #9e9e9e;
+  background-color: rgba(158, 158, 158, 0.1);
+}
+.admonition.quote .admonition-title {
+  background-color: rgba(158, 158, 158, 0.1);
+  color: #000000;
+  font-size: 1.2em;
+}
+.admonition.quote .admonition-title:before {
+  content: "💬"; /* Quote symbol #6ab0de*/
+  margin-right: 10px;
+}
+  
+  /* Quote admonition */
+  .admonition.commentary {
+    border-left-color: #9e9e9e;
+    background-color: rgba(158, 158, 158, 0.1);
+    border:3px dotted silver;
+  }
+  .admonition.commentary .admonition-title {
+    background-color: rgba(158, 158, 158, 0.1);
+    color: #393939;
+    font-size: 1.2em;
+  }
+  .admonition.commentary .admonition-title:before {
+    content: "💬"; /* Quote symbol #6ab0de*/
+    margin-right: 10px;
+  }

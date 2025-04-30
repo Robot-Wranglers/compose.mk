@@ -1,6 +1,16 @@
 """
 See the main docs: https://robot-wranglers.github.io/compose.mk/demos/RAG
 """
+import os
+import functools
+import hashlib
+import requests
+
+import click
+
+from rich.console import Console
+from rich.text import Text
+
 from langchain.chains import (ConversationalRetrievalChain, LLMChain,
                               RetrievalQA, StuffDocumentsChain)
 from langchain_community.document_loaders import DirectoryLoader
@@ -11,15 +21,7 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ollama import OllamaLLM
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from rich.console import Console
-from rich.text import Text
-
-import click
-import functools
-import hashlib
-import os
-import requests
-
+from langchain.chains import RetrievalQA
 EBD_MODEL_NAME = os.environ.get("EBD_MODEL_NAME", "all-MiniLM-L6-v2")
 LLM_MODEL_NAME = os.environ.get('LLM_MODEL', 'phi3:mini')
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "localhost")
@@ -27,33 +29,6 @@ OLLAMA_PORT = os.environ.get("OLLAMA_PORT", "11434")
 OLLAMA_URL = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}"
 USE_CACHE = os.environ.get('USE_CACHE',"1")=="1"
 console = Console(stderr=True)
-
-
-def log(header, txt):
-    green_text = Text(header, style="green")
-    dim_text = Text(txt, style="dim")
-    console.print(green_text, dim_text)
-
-
-log.init = functools.partial(log, 'init:  ')
-log.chat = functools.partial(log, 'chat:  ')
-log.ingest = functools.partial(log, 'ingest:')
-log.query = functools.partial(log, 'query: ')
-log.result = functools.partial(log, 'result:')
-
-
-def hashed(glob):
-    return hashlib.md5(glob.encode()).hexdigest()
-
-
-def get_loader(glob):
-    return DirectoryLoader(os.getcwd(), glob=glob)
-
-
-@click.group()
-def cli():
-    """A simple CLI app with multiple commands."""
-
 
 template = """Use the following pieces of context to answer the question at the end.
 If you don't know the answer, just say that you don't know, don't try to make up an answer.
@@ -65,13 +40,27 @@ Question: {question}
 
 Helpful Answer:"""
 
+def log(header, txt):
+    green_text = Text(header, style="green")
+    dim_text = Text(txt, style="dim")
+    console.print(green_text, dim_text)
+
+log.init = functools.partial(log, 'init:  ')
+log.chat = functools.partial(log, 'chat:  ')
+log.ingest = functools.partial(log, 'ingest:')
+log.query = functools.partial(log, 'query: ')
+log.result = functools.partial(log, 'result:')
+
+def hashed(glob):
+    return hashlib.md5(glob.encode()).hexdigest()
+
+def get_loader(glob):
+    return DirectoryLoader(os.getcwd(), glob=glob)
 
 def get_embeddings(): return HuggingFaceEmbeddings(model_name=EBD_MODEL_NAME)
 
-
 def get_llm():
     return OllamaLLM(model=LLM_MODEL_NAME, base_url=OLLAMA_URL)
-
 
 def get_vectors(glob, fname=None):
     if not USE_CACHE or fname is None:
@@ -102,7 +91,11 @@ def show_response(response):
         citations = '\n'.join(["CITATIONS: (not implemented yet for `chat`, use `ask` instead)"])
     log.result(f'\n{result}')
     log.result(f'\n\n{citations}')
-    
+
+@click.group()
+def cli():
+    """A simple CLI app with multiple commands."""
+
 @cli.command()
 @click.argument("glob")
 @click.option("--force", is_flag=True, default=False,)
@@ -127,7 +120,6 @@ def chat(glob, force=False):
         response = retrieval_chain.invoke(query)
         show_response(response)
 
-
 @cli.command()
 @click.argument("glob")
 @click.option("--force", is_flag=True, default=False,)
@@ -137,9 +129,6 @@ def query(glob, query, force=False):
     db_path = _ingest(glob, force=force)
     query = ' '.join(query)
     log.query(f"Got query: {query}")
-    from langchain.chains import RetrievalQA
-
-    # from langchain_ollama import OllamaLLM
     loader = get_loader(glob)
     embeddings = get_embeddings()
     vectorstore = get_vectors(glob, db_path)
@@ -155,8 +144,6 @@ def query(glob, query, force=False):
 @click.option("--force", is_flag=True, default=False,)
 def ingest(glob, force=False):
     return _ingest(glob, force=force)
-
-
 def _ingest(glob, force=False):
     db_path = f".tmp.faiss_index.{hashed(glob)}"
     log.ingest(f"FAISS index at {db_path}")
@@ -169,12 +156,9 @@ def _ingest(glob, force=False):
         vectorstore.save_local(db_path)
     return db_path
 
-
 @cli.command()
 @click.argument("model", default=LLM_MODEL_NAME)
 def init(model, ): _init(model=model)
-
-
 def _init(model=LLM_MODEL_NAME):
     def model_exists(model_name):
         try:
@@ -193,7 +177,6 @@ def _init(model=LLM_MODEL_NAME):
         else:
             log.init(f"Model '{model_name}' is ready")
     pull_model(model)
-
 
 if __name__ == '__main__':
     cli()

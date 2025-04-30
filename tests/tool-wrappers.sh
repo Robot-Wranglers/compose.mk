@@ -2,7 +2,7 @@
 # tests/tool-wrappers.sh:
 #   Exercise some of the tool-wrappers that are part of stand-alone mode.
 #
-# This demo ships with the `compose.mk` repository and runs as part of the test-suite.
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.
 #
 # USAGE: bash -x tests/tool-wrappers.sh
 
@@ -40,8 +40,8 @@ cat Makefile | style=monokai lexer=Makefile ./compose.mk stream.pygmentize
 ./compose.mk jb key=val | ./compose.mk jq . | ./compose.mk stream.json.pygmentize
 
 # Use `stream.peek` to preview data somewhere in the middle of a pipe and pass it on
-./compose.mk jb key=val | ./compose.mk stream.peek > /tmp/tmp.stream.out
+./compose.mk jb key=val | ./compose.mk stream.peek | ./compose.mk jq .
 
-# pull data from yaml with yq
+# Pull data from yaml with yq
 echo 'one: two' | ./compose.mk yq .one
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env -S make -f
 # demos/elixir.mk: 
 #   Demonstrating polyglots using elixir.
-#   This demo ships with the `compose.mk` repository and runs as part of the test-suite.  
+#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 #   See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
 #   USAGE: ./demos/elixir.mk
 
@@ -11,6 +11,7 @@ include compose.mk
 # Here, iex can work too, but there are minor differences.
 elixir.img=elixir:otp-27-alpine
 elixir.interpreter=elixir 
+elixir=${elixir.img},${elixir.interpreter}
 
 # Now define the elixir code
 define hello_world 
@@ -27,13 +28,13 @@ demo.elixir1:
 	img=${elixir.img} entrypoint=${elixir.interpreter} \
 		def=hello_world ${make} docker.run.def
 	
-# Another way, using macros & pipes
+# Another way, using piping and streamsmacros & pipes
 demo.elixir2:
 	${mk.def.read}/hello_world \
-		| ${stream.to.docker}/${elixir.img},${elixir.interpreter}
+		| ${stream.to.docker}/${elixir}
 
 # Fully manual style, handling your own tmpfiles, and sticking to targets
 demo.elixir3:
 	${mk.def.to.file}/hello_world/temp-file
-	cmd=temp-file ${make} docker.image.run/${elixir.img},${elixir.interpreter}
+	cmd=temp-file ${make} docker.image.run/${elixir}
 	rm -f temp-file

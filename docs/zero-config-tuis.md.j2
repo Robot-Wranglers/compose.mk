@@ -4,26 +4,33 @@
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-As a quick option for interacting with third-party projects that you can't control and don't want to edit, zero-config TUIs are part of what makes `compose.mk` useful in [tool mode]({{mkdocs.site_relative_url}}).  
+Zero-config TUIs are part of what makes `compose.mk` useful in [tool mode]({{mkdocs.site_relative_url}}), especially as a quick option for interacting with third-party projects that you can't control and don't want to edit.  
 
-Examples here all involve full-blown TUIs, i.e. multi-pane content with layouts that can be created with no code/config.  For something simpler that's still interactive, see also the [selector docs]({{mkdocs.site_relative_url}}/selector).
+!!! road_map "Road Map"
+    Examples here all involve full-blown TUIs, i.e. multi-pane content with layouts that can be created with no code/config.  For something simpler that's still interactive, see also the [selector docs]({{mkdocs.site_relative_url}}/selector).
 
 #### Basic Examples 
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-For a simple demo that's just exercising containerized `tmux`, geometry, and dispatching targets to panes.. try `./compose.mk tux.demo`:
+For a simple demo that's just exercising containerized `tmux`, geometry, and dispatching targets to panes.. try {{macros.api_link('tux.demo',mkdocs)}}:
 
-{{macros.img_link("tui-tte.gif", mkdocs, "350px")}}
+```bash {.cli_example}
+$ ./compose.mk tux.demo
+```
+{{macros.img_link("tui-tte.gif", mkdocs, "350px",class="cli_output")}}
 
 Embedded TUI capapbilities are usually pulled/built just-in-time and on request, then cached afterwards. So besides doing some basic testing, this has the effect of "priming" the TUI for the other examples below.
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-For a more involved example of dashboarding, you can try `./compose.mk docker.commander`.  This demonstrates using other containers as TUI widgets- in this case we combine [lazydocker](https://github.com/jesseduffield/lazydocker), [moncho/dry](https://github.com/moncho/dry), and [imgrot](https://github.com/Robot-Wranglers/docker-imgrot).
+For a more involved example of dashboarding, try {{macros.api_link('docker.commander',mkdocs)}}.  This demonstrates using other containers as TUI widgets- in this case we combine [lazydocker](https://github.com/jesseduffield/lazydocker), [moncho/dry](https://github.com/moncho/dry), and [imgrot](https://github.com/Robot-Wranglers/docker-imgrot).
 
 
-{{macros.img_link("docker.commander.gif", mkdocs, "350px")}}
+```bash {.cli_example}
+$ ./compose.mk docker.commander  
+```
+{{macros.img_link("docker.commander.gif", mkdocs, "350px",class="cli_output")}}
 
 
 #### Working with Compose-Files
@@ -31,18 +38,15 @@ For a more involved example of dashboarding, you can try `./compose.mk docker.co
 
 **If your project has a docker-compose file,** the [selector docs]({{mkdocs.site_relative_url}}/selector/#interactive-container-selection) describe how you can select a single container interactively and shell into it.  In a similar vein, you can also use the [`loadf` command]({{mkdocs.site_relative_url}}/loadf) to **open several container shells at once.**
 
-```bash 
+```bash {.cli_example}
 # Opens 3 panes with container-shells, one for each of the containers in the file.
 $ ./compose.mk loadf demos/data/docker-compose.yml
 ```
-
-{{macros.img_link("loadf-1.png", mkdocs, "70%")}}
-
--------------------------
+{{macros.img_link("loadf-1.png", mkdocs, "70%", class="cli_output")}}
 
 Implicitly `loadf` is dynamically creating make-targets corresponding to the compose-services.  We can get more explicit by using `tux.open` as seen in the [Layout Section]({{mkdocs.site_relative_url}}/embedded-tui/#layout-basics), and passing in services names or target names:
 
-```bash
+```bash {.cli_example}
 # Equivalent to above, but more explicit and less magical.
 $ layout=spiral ./compose.mk loadf demos/data/docker-compose.yml \
     tux.open.service_shells/debian,alpine,ubuntu
@@ -60,15 +64,16 @@ $ layout=spiral ./compose.mk loadf demos/data/docker-compose.yml \
 
 For demonstrating this, we'll use the following classic Makefile, which does **not** include `compose.mk` itself, and simply defines fake `build`, `clean`, and `test` targets that do nothing.
 
-```Makefile
-{{open('demos/no-include.mk', 'r').read().strip()}}
-```
+{{macros.embed_demo('demos/no-include.mk', github=github)}}
 
 Using `mk.include` by itself works in the way that you'd probably expect, but does nothing very interesting:
 
-```bash
+```bash {.cli_example}
 # Roughly equivalent to `make -f demos/no-include.mk`
-$ ./compose.mk mk.include/demos/no-include.mk 
+$ ./compose.mk \
+    mk.include/demos/no-include.mk 
+```
+```bash {.cli_output}
 cleaning
 building
 testing
@@ -76,38 +81,48 @@ testing
 
 The interesting part is that using `tux.open` in the way that [we've already seen]({{mkdocs.site_relative_url}}/embedded-tui/#layout-basics) *also* works how you'd expect here.  Thus you can use the command below to open each target in a separate pane:
 
-```bash
-$ ./compose.mk mk.include/demos/no-include.mk tux.open/clean,build,test
+```bash {.cli_example}
+$ ./compose.mk \
+        mk.include/demos/no-include.mk \
+        tux.open/clean,build,test
 ```
-
--------------------------
 
 So this is neat.. but it's not that useful to run *clean/build/test* in parallel.
 
 How about something more practical, like starting a TUI that runs the *clean/build* targets back-to-back, plus a separate pane that's running *test* in a loop?  This is actually doable.  For it to happen, we can leverage the workflow helpers in the [`flux.*`]({{mkdocs.site_relative_url}}/api#api-flux) target namespace.  The command line for this starts to get complicated, so let's build it up one piece at a time. 
 
-```bash
+```bash {.cli_example}
 # Running `clean` and `build` in one step:
-$ ./compose.mk mk.include/demos/no-include.mk flux.wrap/clean:build
+$ ./compose.mk \
+        mk.include/demos/no-include.mk \
+        flux.wrap/clean:build
+```
+```bash {.cli_output}
 cleaning
 building
+```
 
+```bash {.cli_example}
 # Looping the test-target forever
-$ ./compose.mk mk.include/demos/no-include.mk flux.loopf/test
+$ ./compose.mk \
+        mk.include/demos/no-include.mk \
+        flux.loopf/test
+```
+```bash {.cli_output}
 testing
 testing
 testing
 ^C
-
-# Putting it all together
-$ layout=horizontal \
-    ./compose.mk mk.include/demos/no-include.mk \
-        tux.open/flux.loopf/test,flux.wrap/clean:build
 ```
 
-{{macros.img_link("zero-config-tui.gif", mkdocs, "85%")}}
-
--------------------------
+```bash {.cli_example}
+# Putting it all together
+$ layout=horizontal \
+    ./compose.mk \
+        mk.include/demos/no-include.mk \
+        tux.open/flux.loopf/test,flux.wrap/clean:build
+```
+{{macros.img_link("zero-config-tui.gif", mkdocs, "60%", class="cli_output")}}
 
 Expanding on this.. you could add the `io.bash` target to the comma-separated list of `tux.open` arguments for an additional pane featuring an interactive shell.  Or you could add the {{macros.api_link('io.env',mkdocs,arg='var_prefix')}} target to dump a list of relevant environment variables for this project.  You get the idea.
 

@@ -37,6 +37,8 @@ export rag_script=demos/data/rag.py
 export glob?=docs/*.md
 corpus_count=$${glob} (${yellow}`ls $${glob} | wc -l`${no_ansi_dim} files total)
 
+__main__:; cmk.log(${red}USAGE: See https://robot-wranglers.github.io/compose.mk/demos/RAG/)
+
 ## Preparing to dispatch commands into the `rag` service defined in the compose file.
 ## This uses the scaffolded target created by `compose.import` call at the top.
 ## This is a partial, not ready to run until it gets a `cmd`.  See targets below
@@ -62,7 +64,7 @@ ingest.force:
 
 ask:
 	@# Ask a question about files that match the given pattern.
-	cmk.log.target(Answering query for corpus: ${corpus_count})
+	cmk.log.target(Answering query with corpus: ${corpus_count})
 	cmd="${rag_script} query '$${glob}' '$${query:-describe it}'" ${wrapper}
  
 chat:
@@ -75,7 +77,7 @@ summarize:
 	@# An alias for `ask` that summarizes files matching the given pattern.
 	query="summarize all of the content" this.ask
 
-## Default behaviour for docker compose is to brings up containers 
+## Default behaviour for docker compose is to bring up containers 
 ## that are required by `depends_on`, but it never shuts them down!
 ## Thus when `rag` container `depends_on` `ollama_server`, we still
 ## need to clean up.
@@ -83,5 +85,3 @@ export CMK_AT_EXIT_TARGETS=stop
 
 stop: ollama_server.stop
 	@# Shutdown hook, this ensures the (embedded) ollama service is halted
-
-__main__:; cmk.log(${red}USAGE: see https://robot-wranglers.github.io/compose.mk/demos/RAG/)

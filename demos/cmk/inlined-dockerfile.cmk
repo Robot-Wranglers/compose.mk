@@ -20,8 +20,8 @@ test.runner:
 
 test.raw:
 	cmk.log.test_case(Low-level unmediated access to image)
-	docker image inspect compose.mk:my_container > /dev/null
-	docker run --entrypoint sh compose.mk:my_container -x -c "true" > /dev/null
+	docker image inspect ${my_container.img} > /dev/null
+	docker run --entrypoint sh ${my_container.img} -x -c "true" > /dev/null
 
 self.dispatch_test:
-	cmk.log(Testing target from inside the inlined-container:\n  `uname -a`)
+	cmk.log(Testing target from inside the inlined-container--\n  `uname -a`)
