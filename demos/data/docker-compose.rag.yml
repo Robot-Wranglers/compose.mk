@@ -33,8 +33,8 @@ services:
     entrypoint: ['ollama','serve']
     volumes:
       # NB: this allows model-sharing for any host-installation of ollama if 
-      # it's available probably wrong for non-Linux and also maybe wrong for 
-      # some ollama versions
+      # it's available. Probably wrong for non-Linux and also maybe wrong for 
+      # some ollama versions?
       - /usr/share/ollama/.ollama:/root/.ollama
   rag: 
     <<: *base
@@ -46,8 +46,8 @@ services:
       # Share the hosts working directory- this is for document ingestion
       - ${PWD}:/workspace
       # NB: this allows model-sharing for the host-installation of 
-      # hugging face if applicable.  probably wrong for non-Linux and 
-      # also maybe wrong for some library versions
+      # hugging face if applicable.  Probably wrong for non-Linux and 
+      # also maybe wrong for some library versions?
       - ${HOME}/.cache/huggingface:/root/.cache/huggingface
     environment: 
       OLLAMA_HOST: ollama_server

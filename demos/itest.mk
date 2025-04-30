@@ -13,15 +13,13 @@
 # otherwise exercise base-targets that are provided by the lib
 include compose.mk
 
-.DEFAULT_GOAL := all 
-
 # Load all services from 1 compose file, *not* into the root namespace.
 # $(eval $(call compose.import.as, ▰, demos/data/docker-compose.cm-tools.yml))
 
 # Load all services from 2 compose files into 1 namespace.
 $(eval $(call compose.import, demos/data/docker-compose.yml, ▰))
 
-all: flux.star/test.* 
+__main__: flux.star/test.*
 
 test.mk.assert_env_var:
 	$(call log.test_case, Testing assert.env_var)
@@ -84,6 +82,9 @@ test.main.bridge:
 	${make} docker-compose.services
 	$(call log.test_case, Test detection\nTarget @ <compose_file>.get_shell)
 	${make} docker-compose/alpine.get_shell
+	$(call log.test_case, Test pulling configuration data)
+	${make} docker-compose/alpine.get_config
+	${make} docker-compose/alpine.get_config/build.context
 
 test.dispatch.retvals:
 	$(call log.test_case, Checking dispatch return codes)

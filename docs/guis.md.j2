@@ -16,11 +16,12 @@ GUIs + docker is a complex topic.  <font color=red>This page is under constructi
 ### Background & Caveats
 <hr style="width:100%;border-bottom:3px solid black;">
 
+**Demos here are so far mainly targeting Linux, and sometimes x11 and/or system packages might be required.**
+
 Despite amazing work with projects like x11docker[^1], Xephyr[^2], xquartz[^3], and xpra[^4] .. working with GUIs tends to be fragile, fiddly, and less portable than terminal apps.  Any or all of those projects can in principle be combined with `compose.mk`, but the right approach to "batteries included" is much harder to land on.
 
 All the projects mentioned are about **solving the issue of getting a stand-alone XOrg server,** but after you have one, you still need to decide how exactly to use it.  Options here include stuff like forwarding graphics via a browser, VNC, ssh, sockets, etc.  Searching for any combination of these tools + docker gives lots of results for this sort of thing, but much of the related work is old, archived, or unmaintained.  Many tutorials along these lines will have lots of different files, and invite you to do lots of copy/paste.  As usual with `compose.mk` we'll aim for something self-contained and try to minimize dependencies!  
 
-<font color=red>Demos here are so far mainly targeting Linux, and sometimes x11 and/or system packages might be required.</font>
 
 Just for fun, we'll also use [CMK-lang]({{mkdocs.site_relative_url}}/compiler#compose-file-example) for the examples here, which is a [separate language]({{mkdocs.site_relative_url}}/language) that tends to clean up syntax, and is compiled to Makefile on demand.  
 
@@ -41,7 +42,7 @@ You can see the code for this below, it is complete and runs as-is.  Code is als
 
 Running the demo just opens *`xeyes`*, uses *`feh`* to display an image, and starts *`glxgears`*.  These tools and the window manager itself run inside the i3 container, but the environment is also accessible from other containers, or from your host.  *(To see this, you can try running something like* `DISPLAY=:23 xeyes` *from the host to test one way mix in other components.)*
 
-See the screenshot at the [top of the page](#bonus-guis) for a screenshot. This is more of a "skeleton" than anything with real meat on the bones.  But what's accomplished here is all about **quickly shipping a whole environment as an application**, and several aspects of the skeleton are carefully chosen for convenient extension:
+See the screenshot at the [top of the page](#bonus-guis) for a preview. This is more of a "skeleton" than anything with real meat on the bones.  But what's accomplished here is all about **quickly shipping a whole environment as an application**, and several aspects of the skeleton are carefully chosen for convenient extension:
 
 **Lifecycle:** 
 :  The way this launches Xephyr and i3, the xorg server depends on the window manager, and the window manager depends on the xorg server.  In case either one exits, the other will as well.  Despite multiple blocking components, launching is nonblocking, and doesn't require additional thought about piecewise shut down for backgrounded stuff.  As with other demos, it's possible to zip this into a completely self-contained application, [using the packaging features]({{mkdocs.site_relative_url}}/demos/packaging).
@@ -50,12 +51,14 @@ See the screenshot at the [top of the page](#bonus-guis) for a screenshot. This 
 :  See the usage of `i3-msg exec` ?  Good support for RPC in *`i3`* makes this very scriptable.  If *`i3`* is available on the host, you can drive the GUI from "outside" using a shared socket.  And in addition to controlling the window-manager *via* make-targets, you can also have it *run* targets, [which might represent other containers, etc]({{mkdocs.site_relative_url}}/language#homoiconic).  Since *`i3`* has many language bindings[^5], you can also drive this thing via [compose.mk polyglots]({{mkdocs.site_relative_url}}/demos/polyglots).
 
 **Configurable:** 
-:  The config for i3 and its status bar that's embedded above could easily be an external file, and might seem like an unnecessary distraction for a small demo.  For *actual use-cases* this is pretty nice though, because it makes it easy to offload the complexity of customized application startup and shortcuts somewhere else, without creating all the code for that from scratch.
+:  The config for i3 and its status bar that's embedded above could easily be an external file, and might seem like an unnecessary distraction for a small demo.  For *actual use-cases* this is pretty nice though, because it makes it easy to offload the complexity of customized application startup and shortcuts somewhere else, without creating all the code for that from scratch.  
+
+For further extensions and creating project-specific dashboards or IDEs, you might want to consider combinations of other tools that are small, fast and focused.  Ideally tools that are themselves scriptable and embeddable, like `yazi`, `surf`, `vim`, etc.
 
 ### XPra Demo
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Rather than the "native app" look and feel in the [Xephyr demo](#xephyr-and-i3), another approach is to expose x11 via a webbrowser.  The main benefit of this approach is that it doesn't require external packages or even x11 on the host since we **dockerize the xorg server itself**.  Xpra has lots of options, and we won't cover all those details here; see instead the main docs [^4].
+Rather than the "native app" look and feel in the [Xephyr demo](#xephyr-and-i3), another approach is to expose x11 via a webbrowser.  The main benefit of this is that it doesn't require external packages or even x11 on the host since we **dockerize the xorg server itself**.  Xpra has lots of options, and we won't cover all those details here; see instead the main docs [^4].
 
 #### DOOM 
 <hr style="width:95%;border-bottom:1px dashed black;">

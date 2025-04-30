@@ -178,10 +178,6 @@ export MAKEFILE_LIST:=$(call strip,${MAKEFILE_LIST})
 export MAKE_FLAGS=$(shell [ `echo ${MAKEFLAGS} | cut -c1` = - ] && echo "${MAKEFLAGS}" || echo "-${MAKEFLAGS}")
 export MAKEFILE?=$(firstword $(MAKEFILE_LIST))
 export TRACE?=$(shell echo "$${TRACE:-$${trace:-0}}")
-ifeq (${TRACE},1)
-$(shell printf "${yellow}trace=$${TRACE} quiet=$${quiet} verbose=$${verbose:-} ${MAKE_CLI}${no_ansi}\n" > /dev/stderr)
-else
-endif 
 
 # Returns everything one the CLI *after* the current target.
 # WARNING: do not refactor as VAR=val !
@@ -342,6 +338,10 @@ export GITHUB_ACTIONS?=false
 export CMK_INTERPRETING?=
 docker.env.standard=-e DOCKER_HOST_WORKSPACE=$${DOCKER_HOST_WORKSPACE:-$${PWD}} -e TERM=$${TERM:-xterm} -e GITHUB_ACTIONS=${GITHUB_ACTIONS} -e TRACE=$${TRACE}
 
+ifeq (${TRACE},1)
+$(shell printf "trace=$${TRACE} quiet=$${quiet} verbose=$${verbose:-} ${yellow}CMK_DIND=$${CMK_DIND} ${MAKE_CLI}${no_ansi}\n" > /dev/stderr)
+endif 
+
 # External tool used for parsing Makefile metadata
 PYNCHON_VERSION?=a817d58
 pynchon=$(trace_maybe) && ${pynchon.run}
@@ -361,9 +361,7 @@ json.from=${jb}
 jq=${jq.run}
 yq=${yq.run}
 
-# IMG_GUM?=v0.15.2
 IMG_GUM?=v0.16.0
-# IMG_GUM?=v0.9.0
 GLOW_VERSION?=v1.5.1
 GLOW_STYLE?=dracula
 
@@ -508,12 +506,6 @@ compose.select/%:
 	&& header="Choose a container:" && ${io.get.choice} \
 	&& set -x && ${io.shell.isolated} ${CMK_EXEC} loadf ${*} $${chosen}.shell
 
-# compose.services/%:
-# 	@# Lists services available for the given compose file.
-# 	@# Used when 'compose.import' hasn't been called for the given compose file.
-# 	@# If 'compose.import' has been called, use '<compose_stem>.services' directly.
-# 	@#
-# 	${docker.compose} $${COMPOSE_EXTRA_ARGS} -f ${*} config --services | sort
 
 compose.services/%:; printf "$(call compose.services,${*})"
 	@# Returns space-delimited names for each non-abstract service defined by the given composefile.
@@ -524,14 +516,6 @@ compose.services/%:; printf "$(call compose.services,${*})"
 compose.services=$(shell \
 	( ${docker.compose} $${COMPOSE_EXTRA_ARGS:-} -f ${1} config --services \
 		| sort | grep -v abstract || true ) 2>/dev/null | ${stream.nl.to.space})
-
-compose.shell/%:
-	@#
-	@#
-	@#
-	fname=$(shell echo ${*}|cut -d, -f1) \
-	&& svc=$(shell echo ${*}|cut -d, -f2-) \
-	&& $(call compose.shell, $${fname}, $${svc})
 
 compose.validate/%:
 	@# Validates the given compose file (i.e. asks docker compose to parse it)
@@ -1143,6 +1127,103 @@ CMK_EXEC=`dirname ${CMK_SRC}`/`basename ${CMK_SRC}`
 mk.assert.env_var=[[ -z "$${$(strip ${1})}" ]] && { $(call log.io, ${red}Error:${no_ansi_dim} required variable ${no_ansi}${underline}$(strip ${1})${no_ansi_dim} is unset or empty!); exit 39; } || true
 mk.assert.env=$(foreach var_name, ${1}, $(call mk.assert.env_var, ${var_name});)
 
+# Helper for working with temp files.  Returns filename,
+# and uses 'trap' to handle at-exit file-deletion automatically.
+# Note that this has to be macro for reasons related to ONESHELL.
+# You should chain commands with ' && ' to avoid early deletes
+ifeq (${OS_NAME},Darwin)
+col_b=LC_ALL=C col -b
+io.mktemp=export tmpf=$$(mktemp ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -f $${tmpf}" EXIT
+# Similar to io.mktemp, but returns a directory.
+io.mktempd=export tmpd=$$(mktemp -u ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
+else
+col_b=col
+io.mktemp=export tmpf=$$(TMPDIR=`pwd` mktemp ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -f $${tmpf}" EXIT
+# Similar to io.mktemp, but returns a directory.
+io.mktempd=export tmpd=$$(TMPDIR=`pwd` mktemp -d ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
+endif
+glow.docker:=docker run -q -i charmcli/glow:${GLOW_VERSION} -s ${GLOW_STYLE}
+
+# WARNING: newer glow is broken with pipes & ptys.. 
+# so we force docker rather than defaulting to a host tool 
+# see https://github.com/charmbracelet/glow/issues/654
+# glow.run:=$(shell which glow >/dev/null 2>/dev/null && echo "`which glow` -s ${GLOW_STYLE}" || echo "${glow.docker}")
+glow.run:=${glow.docker}
+
+io.awker/%:
+	@# Treats the given define-block name as an awk script, 
+	@# And runs it on stdin. 
+	$(call io.mktemp) \
+	&& ${mk.def.to.file}/${*}/$${tmpf} \
+	&& ${stream.stdin} | awk -f $${tmpf}
+
+io.bash:; env bash -l
+	@# Starts an interactive shell with all the environment variables set
+	@# by the parent environment, plus those set by this Makefile context.
+
+io.browser/%:
+	@# Like `io.browser`, but accepts a variable-name as an argument.
+	@# Variable will be dereferenced and stored as 'url' before chaining.
+	@# NB: This requires python on the host and can not run from docker.
+	@#
+	url="`${make} mk.get/${*}`" ${make} io.browser
+
+io.browser:
+	@# Tries to open the given URL in a browser.
+	@# NB: This requires python on the host and can not run from docker.
+	@#
+	@# USAGE: 
+	@#  url="..." ./compose.mk io.browser
+	@#
+	$(call log.target, ${red}opening $${url})
+	python3 -c"import webbrowser; webbrowser.open(\"$${url}\")" \
+		|| $(call log.target, ${red}could not open browser!)
+
+IMG_CURL=curlimages/curl:8.13.0
+io.curl=$(shell which curl 2>/dev/null || echo docker run --rm ${IMG_CURL})
+io.curl.stat=${io.curl} -s -o /dev/null
+
+io.echo:; ${stream.stdin}
+	@# Echos data from input stream. Alias for the `stream.stdin` macro.
+
+io.env:
+	@# Dumps a relevant subset of environment variables for the current context.
+	@# No arguments.  Pipe-safe since this is just filtered output from 'env'.
+	@#
+	@# USAGE:
+	@#   ./compose.mk io.env
+	@#
+	${make} io.env.filter.prefix/PWD,CMK,KUBE,K8S,MAKE,TUI,DOCKER | ${stream.grep.safe}
+
+io.env/% io.env.filter.prefix/%:
+	@# Filters environment variables by the given prefix or (comma-delimited) prefixes.
+	@#
+	@# USAGE:
+	@#   ./compose.mk io.env/<prefix1>,<prefix2>
+	@#
+	echo ${*} | sed 's/,/\n/g' \
+	| xargs -I% sh -c "env | ${stream.grep.safe} | grep \"^%.*=\"||true"
+
+io.envp io.env.pretty .tux.widget.env:
+	@# Pretty version of io.env, this includes some syntax highlighting.
+	@# No arguments.  See 'io.envp/<arg>' for a version that supports filtering.
+	@#
+	@# USAGE:
+	@#  ./compose.mk io.envp
+	@#
+	${make} io.env | ${make} stream.ini.pygmentize
+
+io.envp/% io.env.pretty/% .tux.widget.env/%:
+	@# Pretty version of 'io.env/<arg>', this includes syntax highlighting and also filters the output.
+	@#
+	@# USAGE:
+	@#  ./compose.mk io.envp/<prefix_to_filter_for>
+	@#
+	@# USAGE: (only vars matching 'TUI*')
+	@#  ./compose.mk io.envp/TUI
+	@#
+	${make} io.env/${*} | ${make} stream.ini.pygmentize
+
 io.figlet/%:
 	@# Treats the argument as a label, and renders it with `figlet`. 
 	@# (This requires the embedded tui is built) 
@@ -1162,10 +1243,6 @@ io.file.select=header="Choose a file: (dir=$${dir:-.})"; \
 io.get.url=$(call io.mktemp) && curl -sL $${url} > $${tmpf}
 io.gum.docker=${trace_maybe} && docker run $$(if [ -t 0 ]; then echo "-it"; else echo "-i"; fi) -e TERM=$${TERM:-xterm} --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nCOPY --from=charmcli/gum:${IMG_GUM} /usr/local/bin/gum /usr/local/bin/gum\nRUN apk add --update --no-cache bash\n")`
 
-IMG_CURL=curlimages/curl:8.13.0
-io.curl=$(shell which curl 2>/dev/null || echo docker run --rm ${IMG_CURL})
-io.curl.stat=${io.curl} -s -o /dev/null
-
 ifeq ($(shell which gum >/dev/null 2> /dev/null && echo 1 || echo 0),1) 
 io.gum.run:=`which gum`
 #io.get.choice=chosen=$$(${io.gum.run} choose --header=\"$${header:-Choose:}\" $${choices})
@@ -1184,14 +1261,6 @@ io.gum.style=label="${1}" ${make} io.gum.style
 io.gum.style.div:=--border double --align center --width $${width:-$$(echo "x=$$(tput cols 2>/dev/null ||echo 45) - 5;if (x < 0) x=-x; default=30; if (default>x) default else x" | bc)}
 io.gum.style.default:=--border double --foreground 2 --border-foreground 2
 io.gum.tty=export tty=1; $(call io.gum, ${1})
-
-glow.docker:=docker run -q -i charmcli/glow:${GLOW_VERSION} -s ${GLOW_STYLE}
-
-# WARNING: newer glow is broken with pipes & ptys.. 
-# so we force docker rather than defaulting to a host tool 
-# see https://github.com/charmbracelet/glow/issues/654
-# glow.run:=$(shell which glow >/dev/null 2>/dev/null && echo "`which glow` -s ${GLOW_STYLE}" || echo "${glow.docker}")
-glow.run:=${glow.docker}
 
 io.gum.choice/% io.gum.choose/%:
 	@# Interface to `gum choose`.
@@ -1243,92 +1312,6 @@ io.gum.style/% io.draw.banner/%:; label="${*}" ${make} io.draw.banner
 	@# USAGE: 
 	@#   ./compose.mk io.draw.banner/<label>
 	
-
-# Helper for working with temp files.  Returns filename,
-# and uses 'trap' to handle at-exit file-deletion automatically.
-# Note that this has to be macro for reasons related to ONESHELL.
-# You should chain commands with ' && ' to avoid early deletes
-ifeq (${OS_NAME},Darwin)
-col_b=LC_ALL=C col -b
-io.mktemp=export tmpf=$$(mktemp ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -f $${tmpf}" EXIT
-# Similar to io.mktemp, but returns a directory.
-io.mktempd=export tmpd=$$(mktemp -u ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
-else
-col_b=col
-io.mktemp=export tmpf=$$(TMPDIR=`pwd` mktemp ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -f $${tmpf}" EXIT
-# Similar to io.mktemp, but returns a directory.
-io.mktempd=export tmpd=$$(TMPDIR=`pwd` mktemp -d ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
-endif
-io.awker/%:
-	@# Treats the given define-block name as an awk script, 
-	@# And runs it on stdin. 
-	$(call io.mktemp) \
-	&& ${mk.def.to.file}/${*}/$${tmpf} \
-	&& ${stream.stdin} | awk -f $${tmpf}
-
-io.bash:; env bash -l
-	@# Starts an interactive shell with all the environment variables set
-	@# by the parent environment, plus those set by this Makefile context.
-
-io.browser/%:
-	@# Like `io.browser`, but accepts a variable-name as an argument.
-	@# Variable will be dereferenced and stored as 'url' before chaining.
-	@# NB: This requires python on the host and can not run from docker.
-	@#
-	url="`${make} mk.get/${*}`" ${make} io.browser
-
-io.browser:
-	@# Tries to open the given URL in a browser.
-	@# NB: This requires python on the host and can not run from docker.
-	@#
-	@# USAGE: 
-	@#  url="..." ./compose.mk io.browser
-	@#
-	$(call log.target, ${red}opening $${url})
-	python3 -c"import webbrowser; webbrowser.open(\"$${url}\")" \
-		|| $(call log.target, ${red}could not open browser!)
-
-io.echo:; ${stream.stdin}
-	@# Echos data from input stream. Alias for the `stream.stdin` macro.
-
-io.env:
-	@# Dumps a relevant subset of environment variables for the current context.
-	@# No arguments.  Pipe-safe since this is just filtered output from 'env'.
-	@#
-	@# USAGE:
-	@#   ./compose.mk io.env
-	@#
-	${make} io.env.filter.prefix/PWD,CMK,KUBE,K8S,MAKE,TUI,DOCKER | ${stream.grep.safe}
-
-io.env/% io.env.filter.prefix/%:
-	@# Filters environment variables by the given prefix or (comma-delimited) prefixes.
-	@#
-	@# USAGE:
-	@#   ./compose.mk io.env/<prefix1>,<prefix2>
-	@#
-	echo ${*} | sed 's/,/\n/g' \
-	| xargs -I% sh -c "env | ${stream.grep.safe} | grep \"^%.*=\"||true"
-
-io.envp io.env.pretty .tux.widget.env:
-	@# Pretty version of io.env, this includes some syntax highlighting.
-	@# No arguments.  See 'io.envp/<arg>' for a version that supports filtering.
-	@#
-	@# USAGE:
-	@#  ./compose.mk io.envp
-	@#
-	${make} io.env | ${make} stream.ini.pygmentize
-
-io.envp/% io.env.pretty/% .tux.widget.env/%:
-	@# Pretty version of 'io.env/<arg>', this includes syntax highlighting and also filters the output.
-	@#
-	@# USAGE:
-	@#  ./compose.mk io.envp/<prefix_to_filter_for>
-	@#
-	@# USAGE: (only vars matching 'TUI*')
-	@#  ./compose.mk io.envp/TUI
-	@#
-	${make} io.env/${*} | ${make} stream.ini.pygmentize
-
 # Creates a file with the 2nd argument as a command, iff the file given by the first arg is stale.
 io.file.gen.maybe=test \( ! -f ${1} -o -n "%$$(find ${1} -mtime +0 -mmin +$${freshness:-2.7} 2>/dev/null)" \) && ${2} > ${1}
 
@@ -1488,7 +1471,9 @@ io.stack.pop/%:
 io.stack.pop=(${io.stack} | ${jq.run} '.[-1]'; ${io.stack} | ${jq.run} '.[1:]' > ${1}.tmp && mv ${1}.tmp ${1})
 
 io.stack.require=( ls ${1} >/dev/null 2>/dev/null || echo '[]' > ${1})
-
+io.log=$(call log.io,${1})
+io.log.part1=$(call log.part1,${GLYPH_IO}${1})
+io.log.part2=$(call log.part2,${GLYPH_IO}${1})
 io.stack.push/%:
 	@# Pushes new JSON data onto the named stack-file
 	@#
@@ -2276,7 +2261,7 @@ mk.supervisor.interrupt mk.interrupt: mk.interrupt/SIGINT
 	@# The default interrupt.  This is shorthand for mk.interrupt/SIGINT
 
 # WARNING: do not use ${make} here!
-mk.interrupt=${MAKE} mk.interrupt
+mk.interrupt=${MAKE} -f ${MAKEFILE} mk.interrupt
 
 ifeq (${CMK_SUPERVISOR},0)
 mk.supervisor.interrupt/% mk.interrupt/%:
@@ -3243,7 +3228,8 @@ flux.try.except.finally/%:
 ##
 ## **Macro Equivalents:**
 ##
-## Most targets here are also available as macros, which can be used programmatically as an optimization since it saves a process.  
+## Most targets here are also available as macros, which can be used 
+#  as an optimization since it saves a process.  
 ## 
 ## ```bash 
 ##   # For example, from a makefile, these are equivalent commands:
@@ -4450,11 +4436,12 @@ endef
 # also have docker).  This is probably a good thing!
 define compose.get_services
 	$(shell if [ "${CMK_INTERNAL}" = "0" ]; then \
-		${trace_maybe} && ${docker.compose} -f ${1} config --services 2> >(grep -v 'variable is not set' >&2); \
+		${trace_maybe} && ${docker.compose} -f ${1} config --services --no-path-resolution --no-consistency --no-env-resolution ; \
 	else \
 		echo -n ""; fi)
 endef
-
+# $(call io.file.gen.maybe,.tmp.services.${1},${docker.compose} -f ${1} config --services)
+# test \( ! -f ${1} -o -n "%$$(find ${1} -mtime +0 -mmin +$${freshness:-2.7} 2>/dev/null)" \) && ${2} > ${1}
 # Macro to create all the targets for a given compose-service.
 # See docs @ https://robot-wranglers.github.io/compose.mk/bridge
 define compose.create_make_targets
@@ -4503,8 +4490,19 @@ ${compose_file_stem}.exec/%:
 
 ${compose_file_stem}/$(compose_service_name).get_shell:
 	@# Detects the best shell to use with the `$(compose_service_name)` container @ ${compose_file}
-	@#
 	$$(call compose.get_shell, $(compose_file), $(compose_service_name))
+
+${compose_file_stem}/$(compose_service_name).get_config:
+	@# Dumps JSON-formatted config for the `$(compose_service_name)` container @ ${compose_file}.
+	@# This turns off most of the string-interpolation and path-resolution that happens by default.
+	docker compose -f $(compose_file) config \
+		--no-interpolate --no-path-resolution --format json \
+	| ${jq} .services.${compose_service_name}
+
+${compose_file_stem}/$(compose_service_name).get_config/%:
+	@# Dumps JSON-formatted config for the `$(compose_service_name)` container @ ${compose_file}.
+	@# This turns off most of the string-interpolation and path-resolution that happens by default.
+	${make} ${compose_file_stem}/$(compose_service_name).get_config | ${jq} -er .$${*}
 
 ${compose_file_stem}/$(compose_service_name).shell:
 	@# Starts a shell for the "$(compose_service_name)" container defined in the $(compose_file) file.
@@ -4594,7 +4592,9 @@ $(compose_service_name).exec.shell:
 
 $(compose_service_name).get_shell: ${compose_file_stem}/$(compose_service_name).get_shell
 	@# Shorthand for ${compose_file_stem}/$(compose_service_name).get_shell
-
+$(compose_service_name).get_config: ${compose_file_stem}/$(compose_service_name).get_config
+	@# Shorthand for ${compose_file_stem}/$(compose_service_name).get_config
+$(compose_service_name).get_config/%:; ${make} ${compose_file_stem}/$(compose_service_name).get_config/$${*}
 $(compose_service_name).pipe:;  pipe=yes ${make} ${compose_file_stem}/$(compose_service_name)
 	@# Pipe into the default shell for the '$(compose_service_name)' container (via compose file @ ${compose_file})
 
@@ -4772,7 +4772,8 @@ ${compose_file_stem}.build.quiet $(target_namespace).build.quiet:
 	@# WARNING: This is not actually safe for all legal compose files, because
 	@# compose handles run-ordering for defined services, but not build-ordering.
 	@#
-	$(call log.docker, ${bold_green}${target_namespace} ${sep} ${bold_cyan}build ${sep} ${dim_ital}$(shell echo $${svc:-all services}))
+	@$$(eval export svc_disp:=$(shell echo echo $$$${svc:-all services}))
+	$(call log.docker, ${bold_green}${target_namespace} ${sep} ${bold_cyan}build ${sep} ${dim_ital}$${svc_disp})
 	$(trace_maybe) \
 	&& quiet=1 label="build finished in" ${make} flux.timer/compose.build/${compose_file}
 
@@ -4957,24 +4958,13 @@ else
 $(eval defname=$(strip ${1}))
 $(eval bind.maybe=$(strip $(if $(filter undefined,$(origin 2)),"",$(2))))
 ${defname}.with.file/%:; ${make} io.with.file/${defname}/$${*}
-
-${defname}.to.file/%:
-	@#
-	@#
-	CMK_INTERNAL=1 ${make} mk.def.read/${defname} > $${*}
+${defname}.to.file/%:; CMK_INTERNAL=1 ${make} mk.def.read/${defname} > $${*}
 ${defname}.to.file:
-	@#
-	@#
 	@$$(eval export tmpf:=$$(shell TMPDIR=. mktemp))
 	CMK_INTERNAL=1 ${make} mk.def.read/${defname} > $${tmpf} \
 	&& echo $${tmpf}
 ${defname}.preview: ${defname}.with.file/io.preview.file
-	@#
-	@#
-${defname}.run/%:
-	@#
-	@#
-	CMK_INTERNAL=1 ${make} mk.def.read/${defname}/$${*}
+${defname}.run/%:; CMK_INTERNAL=1 ${make} mk.def.read/${defname}/$${*}
 ${defname}.run:
 	case "${bind.maybe}" in \
 		"")  $$(call log.io, ${defname}.run ${sep} ${no_ansi}${defname} was not bound at import time); ${make} ${defname}.with.file/${defname}.interpreter || exit 4 ;; \
@@ -5108,8 +5098,10 @@ BEGIN {
     from_string[1] = "compose.import("; to_string[1] = "$(call eval.call, compose.import,"
     from_string[2] = "compose.import.string("; to_string[2] = "$(call eval.call, compose.import.string,"
     from_string[3] = "compose.import.code("; to_string[3] = "$(call eval.call, compose.import.code,"
+    from_string[4] = "polyglot.bind.target("; to_string[4] = "$(call eval.call, polyglot.bind.target,"
+    from_string[5] = "polyglots.bind.target("; to_string[5] = "$(call eval.call, polyglots.bind.target,"
     # Count of substitution pairs
-    num_substitutions = 3 }
+    num_substitutions = 5 }
 # Function to ensure the header is printed once before any other output
 function ensure_header() {
     if (!header_printed) {
@@ -5297,7 +5289,7 @@ flux.post/%:
 
 define .awk.rewrite.targets.maybe 
 {
-  if ($0 ~ /help/ || $0 ~ /mk.interpret/ || $0 ~ /mk.include/ || $0 ~ /loadf/) {
+  if ($0 ~ /help/ || $0 ~ /jb/ || $0 ~ /yq/ || $0 ~ /jq/ || $0 ~ /mk.interpret/ || $0 ~ /mk.include/ || $0 ~ /loadf/) {
 	print $0
 	next }
   result = ""

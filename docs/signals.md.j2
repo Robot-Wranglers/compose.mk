@@ -37,11 +37,11 @@ $ ./compose.mk jb foo=bar
 ### Inheritance & Interpreters
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Projects that are extending `compose.mk` might be interested in *inheriting* the capabilities for signals and supervisors.  The simplest reason you might want to do this is just for the sake of bringing [compose.mk-style CLI help]({{mkdocs.site_relative_url}}) to your own project, *i.e. targets that actually support positional arguments,* but [the advanced examples](#advanced-examples) on this page hint at other possibilities.  
+Projects that are extending `compose.mk` might be interested in *inheriting* the capabilities for signals and supervisors.  The simplest reason you might want to do this is just for the sake of bringing [compose.mk-style CLI help]({{mkdocs.site_relative_url}}/cli-help) to your own project, *i.e. targets that actually support positional arguments,* but [the advanced examples](#advanced-examples) on this page hint at other possibilities.  
 
-For [technical reasons](#implementation-details), there's unfortunately no way to inherit signal capabilities by simply using `include compose.mk` from your project Makefiles.  There is however a work-around if you're willing to **setup `compose.mk` itself as your interpreter**.  (For information about getting an interpreter *and* a transpiler/preprocessor, see instead [the compiler docs]({{mkdocs.site_relative_url}}/compiler))
+For [technical reasons](#implementation-details), there's unfortunately no way to inherit signal capabilities by simply using `include compose.mk` from your project Makefiles.  But, there's a work-around for this if you're willing to setup `compose.mk` itself as the interpreter.  *(For information about getting an interpreter *and* a transpiler/preprocessor, see instead [the compiler docs]({{mkdocs.site_relative_url}}/compiler))*
 
-This pattern is an advanced topic, and while using it is surprisingly stable and portable, the semantics of it are strange enough that the whole thing should probably be considered experimental.
+This pattern is an advanced topic, and although it is both stable and portable, the semantics are strange enough that the whole thing should probably be considered experimental!
 
 #### Positional Arguments & Yield
 <hr style="width:95%;border-bottom:1px dashed black;">
