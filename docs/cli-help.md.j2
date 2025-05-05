@@ -1,7 +1,6 @@
 {% import 'macros.j2' as macros -%}
 
 ## CLI Help
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 When using `compose.mk` directly, help not only *works,* it goes beyond simply listing available targets, and actually parses and displays documentation per target, and per target-namespace. *(Under the hood, a dockerized version of [charmbracelete/glow](https://github.com/charmbracelet/glow) renders markdown.)*.
@@ -23,13 +22,14 @@ $ ./compose.mk help docker
 
 Because a dockerized `glow` is involved if no local tool is available, and because the Makefile-metadata parser is also a container, be warned that **rendering help can be *very slow*,** especially the first time it runs.  If this bothers you, you can skip some docker-bootstrap time by actually installing stuff.  See the [implementation details section](#implementation-details) for more about this, and other hints for granular access to the moving pieces involved here.
 
-## Help For Project Makefiles
+### Help For Project Makefiles
 <hr style="width:100%;border-bottom:3px solid black;">
 
 To enable help your project Makefile, there are a few options depending on how tightly you want to integrate, but usually it's enough to just `include compose.mk` somewhere near the top. 
 
-### Docstring Style 
---------------------------------
+#### Docstring Style 
+<hr style="width:95%;border-bottom:1px dashed black;">
+
 Note that for help to render properly, your targets need to use the following style for comments, similar to python-docstrings.  *(There is no support for other kinds of `# .. comments ..` that are above or inlined inside of target-bodies.)*
 
 ```Makefile
@@ -39,8 +39,8 @@ Note that for help to render properly, your targets need to use the following st
 <br/>
 {#By itself, this enables **full** target listing with `make help`, including both the inherited targets from `compose.mk` as well as the new targets that are project specific.  #}
 
-### Basic Integration
---------------------------------
+#### Basic Integration
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 The file above is *actually* called `demos/cli-help.mk`, and invoked with `./demos/cli-help.mk`.. but for the sake of the next examples though we'll pretend it's your project Makefile and simply invoked as `make ...`. 
 
@@ -64,8 +64,8 @@ $ make mk.help.target/my-target
 
 <br/>
 
-### Full Integration
---------------------------------------------------
+#### Full Integration
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 With the basic integration so far, we haven't yet seen the kind of help for extensions that we started with for `compose.mk`, i.e. `./compose.mk help <target_or_module>`.
 
@@ -98,7 +98,7 @@ Now `./demos/cli-help-shebang.mk help my-target` works as expected.  An approach
 If the "search=" trick above won't work for you, see the next section for hints about lower-level access to target-help, target listing, and module/namespace help.
 #}
 
-## Implementation Details
+### Implementation Details
 <hr style="width:100%;border-bottom:3px solid black;">
 
 The implementation for help uses the `mk.help.*` family of targets, and if you want to customize help or error messages they might be useful.  
