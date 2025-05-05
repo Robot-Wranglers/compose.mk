@@ -4434,14 +4434,16 @@ endef
 # As a side-effect, this prevents targets-in-containers from calling other
 # targets-in-containers (which will not work anyway unless those containers
 # also have docker).  This is probably a good thing!
+#
+# WARNING: tempting to add --no-env-resolution --no-path-resolution --no-consistency
+# here, but note that these are not available for some versions of compose.
 define compose.get_services
 	$(shell if [ "${CMK_INTERNAL}" = "0" ]; then \
-		${trace_maybe} && ${docker.compose} -f ${1} config --services --no-path-resolution --no-consistency --no-env-resolution ; \
+		${trace_maybe} && ${docker.compose} -f ${1} config --services  ; \
 	else \
 		echo -n ""; fi)
 endef
-# $(call io.file.gen.maybe,.tmp.services.${1},${docker.compose} -f ${1} config --services)
-# test \( ! -f ${1} -o -n "%$$(find ${1} -mtime +0 -mmin +$${freshness:-2.7} 2>/dev/null)" \) && ${2} > ${1}
+
 # Macro to create all the targets for a given compose-service.
 # See docs @ https://robot-wranglers.github.io/compose.mk/bridge
 define compose.create_make_targets
