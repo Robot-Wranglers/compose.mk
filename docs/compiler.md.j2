@@ -5,11 +5,6 @@
 
 To avoid freaking out people who are just interested in [tools]({{mkdocs.site_relative_url}}/tool-mode) or [libraries]({{mkdocs.site_relative_url}}/standard-lib), the fact that [compose.mk is actually a programming language]({{mkdocs.site_relative_url}}/language) isn't emphasized in most docs/demos, and the shocking secret truth is safe to ignore.  If you *are* interested though, the [language overview]({{mkdocs.site_relative_url}}/language/#language-properties) is good background reading.
 
-Other related documentation includes: The [more basic interpreter usage]({{mkdocs.site_relative_url}}/signals/#inheritance-interpreters), which allows for inheritance of the entire `compose.mk` standard library and signals, but skips compilation and does **not** allow syntactic extensions.  The [packaging support]({{mkdocs.site_relative_url}}/demos/packaging) generates executables, but *isn't* compilation.  And there's also [a few thoughts about style]({{mkdocs.site_relative_url}}/style).
-
-### Introducing CMK
-<hr style="width:100%;border-bottom:3px solid black;">
-
 We'll dive into examples soon, but first some preliminaries:
 
 1. The `compose.mk` language is called **CMK** or **CMK-lang**, to differentiate it from tool/library mode.
@@ -36,9 +31,7 @@ You can run the examples directly as `./demos/cmk/foo.cmk`, or using `./compose.
 ### Basic Example
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Let's revisit the JSON emit/consume example that's part of the [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics).  
-
-The original code was simple, but rewriting this in CMK is even better and much more pretty:
+Let's revisit the JSON emit/consume example that's part of the [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics).  The original code was simple, but rewriting this in CMK is even better and much more pretty:
 
 ```Makefile 
 {{open('demos/cmk/structured-io.cmk','r').read().strip()}}
@@ -47,7 +40,7 @@ The original code was simple, but rewriting this in CMK is even better and much 
 We'll get to the odd arrow syntax at the end of this section, but start with most basic stuff first. 
 
 **New Interpreter:**
-:  This example introduces `mk.interpret!` via a shebang that's different from other demos that use `make -f ..`.  As with other demos, this one is **executable directly** as `./demos/cmk/structured-io.cmk`.  Unlike other demos, we can't run it directly with `make`.  If you want to run a file that's not executable, use `./compose.mk mk.interpret! <filename>`.  We've introduced the more basic version of `mk.interpret` [elsewhere]({{mkdocs.site_relative_url}}/signals/#inheritance-interpreters) in a very different context.  This example is similar in effect, but **`mk.interpret!` opts into all the pre-processing / compilation / transpilation** stuff that allows us to extend the base syntax of `make` and use the more exotic stuff you see in the rest of the file.
+:  This example introduces `mk.interpret!` via a shebang that's different from other demos that use `make -f ..`.  As with other demos, this one is **executable directly** as `./demos/cmk/structured-io.cmk`.  Unlike other demos, we can't run it directly with `make`.  If you want to run a file that's *not* executable, use `./compose.mk mk.interpret! <filename>`.  We've introduced the more basic version of `mk.interpret` [elsewhere]({{mkdocs.site_relative_url}}/signals/#inheritance-interpreters) in a very different context.  This example is similar in effect, but **`mk.interpret!` opts into all the pre-processing / compilation / transpilation** stuff that allows us to extend the base syntax of `make` and use the more exotic stuff you see in the rest of the file.
 
 **Implied Include:**
 :  When using the interpreter, a line like `include compose.mk` is always implied, and of course this brings with it full access to the [standard library]({{mkdocs.site_relative_url}}/standard-lib).
@@ -241,6 +234,8 @@ Crazy?  Sure!  But also very clean in a specific way: *hopefully* the gnarly awk
 
 ### Appendix
 <hr style="width:100%;border-bottom:3px solid black;">
+
+Other related documentation includes: The [more basic interpreter usage]({{mkdocs.site_relative_url}}/signals/#inheritance-interpreters), which allows for inheritance of the entire `compose.mk` standard library and signals, but skips compilation and does **not** allow syntactic extensions.  The [packaging support]({{mkdocs.site_relative_url}}/demos/packaging) generates executables, but *isn't* compilation.  And there's also [a few thoughts about style]({{mkdocs.site_relative_url}}/style).
 
 *Data below is rendered from the latest source code.*
 

@@ -9,48 +9,8 @@ export APP_DISPLAY?=:23
 
 # Begin containerized version of i3 window manager and support files.
 ⋘ gui.services
-configs:
-  # See https://i3wm.org/docs/userguide.html for a complete reference
-  i3statconf:
-    content: |
-      general {
-        output_format = "i3bar"
-        colors = true
-        interval = 5
-      }
-      order += "cpu_usage"
-      order += "disk /"
-      order += "tztime local"
-      cpu_usage { format = "CPU: %usage" }
-      disk "/" { format = "Disk: %free" }
-      tztime local { format = "%Y-%m-%d %H:%M:%S" }
-  i3conf:
-    content: |
-      # Set mod key to Alt (Mod1)
-      set $$mod Mod1
-      # Use Mouse+$mod to drag floating windows
-      floating_modifier $$mod
-      # Kill focused window
-      bindsym $$mod+Shift+q kill
-      # Change focus between windows
-      bindsym $$mod+h focus left
-      bindsym $$mod+j focus down
-      bindsym $$mod+k focus up
-      bindsym $$mod+l focus right
-      # Split window
-      bindsym $$mod+v split v
-      bindsym $$mod+b split h
-      # Toggle fullscreen
-      bindsym $$mod+f fullscreen toggle
-      # Layout toggle (stacked, tabbed, default)
-      bindsym $$mod+s layout stacking
-      bindsym $$mod+w layout tabbed
-      bindsym $$mod+e layout toggle split
-      # Floating toggle
-      bindsym $$mod+Shift+space floating toggle
-      bar { status_command i3status }
 services:
-  i3: &base
+  i3:
     image: compose.mk:i3
     hostname: i3
     build:
@@ -74,6 +34,48 @@ services:
         target: /root/.config/i3/config
       - source: i3statconf
         target: /root/.config/i3status/config
+configs:
+  # https://i3wm.org/i3status/manpage.html
+  # https://github.com/i3/i3status
+  i3statconf:
+    content: |
+      general {
+        output_format = "i3bar"
+        colors = true
+        interval = 5
+      }
+      order += "cpu_usage"
+      order += "disk /"
+      order += "tztime local"
+      cpu_usage { format = "CPU: %usage" }
+      disk "/" { format = "Disk: %free" }
+      tztime local { format = "%Y-%m-%d %H:%M:%S" }
+  # See https://i3wm.org/docs/userguide.html for a complete reference
+  # Set mod key to Alt (Mod1)
+  # Use Mouse+$mod to drag floating windows
+  # Kill focused window
+  # Change focus between windows
+  # Split window
+  # Toggle fullscreen
+  # Layout toggle (stacked, tabbed, default)
+  # Floating toggle
+  i3conf:
+    content: |
+      set $$mod Mod1
+      floating_modifier $$mod
+      bindsym $$mod+Shift+q kill
+      bindsym $$mod+h focus left
+      bindsym $$mod+j focus down
+      bindsym $$mod+k focus up
+      bindsym $$mod+l focus right
+      bindsym $$mod+v split v
+      bindsym $$mod+b split h
+      bindsym $$mod+f fullscreen toggle
+      bindsym $$mod+s layout stacking
+      bindsym $$mod+w layout tabbed
+      bindsym $$mod+e layout toggle split
+      bindsym $$mod+Shift+space floating toggle
+      bar { status_command i3status }
 ⋙
 
 # Top-level helpers, these require Xephyr 
