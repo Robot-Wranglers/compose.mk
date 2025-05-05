@@ -179,7 +179,7 @@ export MAKE_FLAGS=$(shell [ `echo ${MAKEFLAGS} | cut -c1` = - ] && echo "${MAKEF
 export MAKEFILE?=$(firstword $(MAKEFILE_LIST))
 export TRACE?=$(shell echo "$${TRACE:-$${trace:-0}}")
 
-# Returns everything one the CLI *after* the current target.
+# Returns everything on the CLI *after* the current target.
 # WARNING: do not refactor as VAR=val !
 define mk.cli.continuation
 $${MAKE_CLI#*${@}}
@@ -506,7 +506,6 @@ compose.select/%:
 	&& header="Choose a container:" && ${io.get.choice} \
 	&& set -x && ${io.shell.isolated} ${CMK_EXEC} loadf ${*} $${chosen}.shell
 
-
 compose.services/%:; printf "$(call compose.services,${*})"
 	@# Returns space-delimited names for each non-abstract service defined by the given composefile.
 	@# Also available as a macro.
@@ -603,8 +602,6 @@ compose.size/%:
 compose.images/%:; ${docker.compose} -f ${*} config --images
 	@# Returns all images used with the given compose file.
 	
-
-#| ${jq} -R 'select(length > 0) | split(" "; 2) | {(.[0]): .[1]}' | jq -s 'reduce .[] as $$item ({}; . + $$item)'
 # Helper for defining targets, this curries the 
 # given parameter as a command to the given docker image 
 #
@@ -753,7 +750,6 @@ docker.image.dispatch/%:
 	@#  ./compose.mk docker.image.dispatch/<img>/<target>
 	tty=1 img=`printf "${*}" | cut -d/ -f1` ${make} docker.dispatch/`printf "${*}" | cut -d/ -f2-`
 
-
 # NB: exit status does not work without grep..
 docker.images.filter=docker images --filter reference=${1} --format "{{.Repository}}:{{.Tag}}"|grep ${1}
 
@@ -855,17 +851,6 @@ docker.from.def/% docker.build.def/% Dockerfile.build/%:
 				&& tag=$${tag} ${make} docker.build/$${tmpf} ); ;; \
 	esac
 		
-# Dockerfile.from.fs/% docker.from.file/%:
-# 	@# Builds a container from the given Dockerfile.  The 'tag' variable is required.
-# 	@#
-# 	@# USAGE:
-# 	@#  tag=<tag_name> ./compose.mk docker.from.file/<fname>
-# 	@#
-# 	$(call log,${GLYPH.DOCKER} ${@} ${sep}${dim} ${dim_cyan}${*}${no_ansi_dim} as ${dim_green}$${tag}) \
-# 	&& $(trace_maybe) \
-# 	&& cat ${*} | ${stream.as.log} \
-# 	| docker build -t $${tag} -
-
 docker.from.github:
 	@# Helper that constructs an appropriate url, then chains to `docker.from.url`.
 	@#
@@ -925,31 +910,6 @@ docker.prune docker.system.prune:
 
 docker.ps:; docker ps --format json | ${jq} .
 	@# Like 'docker ps', but always returns JSON.
-
-# docker.run.image/%:
-# 	@# Runs the given commands in the given image.
-# 	@#
-# 	@# USAGE: ( generic )
-# 	@#  entrypoint=<entry> cmd=<args_to_entrypoint> ./compose.mk docker.run.image/<img>
-# 	@#
-# 	@# USAGE: ( concrete )
-# 	@#  entrypoint=make cmd=flux.ok ./compose.mk docker.run.image/debian/buildd:bookworm
-# 	@#
-# 	$(trace_maybe) \
-# 	&& img="`printf "${*}"|cut -d, -f1`" \
-# 	&& entrypoint="`printf "${*}"|cut -d, -f2-`" \
-# 	&& case $${entrypoint:-} in \
-# 		"") entrypoint=$${entrypoint:-} ;; \
-# 	esac && ${make} docker.run.sh
-# docker.run.def/%:
-# 	@# Like 'docker.run.def', but unpacks arguments from target invocation.
-# 	@#
-# 	@# USAGE:
-# 	@#  ./compose.mk docker.run.def/<def_name>/<image>
-# 	@#
-# 	def="`echo ${*} | cut -d/ -f1 `" \
-# 	&& img=`echo ${*} | cut -d/ -f2- ` \
-# 	${make} docker.run.def
 
 docker.run.def:
 	@# Treats the named define-block as a script, then runs it inside the given container.
@@ -1193,16 +1153,17 @@ io.env:
 	@# USAGE:
 	@#   ./compose.mk io.env
 	@#
-	${make} io.env.filter.prefix/PWD,CMK,KUBE,K8S,MAKE,TUI,DOCKER | ${stream.grep.safe}
+	CMK_INTERNAL=1 ${make} io.env.filter.prefix/PWD,CMK,KUBE,K8S,MAKE,TUI,DOCKER | ${stream.grep.safe}
 
 io.env/% io.env.filter.prefix/%:
 	@# Filters environment variables by the given prefix or (comma-delimited) prefixes.
+	@# Also available as a macro.
 	@#
 	@# USAGE:
 	@#   ./compose.mk io.env/<prefix1>,<prefix2>
-	@#
 	echo ${*} | sed 's/,/\n/g' \
 	| xargs -I% sh -c "env | ${stream.grep.safe} | grep \"^%.*=\"||true"
+io.env=CMK_INTERNAL=1 ${make} io.env
 
 io.envp io.env.pretty .tux.widget.env:
 	@# Pretty version of io.env, this includes some syntax highlighting.
@@ -1290,6 +1251,7 @@ io.gum.spin:
 io.gum.style io.draw.banner:
 	@# Helper for formatting text and banners using `gum style` and `gum format`.
 	@# Expects label text under the `label variable, plus supporting optional `width`.
+	@# See also `io.print.banner` for something simpler.
 	@#
 	@# REFS:
 	@# [1] https://github.com/charmbracelet/gum for more details.
@@ -1307,8 +1269,8 @@ io.gum.style io.draw.banner:
 
 io.gum.style/% io.draw.banner/%:; label="${*}" ${make} io.draw.banner
 	@# Prints a divider with the given label. 
-	@# This has to be a legal target; Do not use spaces, etc!
-	@#
+	@# Invocation must be a legal target (Do not use spaces, etc!)
+	@# See also `io.draw.banner` and `io.print.banner` for something simpler.
 	@# USAGE: 
 	@#   ./compose.mk io.draw.banner/<label>
 	
@@ -1473,7 +1435,7 @@ io.stack.pop=(${io.stack} | ${jq.run} '.[-1]'; ${io.stack} | ${jq.run} '.[1:]' >
 io.stack.require=( ls ${1} >/dev/null 2>/dev/null || echo '[]' > ${1})
 io.log=$(call log.io,${1})
 io.log.part1=$(call log.part1,${GLYPH_IO}${1})
-io.log.part2=$(call log.part2,${GLYPH_IO}${1})
+io.log.part2=$(call log.part2,${1})
 io.stack.push/%:
 	@# Pushes new JSON data onto the named stack-file
 	@#
@@ -4745,7 +4707,7 @@ ${compose_file_stem}.services $(target_namespace).services:
 	@#
 	@# NB: This must remain suitable for use with xargs, etc
 	@#
-	echo $(__services__) | sed -e 's/ /\n/g'
+	echo $(__services__) | sed -e 's/ /\n/g' | sort
 
 ${compose_file_stem}.images ${target_namespace}.images:; ${make} compose.images/${compose_file}
 	@# Returns a nl-delimited list of images for this compose file
@@ -4862,6 +4824,7 @@ ${compose_file_stem}/%:
 	@# WARNING: This uses noglob to let expansion happen in the container. 
 	@#          This could be confusing but is usually correct.
 	@#
+	@$$(eval export tty:=$(shell [ "$${tty}" = "0" ] && echo "" || echo "-T"))
 	@$$(eval export svc_name:=$$(shell echo $$@|awk -F/ '{print $$$$2}'))
 	@$$(eval export cmd:=$(shell echo $${MAKE_CLI_EXTRA:-$${cmd:-}}))
 	@$$(eval export quiet:=$(shell if [ -z "$${quiet:-}" ]; then echo "0"; else echo "$${quiet:-1}"; fi))
@@ -4879,7 +4842,7 @@ ${compose_file_stem}/%:
 		if [ -z "$${env:-}" ]; then echo "-e _=_"; else \
 		printf "$${env:-}" | sed 's/,/\n/g' | xargs -I% echo --env %='☂$$$${%}☂'; fi))
 	@$$(eval export base:=docker compose -f ${compose_file} \
-		run -T --rm --remove-orphans --quiet-pull \
+		run $${tty} --rm --remove-orphans --quiet-pull \
 		$$(subst ☂,\",$${extra_env}) \
 		--env CMK_INTERNAL=1 \
 		-e TERM="$${TERM}" -e GITHUB_ACTIONS=${GITHUB_ACTIONS} -e TRACE=$${TRACE} \

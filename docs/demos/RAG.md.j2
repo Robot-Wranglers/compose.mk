@@ -44,26 +44,11 @@ All support code is included in [the appendix](#appendix-support-code).  Quick l
 
 Jump ahead if you're waiting for [examples](#example-output) and [usage](#usage), but since [the support code appendix](#appendix-support-code) is big, let's front-load the discussion.  Besides the fact that the default corpus is this project documentation.. you might be wondering whether this is even *remotely* related to `compose.mk` core competencies.  Fair.  
 
----------------------
+This is just a toy, and no doubt there is a better way to [embed ollama in an application](https://github.com/Mozilla-Ocho/llamafile), indeed [llamafile also has a RAG demo](https://github.com/Mozilla-Ocho/llamafile-rag-example).  This demo is demanding in terms of available space and CPU.  Poor quality and relatively slow summaries of a few paragraphs in only ~40 markdown files will cost you a ~4gb download of `phi3:mini` if you're not holding it already.  In a lot of ways, you might as well just grep!  GPU acceleration is even explicitly *disabled* too, in the interest of portability[^3].  But it takes a "obviously service and/or system" type of problem and makes it refreshingly "local-first and CLI friendly" instead.  By handling (conditional) startup, shutdown, and not actually forwarding ports.. **orchestration abstracts the lifecycle stuff and effectively turns a *system* into an application / tool**, and that's the sort of thing `compose.mk` is good at.  To try and make sure that this idea is more than wishful thinking.. we'll also use `compose.mk` [packaging features](#packaging-it) to wrap all the moving parts and the documents <u>into a single self-extracting executable</u>.
 
-This is just a toy, and no doubt there is a better way to [embed ollama in an application](https://github.com/Mozilla-Ocho/llamafile), indeed [llamafile also has a RAG demo](https://github.com/Mozilla-Ocho/llamafile-rag-example).
+Python does all the LLM work here, but the compose file handles the dependencies, including both Ollama and Python requirements.  Orchestration comes in because *we may not need the containerized ollama server at all* if one is available locally already, and in that case we just use it.  **If no local ollama server is running, we start a containerized one and use that instead.**  In that case, we forward no ports, leverage existing models via volumes if they are available on the host or download them if necessary, and finally ensure the containerized daemon is shut down after use.
 
-Python does all the LLM work here, but the compose file handles the dependencies, including both Ollama and Python requirements.  The need for at least minimal orchestration comes in because *we may not need the containerized ollama server at all* if one is available locally already, and in that case we just use it.  Meanwhile **if no local ollama server is available,** we start a containerized one and use that instead.  
-
-For a containerized server:
-
-* We forward no ports, 
-* Leverage existing models via volumes if they are available on the host, or 
-* Download them just in time if necessary, and finally
-* Ensure the containerized daemon is shut down after use
-
-By handling (conditional) startup, shutdown, and not actually forwarding ports.. **orchestration abstracts the lifecycle stuff and effectively turns a *system* into an application / tool**, and that's the sort of thing `compose.mk` is good at.  To try and make sure that this idea is more than wishful thinking.. we'll also use `compose.mk` [packaging features](#packaging-it) to wrap all the moving parts and the documents <u>into a single self-extracting executable</u>.
-
------------------------
-
-Like the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking), this one is weighty. Poor quality and relatively slow summaries of a few paragraphs in only ~40 markdown files will cost you a ~4gb download of `phi3:mini` if you're not holding it already.  In a lot of ways, you might as well just grep!  GPU acceleration is even explicitly *disabled* too, in the interest of portability[^3].  Also like the notebooking demo, this one takes a "*obviously service and/or system*" type of problem and makes it refreshingly "*local-first and CLI friendly*" instead.
-
-Still, the PoC is fast to slap together and it has some potential, especially when other services are added.  This demo started in a way that would make that more obvious, using dockerized ollama, multiple agents, all connected by dockerized ircd and thelounge for a client!  But then it's becoming project-sized rather demo-sized. =P Another idea that's not explored here is tool-use.  Currently `compose.mk` simply drives the LLM components.. but via tool execution, access that goes from the LLM *back* to `compose.mk` and [uses polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) could be interesting.  Hmm, a project for some other time.
+Toy or not, there's some potential here especially when other services are added.  (This demo started in a way that would make that more obvious, using dockerized ollama, multiple agents, all connected by dockerized ircd and a web-based client.  But then it's becoming project-sized rather demo-sized. =) Another idea that's not explored here is tool-use.  Currently `compose.mk` simply drives the LLM components.. but via tool execution, access that goes from the LLM *back* to `compose.mk` and [uses polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) could be interesting.  Hmm, a project for some other time.
 
 Anyway, without further delay, let's get into it.
 
@@ -230,6 +215,6 @@ You can download the agent [here]({{mkdocs.site_relative_url}}/artifacts/docs.ag
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-[^1]: https://ollama.com/
-[^2]: https://python.langchain.com/docs/introduction/
+[^1]: [https://ollama.com](https://ollama.com/)
+[^2]: [https://python.langchain.com/docs/introduction](https://python.langchain.com/docs/introduction/)
 [^3]: See the compose file for hints about enabling GPUs
