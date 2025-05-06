@@ -48,7 +48,7 @@
 # caught, they are passed back to make for handling.  (Only SIGINT is currently supported.)
 #
 # Signals are used sometimes to short-circuit `make` from attempting to parse the full CLI. 
-# This supports special cases like `./compose.mk loadf` & container invocations that use ' -- '
+# This supports special cases like `./compose.mk loadf ...` and other tool-wrappers.
 # See docs & usage of `mk.interrupt` and `mk.yield` for details.
 #
 #/* \
@@ -904,9 +904,12 @@ docker.panic: docker.stop.all docker.network.panic docker.volume.panic docker.sy
 	docker rm -f $$(docker ps -qa | tr '\n' ' ') 2>/dev/null || true
 
 docker.prune docker.system.prune:
-	@# Runs 'docker system prune' for the entire system.
+	@# Debugging only! Runs 'docker system prune' for the entire system.
 	@# 
 	set -x && docker system prune -a -f
+
+docker.prune.old:; docker system prune --all --force --filter "until=168h"
+	@# Debugging only! Runs 'docker system prune --all --force --filter "until=168h"'
 
 docker.ps:; docker ps --format json | ${jq} .
 	@# Like 'docker ps', but always returns JSON.
@@ -3107,19 +3110,20 @@ flux.timer/%:
 	@# USAGE:
 	@#   ./compose.mk flux.timer/<target_to_run>
 	@#
-	case `[ -p ${stdin} ] && echo "yes" || echo no`  in \
-		yes) export script="${stream.stdin} | ${make} ${*}";; \
-		no) export script="${make} ${*}";; \
-	esac \
-	&& label=${*} ${make} io.timer 
-	
-io.timer:
 	${trace_maybe} && start_time=$$(date +%s) \
-	&& eval $${script} \
+	&& ${make} ${*} \
 	&& end_time=$$(date +%s) \
 	&& time_diff_ns=$$((end_time - start_time)) \
 	&& delta=$$(awk -v ns="$$time_diff_ns" 'BEGIN {printf "%.9f", ns }') \
 	&& $(call log.flux, ${@} ${sep} ${dim}$${label:-done in} ${yellow}$${delta}s)
+	
+# io.timer:
+# 	${trace_maybe} && start_time=$$(date +%s) \
+# 	&& eval $${script} \
+# 	&& end_time=$$(date +%s) \
+# 	&& time_diff_ns=$$((end_time - start_time)) \
+# 	&& delta=$$(awk -v ns="$$time_diff_ns" 'BEGIN {printf "%.9f", ns }') \
+# 	&& $(call log.flux, ${@} ${sep} ${dim}$${label:-done in} ${yellow}$${delta}s)
 
 flux.timeout/%:
 	@# Runs the given target for the given number of seconds, then stops it with TERM.
@@ -3469,6 +3473,9 @@ stream.to.stderr stream.preview:; ${stream.to.stderr}
 	@# Unlike 'stream.peek', this does not pass on the input stream.
 
 stream.yaml.pygmentize=lexer=yaml ${make} stream.pygmentize
+stream.yaml.to.json=${yq} -o json
+stream.yaml.to.json:; ${stream.yaml.to.json}
+	@# Converts yaml to JSON
 stream.makefile.pygmentize=lexer=makefile ${make} stream.pygmentize
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
