@@ -1188,15 +1188,14 @@ io.envp/% io.env.pretty/% .tux.widget.env/%:
 	@#
 	${make} io.env/${*} | ${make} stream.ini.pygmentize
 
-io.figlet/%:
+io.figlet/%:; label="${*}"; ${io.figlet}
 	@# Treats the argument as a label, and renders it with `figlet`. 
-	@# (This requires the embedded tui is built) 
-	label="${*}" ${make} io.figlet
-
-io.figlet: 
+	@# NB: This requires the embedded tui is built.  
+	
+io.figlet:; ${io.figlet} 
 	@# Pulls `label` from the environment and renders it with `figlet`. 
-	@# (This requires the embedded tui is built) 
-	echo "figlet -f$${font:-3d} $${label}" | ${make} tux.shell.pipe >/dev/stderr
+	@# Also available as a macro. NB: This requires the embedded tui is built.
+io.figlet=echo "figlet -f$${font:-3d} $${label}" | ${make} tux.shell.pipe >/dev/stderr
 
 # docker run $(if [ -t 0 ]; then echo "-it"; else echo "-i"; fi) my-image:latest
 io.file.select=header="Choose a file: (dir=$${dir:-.})"; \
@@ -1251,10 +1250,10 @@ io.gum.spin:
 		--title "$${label:-?}" -- $${cmd:-sleep 2};
 
 # Labels automatically go through 'gum format' before 'gum style', so templates are supported.
-io.gum.style io.draw.banner:
+io.gum.style io.draw.banner:; ${io.draw.banner}
 	@# Helper for formatting text and banners using `gum style` and `gum format`.
 	@# Expects label text under the `label variable, plus supporting optional `width`.
-	@# See also `io.print.banner` for something simpler.
+	@# Also available as a macro.  See isntead `io.print.banner` for something simpler.
 	@#
 	@# REFS:
 	@# [1] https://github.com/charmbracelet/gum for more details.
@@ -1262,15 +1261,17 @@ io.gum.style io.draw.banner:
 	@# EXAMPLE:
 	@#   label="..." ./compose.mk io.draw.banner 
 	@#   width=30 label='...' ./compose.mk io.draw.banner 
-	@#
+	
+define io.draw.banner
 	export label="$${label:-`date '+%T'`}" \
 	&& ${io.gum.run} style ${io.gum.style.default} ${io.gum.style.div} $${label} \
 	; case $$? in \
 		0) true;; \
-		*) ${make} io.print.banner;; \
+		*) (${io.print.banner});; \
 	esac
+endef
 
-io.gum.style/% io.draw.banner/%:; label="${*}" ${make} io.draw.banner
+io.gum.style/% io.draw.banner/%:; label="${*}"; ${io.draw.banner}
 	@# Prints a divider with the given label. 
 	@# Invocation must be a legal target (Do not use spaces, etc!)
 	@# See also `io.draw.banner` and `io.print.banner` for something simpler.
@@ -1284,14 +1285,12 @@ io.help:; ${make} mk.namespace.filter/io.
 	@# Lists only the targets available under the 'io' namespace.
 
 io.gum.div=label=${@} ${make} io.gum.div
-io.gum.div:
-	@# Like `io.print.banner`, but defaults to using `gum` to render it.
+io.gum.div:; label=$${label:-${io.timestamp}} ${io.draw.banner}
+	@# Draw a horizontal divider with gum.
 	@# If `label` is not provided, this defaults to using a timestamp.
 	@#
 	@# USAGE:
 	@#  ./compose.mk io.gum.div label=".."
-	@#
-	label=$${label:-${io.timestamp}} ${make} io.draw.banner
 
 io.preview.img/%:; cat ${*} | ${stream.img} 
 	@# Console-friendly image preview for the given file. See also: `stream.img`
@@ -1328,15 +1327,16 @@ io.preview.file/%:
 	&& style=monokai ${make} io.preview.pygmentize/${*} \
 	| ${stream.nl.enum} | ${stream.indent.to.stderr}
 
-io.print.banner:
+io.print.banner:; ${io.print.banner}
 	@# Prints a divider on stdout, defaulting to the full 
 	@# term-width, with optional label. If label is not set, 
 	@# a timestamp will be used.  Also available as a macro.
 	@#
 	@# USAGE:
 	@#  label=".." filler=".." width="..." ./compose.mk io.print.banner 
-	@#
-	@export width=$${width:-${io.terminal.cols}} \
+# io.print.banner=label="${@}" ${make} io.print.banner
+define io.print.banner
+	export width=$${width:-${io.terminal.cols}} \
 	&& label=$${label:-${io.timestamp}} \
 	&& label=$${label/./-} \
 	&& if [ -z "$${label}" ]; then \
@@ -1350,9 +1350,8 @@ io.print.banner:
 		&& printf "${no_ansi_dim}${bold}${green}$${label}${no_ansi_dim}" > /dev/stderr \
 	    && printf "%*s${no_ansi}\n\n" "$${side_length}" | sed "s/ /$${filler}/g" > /dev/stderr \
 	; fi
-io.print.banner=label="${@}" ${make} io.print.banner
-
-io.print.banner/%:; label="${*}" ${make} io.print.banner
+endef
+io.print.banner/%:; label="${*}"; ${io.print.banner}
 	@# Like `io.print.banner` but accepts a label directly.
 
 io.quiet.stderr/%:; cmd="${make} ${*}" make io.quiet.stderr.sh
@@ -2979,7 +2978,7 @@ flux.stage.enter/% flux.stage/%:
 	@# 
 	stagef="${flux.stage.file}" \
 	&& header="flux.stage ${sep} ${bold}${underline}${*}${no_ansi} ${sep}" \
-	&& (label="${*}" ${make} $${banner_target:-io.draw.banner}) \
+	&& (label="${*}" CMK_INTERNAL=1 ${make} $${banner_target:-io.draw.banner}) \
 	&& true $(eval export FLUX_STAGE=${*}) $(eval export FLUX_STAGES+=${*}) \
 	&& $(call log.flux, $${header}${dim} stack file @ ${dim_ital}$${stagef}) \
 	&& ${jb} stage.entered="`date`" | ${make} flux.stage.push/${*}
