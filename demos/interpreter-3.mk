@@ -5,15 +5,14 @@
 #
 # Main docs: https://robot-wranglers.github.io/compose.mk/signals/
 #
-
+# USAGE: 
+#   ./demos/interpreter-3.mk
+#
 include compose.mk
-
-.DEFAULT_GOAL:=__main__ 
 python.img=python:3.11-slim-bookworm
 python.interpreter=python
 
 define python_script
-# %% python
 from optparse import OptionParser
 def main():
     parser = OptionParser(usage="usage: %prog [options] filename",version="%prog 1.0")
