@@ -3,16 +3,53 @@
 ## About Style
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Style should be practical rather than prescriptive, but here's a few things that seem worth writing down.  This page will probably grow over time.
+Style should be practical rather than prescriptive, but here's a few things that seem worth writing down.  This page will probably grow over time, but note that it's mostly intended to apply to *Makefile*, and sometimes specifically `compose.mk` and/or non-traditional Makefiles.  Currently even `compose.mk` doesn't *completely* follow it's own style guide everywhere, but it's gradually getting normalized.
+
+Makefile is already a peculiar language because it handles 2 syntaxes simultaneously: one for shell, and one for Makefile-proper.  If you're using `compose.mk` for [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) or [matrioshkas]({{mkdocs.site_relative_url}}/demos/matrioshka), that can add even more syntax. This can make readability challenging, but strong conventions can help a lot.
+
+Much inspiration is taken from python.  A few examples: 
+
+* The default target is `__main__`
+* Usage of prerequisites as [parametric pseudo-functions](#arguments-parameters-pipes) resembles decorators
+* There's [some emulation]({{mkdocs.site_relative_url}}/signals/#at-exit-handlers)  of the `atexit` module
+* Usage of `self` conventionally indicates a non-public interface, etc
+
+CMK-lang is an optional superset of Makefile, and documented separately [here]({{mkdocs.site_relative_url}}/compiler), but one of the way it improves readability is to start removing the need for `${..}`, normalize the format for `make` function-calls, etc, and most of this stuff still applies.
+
+### General Naming Conventions
+<hr style="width:100%;border-bottom:3px solid black;">
+
+1. Dot-path style namespacing are a honking great idea (e.g. `module.target`).
+1. Snake-case style target names are recommended when they will help with tab-completion (e.g. `module.target_name`).
+1. Kebab-case for targets (e.g. `my-target-name`) is fairly common in Makefiles out in the wild, so it is **explicitly reserved for project code**, never used for targets in `compose.mk`, and is not recommended for library-style extensions of `compose.mk`.
+1. Dot-paths should be used instead of snake-case if targets resemble keywords. i.e. if `_` is just too onerous and `.` is faster.  For example {{macros.api_link('flux.if.then',mkdocs,arg='targets')}}.
+
+### Targets As Functions
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The last example mentioning `flux.if.then` raises the question of how to handle parametric stuff, which gets a bit tricky.  Basically `compose.mk` needs to build a reasonable way to simulate "functions" and "arguments" from mere targets.  Besides adding function-calls, this effectively makes prerequisites more powerful too, and somewhat more similar to function-decorators.  
+
+Targets-as-functions are pretty normal for lots of Makefile hackery, although many people would consider it an abuse!  Others might argue that strong notational conventions can sometimes elevate a hack into an art form. =P For a more detailed look at this covering more advanced topics, see also the section on [performance and currying](#performance-and-currying), and a look at [homoiconicity in compose.mk]({{mkdocs.site_relative_url}}/language/#homoiconic).
+
+Extensions for `compose.mk` (or just random Makefiles) might benefit from this also, so here's a suggested approach.
+
+#### Arguments, Parameters, Pipes
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+1. Parametric targets should prefer a form like `module.target_name/<arg>`, i.e. use `/` to separate arguments.  This works fine for a single file-argument *(just parse with `echo ${*} | cut -d/ -f 1-`)*.  Bonus: this is unlikely to collide with your filesystem or require annoying usage of `.PHONY` everywhere.
+1. In case of multiple arguments, if the arity is fixed and arguments won't include `/`, use a form like `module.target_name/<arg1>/<arg2>`. Recipes can parse arguments with `echo ${*} | cut -d/ -f <arg_num>`
+1. In case of an unknown number of arguments or accepting more than one filepath, split on commas.
+
+In case your targets-as-functions have argument(s) that need to include spaces, newlines, etc.. you have no choice but to use env-vars or pipes.  For clarity, targets that expect pipes should usually be considered members of the [*stream* module]({mkdocs.site_relative_url}}/api#api-stream) (e.g. `stream.target_name`), even if the implementation is part of extensions.  Runtime checks for required env-vars are good practice, and there is some [support for this in the standard library]({{mkdocs.site_relative_url}}/standard-lib#assertion-support).
 
 ### Internal Style 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-**In terms of interface and in terms of internal *style***, `compose.mk` tends to avoid macros and other fancy Makefile'isms as much as possible because compared with targets, they are more magical, less reusable, and less composable.  Still, there are many places where compromising on this makes sense. 
+**In terms of interface and in terms of internal *style***, `compose.mk` tends to avoid macros, function calls, and and other fancy Makefile'isms as much as possible because compared with targets, they are often more magical, less readable, less reusable, and less composable.  Still, there are many places where compromising on this makes sense. 
 
-1. For [logging](#logging-facilities), [autogenerated target scaffolding]({{mkdocs.site_relative_url}}/bridge), etc, we can't really avoid `$(call fxn, args)`.[^1]  
+1. For [logging](#logging-facilities), internal implementation of [autogenerated target scaffolding]({{mkdocs.site_relative_url}}/bridge), etc, we can't really avoid `$(call fxn, args)`.[^1]  
 1. Sometimes macros actually **improve** readability (for example writing *`${stream.stdin}`* instead of *`cat /dev/stdin`*). We adopt those approaches for clarity in places where they seem self-documenting.
-1. Macro expansion is also used sometimes as an optimization to avoid extra processes.  Still, macros are basically safe to ignore, because in most cases there's a target-equivalent available.
+1. Macro expansion is also used sometimes as an optimization to avoid extra processes or recursive calls.  Still, macros are basically safe to ignore because in most cases there's a target-equivalent available. See the next section and the section on [performance and currying](#performance-and-currying) for more detailed discussion.
 
 ### Style for Extensions 
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -22,23 +59,127 @@ Style should be practical rather than prescriptive, but here's a few things that
 * Explicit container dispatch *(i.e. [typical usage]({{mkdocs.site_relative_url}}/container-dispatch) `<container>.dispatch/<target>`)*
 * Implicit container dispatch *(i.e. [namespace-style dispatch]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch) `<ns>/<container>/<target>`)*
 * Explicit polyglot invocation *(i.e. [less magic]({{mkdocs.site_relative_url}}/demos/polyglots/#containerized-interpreters) and manual control)* 
-* Implicit polyglot invocation *(i.e. [more magic]({{mkdocs.site_relative_url}}/demos/polyglots/#foreign-code-as-first-class), using `polyglot.bind`)*
+* Implicit polyglot invocation *(i.e. [more magic]({{mkdocs.site_relative_url}}/demos/polyglots/#foreign-code-as-first-class), using `polyglot.bind` or [CMK-lang]({{mkdocs.site_relative_url}}/compiler))*
 
 For new development though and depending on how many tool containers you use, implicit style might be more idiomatic.  *(See especially the [platform lifecycle demo]({{mkdocs.site_relative_url}}/demos/platform/) for clean and practical example usage with a concrete problem.)*
 
-Revisiting the earlier idea that "sometimes macros improve readability" and knowing that many targets have equivalent macros, there's a similar choice about implicit vs explicit style:
+Revisiting the earlier idea that "sometimes macros improve readability" and knowing that many targets have equivalent macros, there's often a similar choice about implicit vs explicit style:
 
 ```Makefile
 include compose.mk 
 
 explicit:
-	${make} <some_target>/<some_arg>
+	${make} <target>/<argument>
 
 implicit:
-	${some_target}/<some_arg>
+	${target}/<argument>
 ```
 
-When a target is used often enough, the explicit style becomes tedious to read and write.  So *whenever it won't confuse someone else* an implicit style might be preferred, especially for larger programs.[^2]
+When a target is used often enough, the explicit style becomes tedious to read and write.  So *whenever it won't confuse someone else* an implicit style might be preferred, especially for larger programs.[^2]  See the next section for more detailed discussion.
+
+### Performance and Currying
+<hr style="width:100%;border-bottom:3px solid black;">
+
+This is an advanced topic and safe for new users to ignore!  In terms of performance, **assignments and trivial expansions are very cheap**[^6].  This suggests that you're better off **not** using things like `$(shell ..)` in most expansions.  Instead of doing *actual work*, the best way to use expansions is often about code-reuse, i.e. using snippets of shell across multiple targets, then letting targets call targets to do work.  Doing this effectively is subtle and requires some understanding of [flavors of Makefile variables](https://www.gnu.org/software/make/manual/html_node/Flavors.html).  
+
+Here's a quick example of a common pattern in `compose.mk` that uses a local tool if present, falling back to docker if necessary.
+
+```Makefile
+tool.docker=docker run ...
+tool:=$(shell which tool 2>/dev/null || echo "${tool.docker}")
+target1:
+	${tool} ...
+target2:
+	${tool} ...
+```
+
+However, many targets in `compose.mk` also have macro-equivalents, which is more related to syntax than reusing computations or code. This is discussed [elsewhere in this page](#style-for-extensions), and is related to effectively using targets as "pseudo-functions", which is described in the section on [arguments, pipes, and parameters](#arguments-parameters-pipes).  For related reasons, it's often a good idea to differentiate "nullary" expansions from ones that require parameters.  Consider the following example:
+
+```Makefile
+# macro that accepts implicit arguments
+foo=echo doing something
+
+# target equivalent 
+foo/%:
+	${foo}/${*}
+
+# implicitly reusing foo, via macro 
+implicit-style:
+	${foo}/bar
+
+# explicitly reusing foo, via target
+explicit-style:
+	${make} foo/bar
+```
+
+Above an implicit-style target saves a process and cleans syntax, but it only works because `foo` accepts zero arguments, or, an optional extra argument at the end.. essentially a coincidence based on the nature of `echo`.  
+
+Here's the *naive* way to use the argument somewhere in the middle of the expansion.. this is instructive and a useful trick, but we can do better.
+
+```Makefile
+# a private macro that requires explicit arguments
+self.hello=printf "hello ${1}\n" 
+
+# primary target, available for API-style usage or from CLI
+# this MUST use private macro to avoid infinite-recursion.
+hello/%:
+	$(call self.hello, ${*})
+
+# public macro, cleaning syntax for library-style reuse of target.
+hello=${make} printf/
+
+# implicitly reusing `hello/%` target, via macro. 
+# this is basically using an internal API / library style call
+implicit-style:
+	${hello}/world
+
+# explicitly reusing `hello/%` target, via recursion.
+# this is basically using the "external" API via CLI.
+explicit-style:
+	${make} hello/world
+```
+
+Above, `implicit-style` is only syntactic sugar that cleans up a bit but can't actually save a process.  Ultimately it is the same as `explicit-style`.  That's a shame since **removing** a recursive-make is potentially a significant performance optimization if your project is doing expensive stuff during bootstrap (like say, [generating scaffolded targets for multiple compose files]({{mkdocs.site_relative_url}}/bridge)).  In terms of argument-passing though the code above is fairly readable with consistent notation: both implicit/explicit style reuse are avoiding `$(call ..)` and the intent is fairly clear.  
+
+Unfortunately though the `hello/%` implementation is a bit ugly, plus we needed *both* a public version of the macro and a private helper version.  One way to deal with this is basically *using currying* to ensure that arguments can appear at the end even if they are used in the middle.  Doing this with bash does make the macro itself *more* ugly, but cleans up both syntax and efficiency of implementations elsewhere:
+
+```Makefile
+# public macro that accepts optional/implicit arguments.
+# accepts argument at the end, currying it towards middle
+hello=bash -x -c 'printf "$${1\#/}\n"' -- 
+
+# parametric usage via CLI-API can now 
+# use public macro for it's internal implementation
+hello/%:
+	${hello}/${*}
+
+# implicit-style achieves code reuse using  
+# a library-style call, but it still uses public macro.
+implicit-style:
+	${hello}/alice
+
+# explicit-style reuses code via CLI API and recursion.
+# looks *almost* like implicit-style, refactoring between 
+# implicit/explicit style is easy.
+explicit-style:
+	${make} hello/bob
+```
+
+Two main things are happening now in the `hello` macro at the top.  The first is an inlined script that accepts and uses an argument (hence the double-escaped `$$1` because it's a bash-var and not a make-var).  The second thing is using string-interpolation to strip the leading `/`, just to remain perfectly faithful to the original hello-world implementation.  
+
+Implicit-style is not only more *pretty* than explicit-style now, it's also significantly more efficient, and we eliminated not just *one* usage of `$(call)` but all of them in the future.  When in doubt about whether an internal API exists, you can default to using the explicit approach with the CLI, and easily refactor later for any necessary performance optimizations.
+
+To really emphasize the notational improvements, let's set aside our separate targets for `implicit-style` and `explicit-style`, add prerequisites, and put it all together:
+
+```Makefile
+bonus: hello/alice hello/bob 
+	${hello}/charlie
+	${make} hello/world
+```
+
+So yeah, this hack is maybe not that appealing for something so simple.  But by using define/endef, of course the `hello` macro might be a large multiline, might be doing something much more complicated, and might even [be using a language besides bash]({{mkdocs.site_relative_url}}/demos/polyglots)!
+
+So to put it another way, eliminating `$(call)` enhances readability, and while replacing it with `bash` actually decreases efficiency, a clean invocation of `bash` is still better than recursive calls to `make`.  A good compromise overall.. balancing readability, code reuse, consistent notation, and ensuring public APIs remain accessible but private APIs are usable, all at the same time.  
 
 ### From Style to Dialect
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -53,3 +194,4 @@ Somewhere at the limit of style, syntax, and sugar you run into ideas like diale
 [^3]: Wiki on [Dialects, flavors and implementations](https://en.wikipedia.org/wiki/Programming_language#Dialects,_flavors_and_implementations)
 [^4]: [https://en.wikipedia.org/wiki/Extensible_programming](https://en.wikipedia.org/wiki/Extensible_programming)
 [^5]: [https://en.wikipedia.org/wiki/Language-oriented_programming](https://en.wikipedia.org/wiki/Language-oriented_programming)
+[^6]: [https://www.oreilly.com/library/view/managing-projects-with/0596006101/ch10.html](https://www.oreilly.com/library/view/managing-projects-with/0596006101/ch10.html)
