@@ -87,7 +87,7 @@ esac \
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 SHELL:=bash
 MAKEFLAGS:=-s -S --warn-undefined-variables
-MAKEFLAGS+=--no-builtin-rules
+MAKEFLAGS+=--no-builtin-rules --no-print-directory
 .SUFFIXES:
 .INTERMEDIATE: .tmp.* .flux.*
 export TERM?=xterm-256color
@@ -235,8 +235,9 @@ log.trace=[ "${TRACE}" == "0" ] && true || (printf "${log.prefix.makelevel}`echo
 log.trace.fmt=( ${log.trace} && [ "${TRACE}" == "0" ] && true || (printf "${2}" | fmt -w 70 | ${stream.indent.to.stderr} ) )
 log.trace.part1=[ "${TRACE}" == "0" ] && true || $(call log.part1, ${1})
 log.trace.part2=[ "${TRACE}" == "0" ] && true || $(call log.part2, ${1})
-log.target.rerouting=$(call log, ${dim}${_GLYPH_IO}${dim} $(shell echo ${@}|sed 's/\/.*/\/../') ${sep}${dim} Invoked from top; rerouting to tool-container)
+log.target.rerouting=$(call log, ${dim}${_GLYPH_IO}${dim} $(shell echo ${@}|sed 's/\/.*//') ${sep}${dim} Invoked from top; rerouting to tool-container)
 log.trace.target.rerouting=( [ "${TRACE}" == "0" ] && true || $(call log.target.rerouting) )
+log.file.contents=([ "$${quiet:-0}" == "1" ] || printf "`printf "${1}"|${stream.lstrip}` ${dim}`cat ${2}`${no_ansi}\n" > /dev/stderr) 
 log.file.preview=$(call log.target, ${cyan_flow_left}) ; $(call io.preview.file, ${1})
 
 log.docker=$(call log, ${GLYPH.DOCKER} ${1})
@@ -537,7 +538,15 @@ compose.validate.quiet/%:; ${make} compose.validate/${*} >/dev/null 2>/dev/null
 compose.require:
 	@# Asserts that docker compose is available.
 	docker info --format json | ${jq} -e '.ClientInfo.Plugins[]|select(.Name=="compose")'
+compose.size/%:
+	@# Returns image sizes for all services in the given compose file,
+	@#  i.e. JSON like `{ "repo:tag" : "human friendly size" }`
+	@#
+	filter="`${make} compose.images/${*} | ${stream.as.grepE}`" \
+	&& ${make} docker.size.summary | grep -E "$${filter}" | ${jq.column.zipper}
 
+compose.images/%:; ${docker.compose} -f ${*} config --images
+	@# Returns all images used with the given compose file.
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## END: compose.* targets
 ## BEGIN: docker.* targets
@@ -556,6 +565,11 @@ compose.require:
 ##  * `[1]:` [Main API](https://robot-wranglers.github.io/compose.mk/api#api-docker)
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+jq.column.zipper=${jq} -R 'split(" ")' \
+	| ${jq} '{(.[0]) : .[1]}' \
+	| ${jq} -s 'reduce .[] as $$item ({}; . + $$item)' \
+	| ${jq} 'to_entries | sort_by(.value) | from_entries' 
+stream.as.grepE = ${stream.nl.to.space} | sed 's/ /|/g'
 
 docker.clean:
 	@# This refers to "local" images.  Cleans all images from 'compose.mk' repository,
@@ -570,6 +584,8 @@ docker.clean:
 		|| (${make} docker.images \
 			| ${stream.peek} | xargs -I% sh -c "docker rmi -f $${CMK_EXTRA_REPO}:% 2>/dev/null || true")
 
+docker.compose:=$(shell docker compose >/dev/null 2>/dev/null && echo docker compose || echo echo DOCKER-COMPOSE-MISSING;) 
+
 docker.containers.all:=docker ps --format json
 
 docker.image.sizes:
@@ -578,10 +594,7 @@ docker.image.sizes:
 	@# See `docker.size.summary` for similar column-oriented output
 	@#
 	${make} docker.size.summary | ${jq.column.zipper}
-jq.column.zipper=${jq} -R 'split(" ")' \
-	| ${jq} '{(.[0]) : .[1]}' \
-	| ${jq} -s 'reduce .[] as $$item ({}; . + $$item)' \
-	| ${jq} 'to_entries | sort_by(.value) | from_entries' 
+
 docker.size.summary:
 	@# Shows disk-size summaries for all images. 
 	@# Returns nl-delimited output like `repo:tag human_friendly_size`
@@ -591,18 +604,17 @@ docker.size.summary:
 		| grep -v '<none>:<none>' |grep -v '^hello-world:' \
 		| awk 'NF >= 2 {print $$1, substr($$0, index($$0, $$2))}'
 
-stream.as.grepE = ${stream.nl.to.space} | sed 's/ /|/g'
-compose.size/%:
-	@# Returns image sizes for all services in the given compose file,
-	@#  i.e. JSON like `{ "repo:tag" : "human friendly size" }`
+docker.host_ip:
+	@# Attempts to return the address for the docker host.  
+	@# This is the IP that *containers* can use to contact the host machine from, 
+	@# if the network bridge is setup as usual.  This can be useful for things 
+	@# like testing kind/k3d cluster services from the outside.
 	@#
-	filter="`${make} compose.images/${*} | ${stream.as.grepE}`" \
-	&& ${make} docker.size.summary | grep -E "$${filter}" | ${jq.column.zipper}
-
-compose.images/%:; ${docker.compose} -f ${*} config --images
-	@# Returns all images used with the given compose file.
-	
-# Helper for defining targets, this curries the 
+	@# This must run on the host and the details can be *passed* to containers; 
+	@# it won't run inside containers. This  probably doesn't work outside of linux.
+	@#
+	ip addr show docker0 | grep -Po 'inet \K[\d.]+'
+	# Helper for defining targets, this curries the 
 # given parameter as a command to the given docker image 
 #
 # USAGE: ( concrete )
@@ -612,7 +624,6 @@ compose.images/%:; ${docker.compose} -f ${*} config --images
 #   my-target/%:; ${docker.image.curry.command}/<img>,<entrypoint>
 docker.curry.command=cmd="${*}" ${make} flux.apply
 docker.image.curry.command=cmd="${*}" ${make} docker.image.run
-docker.compose:=$(shell docker compose >/dev/null 2>/dev/null && echo docker compose || echo echo DOCKER-COMPOSE-MISSING;) 
 docker.images:; $(call docker.images)
 	@# Returns only affiliated images from 'compose.mk' repository, 
 	@# i.e. containers that are related to the embedded TUI, and/or 
@@ -709,6 +720,7 @@ docker.def.is.cached/%:
 			esac); ;;  \
 		*) $(call log.trace.part2, missing) && echo no; ;; \
 	esac
+
 docker.def.run/%:
 	@# Builds, then runs the docker-container represented by the given define-block
 	@#
@@ -751,7 +763,7 @@ docker.image.dispatch/%:
 	tty=1 img=`printf "${*}" | cut -d/ -f1` ${make} docker.dispatch/`printf "${*}" | cut -d/ -f2-`
 
 # NB: exit status does not work without grep..
-docker.images.filter=docker images --filter reference=${1} --format "{{.Repository}}:{{.Tag}}"|grep ${1}
+docker.images.filter=docker images --filter reference=${1} --format "{{.Repository}}:{{.Tag}}" | grep ${1}
 
 docker.image.run/%:
 	@# Runs the named image, using the (optional) named entrypoint.
@@ -983,8 +995,9 @@ docker.run.sh:
 	@# See 'docker.run.sh' for an example of how this is used.
 	$(call log.docker, docker.proxy.env${no_ansi} ${sep} ${dim}${ital}$${env:-}) \
 	&& printf ${*} | sed 's/,/\n/g' \
+	| xargs -I% bash -c "[[ -v % ]] && true || printf %" \
 	| xargs -I% printf " -e %=\"\`echo \$${%}\`\""; printf '\n'
-  
+
 
 docker.start:; ${make} docker.start/$${img}
 	@# Like 'docker.run', but uses the default entrypoint.
@@ -1059,7 +1072,7 @@ docker.stop.all:
 	&& [ -z "$${ids}" ] && true || (set -x && docker stop -t $${timeout:-1} $${ids})
 
 
-docker.volume.panic:; docker volume prune -f
+docker.volume.panic:; set -x && docker volume prune -f
 	@# Runs 'docker volume prune' for the entire system.
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -1080,16 +1093,6 @@ docker.volume.panic:; docker volume prune -f
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-log.file.contents=([ "$${quiet:-0}" == "1" ] || printf "`printf "${1}"|${stream.lstrip}` ${dim}`cat ${2}`${no_ansi}\n" > /dev/stderr) 
-log.maybe=([ "$${quiet:-0}" == "1" ] || $(call log, ${1}))
-CMK_EXEC=`dirname ${CMK_SRC}`/`basename ${CMK_SRC}`
-
-# This is a hack because charmcli/gum is distroless, but the spinner needs to use "sleep", etc
-# io.gum.alt.dumb=docker run -it -e TERM=dumb --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nRUN apk add -q --update --no-cache bash\nCOPY --from=charmcli/gum:${IMG_GUM} /usr/local/bin/gum /usr/local/bin/gum")`
-# Helpers for asserting environment variables are present and non-empty 
-mk.assert.env_var=[[ -z "$${$(strip ${1})}" ]] && { $(call log.io, ${red}Error:${no_ansi_dim} required variable ${no_ansi}${underline}$(strip ${1})${no_ansi_dim} is unset or empty!); exit 39; } || true
-mk.assert.env=$(foreach var_name, ${1}, $(call mk.assert.env_var, ${var_name});)
-
 # Helper for working with temp files.  Returns filename,
 # and uses 'trap' to handle at-exit file-deletion automatically.
 # Note that this has to be macro for reasons related to ONESHELL.
@@ -1105,6 +1108,18 @@ io.mktemp=export tmpf=$$(TMPDIR=`pwd` mktemp ./.tmp.XXXXXXXXX$${suffix:-}) && tr
 # Similar to io.mktemp, but returns a directory.
 io.mktempd=export tmpd=$$(TMPDIR=`pwd` mktemp -d ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
 endif
+
+
+log.maybe=([ "$${quiet:-0}" == "1" ] || $(call log, ${1}))
+CMK_EXEC=`dirname ${CMK_SRC}`/`basename ${CMK_SRC}`
+
+# This is a hack because charmcli/gum is distroless, but the spinner needs to use "sleep", etc
+# io.gum.alt.dumb=docker run -it -e TERM=dumb --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nRUN apk add -q --update --no-cache bash\nCOPY --from=charmcli/gum:${IMG_GUM} /usr/local/bin/gum /usr/local/bin/gum")`
+# Helpers for asserting environment variables are present and non-empty 
+mk.assert.env_var=[[ -z "$${$(strip ${1})}" ]] && { $(call log.io, ${red}Error:${no_ansi_dim} required variable ${no_ansi}${underline}$(strip ${1})${no_ansi_dim} is unset or empty!); exit 39; } || true
+mk.assert.env=$(foreach var_name, ${1}, $(call mk.assert.env_var, ${var_name});)
+
+
 glow.docker:=docker run -q -i charmcli/glow:${GLOW_VERSION} -s ${GLOW_STYLE}
 
 # WARNING: newer glow is broken with pipes & ptys.. 
@@ -1164,9 +1179,10 @@ io.env/% io.env.filter.prefix/%:
 	@#
 	@# USAGE:
 	@#   ./compose.mk io.env/<prefix1>,<prefix2>
-	echo ${*} | sed 's/,/\n/g' \
-	| xargs -I% sh -c "env | ${stream.grep.safe} | grep \"^%.*=\"||true"
-io.env=CMK_INTERNAL=1 ${make} io.env
+	echo ${*} | ${_io.env}
+_io.env=sed 's/,/\n/g' | xargs -I% sh -c "env | ${stream.grep.safe} | grep \"^%.*=\" || true"
+io.env=bash -c 'echo $${1\#/} | ${_io.env}' -- 
+io.env.filter.prefix=${io.env}
 
 io.envp io.env.pretty .tux.widget.env:
 	@# Pretty version of io.env, this includes some syntax highlighting.
@@ -2759,6 +2775,31 @@ flux.or/%:
 flux.column/%:; delim=':' ${make} flux.pipeline/${*}
 	@# Exactly flux.pipeline, but splits targets on colons.
 
+flux.parallel/%:
+	@# Runs the named targets in parallel, using make's builtin support for concurrency.
+	@#
+	@# Similar to `flux.join`, but using `make --jobs`, this is fundamentally much more
+	@# tricky to handle than `flux.join`, but also in some ways will allows for 
+	@# finer-grained control.  It probably doesn't work the way you think, because
+	@# concurrency may affect *more* than the top level targets that are named as 
+	@# arguments.  See [1] for more documentation about that.
+	@#
+	@# See the `flux.join` docs for some hints about running concurrently but safely 
+	@# producing structured output.  Major caveat: input streams [2] probably cannot be 
+	@# easily or safely used with `flux.parallel`. 
+	@# 
+	@#
+	@# REFS: 
+	@#  [1] https://www.gnu.org/software/make/manual/html_node/Parallel-Disable.html
+	@#  [2] https://www.gnu.org/software/make/manual/html_node/Parallel-Input.html
+	@#
+	targets="`echo ${*} | ${stream.comma.to.space}`" \
+	&& $(call log.flux, flux.parallel ${sep} ${cyan} $${targets}) \
+	&& ${trace_maybe} \
+	&& ${make} --jobs $${jobs:-2} $${targets} \
+		2> >(grep -v "resetting jobserver mode" \
+			|grep -v "warning: jobserver unavailable")
+
 flux.pipeline/%:
 	@# Runs the given comma-delimited targets in a bash-style command pipeline.
 	@# Besides working with targets and allowing for DAG composition, this has 
@@ -2803,6 +2844,9 @@ flux.pipeline/: flux.noop
 	@# No-op.  This just bottoms out the recursion on `flux.pipeline`.
 
 flux.mux flux.join:
+	@# Similar to `flux.parallel`, but actually uses processes directly.  
+	@# See instead that implementation for finer-grained control.
+	@#
 	@# Runs the given comma-delimited targets in parallel, then waits for all of them to finish.
 	@# For stdout and stderr, this is a many-to-one mashup of whatever writes first, and nothing
 	@# about output ordering is guaranteed.  This works by creating a small script, displaying it,
@@ -2833,8 +2877,8 @@ flux.mux flux.join:
 	&& cat $${tmpf} | ${stream.as.log} \
 	&& bash ${dash_x_maybe} $${tmpf}
 
-flux.mux/%:; targets="${*}" ${make} flux.mux
-	@# Alias for flux.mux, but accepts arguments directly
+flux.mux/% flux.join%:; targets="${*}" ${make} flux.mux
+	@# Like `flux.join` but accepts arguments directly.
 
 flux.negate/%:; ! ${make} ${*}
 	@# Negates the status for the given target.
@@ -4543,9 +4587,13 @@ $(compose_service_name).clean: ${compose_file_stem}.clean/$(compose_service_name
 	@#
 	@# Shorthand for ${compose_file_stem}.clean/$(compose_service_name)
 
+# NB: optimization: NOT using chaining
 $(compose_service_name).dispatch/%:
 	@# Shorthand for ${compose_file_stem}.dispatch/$(compose_service_name)/<target_name>
-	${make} ${compose_file_stem}.dispatch/$(compose_service_name)/$${*}
+	entrypoint=make \
+	cmd="${MAKE_FLAGS} -f ${MAKEFILE} $${*}" \
+	${make} $${compose_file_stem}/$(compose_service_name)
+
 $(compose_service_name).dispatch.quiet/%:; quiet=1 ${make} $(compose_service_name).dispatch/$${*}
 $(compose_service_name).exec.detach/%:
 	$$(call log.docker, ${dim_green}${target_namespace} ${sep} ${no_ansi}${green}$(compose_service_name) ${sep} ${dim_cyan}exec.detach ${sep} `printf $${*}|cut -d/ -f1-`)
@@ -4610,9 +4658,9 @@ ${target_namespace}/$(compose_service_name)/%:
 endef
 
 define compose.get_shell
-	${docker.compose} -f $(1) run --entrypoint bash $(2) -c "which bash" 2>/dev/null \
-	|| (${docker.compose} -f $(1) run --entrypoint sh $(2) -c "which sh" 2>/dev/null \
-		|| echo )
+	${docker.compose} -f $(1) run --entrypoint bash $(2) -c "which bash"  \
+	|| (${docker.compose} -f $(1) run --entrypoint sh $(2) -c "which sh" \
+		|| $(call log.docker, ${red}No shell found for $(1) / $(2)); exit 35 )
 endef
 
 define compose.shell
@@ -4846,7 +4894,7 @@ ${compose_file_stem}/%:
 		then echo ""; else echo "--user $${user:-}"; fi))
 	@$$(eval export extra_env=$(shell \
 		if [ -z "$${env:-}" ]; then echo "-e _=_"; else \
-		printf "$${env:-}" | sed 's/,/\n/g' | xargs -I% echo --env %='☂$$$${%}☂'; fi))
+		printf "$${env:-}" | sed 's/,/\n/g' | xargs -I% bash -c "[[ -v % ]] && printf '%\n' || true" | xargs -I% echo --env %='☂$$$${%}☂'; fi))
 	@$$(eval export base:=docker compose -f ${compose_file} \
 		run $${tty} --rm --remove-orphans --quiet-pull \
 		$$(subst ☂,\",$${extra_env}) \

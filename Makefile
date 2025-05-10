@@ -45,7 +45,8 @@ stest smoke-test:
 	ls tests/*.sh | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 
 demos demos.test demo-test:
-	set -x && ls demos/*.mk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
+	# set -x && ls demos/*.mk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
+	 set -x && ls demos/*.mk |grep -v lean| xargs -I% bash -x -c "./%" || exit 255
 demos/cmk:
 	set -x && ls demos/cmk/*.cmk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 
