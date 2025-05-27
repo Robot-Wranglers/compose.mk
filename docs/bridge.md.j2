@@ -16,9 +16,6 @@ We'll use images for debian and alpine just as examples, but these might be any 
 
 {{macros.embed_demo('demos/data/docker-compose.minimal.yml', type='yaml', github=github)}}
 
-!!! info "Tip"
-    Usually it's better to separate the details of automation / execution environment, but technically you can also [embed compose service definitions]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) and generate scaffolding from that too.
-
 Next, the Makefile.  To generate make-targets for every service in the given compose file, we just need to include `compose.mk` as a library, then call one of the `compose.import.*` functions.
 
 The simplest way to use `compose.import` is passing in single argument for the compose-file:
@@ -29,6 +26,7 @@ include compose.mk
 $(eval $(call compose.import, docker-compose.yml))
 ```
 
+
 {#
 and specifying we want services-handles as the top-level, plus an optional namespace for .
 By default, you'll get 
@@ -38,13 +36,19 @@ The arguments *`(some_namespace, TRUE)`* above allow for control of the scaffold
 but The 2nd argument *TRUE* is a bool for whether `compose.import` was allowed to import to the root namespace, you get top-level targets for each service.
 #}
 
-That's it for the minimal boilerplate, but we already have lots of interoperability for the containers involved.  This includes stuff like:
+That's it for the boilerplate, but we already have lots of interoperability for the containers involved.  This includes stuff like:
 
 * The ability to quickly shell into these containers 
 * The usual `docker compose` verbs like *stop/start/up/exec/logs*
 * And crucially, *capabilities for command-pipes and dispatch*.
 
+!!! info "Tip"
+  For project-automation, it's usually best to separate the details of automation / execution environment, as seen above.  
+  
+  If you are interested in **prototyping systems or building tools/apps,** you can skip the external compose file, [embed compose service definitions]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) and generate scaffolding from that too.
+
 See the next section for details about the scaffolded targets, or, if you're interested in running tasks inside of the compose-services skip ahead to the [container-dispatch section]({{mkdocs.site_relative_url}}/container-dispatch).
+
 
 ### Target Scaffolding
 <hr style="width:100%;border-bottom:3px solid black;">
