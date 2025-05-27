@@ -3209,6 +3209,7 @@ flux.timeout.sh:
 	@# USAGE: (tails docker logs for up to 10s, then stops)
 	@#   ./compose.mk flux.timeout.sh cmd='docker logs -f xxxx' timeout=10
 	@#
+	@# FIXME: use timeout(1) ?
 	timeout=$${timeout:-5} \
 	&& $(call log.io, flux.timeout.sh${no_ansi_dim} (${yellow}$${timeout}s${no_ansi_dim}) ${sep} ${no_ansi_dim}$${cmd}) \
 	&& $(trace_maybe) \
