@@ -36,26 +36,26 @@ With that in place, you have access to a few different possibilities:
 Here's an overview for how the `compose.mk` standard library is organized into modules: you can dive into the module or target-level documentation anywhere that looks interesting.  If you prefer a more guided tour, check out the rest of this page for a few of the random highlights.
 
 !!! road_map "Module Layout"
-  [**`flux.*` targets:**]({{mkdocs.site_relative_url}}/api#api-flux) 
-  :  A tiny but powerful workflow/pipelining API, roughly comparable to something like declarative pipelines in Jenkins[^1], providing concurrency, retry operators, etc.  You can also think of it as "target algebra" for `make`, similar to how bash provides process algebra.
+    [**`flux.*` targets:**]({{mkdocs.site_relative_url}}/api#api-flux) 
+    :  A tiny but powerful workflow/pipelining API, roughly comparable to something like declarative pipelines in Jenkins[^1], providing concurrency, retry operators, etc.  You can also think of it as "target algebra" for `make`, similar to how bash provides process algebra.
 
-  [**`tux.*` targets:**]({{mkdocs.site_relative_url}}/api/#api-tux) 
-  :  A control-surface for a tmux-backed console geometry manager. See the [embedded TUI docs]({{mkdocs.site_relative_url}}/embedded-tui) for a higher level overview and demos.
+    [**`tux.*` targets:**]({{mkdocs.site_relative_url}}/api/#api-tux) 
+    :  A control-surface for a tmux-backed console geometry manager. See the [embedded TUI docs]({{mkdocs.site_relative_url}}/embedded-tui) for a higher level overview and demos.
 
-  [**`stream.*` targets:**]({{mkdocs.site_relative_url}}/api#api-stream) 
-  :  Support for working with streams, including newline/comma/space delimited streams, common use cases with JSON, etc.  Everything here is used with pipes, and reads from stdin.  It's not what you'd call "typed", but it reduces error-prone parsing and moves a little bit closer to structured data.  See some examples [here](#structured-io-stream-types-pipes).
+    [**`stream.*` targets:**]({{mkdocs.site_relative_url}}/api#api-stream) 
+    :  Support for working with streams, including newline/comma/space delimited streams, common use cases with JSON, etc.  Everything here is used with pipes, and reads from stdin.  It's not what you'd call "typed", but it reduces error-prone parsing and moves a little bit closer to structured data.  See some examples [here](#structured-io-stream-types-pipes).
 
-  [**`io.*` targets:**]({{mkdocs.site_relative_url}}/api#api-io) 
-  :  Misc. utilities for printing, formatting, timers, files, etc.  Related topics include [file and stream previews](#file-and-stream-previews).
+    [**`io.*` targets:**]({{mkdocs.site_relative_url}}/api#api-io) 
+    :  Misc. utilities for printing, formatting, timers, files, etc.  Related topics include [file and stream previews](#file-and-stream-previews).
 
-  [**`docker.*` targets:**]({{mkdocs.site_relative_url}}/api#api-docker) 
-  : An small interface for working with docker.  *(See also the docs for [raw docker support]({{mkdocs.site_relative_url}}/raw-docker).)*
+    [**`docker.*` targets:**]({{mkdocs.site_relative_url}}/api#api-docker) 
+    : An small interface for working with docker.  *(See also the docs for [raw docker support]({{mkdocs.site_relative_url}}/raw-docker).)*
 
-  [**`mk.*` targets:**]({{mkdocs.site_relative_url}}/api#api-docker) 
-  :  Meta-tooling for 'make' itself. This enables help functions, signals and supervisors, some utilities for reflection, etc.  See also the [reflection docs](#reflection-support), the [packaging demo]({{mkdocs.site_relative_url}}/demos/packaging), etc.
+    [**`mk.*` targets:**]({{mkdocs.site_relative_url}}/api#api-docker) 
+    :  Meta-tooling for 'make' itself. This enables help functions, signals and supervisors, some utilities for reflection, etc.  See also the [reflection docs](#reflection-support), the [packaging demo]({{mkdocs.site_relative_url}}/demos/packaging), etc.
 
-  [**`compose.*` targets:**]({{mkdocs.site_relative_url}}/api#api-compose)
-  : A small interface for working with docker compose. 
+    [**`compose.*` targets:**]({{mkdocs.site_relative_url}}/api#api-compose)
+    : A small interface for working with docker compose. 
 
 {% include "structured-io.md.j2" %}
 {% include "assertions.md.j2"%}

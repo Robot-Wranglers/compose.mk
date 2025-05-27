@@ -36,11 +36,12 @@ Note that despite all the output **this is pipe-safe**, in case the commands inv
 
 As another example, you can use the [`<svc_name>.pipe` target]({{mkdocs.site_relative_url}}/bridge/#svc_nameshellpipe) to push data *into* a container with a command like this:
 
-```bash  {.cli_example} {.line-numbers}
+```bash  {.cli_example .line-numbers}
 
 $ echo hostname | ./compose.mk loadf \
     demos/data/docker-compose.yml debian.shell.pipe
-
+```
+```bash {.cli_output}
 debian
 ```
 

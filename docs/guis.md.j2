@@ -3,10 +3,10 @@
 ## Bonus: GUIs
 <hr style="width:100%;border-bottom:3px solid black;">
 
-!!! warning "WIP: **This page is under construction.**"
-    Capabilities are less portable and not as "baked in" as the TUI capabilities are, but working with GUIs is also  possible  Docker+GUIs is a complex topic.. this page is under construction.
-    
-This section has a growing collection of small demos for working with GUIs.
+!!! warning "**This page is under construction.**"
+    Capabilities are less portable and not as "baked in" as the TUI support, but `compose.mk` can also be used to work with GUIs.  Cross-platform GUIs and Docker is a complex topic though, and this page is still a work in progress.
+
+This section has a growing collection of small demos for working with GUIs, sometimes combining multiple existing GUIs and even *window managers* into a single "application" in only a handful for lines.
 
 {{macros.img_link("gui1.gif", mkdocs, "95%", align='center',class="")}}
 
@@ -32,7 +32,7 @@ Just for fun, we'll also use [CMK-lang]({{mkdocs.site_relative_url}}/compiler#co
 ### Xephyr Demo
 <hr style="width:100%;border-bottom:3px solid black;">
 
-!!! danger Caveats
+!!! danger "Caveats"
     This example only works on linux, requires x11 to be already started, and requires *`Xephyr`* on the host.  *(In debian-based distros, you can install it with something like `apt-get install -y xserver-xephyr`.)*  
 
 The goal for this demo is a "composite" kind of application, similar to what many of the TUI demos are showing.  We want to throw together "widgets" that might consist of smaller applications that are themselves dockerized, or are already available on the host.  The feel should be "native", i.e. no port-forwarding, no browsers.
@@ -43,14 +43,14 @@ You can see the code for this below, it is complete and runs as-is.  {#Code is a
 
 {{macros.embed_demo('demos/cmk/xephyr.cmk', github=github)}}
 
-We've already seen what it looks like:
+We've already seen what it looks like: Running the demo just opens *`xeyes`*, uses *`feh`* to display an image, and starts *`glxgears`*.  These tools and the window manager itself run inside the i3 container, but the environment is also accessible from other containers, or from your host.
 
 ```bash {.cli_example .language-bash}
 $ ./demos/cmk/xephyr.cmk 
 ```
 {{macros.img_link("gui1.gif", mkdocs, "95%", align='center',class="cli_output")}}
 
-Running the demo just opens *`xeyes`*, uses *`feh`* to display an image, and starts *`glxgears`*.  These tools and the window manager itself run inside the i3 container, but the environment is also accessible from other containers, or from your host.  *(To see this, you can try running something like* `DISPLAY=:23 xeyes` *from the host to test one way mix in other components.)*
+To test one way mix in other components, you can try running something like* `DISPLAY=:23 xeyes` from the host.
 
 #### Application Skeleton 
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -81,9 +81,7 @@ The traditional thing here is to run doom, which is definitely kind of pixelated
 ```bash {.cli_example .language-bash}
 $ ./demos/cmk/xpra_doom.cmk 
 ```
-{{macros.img_link("gui3.gif", mkdocs, "60%", align='center',class="cli_output")}}
-
----------------------------------
+{{macros.img_link("gui3.gif", mkdocs, "60%", align='center', class="cli_output")}}
 
 And here's the code:
 
@@ -103,12 +101,11 @@ $ ./demos/cmk/xpra.cmk gui
 ```
 {{macros.img_link("gui2.gif", mkdocs, "95%", align='center',class="cli_output")}}
 
+By default this opens a webserver at [http://localhost:9090](http://localhost:9090).  Note that server authentication is disabled by default for all these demos. See the XPra docs for setting user/password details.  Here's the code:
+
 {{macros.embed_demo('demos/cmk/xpra.cmk', github=github)}}
 
-By default this opens a webserver at [http://localhost:9090](http://localhost:9090).  Running it looks like this:
-
-
-Note that server authentication is disabled by default for all these demos. See the XPra docs for setting user/password details.  Other differences with this demo are that we do *not* share the X11 socket with the host, so by default you *cannot* launch applications in this environment by simply exporting `DISPLAY`.  Besides sharing the unix socket, it's also possible to use XPra from the host and share the TCP socket.
+Other differences with this demo are that we do *not* share the X11 socket with the host, so by default you *cannot* launch applications in this environment by simply exporting `DISPLAY`.  Besides sharing the unix socket, it's also possible to use XPra from the host and share the TCP socket.
 
 Besides auth, this example is rough in terms of proper daemonization, clean logging, and clean exits.  Rather than backgrounding the server and hoping you remember to kill it, it runs in the foreground to make debugging changes easier.  When you're done with the server, just press enter on the console to exit and you should see a clean exit.  But note that **Ctrl-C may not stop the server.**  You can use `./demos/cmk/xpra.cmk xpra.stop` to ensure shutdown or use {{macros.api_link('docker.stop.all',mkdocs)}} to kill everything indiscriminately.
 

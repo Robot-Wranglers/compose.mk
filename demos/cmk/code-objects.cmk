@@ -4,16 +4,20 @@
 # USAGE: ./demos/cmk/code-objects.cmk
 
 # Main entrypoint, showing how to preview and run embedded code.
-__main__: hello_world1.preview hello_world1.run \
+__main__: \
+	hello_world1.preview \
+	hello_world1.run \
 	hello_world2.run hello_world3.run \
 	hello_world4.preview 
 
 # Code bound to a containerized interpreter using literals.
+elixir.img=elixir:otp-27-alpine
+elixir.interpreter=elixir
 〚 hello_world1
 import IO, only: [puts: 1]
 puts("elixir World!")
 System.halt(0)
-⟧ with elixir:otp-27-alpine, elixir as container
+⟧ with ${elixir.img}, ${elixir.interpreter} as container
 
 # Code bound to a containerized interpreter using variables.
 # In this case, you can accept user-overrides from env-vars.

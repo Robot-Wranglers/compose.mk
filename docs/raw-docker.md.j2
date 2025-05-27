@@ -3,19 +3,19 @@
 ## Raw Docker Support
 <hr style="width:100%;border-bottom:3px solid black;">
 
+!!! Info "Info"
+    **Note that functionality here is *use-case driven*** and so the [`docker.*` target api]({{mkdocs.site_relative_url}}/api/#api-docker) interface is not intended to be 1:1 with the docker CLI.  Using the docker CLI directly is still [idiomatic compose.mk]({{mkdocs.site_relative_url}}/style), so we're not looking to replace it.  Instead, the offerings here are all building on top of it or making common interactions somewhat smoother.
+
 Usually it's a good idea to separate task-definitions from the containers runtime, and [using the docker compose support]({{mkdocs.site_relative_url}}/bridge) is really the recommended way to arrange things.
 
 However.. `compose.mk` sometimes needs more direct and low-level access to docker primitives for internal use, and this functionality is exposed for external use as well.  
-
-!!! Info "Info"
-    **Note that functionality here is *use-case driven*** and so the [`docker.*` target api]({{mkdocs.site_relative_url}}/api/#api-docker) interface is not intended to be 1:1 with the docker CLI.  Using the docker CLI directly is still [idiomatic compose.mk]({{mkdocs.site_relative_url}}/style), so we're not looking to replace it.  Instead, the offerings here are all building on top of it or making common interactions somewhat smoother.
 
 {#**For use-cases related to cleaning and refactoring bash-script or Makefiles that are already using the docker CLI,** there are various utility functions that are available as part of the [`docker.*` namespace of the API]({{mkdocs.site_relative_url}}/api/#api-docker).#}
 
 ### Tool-Container Defaults
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Most of the low-level docker support in `compose.mk` makes the assumption that you're <u><strong>working with tool containers</strong></u>, and there's two important defaults that come along with this assumption:
+Most of the low-level docker support in `compose.mk` makes the assumption that you're <u>working with tool containers</u>, and there's two important defaults that come along with this assumption:
 
 1. **The working directory, which is usually the project root, is volume-mounted by default.**
 1. **The docker-socket is mounted and shared by default also.** 
@@ -33,8 +33,10 @@ The situation is similar though for any other kind of **unmodified stock image**
 # Run the trivial `flux.ok` target inside the given image
 $ img=debian/buildd:bookworm ./compose.mk docker.dispatch/flux.ok
 ```
-
--------------------------------------
+``` bash {.cli_output}
+≣ docker.run // img=debian/buildd:bookworm 
+Φ flux.ok // succeeding as requested! 
+```
 
 If you're doing something like the above frequently, then you can also use `compose.import.docker_image` to generate scaffolded targets that do the same thing:
 
@@ -71,15 +73,11 @@ Most of the use-cases for raw docker support are related to scripting with `comp
 Below, you can find quick links for the [docker]({{mkdocs.site_relative_url}}/api/#api-docker) / [Dockerfile]({{mkdocs.site_relative_url}}/api/#api-dockerfile) / [mk.docker]({{mkdocs.site_relative_url}}/api/#api-mkdocker) sections of the main API.
 
 
-{{macros.api_link_many('docker', mkdocs, exclude='docker-compose')}}
+{{macros.api_link_many(['docker'], mkdocs, exclude='docker-compose')}}
 
 --------------
 
-{{macros.api_link_many('Dockerfile', mkdocs)}}
-
-------------------
-
-{{macros.api_link_many('mk.docker', mkdocs)}}
+{{macros.api_link_many(['Dockerfile','mk.docker'], mkdocs)}}
 
 <hr style="width:100%;border-bottom:3px solid black;">
 

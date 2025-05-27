@@ -19,34 +19,28 @@ But much of the criticism *and* the advocacy arises from misunderstandings
 or myopic treatment of the tools or the use-cases involved.  **Working theory: philosophy rarely changes hearts and minds, but tooling and examples might?**#}
 
 ## Is this even for real?
-
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Some people might be skeptical about getting involved with *the biggest, baddest, and most highly-powered mutant Makefile the world has ever seen*, so let's be super clear about a few things: 
 
-!!! danger "<small>Reasonable people might consider this stuff to be mad science.</small>"
-    The source code for `compose.mk` weighs in at an eye-popping 2500+ lines of pure Makefile, and many features use on-the-fly code-generation.  There are other eyebrow raising implementation details, including use (abuse?) of POSIX signals and lots of white-knuckled, wild-eyed metaprogramming.  One might even say that *the whole implementation is a very long list of terrible hacks that can only be redeemed by a* **but look what you can do with this!** *moment.*
+The source code for `compose.mk` weighs in at an eye-popping 2500+ lines of pure Makefile, and many features use on-the-fly code-generation.  There are other eyebrow raising implementation details, including use (abuse?) of POSIX signals and lots of white-knuckled, wild-eyed metaprogramming.  One might even say that *the whole implementation is a very long list of terrible hacks that can only be redeemed by a* **but look what you can do with this!** *moment.*
 
 Well, pushing the boundaries of a simple toolchain <u>is</u> part of the goal.  At the same time, this isn't some esolang flex like a [fractran compiler](https://github.com/siraben/hasktran) or [regex-chess](https://nicholas.carlini.com/writing/2025/regex-chess.html), or at least it isn't *only* that. 
 
-At first, `compose.mk` started as an experiment in basic docker-support for `make` and became an experiment in dependency minimalism in general, *but it just never hit a wall*, and it seems like it ended up in a very interesting place.  
+Originally, `compose.mk` started as an experiment in basic docker-support for `make`, then became an experiment in dependency minimalism in general, *but it just never hit a wall*, and it seems like it ended up in a very interesting place.  
 
-`compose.mk` introduces various primitives and idioms that make `make` feel like a Real Language™.  Just in case the library offerings won't help with that.. then you can always opt in to [using a transpiler]({{mkdocs.site_relative_url}}/compiler) and even [redefining the syntax for your use-case]({{mkdocs.site_relative_url}}/compiler/#user-defined-extensions).
+Part of what `compose.mk` adds is various primitives and idioms that make `make` feel like a Real Language™.  Just in case the library offerings won't help with that.. then you can always opt in to [using a transpiler]({{mkdocs.site_relative_url}}/compiler) and even [redefining the syntax for your use-case]({{mkdocs.site_relative_url}}/compiler/#user-defined-extensions).
 
-!!! question "Hmm.."
-    You would think that minimalism cannot be compatible with **aggressively reusing available tools**.  But in the limit, scripting with `compose.mk` **feels like a genuinely new way to write glue code that pulls in foreign tools and code as first class objects** in a way that's more organized than adhoc.
+You would think that minimalism cannot be compatible with **aggressively reusing available tools**.  But in the limit, scripting with `compose.mk` **feels like a genuinely new way to write glue code that pulls in foreign tools and code as first class objects** in a way that's more organized than adhoc.
 
 Speaking of "real languages", `compose.mk` can actually help you [write make-targets in foreign languages]({{mkdocs.site_relative_url}}/demos/polyglots/) too.. but that's just another example of the kind of thing that might make people nervous!  Opinions will differ about whether this kind of sorcery is really a good idea.  Maybe if you see something that offends your sensibilities let's agree to call it a prototyping workflow? ;)
 
-----------------------
-
 !!! warning "Cue the obligatory disclaimer"
     With great power comes great responsibility, and like most things you'll have to exercise some judgement.  Some of the demos are pretty crazy, and perhaps no one will thank you for [going wild]({{mkdocs.site_relative_url}}/demos/makeception) with ill-conceived applications of [mad science techniques]({{mkdocs.site_relative_url}}/demos/matrioshka/) inside real projects.  
-    
-At least in part, compose.mk is an experiment and an art project[^5].  But sometimes you gotta weigh a hack against the utility it provides, and evaluate things in terms of *simplicity, stability, and portability* rather than purist or traditional aesthetics.  Just don't be antisocial by embedding a gruesome and frequently-changing 300-line Dockerfile into your team's Makefile, and you'll be fine.  
 
-!!! success "<small>With that stern warning out of the way.. </small>"
-    Yup, `compose.mk` is for real.**  At this point it [really is esolang-inspired in some ways,]({{mkdocs.site_relative_url}}/matrioshka) but it also solves real problems, real fast.  And beyond using it to solve traditional problems in better ways, there's a good chance you'll want to use it for [completely]({{mkdocs.site_relative_url}}/embedded-tui) [different]({{mkdocs.site_relative_url}}/demos/packaging) [kinds of]({{mkdocs.site_relative_url}}/compiler) [use-cases]({{mkdocs.site_relative_url}}/gui).
+At least in part, compose.mk is an experiment and an art project[^5].  But sometimes a hack should be weighed against the utility it provides, and evaluated things in terms of *simplicity, stability, and portability* rather than purist or traditional aesthetics.  Just don't be antisocial by embedding a gruesome and frequently-changing 300-line Dockerfile into your team's Makefile, and you'll be fine.  
+
+**With that stern warning out of the way..  Yup, `compose.mk` is for real.**  At this point it [really is esolang-inspired in some ways,]({{mkdocs.site_relative_url}}/matrioshka) but it also solves real problems, real fast.  And beyond using it to solve traditional problems in better ways, there's a good chance you'll want to use it for [completely]({{mkdocs.site_relative_url}}/embedded-tui) [different]({{mkdocs.site_relative_url}}/demos/packaging) [kinds of]({{mkdocs.site_relative_url}}/compiler) [use-cases]({{mkdocs.site_relative_url}}/guis).
 
 ## Convincing the Anxious 
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -72,8 +66,7 @@ How about some redeeming qualities to redeem those eyebrow-raising details?
 ## A Problem Statement
 <hr style="width:100%;border-bottom:3px solid black;">
 
-!!! goals "So, automation, right?  How should we even do it?"
-    People tend to have strong opions about this topic, but here are some observations that probably aren't too controversial: 
+**So, automation, right?  How should we even do it?** People tend to have strong opions about this topic, but here are some observations that probably aren't too controversial: 
 
 **Orchestration *between* or *across* tool containers is usually awkward.** 
 : This is a challenge that needs some structure imposed.  You can get that structure in lots of ways, but it's always frustrating to see your work locked into esoteric JenkinsFile / GitHubAction blobs where things get complicated to describe, run, or read.  *Project automation ideally needs to run smoothly both inside and outside of CI/CD.*
@@ -111,7 +104,7 @@ That's because `make` is *just too good to ignore*, and there are several major 
 
 If you need something *outside* of docker that you want stability & ubiquity from, it's hard to find a better choice.  As a bonus, most likely tab-completion for make-targets already works out of the box with your OS and shell, and to a certain extent, `make` can even support plan/apply workflows (via `--dry-run`) and parallel execution (via `--jobs`).  
 
-!!! quote "Did someone say that they hate tabs?"
+!!! commentary "Did someone say that they hate tabs?"
     You'll be excited to learn that you can use `.RECIPEPREFIX` and probably surprised that support for using space instead is available for  about 15 years now.  See [this discussion](https://stackoverflow.com/questions/2131213/can-you-make-valid-makefiles-without-tab-characters/21920142#21920142) for more details.
 
 In short, the language agnostic all purpose incredible makefile[^6] was pretty great before, and with `compose.mk` it's almost unstoppable =P
@@ -164,7 +157,7 @@ Basically your options at a time like this are to:
 1. Start replacing lots of `foo-tool` invocations with awkward-but-versioned `docker run foo/foo-tool:VERSION ...` commands.
 1. Rely completely on CI/CD like Jenkins/Github or workflow-engines like Atlantis or Argo for mapping your tasks onto versioned containers.
 
-Choices 1 & 2 are labor intensive and fragile; choice 3 is ugly, fragile, and particularly hard to maintain.  Choice 4 is *maybe* fine once it's actually working, but it's also basically punting on *all local development forever*, so it can be pretty painful to change or debug.  In the worst-case, Choice 4 also has the downsides that you're accepting platform lock-in as well as betting everything on a single point of failure.
+Choices 1 & 2 are labor intensive and fragile; choice 3 is ugly, fragile, and particularly hard to maintain.  Choice 4 is *maybe* fine once it's actually working, but it' also basically punting on *all local development forever*, so it can be pretty painful to change or debug.  In the worst-case, Choice 4 also has the downsides that you're accepting platform lock-in as well as betting everything on a single point of failure.
 
 **Alternatively, you could manage your tool-containers with docker compose, then launch any target in any container with compose.mk's approach to [target dispatch]({{mkdocs.site_relative_url}}/container-dispatch).**  You can still call `make` from Jenkins, Argo, or Github.  While you added smooth workflows for local development, you also just fixed lots of bad coupling, because now you can easily switch your whole CI/CD backend from any of these choices to any of the the others.
 
@@ -190,11 +183,11 @@ So, part of what we're really talking about is **the ability to export a project
 
 To point the microscope at data-engineering instead of data-science.. most people have probably also seen the phenomenon where some team is struggling with enterprise java frameworks and/or cloud-based services for 3 months, just to deliver a CSV -> JSON conversion tool.
 
-----------------
+What does this have to do with `compose.mk`?  Well, none of this is to suggest that [mini ETL demos]({{mkdocs.site_relative_url}}/demos/workflows) mean you can throw away products like Airflow, Databricks, AWS Glue / Step Functions, etc.  (What's more realistic is that maybe your `compose.mk`-backed DAG is just a node in a bigger Airflow-DAG, or that Airflow/ECS/Fargate/Databricks calls your tasks piece-wise.)  
 
-What does this have to do with `compose.mk`?  Well, none of this is to suggest that [mini ETL demos]({{mkdocs.site_relative_url}}/demos/workflows) mean you can throw away products like Airflow, Databricks, AWS Glue / Step Functions, etc.  (What's more realistic is that maybe your `compose.mk`-backed DAG is just a node in a bigger Airflow-DAG, or that Airflow/ECS/Fargate/Databricks calls your tasks piece-wise.)
+Local-first development approaches obviously cannot completely replace services like AWS lambda, sagemaker, or glue.  But having a parallel implementation of a simpler pipeline that is "close enough" is often a good idea for testing and development.
 
-Also none of this is meant to suggest that [compose.mk's self-extracting archives]({{mkdocs.site_relative_url}}/demos/packaging) will cure the reproducibility crisis either, or that [weird self-contained polyglots]({{mkdocs.site_relative_url}}/demos/lean) are a great idea!  What is a good idea though is *making structured prototyping simpler*, and trying to make sure that prototypes can have versioned components, fully specified runtime requirements, and are actually a positive step towards shipping.  
+Also none of this is meant to suggest that [compose.mk's self-extracting archives]({{mkdocs.site_relative_url}}/demos/packaging) will cure the reproducibility crisis either, or that [weird self-contained polyglots]({{mkdocs.site_relative_url}}/demos/lean) are a great idea!  What is a good idea though is *making structured prototyping simpler*, and ensuring that prototypes can have versioned components, fully specified runtime requirements, and are actually a positive step towards shipping.  
 
 For a closer look at what `compose.mk` can offer in terms of projects-as-tools and environments-as-tools, see [the notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking), [the GUI demo]({{mkdocs.site_relative_url}}/guis), and [the RAG demo]({{mkdocs.site_relative_url}}/demos/RAG).
 
@@ -238,11 +231,13 @@ Unlike the "*helm bolted on to terraform/ansible/jenkins*" approach, using `comp
 
 While `compose.mk` is committed to bugfixes, and will continue to change in cases where it feels **incompatible, incomplete, or internally inconsistent**.. the goal is to freeze development as much as possible after it's mature enough to be **extensible**.  It will never change simply to accomodate "one more" domain specific thing, e.g. no increase in surface area for use cases like *documentation builds*, or *cluster lifecycles*, etc.  
 
-As another example, support for something like `podman` won't ever bloat the code-base until/unless it's very clearly more ubiquitous than `docker` is.  In some ways, `compose.mk` is a proof of concept and a reference, so that usage of `docker` or even `make` itself is an implementation detail that could be swapped out in a fork.  Hate to see a [gruesome transpiler hackjob]({{mkdocs.site_relative_url}}/compiler) written in `awk`?  Rewrite it by all means.. but if it's more elegant at the expense of becoming larger or less portable, it probably won't be merged.  See also the [fork-and-forget advice]({{mkdocs.site_relative_url}}/integration/#forks-versioning) for installation, and remarks re: [contributing]({{mkdocs.site_relative_url}}/contributing).
+As another example, support for something like `podman` won't ever bloat the code-base until/unless it's very clearly more ubiquitous than `docker` is.  In some ways, `compose.mk` is a proof of concept and a reference, so that usage of `docker` or even `make` itself is an implementation detail that could be swapped out in a fork.  Hate to see a [gruesome transpiler hackjob]({{mkdocs.site_relative_url}}/compiler) written in `awk`?  Rewrite it by all means.. but if it's more elegant at the expense of becoming larger or less portable, it probably can't be merged.  See also the [fork-and-forget advice]({{mkdocs.site_relative_url}}/integration/#forks-versioning) for installation, and remarks re: [contributing]({{mkdocs.site_relative_url}}/contributing).
 
 --------------
 
-Why fork-and-forget advice in an age of "pull the latest" and like-and-subscribe?  Well, you know how it is out there.  Lately we can't even trust our [web-browsers to keep copy/paste working](https://connect.mozilla.org/t5/discussions/when-they-going-to-fix-the-copy-and-paste-in-firefox/td-p/52574), and much has been written elsewhere about things like the [front end treadmill](https://polotek.net/posts/the-frontend-treadmill/).  In some software ecosystems maybe over a third of *all development effort* is spent fighting with dependencies and upgrading just for the sake of it.  Maybe devs deserve this for living near the cutting edge..  but users are automatically opted-in to updates almost everywhere, and now we just live with the threat that the one critical workflow that you trusted your SaaS or phone for might break at any time.  Change is fine when it's necessary.  Completely useless churn that creates busy-work for millions of people right up until [a project is killed and a community abandoned](https://killedbygoogle.com/) is bad.
+Why fork-and-forget advice in an age of "pull the latest" and like-and-subscribe?  Well, you know how it is out there.  Lately we can't even trust our [web-browsers to keep copy/paste working](https://connect.mozilla.org/t5/discussions/when-they-going-to-fix-the-copy-and-paste-in-firefox/td-p/52574), and much has been written elsewhere about things like the [front end treadmill](https://polotek.net/posts/the-frontend-treadmill/).  
+
+In some software ecosystems maybe over a third of *all development effort* is spent fighting with dependencies and upgrading just for the sake of it.  Maybe devs deserve this for living near the cutting edge..  but users are automatically opted-in to updates almost everywhere, and now we just live with the threat that the one critical workflow that you trusted your SaaS or phone for might break at any time.  Change is fine when it's necessary.  Completely useless churn that creates busy-work for millions of people right up until [a project is killed and a community abandoned](https://killedbygoogle.com/) is bad.
 
 Obviously there is another way.  Most operating systems do better, even with changes, thanks to curmudgeons like Linus and hard-line "no regressions" policies.  Many AWS core services are also great examples, and show decades of miraculous uninterrupted backwards compatibility while they continue to improve.  And thanks to good design, unix CLI tools are still relevant with almost no changes after 50 years.  For projects closer to the top of the stack though, one also wonders.. should *any* project that's more than a decade old really have a **core** that's still under active development?  Wouldn't good design mean growing a plugin or extension system that could effectively host ongoing development instead?
 

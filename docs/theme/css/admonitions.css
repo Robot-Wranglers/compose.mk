@@ -1,3 +1,29 @@
+/* Base admonition styling */
+.rst-content .admonition,
+.rst-content .admonition-todo,
+.rst-content .attention,
+.rst-content .caution,
+.rst-content .error,
+.rst-content .hint,
+.rst-content .important,
+.rst-content .note,
+.rst-content .seealso,
+.rst-content .tip,
+.rst-content .warning,
+.wy-alert {
+  /* padding: 10px; */
+  line-height: 24px;
+  /* margin: 14px; */
+}
+.rst-content .admonition-title,
+.wy-alert-title {
+  /* font-weight: 700; */
+  display: block;
+  /* color: #fff; */
+  background: #6ab0de;
+  /* padding: 6px 12px; */
+  margin: -12px -12px 12px;
+}
 
 div .admonition { 
     /* width:96%;margin-left:2%;margin-right:2%;  */
@@ -133,6 +159,7 @@ div .admonition {
     .admonition.note .admonition-title:before {
       content: "📌";
       margin-right: 10px;
+      opacity:100%;
     }
     
     /* ABSTRACT admonition */
@@ -230,10 +257,11 @@ div .admonition {
     .admonition.question {
       border-left-color: rgb(87, 87, 40);
       border: 1px dotted;
-      background-color:#ffe;
+      /* background-color:#ffe; */
+      background-color: #ebff0030;
     }
     .admonition.question .admonition-title {
-      background-color: #ffc;
+      background-color: #ebeba1;
       color: #1f1e1e;
       font-size: 1.2em;
     }
@@ -243,8 +271,8 @@ div .admonition {
     }
   
     p.admonition-title code {
-      background-color: #f5f5f5;
-      padding: 0.25em 0.5em;
+      /* background-color: #f5f5f5;
+      padding: 0.25em 0.5em; */
       border-radius: 4px;
       font-family: monospace;
       font-color:red;

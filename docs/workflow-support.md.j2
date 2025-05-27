@@ -124,7 +124,8 @@ As seen in the [scaffolded `<service_name>.dispatch` target]({{mkdocs.site_relat
 Let's introduce `flux.try.except.finally` as a simple idiom for flow-control.  This target accepts 3 comma-separated arguments for a `<try_target>`, `<fail_handler>`, and a `<always_handler>`.  Since we have `flux.ok` and `flux.fail` in hand, we'll fill in the blanks with that.
 
 ```bash {.cli_example}
-# Demonstrate `flux.try.except`, passing in 3 comma-separated target-names as arguments.
+# Demonstrate `flux.try.except`, 
+# passing in 3 comma-separated target-names as arguments.
 $ ./compose.mk flux.try.except.finally/flux.fail,flux.ok,flux.ok
 ```
 ```markdown {.cli_output}
@@ -174,8 +175,6 @@ one
 two
 ```
 
----------------------
-
 Introducing {{macros.api_link('flux.and',mkdocs,arg='t1>,<t2>,..<tn')}} and {{macros.api_link('flux.or',mkdocs,arg='t1>,<t2>,..<tn')}}:
 
 ```bash {.cli_example}
@@ -194,8 +193,6 @@ flux.fail // failing as requested!
 make[1]: *** [..: flux.fail] Error 1
 flux.ok // succeeding as requested!
 ```
-
----------------------
 
 Introducing {{macros.api_link('flux.loop.until',mkdocs,arg='test_target')}}:
 

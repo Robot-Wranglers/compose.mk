@@ -31,12 +31,12 @@ With `compose.mk`, much inspiration is taken from python.  A few random examples
 ### Targets As Functions
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The last example mentioning `flux.if.then` raises the question of how to handle parametric stuff, which gets a bit tricky.  Basically `compose.mk` needs a reasonable way to simulate "functions" and "arguments" from mere targets without wrecking readability.  Besides adding function-calls, this effectively makes prerequisites more powerful too, and somewhat more similar to function-decorators.  
-
-!!! danger "<small>Reasonable people might consider this crazy!</small>"
+!!! danger "<small>Mad Science</small>"
 	Targets-as-functions are pretty normal for lots of Makefile hackery, although many people would consider it an abuse!  Others might argue that strong notational conventions can sometimes elevate a hack into an art form. =P 
 	
 	For a more detailed look at this covering more advanced topics, see also the section on [performance and currying](#performance-and-currying), and a look at [homoiconicity in compose.mk]({{mkdocs.site_relative_url}}/language/#homoiconic).
+
+The last example mentioning `flux.if.then` raises the question of how to handle parametric stuff, which gets a bit tricky.  Basically `compose.mk` needs a way to simulate "functions" and "arguments" from mere targets without wrecking readability.  Besides adding function-calls, this effectively makes prerequisites more powerful too, and somewhat more similar to function-decorators.  
 
 Extensions for `compose.mk` (or just random Makefiles) might benefit from this also, so here's a suggested approach.
 
@@ -216,7 +216,7 @@ A pretty good compromise overall.. balancing readability, code reuse, consistent
 ### From Style to Dialect
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Somewhere at the limit of style, syntax, and sugar you run into ideas like dialects[^3], extensible programming[^4], language-oriented programming[^5] and DSLs.  To support this type of thing, [CMK-lang actually allows for direct control of some aspects of the language syntax]({{mkdocs.site_relative_url}}compiler/#user-defined-extensions).  See also the [main docs for Compiler & Dialects]({{mkdocs.site_relative_url}}/compiler).
+Somewhere at the limit of style, syntax, and sugar you run into ideas like dialects[^3], extensible programming[^4], language-oriented programming[^5] and DSLs.  To support this type of thing, CMK-lang allows for [direct control]({{mkdocs.site_relative_url}}compiler/#user-defined-extensions) of some aspects of the language syntax.  See also the [main docs for Compiler & Dialects]({{mkdocs.site_relative_url}}/compiler).
 
 <hr style="width:100%;border-bottom:3px solid black;">
 

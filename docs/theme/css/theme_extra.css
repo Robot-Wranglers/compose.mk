@@ -1,29 +1,12 @@
-
-/* Base admonition styling */
-.rst-content .admonition,
-.rst-content .admonition-todo,
-.rst-content .attention,
-.rst-content .caution,
-.rst-content .error,
-.rst-content .hint,
-.rst-content .important,
-.rst-content .note,
-.rst-content .seealso,
-.rst-content .tip,
-.rst-content .warning,
-.wy-alert {
-  /* padding: 10px; */
-  line-height: 24px;
-  /* margin: 14px; */
-}
-.rst-content .admonition-title,
-.wy-alert-title {
-  /* font-weight: 700; */
+.wy-side-nav-search {
   display: block;
-  /* color: #fff; */
-  background: #6ab0de;
-  /* padding: 6px 12px; */
-  margin: -12px -12px 12px;
+  width: 300px;
+  padding: 0.809em;
+  margin-bottom: 0.809em;
+  z-index: 200;
+  background-color: #0db7ed;
+  text-align: center;
+  color: #fcfcfc;
 }
 
 span .code_table_2{
@@ -236,6 +219,7 @@ div .cli_output img {
   position: relative;
   z-index: 1;
   border-left: 8px solid #358ccb;
+  border-bottom: 2px solid #bdaeae;
   /* background-color: #0db7ed; */
   background-image: linear-gradient(transparent 50%, rgba(69, 142, 209, .04) 50%);
   background-attachment: local;
@@ -248,7 +232,13 @@ div .cli_output img {
     top: -1.5em;
     background-color:red;
 }
-
+html.writer-html5 .rst-content table.docutils th {
+  border: 1px solid black;
+}
+.rst-content table.docutils thead th, .rst-content table.field-list thead th, .wy-table thead th {
+  font-weight: 700;
+  border: 1px solid black;
+}
 .img_container {
   /* border-left: 8px solid #68b16d;*/
   /* border-left: 8px solid #8785d0; */
@@ -270,9 +260,12 @@ div .code_table_bottom {
   align-items: center;     /* vertical alignment */
   border:2px solid black;
   position: relative;
-  top: -2em;
+  /* top: -2em; */
   align:center;
   display: flex; justify-content: space-between; width: 100%;
+}
+p:empty {
+  display: none;
 }
 .jump_down {
   position:relative;
@@ -310,10 +303,7 @@ svg.small_bullseye {
   /*
  * Wrap inline code samples otherwise they shoot of the side and
  * can't be read at all.
- *
- * https://github.com/mkdocs/mkdocs/issues/313
- * https://github.com/mkdocs/mkdocs/issues/233
- * https://github.com/mkdocs/mkdocs/issues/834
+ * https://github.com/mkdocs/mkdocs/issues/313 https://github.com/mkdocs/mkdocs/issues/233 https://github.com/mkdocs/mkdocs/issues/834
  */
 .rst-content code {
   white-space: pre-wrap;
@@ -334,15 +324,34 @@ svg.small_bullseye {
  * https://github.com/mkdocs/mkdocs/issues/834
  * https://github.com/mkdocs/mkdocs/issues/233
  */
+/* .rst-content pre code {
+  color: #b6b0f7d9;
+} */
+ 
+.rst-content .language-cmk pre code {
+  /* color: thistle; */
+  /* color: #b6b0f7d9; */
+  background-color: #24241d;
+  white-space: pre;
+  word-wrap: normal;
+  display: block;
+  padding: 12px;
+  font-size: 14.4px;
+}
+
 .rst-content pre code {
-    /* color: thistle; */
-    color: #b6b0f7d9;
+    color: thistle;
+    /* color: #b6b0f7d9; */
     background-color: #24241d;
     white-space: pre;
     word-wrap: normal;
     display: block;
     padding: 12px;
     font-size: 14.4px;
+}
+.rst-content .snippet pre code {
+  color: #cbe0ef;
+  /* color: #dfd581; */
 }
 /* .goal-list {
   list-style: none;
@@ -391,11 +400,8 @@ svg.small_bullseye {
 }
 
 .rst-content code {
-  /* color: black;
-  background: #efefef; */
-  /* background: rgba(217, 217, 217, 0.974); */
-  background: rgba(217, 217, 217, 0.71);
-  font-weight: bolder;
+  background: rgba(209, 205, 194, 0.37);
+  font-weight: 500;
   padding:.35em;
   /* font-weight:bold; */
 }

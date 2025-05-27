@@ -16,7 +16,7 @@ Most of the meta-tooling that's available is somewhere in the [`mk.*` target nam
 
 For metadata parsing, you can use the `mk.parse/<fname>` target, and get back targets, target chains, target docs, etc.  
 
-{{macros.api_link_many('mk.parse',mkdocs)}}
+{{macros.api_link_many(['mk.parse'],mkdocs)}}
 
 For testing, there is a super lightweight `demos/no-includes.mk` Makefile included in the repository for situations like this. Like the name suggests, it doesn't actually include or use `compose.mk` in any way.
 
@@ -81,7 +81,7 @@ FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
 RUN apk add -q --update py3-pygments
 ```
 
-{{macros.api_link_many('mk.def',mkdocs)}}
+{{macros.api_link_many(['mk.def'],mkdocs)}}
 
 #### Grabbing Symbols
 <hr style="width:95%;border-bottom:1px dashed black;">
