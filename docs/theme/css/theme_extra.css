@@ -1,29 +1,12 @@
-
-/* Base admonition styling */
-.rst-content .admonition,
-.rst-content .admonition-todo,
-.rst-content .attention,
-.rst-content .caution,
-.rst-content .error,
-.rst-content .hint,
-.rst-content .important,
-.rst-content .note,
-.rst-content .seealso,
-.rst-content .tip,
-.rst-content .warning,
-.wy-alert {
-  /* padding: 10px; */
-  line-height: 24px;
-  /* margin: 14px; */
-}
-.rst-content .admonition-title,
-.wy-alert-title {
-  /* font-weight: 700; */
+.wy-side-nav-search {
   display: block;
-  /* color: #fff; */
-  background: #6ab0de;
-  /* padding: 6px 12px; */
-  margin: -12px -12px 12px;
+  width: 300px;
+  padding: 0.809em;
+  margin-bottom: 0.809em;
+  z-index: 200;
+  background-color: #0db7ed;
+  text-align: center;
+  color: #fcfcfc;
 }
 
 span .code_table_2{
@@ -310,10 +293,7 @@ svg.small_bullseye {
   /*
  * Wrap inline code samples otherwise they shoot of the side and
  * can't be read at all.
- *
- * https://github.com/mkdocs/mkdocs/issues/313
- * https://github.com/mkdocs/mkdocs/issues/233
- * https://github.com/mkdocs/mkdocs/issues/834
+ * https://github.com/mkdocs/mkdocs/issues/313 https://github.com/mkdocs/mkdocs/issues/233 https://github.com/mkdocs/mkdocs/issues/834
  */
 .rst-content code {
   white-space: pre-wrap;
@@ -334,15 +314,34 @@ svg.small_bullseye {
  * https://github.com/mkdocs/mkdocs/issues/834
  * https://github.com/mkdocs/mkdocs/issues/233
  */
+/* .rst-content pre code {
+  color: #b6b0f7d9;
+} */
+ 
+.rst-content .language-cmk pre code {
+  /* color: thistle; */
+  /* color: #b6b0f7d9; */
+  background-color: #24241d;
+  white-space: pre;
+  word-wrap: normal;
+  display: block;
+  padding: 12px;
+  font-size: 14.4px;
+}
+
 .rst-content pre code {
-    /* color: thistle; */
-    color: #b6b0f7d9;
+    color: thistle;
+    /* color: #b6b0f7d9; */
     background-color: #24241d;
     white-space: pre;
     word-wrap: normal;
     display: block;
     padding: 12px;
     font-size: 14.4px;
+}
+.rst-content .snippet pre code {
+  color: #cbe0ef;
+  /* color: #dfd581; */
 }
 /* .goal-list {
   list-style: none;
@@ -395,7 +394,7 @@ svg.small_bullseye {
   background: #efefef; */
   /* background: rgba(217, 217, 217, 0.974); */
   background: rgba(217, 217, 217, 0.71);
-  font-weight: bolder;
+  font-weight: 500;
   padding:.35em;
   /* font-weight:bold; */
 }

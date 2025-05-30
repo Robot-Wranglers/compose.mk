@@ -1,5 +1,5 @@
 #!/usr/bin/env -S bash
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 # compose.mk: A minimal automation framework for working with containers.
 #
 # DOCS: https://github.com/robot-wranglers/compose.mk
@@ -37,7 +37,7 @@
 #
 #   # show full interface (see also: https://github.com/robot-wranglers/compose.mk/bridge)
 #   make help
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # Let's get into the horror and the delight right away with shebang hacks. 
 # The block below these comments looks like a comment, but it is not. That line,
@@ -74,7 +74,7 @@ case ${CMK_SUPERVISOR:-1} in \
 esac \
 ; exit ${st}
 
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## END: Supervisor & Signals Boilerplate
 ## BEGIN: Constants for colors, glyphs, logging, and other Makefile-related boilerplate
 ##
@@ -85,7 +85,7 @@ esac \
 ##   MAKEFILE_LIST: Prefer instead `makefile_list`, derived from `MAKE_CLI`.  
 ##                  This is a list of includes, either used with 'include ..' or present at CLI with '-f ..'
 ##
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 SHELL:=bash
 MAKEFLAGS:=-s -S --warn-undefined-variables --no-builtin-rules
 .SUFFIXES:
@@ -288,6 +288,8 @@ docker.run.base:=docker run --rm -i
 ## | CMK_COMPOSE_FILE       | *Temporary file used for the embedded-TUI*                          |
 ## | CMK_DIND               | *Determines whether docker-in-docker is allowed*                    |
 ## | CMK_INTERNAL           | *1 if dispatched inside container, otherwise 0*                     |
+## | CMK_INTERPRETER        | CMK_SRC unless overridden; sometimes useful for extensions          |
+## | CMK_INTERPRETING        | CMK_SRC unless overridden; sometimes useful for extensions          |
 ## | CMK_SRC:               | path to compose.mk source code                                      |
 ## | CMK_SUPERVISOR         | *1 if supervisor/signals is enabled, otherwise 0*                   |
 ## | COMPOSE_IGNORE_ORPHANS | *Honored by 'docker compose', this helps to quiet output*           |
@@ -306,10 +308,12 @@ export CMK_DIND?=0
 export verbose:=$(shell [ "$${quiet:-0}" == "1" ] && echo 0 || echo $${verbose:-1})
 export CMK_INTERNAL?=0
 export CMK_SRC?=$(shell echo ${MAKEFILE_LIST} | sed 's/ /\n/g' | grep compose.mk)
+export CMK_EXEC=`dirname ${CMK_SRC}`/`basename ${CMK_SRC}`
 export CMK_SUPERVISOR?=1
 export CMK_EXTRA_REPO?=.
 export GITHUB_ACTIONS?=false
 export CMK_INTERPRETING?=
+export CMK_INTERPRETER?=${CMK_EXEC}
 
 ifneq ($(findstring compose.mk, ${MAKE_CLI}),)
 export CMK_LIB=0
@@ -602,7 +606,16 @@ docker.image.sizes:
 	@# See `docker.size.summary` for similar column-oriented output
 	@#
 	${make} docker.size.summary | ${jq.column.zipper}
-
+mk.assert.env_var/%:; $(call mk.assert.env_var, ${*})
+# docker.image.stop/%:; img=${*} ${make} docker.image.stop
+docker.image.stop: mk.assert.env_var/img
+	@# Stops one or more running instances launched from given image.
+	@#
+	${trace_maybe} \
+	&& id=`docker ps --filter name= --format json \
+		| ${jq} -r ".|select(.Image==\"$${img}\").ID" \
+		| ${stream.nl.to.space}` \
+		img="" ${make} docker.stop 
 docker.size.summary:
 	@# Shows disk-size summaries for all images. 
 	@# Returns nl-delimited output like `repo:tag human_friendly_size`
@@ -847,6 +860,13 @@ docker.logs.follow/%:
 docker.logs.follow/:
 	@# Error handler, this gets called in case `docker.ps` was null
 	$(call log.docker, docker.logs.follow ${sep} ${yellow}No container ID to get logs from.)
+docker.logs.timeout/%:
+	@#
+	timeout=$(call mk.unpack_arg,1) \
+	&& id=$(call mk.unpack_arg,2,$${id:-}) \
+	quiet=1 CMK_INTERNAL=1 \
+	cmd="docker logs -f $${id} 2>&1" \
+		timeout=3 ${make} flux.timeout.sh 
 
 docker.from.def/% docker.build.def/% Dockerfile.build/%:
 	@# Builds a container, treating the given 'define' block as a Dockerfile.
@@ -1062,21 +1082,39 @@ docker.stat:
 			val="`cat $${tmpf} | ${jq.run} -r .Name`"
 
 docker.stop:
-	@# Stops one container, using the given timeout and the given id or name.
+	@# Stops one or more containers, with optional timeout,
+	@# filtering by the given id, name, or image.
 	@#
 	@# USAGE:
-	@#   ./compose.mk docker.stop id=8f350cdf2867
-	@#   ./compose.mk docker.stop name=my-container
-	@#   ./compose.mk docker.stop name=my-container timeout=99
+	@#   id=8f350cdf2867 ./compose.mk docker.stop 
+	@#   name=my-container ./compose.mk docker.stop 
+	@#   name=my-container timeout=99 ./compose.mk docker.stop
+	@#   img=debian:latest ./compose.mk docker.stop
 	@#
-	$(call log.docker, docker.stop${no_ansi_dim} ${sep} ${green}$${id:-$${name}})
-	export cid=`[ -z "$${id:-}" ] && docker ps --filter name=$${name} --format json | ${jq.run} -r .ID || echo $${id}` \
+	case $${img} in \
+		"") true;; \
+		*) ${make} docker.image.stop && exit 0;; \
+	esac \
+	&& case "$${id:-$${name:-}}" in \
+		"") \
+			$(call log.docker, ${@} ${sep} ${yellow}Nothing to stop) \
+			&& exit 0;; \
+	esac \
+	&& $(call log.docker, docker.stop${no_ansi_dim} ${sep} ${green}$${id:-$${name}}) \
+	&& ${trace_maybe} \
+	&& export cid=`[ -z "$${id:-}" ] \
+		&& docker ps --filter name=$${name} --format json \
+			| ${jq.run} -r .ID || echo $${id}` \
 	&& case "$${cid:-}" in \
 		"") \
 			$(call log.docker, ${@} ${sep} ${yellow}No containers found); ;; \
 		*) \
-			set -x && docker stop -t $${timeout:-1} $${cid} > ${devnull}; ;; \
-	esac
+			${trace_maybe} \
+			&& docker stop -t $${timeout:-1} $${cid} >/dev/null; ;; \
+	esac ${quiet.maybe}
+
+# Completely silent output iff quiet is set and quiet!=0
+quiet.maybe=$(shell [ "$${quiet:-0}" == "0" ] && echo '' || echo '> /dev/null 2>/dev/null' )
 
 docker.stop.all:
 	@# Non-graceful stop for all running containers.
@@ -1129,7 +1167,6 @@ endif
 
 
 log.maybe=([ "$${quiet:-0}" == "1" ] || $(call log, ${1}))
-CMK_EXEC=`dirname ${CMK_SRC}`/`basename ${CMK_SRC}`
 
 # This is a hack because charmcli/gum is distroless, but the spinner needs to use "sleep", etc
 # io.gum.alt.dumb=docker run -it -e TERM=dumb --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nRUN apk add -q --update --no-cache bash\nCOPY --from=charmcli/gum:${IMG_GUM} /usr/local/bin/gum /usr/local/bin/gum")`
@@ -1176,8 +1213,13 @@ io.browser:
 		|| $(call log.target, ${red}could not open browser!)
 
 IMG_CURL=curlimages/curl:8.13.0
-io.curl=$(shell which curl 2>/dev/null || echo docker run --rm ${IMG_CURL})
-io.curl.stat=${io.curl} -s -o /dev/null
+io.curl=$(shell which curl 2>/dev/null || echo docker run --rm ${IMG_CURL}) $(if $(filter undefined,$(origin 1)),,$(1))
+_io.curl=${io.curl} ${1}
+io.curl.stat=bash ${dash_x_maybe} -c '${io.curl} -s -o /dev/null $(if $(filter undefined,$(origin 1)),$${1},$(1)) > /dev/null' -- 
+# io.curl.quiet=bash ${dash_x_maybe} -c '${io.curl} -s $${1}' -- 
+# io.curl.stat=${io.curl} -sS -o /dev/null $(if $(filter undefined,$(origin 1)),,$(1))
+io.curl.quiet=$(call io.curl, -s $(if $(filter undefined,$(origin 1)),,$(1)))
+io.log.curl=$(call io.curl.quiet, nginx-tcp:8080) | ${stream.as.log}
 
 io.echo:; ${stream.stdin}
 	@# Echos data from input stream. Alias for the `stream.stdin` macro.
@@ -1470,8 +1512,8 @@ io.stack.pop=(${io.stack} | ${jq.run} '.[-1]'; ${io.stack} | ${jq.run} '.[1:]' >
 
 io.stack.require=( ls ${1} >/dev/null 2>/dev/null || echo '[]' > ${1})
 io.log=$(call log.io,${1})
-io.log.part1=$(call log.part1,${GLYPH_IO}${1})
-io.log.part2=$(call log.part2,${1})
+io.log.part1=$(call log.part1,${GLYPH_IO} $(strip ${1}))
+io.log.part2=$(call log.part2, $(strip ${1}))
 io.stack.push/%:
 	@# Pushes new JSON data onto the named stack-file
 	@#
@@ -1624,7 +1666,7 @@ mk.def.dispatch/%:
 	&& src="$${intr} $${tmpf}" \
 	&& [ -p ${stdin} ] && ${stream.stdin} | eval $${src} || eval $${src}
 
-mk.def.read=${make} mk.def.read
+mk.def.read=CMK_INTERNAL=1 ${make} mk.def.read
 mk.def.read/%:
 	@# Reads the named define/endef block from this makefile,
 	@# emitting it to stdout. This works around normal behaviour 
@@ -1839,6 +1881,7 @@ mk.compile mk.compiler:
 	esac \
 	&& $(call io.mktemp) && export inputf=`echo $${tmpf}` \
 	&& ${stream.stdin} > $${inputf} \
+	&& export CMK_INTERNAL=1 \
 	&& cat $${inputf} | \
 		style=monokai lexer=makefile \
 		${make} $${runner}/mk.preprocess,.mk.compiler
@@ -1847,7 +1890,7 @@ mk.compile mk.compiler:
 	@# Main transpilation
 	$(call log.mk, mk.compiler ${sep} ) \
 	&& ${trace_maybe} \
-	&& printf "#!/usr/bin/env -S ./compose.mk mk.interpret\n" \
+	&& printf "#!/usr/bin/env -S ${CMK_INTERPRETER} mk.interpret\n" \
 	&& ${stream.stdin} \
 	| ${make} io.awker/.awk.main.preprocess \
 	| ${make} io.awker/.awk.dispatch
@@ -1969,7 +2012,7 @@ mk.interpret!:
 	&& fname="`echo $${cli}| cut -d' ' -f1`" \
 	&& $(call log.mk, ${@} ${sep} compiling ${sep} ${dim}file=${underline}$${fname}${no_ansi}) \
 	&& [ -z "$${rest}" ] && true || $(call log.mk, ${@} ${cyan_flow_right} ${dim_ital}$${rest:-}) \
-	&& cat $${fname} | ${make} mk.compile > $${tmpf} \
+	&& cat $${fname} | CMK_INTERNAL=1 ${make} mk.compile > $${tmpf} \
 	&& chmod ugo+x $${tmpf} \
 	&& ${trace_maybe} \
 	&& $(call mk.yield, continuation=\"$${rest}\" CMK_INTERPRETING=$${fname} ${make} mk.interpret/$${tmpf})
@@ -2009,7 +2052,7 @@ mk.interpret/%:
 		 && cat $${fname} | grep -a -v "^include ${CMK_SRC}" \
 		 && printf '\n\n\n' ; cat ${CMK_SRC} | tail -n1 ) \
 	> $${tmpf} \
-	&& ${make} mk.validate/$${tmpf} \
+	&& CMK_INTERNAL=1 ${make} mk.validate/$${tmpf} \
 	&& $(call log.trace, mk.interpret ${sep} ${dim_ital}$${continuation:-(no additional arguments passed)}) \
 	&& chmod +x $${tmpf} \
 	&& CMK_INTERPRETING=$${CMK_INTERPRETING:-$${fname}} MAKEFILE=$${tmpf} \
@@ -2403,8 +2446,8 @@ mk.vars.filter/%:; (${mk.vars} | grep ${*}) || true
 	@# Filter output of `mk.vars` with the given pattern.
 	@# Non-strict; no error in case of no-match.
 
-mk.unpack_arg=`printf "${*}" | cut -d, -f$(strip ${1})`
-
+# mk.unpack_arg=`printf "${*}" | cut -s -d, -f$(strip ${1})`
+mk.unpack_arg=$(shell result=$$(printf "${*}" | cut -s -d, -f$(strip ${1})); [ -n "$$result" ] && echo "$$result" || echo "$(strip $(if $(filter undefined,$(origin 2)),,$(2)))")
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## BEGIN: flux.* targets
 ##
@@ -3215,12 +3258,33 @@ flux.timeout.sh:
 	&& $(trace_maybe) \
 	&& trap "set -x && echo bye" EXIT INT TERM \
 	&& signal=$${signal:-TERM} \
-	&& eval "$${cmd} &" 2> >(grep -v Terminated$$ >/dev/stderr) \
+	&& eval "$${cmd}" 2> >(grep -v Terminated$$ > /dev/stderr) \
 	&& export command_pid=$$! \
 	&& sleep $${timeout} \
-	&& $(call log, ${dim}${GLYPH_IO} flux.timeout.sh${no_ansi_dim} (${yellow}$${timeout}s${no_ansi_dim}) ${sep} ${no_ansi}${yellow}finished) \
+	&& $(call log.flux, flux.timeout.sh${no_ansi_dim} (${yellow}$${timeout}s${no_ansi_dim}) ${sep} ${no_ansi}${yellow}finished) \
 	&& trap '' EXIT INT TERM \
 	&& kill -$${signal} `ps -o pid --no-headers --ppid $${command_pid}` 2>/dev/null || true
+
+flux.with.ctx/% flux.context_manager/%:
+	@# Runs the given target, using the given namespace as a context-manager
+	@#
+	@# USAGE: 
+	@#  ./compose.mk flux.ctx/<target>,<ctx_name>
+	@#
+	@# Roughly equivalent to `compose.mk <ctx_name>.enter <target> <ctx_name>.exit`
+	@#
+	target=$(call mk.unpack_arg,1) \
+	&& manager=$(call mk.unpack_arg,2) \
+	&& man_args=$(call mk.unpack_arg,3) \
+	&& enter=$${manager}.enter \
+	&& exit=$${manager}.exit \
+	&& case $${man_args} in \
+		"") true;; \
+		*) enter+="/$${man_args}"; exit+="/$${man_args}";; \
+	esac \
+	&& $(call log.trace, flux.context_manager ${sep} enter=${dim}$${enter} ${sep} exit=${dim}$${exit} ${sep} target=${dim}$${target}) \
+	&& ${trace_maybe} \
+	&& ${make} $${enter} flux.try.finally/$${target},$${exit}
 
 flux.try.except.finally/%:
 	@# Performs a try/except/finally operation with the named targets.
@@ -3236,16 +3300,31 @@ flux.try.except.finally/%:
 	&& try=`echo ${*}|cut -s -d, -f1` \
 	&& except=`echo ${*} | cut -s -d, -f2` \
 	&& finally=`echo ${*}|cut -s -d, -f3` \
-	&& header="flux.try.except.finally ${sep}${no_ansi_dim}" \
-	&& $(call log.flux, $${header} ${*} ${no_ansi}) \
+	&& header="flux.try.except.finally ${sep}" \
+	&& $(call log.flux, $${header} ${underline}${cyan}try${no_ansi_dim} ${sep} $${try}) \
 	&& ${make} $${try} && exit_status=0 || exit_status=1 \
 	&& case $${exit_status} in \
 		0) true; ;; \
-		1) ${make} $${except} && exit_status=0 || (echo 'keeping 1'; exit_status=1); ;; \
+		1) $(call log.flux, $${header} ${underline}${cyan}except${no_ansi_dim} ${sep} $${except}) && ${make} $${except} && exit_status=0 || (echo 'keeping 1'; exit_status=1); ;; \
 	esac \
-	&& ${make} $${finally} \
+	&& $(call log.flux, $${header} ${underline}${cyan}finally${no_ansi_dim} ${sep} $${finally}) && ${make} $${finally} \
 	&& exit $${exit_status}
-	
+flux.try.except/%:
+	@# Performs a try/except operation with the named targets.
+	@# This is just `flux.try.except.finally` where `finally` is `flux.noop`.
+	@#
+	@# USAGE: (generic)
+	@#  ./compose.mk flux.try.except/<try_target>,<except_target>
+	@#
+	${make} flux.try.except.finally/$(call mk.unpack_arg,1),$(call mk.unpack_arg,2),flux.noop
+flux.try.finally/%:
+	@# Performs a try/finally operation with the named targets.
+	@# This is just `flux.try.except.finally` where `except` is `flux.noop`.
+	@#
+	@# USAGE: (generic)
+	@#  ./compose.mk flux.try.finally/<try_target>,<finally_target>
+	@#
+	${make} flux.try.except.finally/$(call mk.unpack_arg,1),flux.noop,$(call mk.unpack_arg,2)
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## END: flux.* targets
 ## BEGIN: stream.* targets
@@ -4511,9 +4590,9 @@ ${compose_file_stem}.dispatch/%:
 	@# USAGE:
 	@#   ./compose.mk ${compose_file_stem}.dispatch/<svc>/<target>
 	@#
-	entrypoint=make \
+	set -x && entrypoint=make \
 	cmd="${MAKE_FLAGS} -f ${MAKEFILE} `printf $${*}|cut -d/ -f2-`" \
-	${make} $${compose_file_stem}/`printf $${*}|cut -d/ -f1`
+	${make} ${compose_file_stem}/`printf $${*}|cut -d/ -f1`
 
 ${compose_file_stem}/$(compose_service_name).logs:
 	@# Logs for this service.  NB: Uses "follow" mode by default, so this is blocking
@@ -4621,9 +4700,10 @@ $(compose_service_name).clean: ${compose_file_stem}.clean/$(compose_service_name
 # NB: optimization: NOT using chaining
 $(compose_service_name).dispatch/%:
 	@# Shorthand for ${compose_file_stem}.dispatch/$(compose_service_name)/<target_name>
-	entrypoint=make \
+	${trace_maybe} \
+	&& entrypoint=make \
 	cmd="${MAKE_FLAGS} -f ${MAKEFILE} $${*}" \
-	${make} $${compose_file_stem}/$(compose_service_name)
+	${make} ${compose_file_stem}/${compose_service_name}
 
 $(compose_service_name).dispatch.quiet/%:; quiet=1 ${make} $(compose_service_name).dispatch/$${*}
 $(compose_service_name).exec.detach/%:
@@ -4927,8 +5007,7 @@ ${compose_file_stem}/%:
 	@$$(eval export extra_env=$(shell \
 		if [ -z "$${env:-}" ]; then echo "-e _=_"; else \
 		printf "$${env:-}" | sed 's/,/\n/g' | xargs -I% bash -c "[[ -v % ]] && printf '%\n' || true" | xargs -I% echo --env %='☂$$$${%}☂'; fi))
-	@$$(eval export base:=docker compose -f ${compose_file} \
-		run $${tty} --rm --remove-orphans --quiet-pull \
+	@$$(eval export base:=docker compose -f $(compose_file) run $${tty} --rm --remove-orphans --quiet-pull \
 		$$(subst ☂,\",$${extra_env}) \
 		--env CMK_INTERNAL=1 \
 		-e TERM="$${TERM}" -e GITHUB_ACTIONS=${GITHUB_ACTIONS} -e TRACE=$${TRACE} \
@@ -5354,7 +5433,6 @@ define .awk.rewrite.targets.maybe
   print result
 }
 endef
-
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## BEGIN: Dockerfile.* targets
 ## Currently just aliases to other `docker.*` targets.

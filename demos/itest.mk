@@ -108,6 +108,13 @@ test.flux.try.except.finally:
 	! make flux.try.except.finally/flux.fail,flux.fail,flux.ok
 	make flux.try.except.finally/flux.ok,flux.ok,flux.ok
 
+test.flux.context_manager:
+	$(call log.test, testing ${@} calls enter)
+	${make} flux.context_manager/flux.ok,my_ctx_man | grep my_ctx_man.enter
+	${make} flux.context_manager/flux.ok,my_ctx_man | grep my_ctx_man.exit
+my_ctx_man.enter:; printf "${@}"
+my_ctx_man.exit:; printf "${@}"
+
 test.flux.finally:
 	$(call log.test, testing flux.finally)
 	# demo of using finally/always functionality in a pipeline.  touches a tmpfile 

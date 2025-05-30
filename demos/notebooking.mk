@@ -14,7 +14,8 @@ include compose.mk
 
 # Main entrypoint, just shows usage hints 
 __main__:
-	$(call log, ${red}Provide a target like 'lab.tui' or 'lab.pipeline' or use 'help' for help.)
+	$(call log, \
+		${red}Provide a target like 'lab.tui' or 'lab.pipeline' or use 'help' for help.)
 
 # Jupyter lab URL
 lab.url.base=http://localhost:9999
@@ -57,7 +58,9 @@ $(eval $(call compose.import, ${jupyter.root}/docker-compose.jupyter.yml, jupyte
 # Loop over the kernel list, and creating a target handle for each.
 kernel_services=$(call compose.services, ${jupyter.root}/docker-compose.fmtk.yml)
 kernel_target_names=$(foreach svc, ${kernel_services}, kernel.$(svc))
-$(foreach svc, ${kernel_services}, $(eval  kernel.$(svc)/%:; $${make} fmtk/$(svc).command/$${*}))
+$(foreach svc, \
+	${kernel_services}, \
+	$(eval  kernel.$(svc)/%:; $${make} fmtk/$(svc).command/$${*}))
 
 kernels.list:
 	@# A target to list available kernels.  Importantly, this is kernels according 
@@ -158,17 +161,20 @@ lab.notebook.preview/%:
 	@# Console friendly, colored markdown rendering, and usable from the host.
 	bname=`basename ${*}` \
 	&& label="`basename -s.ipynb ${*}`" ${make} io.draw.banner \
-	&& $(call log.target, ${dim_ital}$${bname} ${sep} ${no_ansi}( ${bold_under}input${no_ansi})) \
-	&& quiet=1 ${make} lab.dispatch/self.notebook.preview.in/${*} | ${stream.markdown} \
-	&& $(call log.target, ${dim_ital}$${bname} ${sep} ${no_ansi}( ${bold_under}output${no_ansi})) \
+	&& header="${dim_ital}$${bname} ${sep} ${no_ansi}" \
+	&& $(call log.target, $${header}( ${bold_under}input${no_ansi})) \
+	&& ${make} lab.dispatch.quiet/self.notebook.preview.in/${*} \
+		| ${stream.markdown} \
+	&& $(call log.target, $${header}( ${bold_under}output${no_ansi})) \
 	&& label="notebook finished in" ${make} flux.timer/lab.notebook.exec/${*} \
 	&& $(call io.mktemp) \
 	&& quiet=1 ${make} lab.dispatch/self.notebook.preview.out/${*} > $${tmpf} \
 	&& cat $${tmpf} | ${stream.markdown} \
+	&& error="preview failed.  multiple images or incompatible file types" \
 	&& cat $${tmpf} | grep '!\[png\]' > /dev/null\
 	  && ($(call log.target, Detected image(s). Attempting preview..) \
 	      && ${make} lab.notebook.preview.images/${*} \
-	      || $(call log.target, preview failed.  multiple images or incompatible file types)) \
+	      || $(call log.target, $${error})) \
 	  || true
 
 lab.notebook.imgcount/%:; cat ${*} | ${jq} -r '${jq.imgcount.filter}'

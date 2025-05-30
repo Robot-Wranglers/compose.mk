@@ -12,11 +12,20 @@ document.addEventListener('DOMContentLoaded', function() {
         // prominent link to project source
         document.querySelectorAll('.wy-breadcrumbs').forEach(item => {
             item.insertAdjacentHTML('beforeend', '<li class="wy-breadcrumbs-aside"><a href="https://github.com/robot-wranglers/compose.mk/" class="icon icon-github"> Project Source</a></li>');
-        
+            
+        Prism.languages.cmk={
+        comment:{pattern:/(^|[^\\])#(?:\\(?:\r\n|[\s\S])|[^\\\r\n])*/,lookbehind:!0},string:{pattern:/(["'])(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1/,greedy:!0},"builtin-target":{pattern:/\.[A-Z][^:#=\s]+(?=\s*:(?!=))/,alias:"builtin"},
+        target:{pattern:/^[^:=\s]+(?=\s*:(?!=))/m, alias:"symbol",inside:{variable:/\$+(?:(?!\$)[^(){}:#=\s]+|(?=[({]))/}},
+        variable:/\$+(?:(?!\$)[^(){}:#=\s]+|\([@*%<^+?][DF]\)|(?=[({]))/,
+        keyword:/-include\b|\b(?:define|else|endef|endif|export|ifn?def|ifn?eq|include|override|private|sinclude|undefine|unexport|vpath)\b/,
+        function:{pattern:/(\()(?:abspath|addsuffix|and|basename|call|dir|error|eval|file|filter(?:-out)?|findstring|firstword|flavor|foreach|guile|if|info|join|lastword|load|notdir|or|origin|patsubst|realpath|shell|sort|strip|subst|suffix|value|warning|wildcard|word(?:list|s)?)(?=[ \t])/,lookbehind:!0},
+        operator:/(?:::|[?:+!])?=|[|@]/,
+        punctuation:/[:;(){}]/}
         compose_keywords={'cmk-compose-keyword': {pattern: /.*(stop|build|ps) /, alias:"token p .ni .ne"} };
         Prism.languages.insertBefore('bash', 'keyword', compose_keywords);
         Prism.languages.insertBefore('make', 'keyword', compose_keywords);
-            
+        Prism.languages.insertBefore('cmk', 'keyword', 
+            {'cmk-dockerfile-kw': {pattern: /RUN /, alias:"token target p .ni .ne"}});
         cmk_cli_token={'cmk-cli-token': {pattern: / (?:compose[.]mk|[.]\/compose.mk)/,} };
         Prism.languages.insertBefore('bash', 'keyword', cmk_cli_token);
         Prism.languages.insertBefore('makefile', 'keyword', cmk_cli_token);
@@ -25,7 +34,15 @@ document.addEventListener('DOMContentLoaded', function() {
         Prism.languages.insertBefore('bash', 'punctuation', cmk_syntax);
         Prism.languages.insertBefore('makefile', 'punctuation', cmk_syntax);
         
-        line_feed={'cmk-line-feed': {pattern: /(\\)/,alias:"si punctuation"}};
+        cmk_syntax={'cmk-compose-keyword': {pattern: /[.](dispatch)(\\|,)/,}};
+        Prism.languages.insertBefore('bash', 'keyword', cmk_syntax);
+        Prism.languages.insertBefore('makefile', 'keyword', cmk_syntax);
+        Prism.languages.insertBefore('makefile', 'punctuation', cmk_syntax);
+        cmk_syntax={'cmk-compose-keyword': {pattern: /[.](run).*/,}};
+        Prism.languages.insertBefore('bash', 'keyword', cmk_syntax);
+        Prism.languages.insertBefore('makefile', 'keyword', cmk_syntax);
+        
+        line_feed={'cmk-line-feed': {pattern: /(\\|▰| with | as |⫻|\$|〚|⟧|⋙|🞹|⋘)/,alias:"si punctuation"}};
         Prism.languages.insertBefore('bash', 'punctuation', line_feed);
         Prism.languages.insertBefore('makefile', 'punctuation', line_feed);
         
@@ -38,44 +55,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 alias:"token no"} });
         
         // FXN REGEX: slightly different for bash vs makefile
-        // cmk_fxn=;
         Prism.languages.insertBefore('bash', 'keyword', 
             {'cmk-fxn': {
-                pattern: /(?:io|log|docker|flux|mk|stream|tux)[.]([a-z._])+(?:(\/))/,} });
+                pattern: /(?:io|log|docker|flux|stage|mk|stream|tux)[.]([a-z._])+(?:(\/))/,} });
         Prism.languages.insertBefore('makefile', 'keyword', 
             {'cmk-fxn': {
-                pattern: /(?:io|log|cmk|docker|flux|mk|stream|tux)[.]([a-z._])+(?:(\/|,|\())/,} });
+                pattern: /(?:io|log|cmk|docker|flux|stage|mk|stream|tux)[.]([a-z._])+(?:(\/|,|\())/,} });
         
         // must be before cmk_args 
         cmk_cli_keywords={'cmk-cli-keyword': {pattern: /\b(loadf|jb|jq)\b/, alias:"token p"} };
         Prism.languages.insertBefore('bash', 'keyword', cmk_cli_keywords);
         Prism.languages.insertBefore('make', 'punctuation', cmk_cli_keywords);
 
-        
         cmk_args={'cmk-args': {
             pattern: /(?:[\w.-]+)(?:,(?:[\w.-]+))+/, 
             alias:"token .ni .ne"} };
         Prism.languages.insertBefore('bash', 'keyword', cmk_args);
         Prism.languages.insertBefore('makefile', 'target', cmk_args);
         
-        // Prism.languages.insertBefore('bash', 'keyword', {'cmk-fxn': {pattern: /\bio.print.banner.*\b/,} });
         Prism.languages.insertBefore('makefile', 'keyword', 
             {'cmk-recursion': {pattern: /\b(?:make|self|this)/,} });
-        
-        // Prism.languages.insertBefore('bash', 'keyword', 
-        //     {'cmk-path': {pattern: / (?:[.]\/)(?!compose.mk\b).*\b/, alias:"token name"} });
-        // Prism.languages.insertBefore('bash', 'keyword', {'cmk-fxn': {pattern: /\b[\w.-]+\/[\w./-]+(?:,[\w./-]+)*\b/,} });
-            // Prism.plugins.customClass.add(({language, type, content}) => {
-        //     console.log({language, type, content});
-        //     if (content === './compose.mk' ) {return 'cmk-token';}
-        // });(?:flux|io)
+        Prism.languages.insertBefore('makefile', 'keyword', 
+            {'cmk-syntax': {pattern: /(?:dispatch|run)/,} });
+        Prism.languages.insertBefore('makefile', 'punctuation', 
+            {'cmk-syntax': {pattern: /(?:dispatch|run)/,} });
         
         const wrapTextNodeWithSpan = (text, classes) => {                     
             const span = document.createElement('span');
-            span.textContent = text.nodeValue; // Reuse the text node's value
+            span.textContent = text.nodeValue; 
             span.className = classes;
             text.parentNode.replaceChild(span, text); return span; 
         };
+        document.querySelectorAll('div.cmk-lang:not(.nohighlight) code').forEach(
+            node => {
+                node.className+=" language-cmk";
+                Prism.highlightElement(node)
+        });
         
         document.querySelectorAll('div.highlight:not(.nohighlight) code').forEach(
             node => {
@@ -101,11 +116,6 @@ document.addEventListener('DOMContentLoaded', function() {
             //     // console.log(node.innerHTML);
             // }
         }); 
-        
-        
-        
-        
-        
         
         
         document.querySelectorAll('div.cli_example').forEach(block => { 
@@ -153,11 +163,9 @@ function toggleCodeBlock(id, link) {
 function wrapContiguousDefineBlocks() {
     // Get the container element to process
     const container = document.body;
-    
     // Store nodes and tracking variables for each block
     let currentNodes = [];
     let hasDefineSpan = false;
-    
     // Use a TreeWalker to navigate through all nodes
     const walker = document.createTreeWalker(
       container,

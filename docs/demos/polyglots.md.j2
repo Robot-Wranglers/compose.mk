@@ -169,13 +169,14 @@ Although it isn't exactly a polyglot, the [Notebooking Demo]({{mkdocs.site_relat
 #### Implementation Details 
 <hr style="width:100%;border-bottom:3px solid black;">
  
+!!! tip "Tip"
+    The [*`mk.def.*`* targets]({{mkdocs.site_relative_url}}/api#api-mk) **always leave the data inside the define-blocks completely untouched**, meaning that there's no requirement for escaping the contents. Strings, tabs, spaces, and things like `$` are always left alone.
+
+    This also means the **content is fairly static**, i.e. *no pre-execution templating*.  This is a feature!  It discourages JIT code-generation in favor of more structured interactions via parameters-passing, environment variables, pipes, etc.
+
 It comes up sometimes that people want to have polyglots with pure `make`, not for building weird hybrid applications in the `compose.mk` sense, but just to get decent string manipulation abilities or similar. Historically the suggested approaches involved sketchy `.ONESHELL` hacks[^1], but comes with several issues.
 
-The approach used by `compose.mk` still has some limitations[^3], but it is overall much more robust and reliable than previous approaches, and easily supports *multiple* polyglots side-by-side and alongside more traditional targets.  Most of this stuff hinges on multi-line define-blocks, plus the [ability of `compose.mk` to handle reflection]({{mkdocs.site_relative_url}}/standard-lib/#reflection-support).  *(See the API for [*`mk.*`*]({{mkdocs.site_relative_url}}/api#api-mk) for more details.)*
-
-Note that the [*`mk.def.*`* targets]({{mkdocs.site_relative_url}}/api#api-mk) **always leave the data inside the define-blocks completely untouched**, meaning that there's no requirement for escaping the contents and things like `$` are always left alone.
-
-This also means the **content is fairly static**, and not typically amenable to *pre-execution templating*.  This is a feature!, because it discourages JIT code-generation in favor of more structured interactions via parameters-passing, environment variables, pipes, etc.
+The approach used by `compose.mk` still has some limitations[^3], but it is overall much more robust and reliable than previous approaches, and easily supports multiple polyglots side-by-side, and alongside more traditional targets.  Most of this stuff hinges on multi-line define-blocks, plus the ability of `compose.mk` to [handle some reflection]({{mkdocs.site_relative_url}}/standard-lib/#reflection-support).  *(See the API for [*`mk.*`*]({{mkdocs.site_relative_url}}/api#api-mk) for more details.)*
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
