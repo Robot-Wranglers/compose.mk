@@ -219,6 +219,7 @@ div .cli_output img {
   position: relative;
   z-index: 1;
   border-left: 8px solid #358ccb;
+  border-bottom: 2px solid #bdaeae;
   /* background-color: #0db7ed; */
   background-image: linear-gradient(transparent 50%, rgba(69, 142, 209, .04) 50%);
   background-attachment: local;

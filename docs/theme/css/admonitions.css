@@ -257,10 +257,10 @@ div .admonition {
     .admonition.question {
       border-left-color: rgb(87, 87, 40);
       border: 1px dotted;
-      background-color:#ffe;
+      /* background-color:#ffe; */
     }
     .admonition.question .admonition-title {
-      background-color: #ffc;
+      background-color: #ebeba1;
       color: #1f1e1e;
       font-size: 1.2em;
     }

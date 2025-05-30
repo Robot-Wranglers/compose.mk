@@ -7,6 +7,13 @@ One of the main features for `compose.mk` is a method for "importing" one [or mo
 
 Sometimes this "importing" process is referred to as *automation scaffolding*, or we might refer to it as *the make/compose bridge* or simply *the bridge*.
 
+!!! road_map "Road Map"
+    For project-automation, it's usually best to separate the details of automation / execution environment, as seen in the next example.
+    
+    If you are interested in **prototyping systems or building tools/apps,** you can skip the external compose file, [embed compose service definitions]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) and generate scaffolding from that too.
+
+    To jump straight to details, see [Target Scaffolding](#target-scaffolding), or, if you're interested in running tasks inside of the compose-services see [Container Dispatch]({{mkdocs.site_relative_url}}/container-dispatch).
+    
 ### Basic Example 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
@@ -41,14 +48,6 @@ That's it for the boilerplate, but we already have lots of interoperability for 
 * The ability to quickly shell into these containers 
 * The usual `docker compose` verbs like *stop/start/up/exec/logs*
 * And crucially, *capabilities for command-pipes and dispatch*.
-
-!!! info "Tip"
-  For project-automation, it's usually best to separate the details of automation / execution environment, as seen above.  
-  
-  If you are interested in **prototyping systems or building tools/apps,** you can skip the external compose file, [embed compose service definitions]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) and generate scaffolding from that too.
-
-See the next section for details about the scaffolded targets, or, if you're interested in running tasks inside of the compose-services skip ahead to the [container-dispatch section]({{mkdocs.site_relative_url}}/container-dispatch).
-
 
 ### Target Scaffolding
 <hr style="width:100%;border-bottom:3px solid black;">
