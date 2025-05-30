@@ -74,6 +74,17 @@ demo.double.dispatch: ▰/debian/self.demo ▰/alpine/self.demo
 
 # test.containerized.tty.output: 
 # 	cmd='sleep 2' label='testing gum spinner inside container' make io.gum.spin
+test.compiler:
+	$(call log.test, Compilation of CMK gives legal makefile + library fxns)
+	${io.mktemp} \
+	&& cat demos/cmk/structured-io.cmk | ./compose.mk mk.compile > $${tmpf} \
+	&& chmod +x $${tmpf} \
+	&& $${tmpf} flux.ok
+	$(call log.test, Compilation of makefile gives legal makefile + library fxns)
+	${io.mktemp} \
+	&& cat demos/no-include.mk | ./compose.mk mk.compile > $${tmpf} \
+	&& chmod +x $${tmpf} \
+	&& $${tmpf} clean flux.ok
 
 test.main.bridge:
 	$(call log.test, main bridge)
