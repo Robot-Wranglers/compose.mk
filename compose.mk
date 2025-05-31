@@ -63,14 +63,14 @@ case ${CMK_SUPERVISOR:-1} in \
 		printf "ᐂ ${sep} Installing supervisor..\n\033[0m" > /dev/stderr); \
 		export MAKE_SUPER=$(exec sh -c 'echo "$PPID"'); \
 		[ "${trace}" == 1 ] && set -x || true;  \
-		trap "CMK_DISABLE_HOOKS=1 ${_make_} mk.supervisor.trap/SIGINT; " SIGINT; \
+		trap "CMK_DISABLE_HOOKS=1 CMK_INTERNAL=1 ${_make_} mk.supervisor.trap/SIGINT; " SIGINT; \
 		case ${CMK_DISABLE_HOOKS:-0} in \
-			0) _targets="`echo ${@:-mk.__main__} | quiet=1 ${_make_} io.awker/.awk.rewrite.targets.maybe`";; \
+			0) _targets="`echo ${@:-mk.__main__} | CMK_INTERNAL=1 quiet=1 ${_make_} io.awker/.awk.rewrite.targets.maybe`";; \
 			1) _targets="${@:-mk.__main__}";; \
 		esac; \
 		${_make_} mk.supervisor.enter/${MAKE_SUPER} ${_targets} \
 			2> >(sed '/^make.*:.*mk.interrupt\/SIGINT.*Killed/,/^make:.*Error.*/d' >/dev/stderr); \
-		st=$? ; CMK_DISABLE_HOOKS=1 ${_make_} mk.supervisor.exit/${st}; st=$?; ;; \
+		st=$? ; CMK_DISABLE_HOOKS=1 CMK_INTERNAL=1 ${_make_} mk.supervisor.exit/${st}; st=$?; ;; \
 esac \
 ; exit ${st}
 
@@ -283,22 +283,30 @@ docker.run.base:=docker run --rm -i
 ##
 ## Variables used internally:
 ##
-## | Variable               | Meaning                                                             |
-## | ---------------------- | ------------------------------------------------------------------- |
-## | CMK_COMPOSE_FILE       | *Temporary file used for the embedded-TUI*                          |
-## | CMK_DIND               | *Determines whether docker-in-docker is allowed*                    |
-## | CMK_INTERNAL           | *1 if dispatched inside container, otherwise 0*                     |
-## | CMK_INTERPRETER        | CMK_SRC unless overridden; sometimes useful for extensions          |
-## | CMK_INTERPRETING        | CMK_SRC unless overridden; sometimes useful for extensions          |
-## | CMK_SRC:               | path to compose.mk source code                                      |
-## | CMK_SUPERVISOR         | *1 if supervisor/signals is enabled, otherwise 0*                   |
-## | COMPOSE_IGNORE_ORPHANS | *Honored by 'docker compose', this helps to quiet output*           |
-## | DOCKER_HOST_WORKSPACE  | *Needs override for correctly working with DIND volumes*            |
-## | TRACE:                 | 1 if increase verbosity desired (more detailed than verbose)        |
-## | GITHUB_ACTIONS:        | true if running inside github actions, false otherwise              |
-## | verbose:               | 1 if normal debugging output should be shown, otherwise 0           |
-## | __file__:              | val of CMK_SRC if stand-alone mode, invoked file if in library mode |
-## | trace:                 | alias for setting TRACE                                             |
+## | Variable               | Meaning                                                               |
+## | ---------------------- | ----------------------------------------------------------------------|
+## | CMK_COMPOSE_FILE       | *Temporary file used for the embedded-TUI*                            |
+## | CMK_DIND               | *Determines whether docker-in-docker is allowed*                      |
+## | CMK_INTERPRETING       | CMK_SRC unless overridden; sometimes useful for extensions            |
+## | CMK_SRC:               | path to compose.mk source code                                        |
+## | CMK_SUPERVISOR         | *1 if supervisor/signals is enabled, otherwise 0*                     |
+## | DOCKER_HOST_WORKSPACE  | *Needs override for correctly working with DIND volumes*              |
+## | TRACE:                 | 1 if increase verbosity desired (more detailed than verbose)          |
+## | verbose:               | 1 if normal debugging output should be shown, otherwise 0             |
+## | __file__:              | val of CMK_SRC if stand-alone mode, invoked file if in library mode   |
+## | __interpreter__        | usually "./${CMK_SRC}" unless overridden. maybe useful for extensions |
+## | trace:                 | alias for setting TRACE                                               |
+##
+## CMK_INTERNAL: 1 if runtime is dispatched inside a container, otherwise 0
+##   Setting CMK_INTERNAL=1 rather than detecting it effectively controls whether DIND is enabled, 
+##   and can be used as an optimization. This sets all `compose.imports` to no-op.
+##
+## Other Variables
+## | Variable               | Meaning                                                               |
+## | ---------------------- | ----------------------------------------------------------------------|
+## | COMPOSE_IGNORE_ORPHANS | *Honored by 'docker compose', this helps to quiet output*             |
+## | GITHUB_ACTIONS:        | true if running inside github actions, false otherwise                |
+##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 export COMPOSE_IGNORE_ORPHANS?=True
@@ -307,19 +315,20 @@ export CMK_COMPOSE_FILE?=.tmp.compose.mk.yml
 export CMK_DIND?=0
 export verbose:=$(shell [ "$${quiet:-0}" == "1" ] && echo 0 || echo $${verbose:-1})
 export CMK_INTERNAL?=0
-export CMK_SRC?=$(shell echo ${MAKEFILE_LIST} | sed 's/ /\n/g' | grep compose.mk)
-export CMK_EXEC=`dirname ${CMK_SRC}`/`basename ${CMK_SRC}`
+# export CMK_SRC?=$(shell echo ${MAKEFILE_LIST} | sed 's/ /\n/g' | grep compose.mk)
+# export CMK_SRC:=$(shell echo ${MAKEFILE_LIST} | sed 's/ /\n/g' | grep compose.mk)
+export CMK_SRC=compose.mk
+export __interpreter__?=$(shell echo `dirname ${CMK_SRC}||echo .`/`basename ${CMK_SRC}||echo compose.mk`)
 export CMK_SUPERVISOR?=1
 export CMK_EXTRA_REPO?=.
 export GITHUB_ACTIONS?=false
 export CMK_INTERPRETING?=
-export CMK_INTERPRETER?=${CMK_EXEC}
 
 ifneq ($(findstring compose.mk, ${MAKE_CLI}),)
 export CMK_LIB=0
 export CMK_STANDALONE=1
 export CMK_SRC=$(findstring compose.mk, ${MAKE_CLI})
-.DEFAULT_GOAL:=help
+# .DEFAULT_GOAL:=help
 else
 export CMK_LIB=1
 ifeq ($(strip ${CMK_INTERPRETING}),)
@@ -406,7 +415,8 @@ compose.build/%:
 	@#   ./compose.mk compose.build/<compose_file>
 	@#   svc=<svc_name> ./compose.mk compose.build/<compose_file>
 	@#
-	$(call log.docker, compose.build ${sep} ${green}$(shell basename ${*}) ${sep} ${dim_ital}$${svc:-all services})
+	$(call log.docker, \
+		compose.build ${sep} ${green}$(shell basename ${*}) ${sep} ${dim_ital}$${svc:-all services})
 	case $${force:-0} in \
 		"") force='';; \
 		0) force='';; \
@@ -433,7 +443,8 @@ compose.clean/%:
 	@#   svc=<svc_name> ./compose.mk compose.clean/<compose_file> 
 	@#
 	$(trace_maybe) \
-	&& $(call log.docker, compose.clean ${dim}file=${*} ${sep} ${dim_ital}$${svc:-all services}) \
+	&& $(call log.docker, \
+		compose.clean ${dim}file=${*} ${sep} ${dim_ital}$${svc:-all services}) \
 	&& ${docker.compose} -f ${*} \
 		--progress quiet down -t 1 \
 		--remove-orphans --rmi local $${svc:-}
@@ -453,15 +464,14 @@ compose.dispatch.sh/%:
 		--entrypoint $${entrypoint:-bash} $${svc} ${dash_x_maybe} \
 		-c "$${cmd:-true}" $(_compose_quiet)
 
-compose.get.stem/%:
+compose.get.stem/%:; basename -s .yml `basename -s .yaml ${*}`
 	@# Returns a normalized version of the stem for the given compose-file.
 	@# (A "stem" is just the basename without a suffix.)
 	@#
 	@# USAGE:
 	@#  ./compose.mk compose.get.stem/<fname>
-	@#
-	basename -s .yml `basename -s .yaml ${*}`
-
+	
+_yml.stem=$(shell basename -s .yml `basename -s .yaml ${1}`)
 compose.loadf: tux.require
 	@# Loads the given file,
 	@# then curries the rest of the CLI arguments to the resulting environment
@@ -488,7 +498,7 @@ compose.loadf: tux.require
 					2>&1 | ${stream.indent} ) \
 		 || true ) \
 	&& ( \
-			$(call log.part1, $${header} ${dim}Validating services) \
+			$(call log.part1, ${green}${GLYPH_IO} $${header} ${dim}Validating services) \
 			&& validation=`$${tmpf} $${stem}.services` \
 			&& count=`printf "$${validation}"|${stream.count.words}` \
 			&& validation=`printf "$${validation}" \
@@ -516,7 +526,7 @@ compose.select/%:
 	@#
 	choices="`${make} compose.services/${*}|${stream.nl.to.space}`" \
 	&& header="Choose a container:" && ${io.get.choice} \
-	&& set -x && ${io.shell.isolated} ${CMK_EXEC} loadf ${*} $${chosen}.shell
+	&& set -x && ${io.shell.isolated} ${__interpreter__} loadf ${*} $${chosen}.shell
 
 compose.services/%:; printf "$(call compose.services,${*})"
 	@# Returns space-delimited names for each non-abstract service defined by the given composefile.
@@ -1199,7 +1209,7 @@ io.browser/%:
 	@# Variable will be dereferenced and stored as 'url' before chaining.
 	@# NB: This requires python on the host and can not run from docker.
 	@#
-	url="`${make} mk.get/${*}`" ${make} io.browser
+	url="`CMK_INTERNAL=1 ${make} mk.get/${*}`" ${make} io.browser
 
 io.browser:
 	@# Tries to open the given URL in a browser.
@@ -1231,7 +1241,8 @@ io.env:
 	@# USAGE:
 	@#   ./compose.mk io.env
 	@#
-	CMK_INTERNAL=1 ${make} io.env.filter.prefix/PWD,CMK,KUBE,K8S,MAKE,TUI,DOCKER | ${stream.grep.safe}
+	CMK_INTERNAL=1 ${make} io.env.filter.prefix/PWD,CMK,KUBE,K8S,MAKE,TUI,DOCKER,__ \
+	| ${stream.grep.safe} | grep -v ___ | sort
 
 io.env/% io.env.filter.prefix/%:
 	@# Filters environment variables by the given prefix or (comma-delimited) prefixes.
@@ -1244,16 +1255,18 @@ _io.env=sed 's/,/\n/g' | xargs -I% sh -c "env | ${stream.grep.safe} | grep \"^%.
 io.env=bash -c 'echo $${1\#/} | ${_io.env}' -- 
 io.env.filter.prefix=${io.env}
 
-io.envp io.env.pretty .tux.widget.env:
+# .tux.widget.env: io.envp
+# .tux.widget.env/%: io.envp/%
+
+io.envp io.env.pretty: flux.pipeline.quiet/io.env,stream.ini.pygmentize
 	@# Pretty version of io.env, this includes some syntax highlighting.
 	@# No arguments.  See 'io.envp/<arg>' for a version that supports filtering.
 	@#
 	@# USAGE:
 	@#  ./compose.mk io.envp
-	@#
-	${make} io.env | ${make} stream.ini.pygmentize
-
-io.envp/% io.env.pretty/% .tux.widget.env/%:
+io.envp=CMK_INTERNAL=1 ${make} io.envp
+	
+io.envp/% io.env.pretty/%:
 	@# Pretty version of 'io.env/<arg>', this includes syntax highlighting and also filters the output.
 	@#
 	@# USAGE:
@@ -1263,7 +1276,6 @@ io.envp/% io.env.pretty/% .tux.widget.env/%:
 	@#  ./compose.mk io.envp/TUI
 	@#
 	${make} io.env/${*} | ${make} stream.ini.pygmentize
-
 io.figlet/%:; label="${*}"; ${io.figlet}
 	@# Treats the argument as a label, and renders it with `figlet`. 
 	@# NB: This requires the embedded tui is built.  
@@ -1271,7 +1283,7 @@ io.figlet/%:; label="${*}"; ${io.figlet}
 io.figlet:; ${io.figlet} 
 	@# Pulls `label` from the environment and renders it with `figlet`. 
 	@# Also available as a macro. NB: This requires the embedded tui is built.
-io.figlet=echo "figlet -f$${font:-3d} $${label}" | ${make} tux.shell.pipe >/dev/stderr
+io.figlet=printf "figlet -f$${font:-3d} $${label}" | ${make} tux.shell.pipe >/dev/stderr
 
 # docker run $(if [ -t 0 ]; then echo "-it"; else echo "-i"; fi) my-image:latest
 io.file.select=header="Choose a file: (dir=$${dir:-.})"; \
@@ -1463,6 +1475,7 @@ io.quiet.stderr.sh:
 			; exit $${exit_status} ; \
 		;; \
 	esac
+
 ifeq (${OS_NAME},Darwin)
 # https://www.unix.com/man_page/osx/1/script/
 io.script.tmpf=$(call io.mktemp) && script -q -r $${tmpf} sh ${dash_x_maybe} -c "${1}"
@@ -1547,8 +1560,11 @@ io.user_exit:
 	@# thus honoring `CMK_AT_EXIT_TARGETS`.
 	$(call log.io, ${@} ${sep} $${label:-Waiting for user input} ${sep} ${yellow} Press enter to exit...)
 	read -p "" _ignored \
-	; CMK_DISABLE_HOOKS=1 ${make} mk.supervisor.exit/0
+	; CMK_DISABLE_HOOKS=1 CMK_INTERNAL=1 ${make} mk.supervisor.exit/0
 io.user_exit=label="${1}" ${make} io.user_exit
+
+io.wait io.time.wait: io.time.wait/1
+	@# Pauses for 1 second.
 
 io.wait/% io.time.wait/%:
 	@# Pauses for the given amount of seconds.
@@ -1558,9 +1574,6 @@ io.wait/% io.time.wait/%:
 	@#
 	$(call log.io, ${@}${no_ansi} ${sep} ${dim}Waiting for ${*} seconds..) \
 	&& sleep ${*}
-
-io.wait io.time.wait: io.time.wait/1
-	@# Pauses for 1 second.
 
 io.with.file/%:
 	@# Context manager.
@@ -1633,7 +1646,7 @@ mk.__main__:
 				compose.mk) (\
 					$(call log.trace,empty invocation for compose.mk-- returning help) \
 					&& ${make} help);; \
-				*) ${make} `${make} mk.get/.DEFAULT_GOAL`;; \
+				*) ${make} `CMK_INTERNAL=1 ${make} mk.get/.DEFAULT_GOAL`;; \
 			esac ;; \
 		0) $(call log, ${red}error: library list is empty);; \
 		*) (\
@@ -1665,7 +1678,7 @@ mk.def.dispatch/%:
 	&& $(trace_maybe) \
 	&& src="$${intr} $${tmpf}" \
 	&& [ -p ${stdin} ] && ${stream.stdin} | eval $${src} || eval $${src}
-
+	
 mk.def.read=CMK_INTERNAL=1 ${make} mk.def.read
 mk.def.read/%:
 	@# Reads the named define/endef block from this makefile,
@@ -1862,11 +1875,17 @@ define cmk.default.dialect
 	["this.", "${make} "]
 ]
 endef 
+export __script__?=$(shell [ "${__interpreter__}" = "${__file__}" ] && printf "None" || printf "${__file__}")
 
 mk.assert.env/%:
 	@# Asserts that the (comma-delimited) environment variables are set and non-empty.
 	@# Also available as a macro.
 	$(call mk.assert.env,$(shell echo ${*}|${stream.comma.to.space}))
+
+mk.compile/% mk.compiler/%:; export CMK_INTERPRETING=${*}; cat ${*} | (${mk.compile})
+
+	@# Like `mk.compile`, but accepts file as argument instead of using stdin.
+
 mk.compile mk.compiler:
 	@# This is a transpiler for the CMK language -> Makefile.
 	@# Accepts streaming CMK source on stdin, result on stdout.
@@ -1875,28 +1894,76 @@ mk.compile mk.compiler:
 	@# USAGE:
 	@#  echo "<source_code>" | ./compose.mk mk.compiler
 	@#
-	case $${quiet:-1} in \
+	${mk.compile}
+define mk.compile
+$(call log.mk, ${@}) \
+	&& $(call log.json, file=${__file__} \
+			interpreter=${__interpreter__} \
+			interpreting="$${CMK_INTERPRETING:-None}" \
+			script=${__script__}) \
+	&& case $${quiet:-1} in \
 		*) runner=flux.pipeline.quiet;; \
 		0) runner=flux.pipeline;; \
 	esac \
 	&& $(call io.mktemp) && export inputf=`echo $${tmpf}` \
 	&& ${stream.stdin} > $${inputf} \
 	&& export CMK_INTERNAL=1 \
+	&& printf "#!/usr/bin/env -S CMK_INTERPRETING=$${CMK_INTERPRETING:-stdin} ${__interpreter__} mk.interpret\nMAKEFILE_LIST+=compose.mk\n" \
+	&& CMK_INTERPRETING=$${CMK_INTERPRETING:-stdin} ${make} mk.src \
 	&& cat $${inputf} | \
 		style=monokai lexer=makefile \
 		${make} $${runner}/mk.preprocess,.mk.compiler
+endef
 .mk.compiler:
 	@# Strips shebangs iff it is the first line
 	@# Main transpilation
-	$(call log.mk, mk.compiler ${sep} ) \
-	&& ${trace_maybe} \
-	&& printf "#!/usr/bin/env -S ${CMK_INTERPRETER} mk.interpret\n" \
+	${trace_maybe} \
 	&& ${stream.stdin} \
 	| ${make} io.awker/.awk.main.preprocess \
 	| ${make} io.awker/.awk.dispatch
+	
+mk.src:
+	@# Returns source-code for this make-context (excluding compose.mk).
+	@# This effectively flattens includes, basically concatenating 
+	@# MAKEFILE_LIST in reverse order, and is used internally as part 
+	@# of mk.compile.  This has a different meaning if called from extensions
+	@# 
+	${io.envp}
+	$(call log.mk,${@} ${sep}${dim} Generating source code for context)
+	printf '\n# generated from context:\n'
+	${jb} \
+		MAKEFILE_LIST='${MAKEFILE_LIST}' \
+		MAKEFILE=${MAKEFILE} \
+		make='${make}' \
+		__script__='${__script__}' \
+		__file__=${__file__} \
+		__interpreter__=${__interpreter__} \
+		__interpreting__='${CMK_INTERPRETING}' \
+	 | ${jq} . | ${stream.peek} | ${jq} | awk '{print "#  " $$0}'
+	src_list="$(subst ${CMK_SRC},,${MAKEFILE_LIST})" \
+	&& src_list="$(strip $(shell printf "$${src_list}" | tac))" \
+	&& case "${__script__}" in \
+		"") $(call log.trace, ${@} ${sep} no separate script was found);; \
+		"None") $(call log.trace, ${@} ${sep} no separate script was found);; \
+		"${__file__}") $(call log.trace, ${@} ${sep} no separate script was found);; \
+		*) ( \
+				$(call log.mk, ${@} ${sep} compiling with script ${__script__}) \
+				&& $(call log.mk, ${@} ${sep} ${yellow}script will be included!) \
+				&& cat ${__script__} && printf '\n'; \
+			) \
+	esac \
+	&& case "$${src_list}" in \
+		"") $(call log.mk, ${@} ${sep} no extra source to include);; \
+		*) $(call log.mk, ${@} ${sep} possible extra source to include: $${src_list});; \
+	esac
+
+# a version of (eval (call ..)) which attempts to simulate nargs.
+# used internally by transpiler, it simplifies translation to assume this 
+# is always available from all interpretted contexts.
 define .eval.call
 eval.call=$(eval $(call $(if $(filter undefined,$(origin 1)),,$(1)),$(if $(filter undefined,$(origin 2)),,$(2)),$(if $(filter undefined,$(origin 3)),,$(3)),$(if $(filter undefined,$(origin 4)),,$(4))))
 endef
+
 mk.preprocess: 
 	@# Runs the CMK input preprocessor on stdin.
 	$(call log.target, starting) \
@@ -1905,7 +1972,7 @@ mk.preprocess:
 	&& export cmk_dialect=`cat $${inputf} | ${make} .mk.parse.dialect.hint` \
 	&& export cmk_sugar=`cat $${inputf} | ${make} .mk.parse.sugar.hint` \
 	&& cat $${inputf} \
-	| grep -v '^#' \
+	| grep -a -v '^#' \
 	| ${make} flux.pipeline.quiet/mk.preprocess.dialect,mk.preprocess.sugar \
 	| ${stream.nl.compress} \
 	&& printf '\n'
@@ -1985,8 +2052,7 @@ mk.preprocess.sugar:
 	else $(call log.target,${yellow}no dialect hint in file) fi
 
 mk.include/%:
-	@# Dynamic includes.
-	@# This is experimental stuff for reflection support.
+	@# Dynamic includes. Experimental stuff for reflection support.
 	@#
 	@# This works by using code-generation and turning over the execution, 
 	@# so it requires the supervisor/signals hack to short-circuit the 
@@ -2006,30 +2072,32 @@ mk.interpret!:
 	@# USAGE: 
 	@#   ./compose.mk mk.interpret! <fname>
 	@#	
+	${io.envp}
 	cli="`echo ${mk.cli.continuation} | xargs`" \
 	&& rest="`echo $${cli} | cut -d' ' -f2- -s`" \
 	&& $(call io.mktemp) \
 	&& fname="`echo $${cli}| cut -d' ' -f1`" \
 	&& $(call log.mk, ${@} ${sep} compiling ${sep} ${dim}file=${underline}$${fname}${no_ansi}) \
 	&& [ -z "$${rest}" ] && true || $(call log.mk, ${@} ${cyan_flow_right} ${dim_ital}$${rest:-}) \
+	&& export CMK_INTERPRETING=$${fname} \
 	&& cat $${fname} | CMK_INTERNAL=1 ${make} mk.compile > $${tmpf} \
 	&& chmod ugo+x $${tmpf} \
 	&& ${trace_maybe} \
-	&& $(call mk.yield, continuation=\"$${rest}\" CMK_INTERPRETING=$${fname} ${make} mk.interpret/$${tmpf})
+	&& $(call mk.yield, continuation=\"$${rest}\" CMK_INTERPRETING=$${fname} __script__=${__script__} ${make} mk.interpret/$${tmpf})
 
 mk.interpret:
 	@# This is similar to `mk.include`, and (simulates) changes to the `make` runtime.
-	@# it is mostly intended to be used as shebang, and essentially sets up `compose.mk` 
+	@# It is mostly intended to be used as shebang, and essentially sets up `compose.mk` 
 	@# as an alternative to using `make` as an interpreter.  By opting in to this, 
 	@# extensions can inherit not only `compose.mk` code, but also the signals / supervisors. 
 	@#
-	@# See https://robot-wranglers.github.io/compose.mk/signals/ for more information.
-	@#
 	@# See `mk.interpret!` for a version of this that does preprocessing.
+	@# See https://robot-wranglers.github.io/compose.mk/signals/ for more information.
 	@#
 	@# USAGE:
 	@#  ./compose.mk mk.interpret path/to/Makefile <target> .. <target> 
 	@#
+	${io.envp}
 	${trace_maybe} && tmp="${mk.cli.continuation}" \
 	&& tmp=`echo $${tmp} | ${stream.lstrip}` \
 	&& fname="`echo $${tmp}| cut -d' ' -f1`" \
@@ -2043,19 +2111,34 @@ mk.interpret/%:
 	@#
 	@# USAGE: ./compose.mk mk.interpret/<fname>
 	@#
+	$(call log.mk,${@})
+	${io.envp}
 	case ${*} in \
 		-) fname=/dev/stdin ;;\
 		*) fname="${*}" ;; \
 	esac && $(call io.mktemp) \
 	&& $(call log.mk, mk.interpret ${sep} ${dim}file=${bold}$${fname} ) \
-	&& ( cat ${CMK_SRC} | sed -e '$$d' ; printf '\n\n\n' \
-		 && cat $${fname} | grep -a -v "^include ${CMK_SRC}" \
-		 && printf '\n\n\n' ; cat ${CMK_SRC} | tail -n1 ) \
+	&& $(call log.mk, mk.interpret ${sep} ${red}__script__=${__script__} ) \
+	&& $(call log.mk, mk.interpret ${sep} ${dim}excluding includes: ${CMK_SRC} ${__script__} ) \
+	&& ( cat ${CMK_SRC} \
+			| sed -e '$$d' | grep -a -v '^# ' \
+		&& printf '\n\n\n' \
+		&& cat $${fname} \
+		    | grep -a -v "^include ${CMK_SRC}" \
+		    | grep -a -v "^include ${__script__}" \
+		 && case "${__script__}" in \
+		    "") $(call log.mk,${yellow}script not set);; \
+		    "None") $(call log.mk, ${yellow}script not set);; \
+		    *) printf '\n#interpretted via __script__\ninclude ${__script__}\n' ;; \
+		 esac \
+		 && cat ${CMK_SRC} | tail -n1 ) | ${stream.peek} \
 	> $${tmpf} \
 	&& CMK_INTERNAL=1 ${make} mk.validate/$${tmpf} \
-	&& $(call log.trace, mk.interpret ${sep} ${dim_ital}$${continuation:-(no additional arguments passed)}) \
 	&& chmod +x $${tmpf} \
-	&& CMK_INTERPRETING=$${CMK_INTERPRETING:-$${fname}} MAKEFILE=$${tmpf} \
+	&& cp $${tmpf} .tmp.interpreting \
+	&& $(call log.trace, mk.interpret ${sep} ${dim_ital}$${continuation:-(no additional arguments passed)}) \
+	&& export CMK_INTERPRETING=$${CMK_INTERPRETING:-${*}} \
+	&& __script__=${__script__} MAKEFILE=$${tmpf} \
 		stdbuf -o0 -e0 $${tmpf} $${continuation:-}
 
 mk.let/%:
@@ -2295,7 +2378,7 @@ mk.supervisor.interrupt mk.interrupt: mk.interrupt/SIGINT
 	@# The default interrupt.  This is shorthand for mk.interrupt/SIGINT
 
 # WARNING: do not use ${make} here!
-mk.interrupt=${MAKE} -f ${MAKEFILE} mk.interrupt
+mk.interrupt=CMK_INTERNAL=1 ${MAKE} -f ${MAKEFILE} mk.interrupt
 
 ifeq (${CMK_SUPERVISOR},0)
 mk.supervisor.interrupt/% mk.interrupt/%:
@@ -2348,7 +2431,7 @@ mk.supervisor.interrupt/% mk.interrupt/%:
 		0) $(call log.trace, ${red}Supervisor disabled!); exit 0; ;; \
 		*) \
 			header="${GLYPH_MK} mk.interrupt ${sep}" \
-			&& super=`${make} mk.supervisor.pid||true` \
+			&& super=`CMK_INTERNAL=1 ${make} mk.supervisor.pid||true` \
 			&& case "$${super:-}" in \
 				"") $(call log.trace, ${red}Could not find supervisor!); ;; \
 				*) (\
@@ -2906,7 +2989,7 @@ flux.pipeline/%:
 			; cat $${tmpf} | ${make} flux.pipeline/$${rest}); fi
 .flux.pipeline.preview=(\
 	$(call log.flux, $${hdr} ${bold_green}$${first} ${no_ansi_dim}stage ${sep} ${underline}result preview${no_ansi}) \
-				; cat $${tmpf} | quiet=1 ${make} stream.pygmentize ; printf '\n'>/dev/stderr)
+				; cat $${tmpf} | CMK_INTERNAL=1 quiet=1 ${make} stream.pygmentize ; printf '\n'>/dev/stderr)
 
 flux.pipeline.quiet/%:
 	@# A quiet version of `flux.pipeline`.  
@@ -3422,7 +3505,7 @@ stream.strip:
 	@#
 	${stream.stdin} | awk '{gsub(/[\t\n]/, ""); gsub(/ +/, " "); print}' ORS=''
 
-stream.ini.pygmentize:; ${stream.stdin} | lexer=ini ${make} stream.pygmentize
+stream.ini.pygmentize:; ${stream.stdin} | CMK_INTERNAL=1 lexer=ini ${make} stream.pygmentize
 	@# Highlights input stream using the 'ini' lexer.
 
 stream.csv.pygmentize=${make} stream.csv.pygmentize
@@ -3537,7 +3620,7 @@ define Dockerfile.stream.pygmentize
 FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
 RUN apk add -q --update py3-pygments
 endef
-stream.pygmentize=${make} stream.pygmentize 
+stream.pygmentize=CMK_INTERNAL=1 ${make} stream.pygmentize 
 stream.pygmentize: Dockerfile.build/stream.pygmentize
 	@# Syntax highlighting for the input stream.
 	@# Lexer will be autodetected unless override is provided.
@@ -3555,7 +3638,7 @@ stream.pygmentize: Dockerfile.build/stream.pygmentize
 	&& style="-Ostyle=$${style:-monokai}" \
 	&& src="entrypoint=pygmentize" \
 	&& src="$${src} cmd=\"$${style} $${lexer} -f terminal256 $${fname:-}\"" \
-	&& src="$${src} img=${@} ${make} mk.docker.run.sh" \
+	&& CMK_INTERNAL=1 src="$${src} img=${@} ${make} mk.docker.run.sh" \
 	&& ([ -p ${stdin} ] && ${stream.stdin} | eval $${src} || eval $${src}) >/dev/stderr
 
 stream.json.pygmentize:; lexer=json ${make} stream.pygmentize
@@ -4859,7 +4942,23 @@ compose.import.*=${compose.import}
 compose.import.def=${compose.import.string}
 
 # Main macro to import services from an entire compose file
+# define cacher
+# ifndef MACRO_EXECUTED$(1)$(2)$(3)
+# 	$(eval MACRO_EXECUTED := 1)
+# else
+# 	@echo "Operation already completed (memoized)"
+# endif
+# endef
+
+io.string.hash=$(shell printf "${1}" | sed 's/ /_/g'|sed 's/[.]/_/g'|sed 's/\//_/g')
+
 define compose.import.generic
+$(eval cached:=$(call io.string.hash,$(1)$(2)$(3)))
+$$(shell $(call io.log.part1, __import__ ${sep} ${1} ${3}))
+ifndef $${cached}
+$$(eval ${cached} := 1)
+$$(shell $(call io.log.part2, creating))
+
 $(eval target_namespace:=$(1))
 $(eval import_to_root := $(if $(2), $(strip $(2)), FALSE))
 $(eval compose_file:=$(strip $(3)))
@@ -5039,13 +5138,16 @@ ${compose_file_stem}/%:
 	; fi \
 	&& ([ -z "${MAKE_CLI_EXTRA}" ] && true || ${make} mk.interrupt)
 
-$(foreach \
+$$(foreach \
  	compose_service_name, \
  	$(__services__), \
-	$(eval \
-		$(call compose.create_make_targets, \
+	$$(eval \
+		$$(call compose.create_make_targets, \
 			$${compose_service_name}, \
 			${target_namespace}, ${import_to_root}, ${compose_file}, )))
+else
+$$(shell $(call io.log.part2, ${GLYPH_CHECK} cached))
+endif
 endef
 
 # Main macros to import a code-block
