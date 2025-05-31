@@ -287,7 +287,6 @@ docker.run.base:=docker run --rm -i
 ## | ---------------------- | ----------------------------------------------------------------------|
 ## | CMK_COMPOSE_FILE       | *Temporary file used for the embedded-TUI*                            |
 ## | CMK_DIND               | *Determines whether docker-in-docker is allowed*                      |
-## | CMK_INTERPRETING       | CMK_SRC unless overridden; sometimes useful for extensions            |
 ## | CMK_SRC:               | path to compose.mk source code                                        |
 ## | CMK_SUPERVISOR         | *1 if supervisor/signals is enabled, otherwise 0*                     |
 ## | DOCKER_HOST_WORKSPACE  | *Needs override for correctly working with DIND volumes*              |
@@ -295,6 +294,7 @@ docker.run.base:=docker run --rm -i
 ## | verbose:               | 1 if normal debugging output should be shown, otherwise 0             |
 ## | __file__:              | val of CMK_SRC if stand-alone mode, invoked file if in library mode   |
 ## | __interpreter__        | usually "./${CMK_SRC}" unless overridden. maybe useful for extensions |
+## | __interpreting__       | CMK_SRC unless overridden; sometimes useful for extensions            |
 ## | trace:                 | alias for setting TRACE                                               |
 ##
 ## CMK_INTERNAL: 1 if runtime is dispatched inside a container, otherwise 0
@@ -322,7 +322,7 @@ export __interpreter__?=$(shell echo `dirname ${CMK_SRC}||echo .`/`basename ${CM
 export CMK_SUPERVISOR?=1
 export CMK_EXTRA_REPO?=.
 export GITHUB_ACTIONS?=false
-export CMK_INTERPRETING?=
+export __interpreting__?=
 
 ifneq ($(findstring compose.mk, ${MAKE_CLI}),)
 export CMK_LIB=0
@@ -331,10 +331,10 @@ export CMK_SRC=$(findstring compose.mk, ${MAKE_CLI})
 # .DEFAULT_GOAL:=help
 else
 export CMK_LIB=1
-ifeq ($(strip ${CMK_INTERPRETING}),)
+ifeq ($(strip ${__interpreting__}),)
 export __file__?=$(word 1, $(MAKEFILE_LIST))
 else
-export __file__=${CMK_INTERPRETING}
+export __file__=${__interpreting__}
 endif
 export CMK_STANDALONE=0
 .DEFAULT_GOAL:=__main__
@@ -1882,7 +1882,7 @@ mk.assert.env/%:
 	@# Also available as a macro.
 	$(call mk.assert.env,$(shell echo ${*}|${stream.comma.to.space}))
 
-mk.compile/% mk.compiler/%:; export CMK_INTERPRETING=${*}; cat ${*} | (${mk.compile})
+mk.compile/% mk.compiler/%:; export __interpreting__=${*}; cat ${*} | (${mk.compile})
 
 	@# Like `mk.compile`, but accepts file as argument instead of using stdin.
 
@@ -1895,11 +1895,12 @@ mk.compile mk.compiler:
 	@#  echo "<source_code>" | ./compose.mk mk.compiler
 	@#
 	${mk.compile}
+
 define mk.compile
 $(call log.mk, ${@}) \
 	&& $(call log.json, __file__=${__file__} \
 			__interpreter__=${__interpreter__} \
-			__interpreting__="$${CMK_INTERPRETING:-None}" \
+			__interpreting__="$${__interpreting__:-None}" \
 			__script__=${__script__}) \
 	&& case $${quiet:-1} in \
 		*) runner=flux.pipeline.quiet;; \
@@ -1908,8 +1909,8 @@ $(call log.mk, ${@}) \
 	&& $(call io.mktemp) && export inputf=`echo $${tmpf}` \
 	&& ${stream.stdin} > $${inputf} \
 	&& export CMK_INTERNAL=1 \
-	&& printf "#!/usr/bin/env -S CMK_INTERPRETING=$${CMK_INTERPRETING:-stdin} ${__interpreter__} mk.interpret\nMAKEFILE_LIST+=compose.mk\n" \
-	&& CMK_INTERPRETING=$${CMK_INTERPRETING:-stdin} ${make} mk.src \
+	&& printf "#!/usr/bin/env -S __interpreting__=$${__interpreting__:-stdin} ${__interpreter__} mk.interpret\nMAKEFILE_LIST+=compose.mk\n" \
+	&& __interpreting__=$${__interpreting__:-stdin} ${make} mk.src \
 	&& cat $${inputf} | \
 		style=monokai lexer=makefile \
 		${make} $${runner}/mk.preprocess,.mk.compiler
@@ -1937,7 +1938,7 @@ mk.src:
 		__script__='${__script__}' \
 		__file__=${__file__} \
 		__interpreter__=${__interpreter__} \
-		__interpreting__='${CMK_INTERPRETING}' \
+		__interpreting__='${__interpreting__}' \
 	 | ${jq} . | ${stream.peek} | ${jq} | awk '{print "#  " $$0}'
 	src_list="$(subst ${CMK_SRC},,${MAKEFILE_LIST})" \
 	&& src_list="$(strip $(shell printf "$${src_list}" | tac))" \
@@ -2075,11 +2076,11 @@ mk.interpret!:
 	&& fname="`echo $${cli}| cut -d' ' -f1`" \
 	&& $(call log.mk, ${@} ${sep} compiling ${sep} ${dim}file=${underline}$${fname}${no_ansi}) \
 	&& [ -z "$${rest}" ] && true || $(call log.mk, ${@} ${cyan_flow_right} ${dim_ital}$${rest:-}) \
-	&& export CMK_INTERPRETING=$${fname} \
+	&& export __interpreting__=$${fname} \
 	&& cat $${fname} | CMK_INTERNAL=1 ${make} mk.compile > $${tmpf} \
 	&& chmod ugo+x $${tmpf} \
 	&& ${trace_maybe} \
-	&& $(call mk.yield, continuation=\"$${rest}\" CMK_INTERPRETING=$${fname} __script__=${__script__} ${make} mk.interpret/$${tmpf})
+	&& $(call mk.yield, continuation=\"$${rest}\" __interpreting__=$${fname} __script__=${__script__} ${make} mk.interpret/$${tmpf})
 
 mk.interpret:
 	@# This is similar to `mk.include`, and (simulates) changes to the `make` runtime.
@@ -2098,7 +2099,7 @@ mk.interpret:
 	&& fname="`echo $${tmp}| cut -d' ' -f1`" \
 	&& rest="`echo $${tmp}| cut -d' ' -f2- -s`" \
 	&& $(call log.mk, mk.interpret ${sep} ${dim}starting interpreter ${sep} ${dim}timestamp=${yellow}${io.timestamp}) \
-	&& continuation="$${rest}" CMK_INTERPRETING=$${CMK_INTERPRETING:-$${fname}} ${make} mk.interpret/$${fname}
+	&& continuation="$${rest}" __interpreting__=$${__interpreting__:-$${fname}} ${make} mk.interpret/$${fname}
 	$(call mk.yield, true)
 
 mk.interpret/%:
@@ -2110,9 +2111,14 @@ mk.interpret/%:
 	case ${*} in \
 		-) fname=/dev/stdin ;;\
 		*) fname="${*}" ;; \
-	esac && $(call io.mktemp) \
-	&& $(call log.mk, mk.interpret ${sep} ${dim}file=${bold}$${fname} ) \
-	&& $(call log.mk, mk.interpret ${sep} ${red}__script__=${__script__} ) \
+	esac \
+	&& $(call log.json, \
+		__input__=$${fname} \
+		__file__=${__file__} \
+		__script__=${__script__} \
+		__interpreter__=${__interpreter__} \
+		__interpreting__="$${__interpreting__:-None}" ) \
+	&& $(call io.mktemp) \
 	&& $(call log.mk, mk.interpret ${sep} ${dim}excluding includes: ${CMK_SRC} ${__script__} ) \
 	&& ( cat ${CMK_SRC} \
 			| sed -e '$$d' | grep -a -v '^# ' \
@@ -2131,7 +2137,7 @@ mk.interpret/%:
 	&& chmod +x $${tmpf} \
 	&& cp $${tmpf} .tmp.interpreting \
 	&& $(call log.trace, mk.interpret ${sep} ${dim_ital}$${continuation:-(no additional arguments passed)}) \
-	&& export CMK_INTERPRETING=$${CMK_INTERPRETING:-${*}} \
+	&& export __interpreting__=$${__interpreting__:-${*}} \
 	&& __script__=${__script__} MAKEFILE=$${tmpf} \
 		stdbuf -o0 -e0 $${tmpf} $${continuation:-}
 
@@ -2203,7 +2209,7 @@ mk.pkg/%:
 	@#
 	${make} .mk.pkg/${*}
 
-ifeq (${CMK_INTERPRETING},) 
+ifeq (${__interpreting__},) 
 .mk.pkg/%:; cmd=${*} ${make} mk.pkg.root
 mk.pkg.root:
 	@# Packages the application root, or the given command if provided.
@@ -2214,7 +2220,7 @@ else
 mk.pkg.root:
 	@# Packages the application root, or the given command if provided.
 	label=$${label:-${*}} bin=$${bin:-${*}} script=./compose.mk \
-	script_args="mk.interpret! ${CMK_INTERPRETING} $${cmd:-}" \
+	script_args="mk.interpret! ${__interpreting__} $${cmd:-}" \
 	${make} mk.pkg
 .mk.pkg/%:; cmd=${*} ${make} mk.pkg.root
 endif
