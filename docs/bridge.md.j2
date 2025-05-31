@@ -7,6 +7,13 @@ One of the main features for `compose.mk` is a method for "importing" one [or mo
 
 Sometimes this "importing" process is referred to as *automation scaffolding*, or we might refer to it as *the make/compose bridge* or simply *the bridge*.
 
+!!! road_map "Road Map"
+    For project-automation, it's usually best to separate the details of automation / execution environment, as seen in the next example.
+    
+    If you are interested in **prototyping systems or building tools/apps,** you can skip the external compose file, [embed compose service definitions]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) and generate scaffolding from that too.
+
+    To jump straight to details, see [Target Scaffolding](#target-scaffolding), or, if you're interested in running tasks inside of the compose-services see [Container Dispatch]({{mkdocs.site_relative_url}}/container-dispatch).
+    
 ### Basic Example 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
@@ -16,12 +23,9 @@ We'll use images for debian and alpine just as examples, but these might be any 
 
 {{macros.embed_demo('demos/data/docker-compose.minimal.yml', type='yaml', github=github)}}
 
-!!! info "Tip"
-    Usually it's better to separate the details of automation / execution environment, but technically you can also [embed compose service definitions]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) and generate scaffolding from that too.
-
 Next, the Makefile.  To generate make-targets for every service in the given compose file, we just need to include `compose.mk` as a library, then call one of the `compose.import.*` functions.
 
-The simplest way to use `compose.import` is passing in single argument for the compose-file:
+The simplest way to use `compose.import` is passing in a single argument for the compose-file:
 
 ```Makefile {.snippet}
 # Inside your project Makefile
@@ -38,13 +42,11 @@ The arguments *`(some_namespace, TRUE)`* above allow for control of the scaffold
 but The 2nd argument *TRUE* is a bool for whether `compose.import` was allowed to import to the root namespace, you get top-level targets for each service.
 #}
 
-That's it for the minimal boilerplate, but we already have lots of interoperability for the containers involved.  This includes stuff like:
+That's it for the boilerplate, but we already have lots of interoperability for the containers involved.  This includes stuff like:
 
 * The ability to quickly shell into these containers 
 * The usual `docker compose` verbs like *stop/start/up/exec/logs*
 * And crucially, *capabilities for command-pipes and dispatch*.
-
-See the next section for details about the scaffolded targets, or, if you're interested in running tasks inside of the compose-services skip ahead to the [container-dispatch section]({{mkdocs.site_relative_url}}/container-dispatch).
 
 ### Target Scaffolding
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -95,7 +97,7 @@ For our example so far, `compose_stem` from `docker-compose.yml`would be `docker
 
 Canonical names are always created unconditionally with `compose.import` or [any other kind of import statement](#other-import-statements).
 
-There are *lots* of other scaffolded entrypoints! But they allow follow a pattern like **`<compose_stem>`/`<svc_name>`.`<verb>`**, i.e., basically the same as the corresponding toplevel container handles we saw in the last section.
+There are *lots* of other scaffolded entrypoints! But they all follow a pattern like **`<compose_stem>`/`<svc_name>`.`<verb>`**, i.e., basically the same as the corresponding toplevel container handles we saw in the last section.
 
 #### Dispatch Namespace 
 --------------------------

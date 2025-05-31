@@ -24,7 +24,7 @@ or myopic treatment of the tools or the use-cases involved.  **Working theory: p
 
 Some people might be skeptical about getting involved with *the biggest, baddest, and most highly-powered mutant Makefile the world has ever seen*, so let's be super clear about a few things: 
 
-!!! danger "<small>Reasonable people might consider this stuff to be mad science.</small>"
+!!! danger "<small>Mad Science</small>"
     The source code for `compose.mk` weighs in at an eye-popping 2500+ lines of pure Makefile, and many features use on-the-fly code-generation.  There are other eyebrow raising implementation details, including use (abuse?) of POSIX signals and lots of white-knuckled, wild-eyed metaprogramming.  One might even say that *the whole implementation is a very long list of terrible hacks that can only be redeemed by a* **but look what you can do with this!** *moment.*
 
 Well, pushing the boundaries of a simple toolchain <u>is</u> part of the goal.  At the same time, this isn't some esolang flex like a [fractran compiler](https://github.com/siraben/hasktran) or [regex-chess](https://nicholas.carlini.com/writing/2025/regex-chess.html), or at least it isn't *only* that. 
@@ -111,7 +111,7 @@ That's because `make` is *just too good to ignore*, and there are several major 
 
 If you need something *outside* of docker that you want stability & ubiquity from, it's hard to find a better choice.  As a bonus, most likely tab-completion for make-targets already works out of the box with your OS and shell, and to a certain extent, `make` can even support plan/apply workflows (via `--dry-run`) and parallel execution (via `--jobs`).  
 
-!!! quote "Did someone say that they hate tabs?"
+!!! commentary "Did someone say that they hate tabs?"
     You'll be excited to learn that you can use `.RECIPEPREFIX` and probably surprised that support for using space instead is available for  about 15 years now.  See [this discussion](https://stackoverflow.com/questions/2131213/can-you-make-valid-makefiles-without-tab-characters/21920142#21920142) for more details.
 
 In short, the language agnostic all purpose incredible makefile[^6] was pretty great before, and with `compose.mk` it's almost unstoppable =P
@@ -190,11 +190,11 @@ So, part of what we're really talking about is **the ability to export a project
 
 To point the microscope at data-engineering instead of data-science.. most people have probably also seen the phenomenon where some team is struggling with enterprise java frameworks and/or cloud-based services for 3 months, just to deliver a CSV -> JSON conversion tool.
 
-----------------
+What does this have to do with `compose.mk`?  Well, none of this is to suggest that [mini ETL demos]({{mkdocs.site_relative_url}}/demos/workflows) mean you can throw away products like Airflow, Databricks, AWS Glue / Step Functions, etc.  (What's more realistic is that maybe your `compose.mk`-backed DAG is just a node in a bigger Airflow-DAG, or that Airflow/ECS/Fargate/Databricks calls your tasks piece-wise.)  
 
-What does this have to do with `compose.mk`?  Well, none of this is to suggest that [mini ETL demos]({{mkdocs.site_relative_url}}/demos/workflows) mean you can throw away products like Airflow, Databricks, AWS Glue / Step Functions, etc.  (What's more realistic is that maybe your `compose.mk`-backed DAG is just a node in a bigger Airflow-DAG, or that Airflow/ECS/Fargate/Databricks calls your tasks piece-wise.)
+Local-first development approaches obviously cannot completely replace services like AWS lambda, sagemaker, or glue.  But having a parallel implementation of a simpler pipeline that is "close enough" is often a good idea for testing and development.
 
-Also none of this is meant to suggest that [compose.mk's self-extracting archives]({{mkdocs.site_relative_url}}/demos/packaging) will cure the reproducibility crisis either, or that [weird self-contained polyglots]({{mkdocs.site_relative_url}}/demos/lean) are a great idea!  What is a good idea though is *making structured prototyping simpler*, and trying to make sure that prototypes can have versioned components, fully specified runtime requirements, and are actually a positive step towards shipping.  
+Also none of this is meant to suggest that [compose.mk's self-extracting archives]({{mkdocs.site_relative_url}}/demos/packaging) will cure the reproducibility crisis either, or that [weird self-contained polyglots]({{mkdocs.site_relative_url}}/demos/lean) are a great idea!  What is a good idea though is *making structured prototyping simpler*, and ensuring that prototypes can have versioned components, fully specified runtime requirements, and are actually a positive step towards shipping.  
 
 For a closer look at what `compose.mk` can offer in terms of projects-as-tools and environments-as-tools, see [the notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking), [the GUI demo]({{mkdocs.site_relative_url}}/guis), and [the RAG demo]({{mkdocs.site_relative_url}}/demos/RAG).
 

@@ -39,7 +39,7 @@ endef
 $(eval $(call compose.import.string, inlined.services,  TRUE))
 
 # Top level entrypoint, run the other individual demos.
-__main__: demo.dispatch demo.compose.verbs
+__main__: demo.dispatch demo.compose_verbs
 
 # Dispatch examples: run a task inside alice-container and bob-container.
 # Note that docker build is implicit, on-demand, and cached unless forced.
@@ -52,7 +52,7 @@ self.internal_task:
 # Import has already modified the `inlined.services` namespace 
 # with familiar verbs from docker compose, like "build", "stop",
 # "ps", etc.  Now we can use them.
-demo.compose.verbs: \
+demo.compose_verbs: \
 	inlined.services.stop \
 	inlined.services.build
 
