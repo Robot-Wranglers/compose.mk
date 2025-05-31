@@ -1897,10 +1897,10 @@ mk.compile mk.compiler:
 	${mk.compile}
 define mk.compile
 $(call log.mk, ${@}) \
-	&& $(call log.json, file=${__file__} \
-			interpreter=${__interpreter__} \
-			interpreting="$${CMK_INTERPRETING:-None}" \
-			script=${__script__}) \
+	&& $(call log.json, __file__=${__file__} \
+			__interpreter__=${__interpreter__} \
+			__interpreting__="$${CMK_INTERPRETING:-None}" \
+			__script__=${__script__}) \
 	&& case $${quiet:-1} in \
 		*) runner=flux.pipeline.quiet;; \
 		0) runner=flux.pipeline;; \
@@ -1928,7 +1928,6 @@ mk.src:
 	@# MAKEFILE_LIST in reverse order, and is used internally as part 
 	@# of mk.compile.  This has a different meaning if called from extensions
 	@# 
-	${io.envp}
 	$(call log.mk,${@} ${sep}${dim} Generating source code for context)
 	printf '\n# generated from context:\n'
 	${jb} \
@@ -1943,9 +1942,7 @@ mk.src:
 	src_list="$(subst ${CMK_SRC},,${MAKEFILE_LIST})" \
 	&& src_list="$(strip $(shell printf "$${src_list}" | tac))" \
 	&& case "${__script__}" in \
-		"") $(call log.trace, ${@} ${sep} no separate script was found);; \
-		"None") $(call log.trace, ${@} ${sep} no separate script was found);; \
-		"${__file__}") $(call log.trace, ${@} ${sep} no separate script was found);; \
+		""|None|"${__file__}") $(call log.trace, ${@} ${sep} no separate script was found);; \
 		*) ( \
 				$(call log.mk, ${@} ${sep} compiling with script ${__script__}) \
 				&& $(call log.mk, ${@} ${sep} ${yellow}script will be included!) \
@@ -1953,8 +1950,8 @@ mk.src:
 			) \
 	esac \
 	&& case "$${src_list}" in \
-		"") $(call log.mk, ${@} ${sep} no extra source to include);; \
-		*) $(call log.mk, ${@} ${sep} possible extra source to include: $${src_list});; \
+		"") $(call log.mk, ${@} ${sep} no other sources to include);; \
+		*) $(call log.mk, ${@} ${sep} ${yellow}possible extra source to include: $${src_list});; \
 	esac
 
 # a version of (eval (call ..)) which attempts to simulate nargs.
@@ -2072,7 +2069,6 @@ mk.interpret!:
 	@# USAGE: 
 	@#   ./compose.mk mk.interpret! <fname>
 	@#	
-	${io.envp}
 	cli="`echo ${mk.cli.continuation} | xargs`" \
 	&& rest="`echo $${cli} | cut -d' ' -f2- -s`" \
 	&& $(call io.mktemp) \
@@ -2097,7 +2093,6 @@ mk.interpret:
 	@# USAGE:
 	@#  ./compose.mk mk.interpret path/to/Makefile <target> .. <target> 
 	@#
-	${io.envp}
 	${trace_maybe} && tmp="${mk.cli.continuation}" \
 	&& tmp=`echo $${tmp} | ${stream.lstrip}` \
 	&& fname="`echo $${tmp}| cut -d' ' -f1`" \
@@ -2112,7 +2107,6 @@ mk.interpret/%:
 	@# USAGE: ./compose.mk mk.interpret/<fname>
 	@#
 	$(call log.mk,${@})
-	${io.envp}
 	case ${*} in \
 		-) fname=/dev/stdin ;;\
 		*) fname="${*}" ;; \
@@ -4948,9 +4942,11 @@ compose.import.*=${compose.import}
 compose.import.def=${compose.import.string}
 
 io.string.hash=$(shell printf "${1}" | sed 's/ /_/g'|sed 's/[.]/_/g'|sed 's/\//_/g')
+log.import=$$(shell $$(call \
+	log.io, __import__ $${sep} $${dim_cyan}${target_namespace} $${sep}$${dim} ${1}))
 log.import.1=$$(shell $$(call \
-	io.log.part1, __import__ $${sep} $${dim_cyan}${target_namespace} $${sep}$${dim} ${1}))
-log.import.2=$$(shell $$(call io.log.part2, ${1}))
+	log.trace.part1, __import__ $${sep} $${dim_cyan}${target_namespace} $${sep}$${dim} ${1}))
+log.import.2=$$(shell $$(call log.trace.part2, ${1}))
 define compose.import.generic
 $(eval target_namespace:=$(strip $(1)))
 $(eval compose_file:=$(strip $(3)))
@@ -5146,6 +5142,7 @@ $$(foreach \
 			${target_namespace}, ${import_to_root}, ${compose_file}, )))
 else
 $(call log.import.2,${GLYPH_CHECK} cached)
+$(call log.import,double-import${no_ansi_dim}.. skipping)
 endif
 endef
 
