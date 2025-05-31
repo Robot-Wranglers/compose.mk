@@ -553,7 +553,7 @@ compose.validate/%:
 		*) $(call log.part2, failed) && exit 1; ;; \
 	esac
 
-compose.validate.quiet/%:; ${make} compose.validate/${*} >/dev/null 2>/dev/null
+compose.validate.quiet/%:; CMK_INTERNAL=1 ${make} compose.validate/${*} >/dev/null 2>/dev/null
 	@# Like `compose.validate`, but silent.
 
 compose.require:
@@ -2131,7 +2131,7 @@ mk.interpret/%:
 		    "None") $(call log.mk, ${yellow}script not set);; \
 		    *) printf '\n#interpretted via __script__\ninclude ${__script__}\n' ;; \
 		 esac \
-		 && cat ${CMK_SRC} | tail -n1 ) | ${stream.peek} \
+		 && cat ${CMK_SRC} | tail -n1 ) \
 	> $${tmpf} \
 	&& CMK_INTERNAL=1 ${make} mk.validate/$${tmpf} \
 	&& chmod +x $${tmpf} \
@@ -4912,6 +4912,12 @@ ${img_name}.dispatch/%:; hostname=${img_name} img=${img_name} ${make} mk.docker.
 ${img_name}.run:; img=compose.mk:${img_name} ${make} docker.run.sh 
 endef
 
+MAKE_PID := $(shell echo $$PPID)
+MAKE_ID := $(shell echo $$PPID | { h=5381; read p; for((i=0;i<$${#p};i++)); do printf -v c "%d" "'$${p:i:1}"; h=$$((h*33+c)); done; echo $$((h & 0x7FFFFFFF)); })
+# Alternative using date for more uniqueness
+MAKE_ID_ALT := $(shell printf "%d%s" $$PPID $$(date +%N 2>/dev/null || echo $$RANDOM))
+_pid_info= $(call log.io, Make PID: ${MAKE_PID} -- ${MAKE_ID} -- ${MAKE_ID_ALT} -- $$$$)
+pid_info:; ${_pid_info}
 # USAGE: ( generic )
 #   $(eval $(call compose.import.docker_image, <image_alias>, <image>))
 #
@@ -4941,27 +4947,20 @@ endef
 compose.import.*=${compose.import}
 compose.import.def=${compose.import.string}
 
-# Main macro to import services from an entire compose file
-# define cacher
-# ifndef MACRO_EXECUTED$(1)$(2)$(3)
-# 	$(eval MACRO_EXECUTED := 1)
-# else
-# 	@echo "Operation already completed (memoized)"
-# endif
-# endef
-
 io.string.hash=$(shell printf "${1}" | sed 's/ /_/g'|sed 's/[.]/_/g'|sed 's/\//_/g')
-
+log.import.1=$$(shell $$(call \
+	io.log.part1, __import__ $${sep} $${dim_cyan}${target_namespace} $${sep}$${dim} ${1}))
+log.import.2=$$(shell $$(call io.log.part2, ${1}))
 define compose.import.generic
-$(eval cached:=$(call io.string.hash,$(1)$(2)$(3)))
-$$(shell $(call io.log.part1, __import__ ${sep} ${1} ${3}))
+$(eval target_namespace:=$(strip $(1)))
+$(eval compose_file:=$(strip $(3)))
+$(eval cached:=$(call io.string.hash,$(target_namespace)$(2)$(3)))
+$(call log.import.1,${compose_file})
 ifndef $${cached}
 $$(eval ${cached} := 1)
-$$(shell $(call io.log.part2, creating))
+$(call log.import.2,${bold}creating)
 
-$(eval target_namespace:=$(1))
 $(eval import_to_root := $(if $(2), $(strip $(2)), FALSE))
-$(eval compose_file:=$(strip $(3)))
 $(eval compose_file_stem:=$(shell basename -s.yaml `basename -s.yml $(strip ${3}`)))
 $(eval __services__:=$(call compose.get_services, ${compose_file}))
 
@@ -5146,7 +5145,7 @@ $$(foreach \
 			$${compose_service_name}, \
 			${target_namespace}, ${import_to_root}, ${compose_file}, )))
 else
-$$(shell $(call io.log.part2, ${GLYPH_CHECK} cached))
+$(call log.import.2,${GLYPH_CHECK} cached)
 endif
 endef
 
