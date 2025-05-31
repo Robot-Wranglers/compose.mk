@@ -232,7 +232,13 @@ div .cli_output img {
     top: -1.5em;
     background-color:red;
 }
-
+html.writer-html5 .rst-content table.docutils th {
+  border: 1px solid black;
+}
+.rst-content table.docutils thead th, .rst-content table.field-list thead th, .wy-table thead th {
+  font-weight: 700;
+  border: 1px solid black;
+}
 .img_container {
   /* border-left: 8px solid #68b16d;*/
   /* border-left: 8px solid #8785d0; */
@@ -254,9 +260,12 @@ div .code_table_bottom {
   align-items: center;     /* vertical alignment */
   border:2px solid black;
   position: relative;
-  top: -2em;
+  /* top: -2em; */
   align:center;
   display: flex; justify-content: space-between; width: 100%;
+}
+p:empty {
+  display: none;
 }
 .jump_down {
   position:relative;

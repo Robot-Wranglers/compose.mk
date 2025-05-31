@@ -25,14 +25,13 @@ We'll use images for debian and alpine just as examples, but these might be any 
 
 Next, the Makefile.  To generate make-targets for every service in the given compose file, we just need to include `compose.mk` as a library, then call one of the `compose.import.*` functions.
 
-The simplest way to use `compose.import` is passing in single argument for the compose-file:
+The simplest way to use `compose.import` is passing in a single argument for the compose-file:
 
 ```Makefile {.snippet}
 # Inside your project Makefile
 include compose.mk
 $(eval $(call compose.import, docker-compose.yml))
 ```
-
 
 {#
 and specifying we want services-handles as the top-level, plus an optional namespace for .
@@ -98,7 +97,7 @@ For our example so far, `compose_stem` from `docker-compose.yml`would be `docker
 
 Canonical names are always created unconditionally with `compose.import` or [any other kind of import statement](#other-import-statements).
 
-There are *lots* of other scaffolded entrypoints! But they allow follow a pattern like **`<compose_stem>`/`<svc_name>`.`<verb>`**, i.e., basically the same as the corresponding toplevel container handles we saw in the last section.
+There are *lots* of other scaffolded entrypoints! But they all follow a pattern like **`<compose_stem>`/`<svc_name>`.`<verb>`**, i.e., basically the same as the corresponding toplevel container handles we saw in the last section.
 
 #### Dispatch Namespace 
 --------------------------

@@ -277,7 +277,7 @@ define _compose_quiet
 endef
 docker.run.base:=docker run --rm -i 
 
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## END: Colors, Logging, and Makefile-related Boilerplate
 ## BEGIN: Environment Variables
 ##
@@ -293,11 +293,12 @@ docker.run.base:=docker run --rm -i
 ## | TRACE:                 | 1 if increase verbosity desired (more detailed than verbose)          |
 ## | verbose:               | 1 if normal debugging output should be shown, otherwise 0             |
 ## | __file__:              | val of CMK_SRC if stand-alone mode, invoked file if in library mode   |
-## | __interpreter__        | usually "./${CMK_SRC}" unless overridden. maybe useful for extensions |
+## | __interpreter__        | `./${CMK_SRC}` unless overridden                                      |
 ## | __interpreting__       | CMK_SRC unless overridden; sometimes useful for extensions            |
 ## | trace:                 | alias for setting TRACE                                               |
 ##
-## CMK_INTERNAL: 1 if runtime is dispatched inside a container, otherwise 0
+## CMK_INTERNAL: 
+## : 1 if runtime is dispatched inside a container, otherwise 0
 ##   Setting CMK_INTERNAL=1 rather than detecting it effectively controls whether DIND is enabled, 
 ##   and can be used as an optimization. This sets all `compose.imports` to no-op.
 ##
@@ -307,7 +308,7 @@ docker.run.base:=docker run --rm -i
 ## | COMPOSE_IGNORE_ORPHANS | *Honored by 'docker compose', this helps to quiet output*             |
 ## | GITHUB_ACTIONS:        | true if running inside github actions, false otherwise                |
 ##
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 export COMPOSE_IGNORE_ORPHANS?=True
 export CMK_AT_EXIT_TARGETS?=flux.noop
@@ -328,7 +329,6 @@ ifneq ($(findstring compose.mk, ${MAKE_CLI}),)
 export CMK_LIB=0
 export CMK_STANDALONE=1
 export CMK_SRC=$(findstring compose.mk, ${MAKE_CLI})
-# .DEFAULT_GOAL:=help
 else
 export CMK_LIB=1
 ifeq ($(strip ${__interpreting__}),)
@@ -369,6 +369,7 @@ pynchon=$(trace_maybe) && ${pynchon.run}
 # pynchon.run=python -m pynchon.util.makefile
 pynchon.docker=${docker.run.base} -v `pwd`:/workspace -w/workspace --entrypoint python robotwranglers/pynchon:${PYNCHON_VERSION} 
 pynchon.run:=$(shell which pynchon >/dev/null 2>/dev/null && echo python || echo "${pynchon.docker}") -m pynchon.util.makefile
+
 # Macros for use with jq/yq/jb, using local tools if available and falling back to dockerized versions
 jq.docker=${docker.run.base} -e key=$${key:-} -v $${DOCKER_HOST_WORKSPACE:-$${PWD}}:/workspace -w/workspace ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}
 yq.docker=${docker.run.base} -e key=$${key:-} -v `pwd`:/workspace -w/workspace mikefarah/yq:$${YQ_VERSION:-4.43.1}
@@ -387,7 +388,6 @@ GLOW_VERSION?=v1.5.1
 GLOW_STYLE?=dracula
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: data
 ## BEGIN: compose.* targets
 ## ----------------------------------------------------------------------------
 ##
@@ -432,6 +432,7 @@ compose.build/%:
 	&& $(trace_maybe) \
 	&& ${docker.compose} $${COMPOSE_EXTRA_ARGS} -f ${*} build $${quiet} $${force} $${svc:-} \
 		2> >(grep -v Built$$ >/dev/stderr)
+_yml.stem=$(shell basename -s .yml `basename -s .yaml ${1}`)
 
 compose.clean/%:
 	@# Runs `docker compose down` for the given compose file, 
@@ -470,8 +471,10 @@ compose.get.stem/%:; basename -s .yml `basename -s .yaml ${*}`
 	@#
 	@# USAGE:
 	@#  ./compose.mk compose.get.stem/<fname>
-	
-_yml.stem=$(shell basename -s .yml `basename -s .yaml ${1}`)
+
+compose.images/%:; ${docker.compose} -f ${*} config --images
+	@# Returns all images used with the given compose file.
+
 compose.loadf: tux.require
 	@# Loads the given file,
 	@# then curries the rest of the CLI arguments to the resulting environment
@@ -566,8 +569,18 @@ compose.size/%:
 	filter="`${make} compose.images/${*} | ${stream.as.grepE}`" \
 	&& ${make} docker.size.summary | grep -E "$${filter}" | ${jq.column.zipper}
 
-compose.images/%:; ${docker.compose} -f ${*} config --images
-	@# Returns all images used with the given compose file.
+compose.versions/%: 
+	@# Attempts to extract version-defaults from the given compose file.
+	cat ${*} \
+		| grep -o -w '[$$]{[^}]*}' | grep ':-' | uniq \
+		| sed 's/^..//' \
+		| sed 's/.$$//' | sed 's/:-/=/' | grep VERSION
+compose.versions_table/%:
+	@# Like `.versions` but returns a markdown table of results 
+	(printf "| Component | Version |\n|---|---|\n" \
+	&& ${make} compose.versions/${*} \
+		| awk -F= '{print "| " $$1 " | " $$2 " |" }')
+
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## BEGIN: docker.* targets
