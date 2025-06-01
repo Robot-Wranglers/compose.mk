@@ -1,22 +1,24 @@
 #!/usr/bin/env -S make -f
-# demos/inlined-dockerfile.mk: 
-#   Part of the `compose.mk` repo, runs as part of the test-suite.
-#   Demonstrates inlining a Dockerfile, building it, then working with the container.
+# Demonstrates inlining a Dockerfile, 
+# building it, then working with the container.
+#
+# Part of the `compose.mk` repo, runs as part of the test-suite.
 #
 # USAGE: ./demos/inlined-dockerfile.mk
 
 include compose.mk
 
-# A minimal inlined dockerfile.  You can install anything or nothing here,
-# but let's have the minimal stuff that's required for using target dispatch.
+# Minimal inlined dockerfile.  
+# You can install anything or nothing here, but let's 
+# have the minimal stuff that's required for using target dispatch.
 define Dockerfile.demo_dockerfile
 FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
 RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
 endef
 
 # Entrypoint.  Ensures the container is built, then runs all the tests.
-__main__: __init__ flux.star/test
 __init__: Dockerfile.build/demo_dockerfile
+__main__: __init__ flux.star/test
 
 # After build, image is always at 'compose.mk:<def_name>'
 inlined_img=compose.mk:demo_dockerfile
@@ -53,5 +55,3 @@ test.6.quiet_build:
 test.7.docker.lambda.target:
 	$(call log.test, docker.lambda builds/runs Dockerfile in 1 step w/o tag)
 	cmd='pwd' ${make} docker.lambda/demo_dockerfile
-	
-

@@ -1,9 +1,8 @@
 #!/usr/bin/env -S make -f
-# demos/lean.mk: 
-#   This example shows an embedded container with a lean+mathlib container, 
-#   plus enough glue code for dispatch so that we can abstract away the container usage.
-#   Included is a script and a theorem that we'll test with, but of course external files 
-#   are supported as well.
+# This example shows an embedded container with a lean+mathlib container, 
+# plus enough glue code for dispatch so that we can abstract away the container usage.
+# Included is a script and a theorem that we'll test with, but of course external files 
+# are supported as well.
 #
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # See also: http://robot-wranglers.github.io/compose.mk/demos/lean

@@ -1,6 +1,5 @@
 #!/usr/bin/env -S make -f
-# demos/etl-img.mk:
-#   Describes an image pipeline with `compose.mk`.
+# Describes an image pipeline with `compose.mk`.
 #
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # USAGE: ./demos/etl-img.mk 

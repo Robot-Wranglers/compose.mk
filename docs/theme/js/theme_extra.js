@@ -53,14 +53,17 @@ document.addEventListener('DOMContentLoaded', function() {
             'cmk-fpath': {
                 pattern: /[.]\/(?:\.?\.?\/)?[\w.-]+\/[\w./-]+/, 
                 alias:"token no"} });
-        
+        Prism.languages.insertBefore('makefile', 'comment', {
+            'cmk-shebang': {
+                pattern: /[#][!].*/, 
+                alias:"shebang important"} });
         // FXN REGEX: slightly different for bash vs makefile
         Prism.languages.insertBefore('bash', 'keyword', 
             {'cmk-fxn': {
-                pattern: /(?:io|log|docker|flux|stage|mk|stream|tux)[.]([a-z._])+(?:(\/))/,} });
+                pattern: /(?:io|log|docker|Dockerfile|flux|stage|mk|stream|tux)[.]([a-z._])+(?:(\/))/,} });
         Prism.languages.insertBefore('makefile', 'keyword', 
             {'cmk-fxn': {
-                pattern: /(?:io|log|cmk|docker|flux|stage|mk|stream|tux)[.]([a-z._])+(?:(\/|,|\())/,} });
+                pattern: /(?:io|log|cmk|docker|Dockerfile|flux|stage|mk|stream|tux)[.]([a-z._])+(?:(\/|,|\())/,} });
         
         // must be before cmk_args 
         cmk_cli_keywords={'cmk-cli-keyword': {pattern: /\b(loadf|jb|jq)\b/, alias:"token p"} };

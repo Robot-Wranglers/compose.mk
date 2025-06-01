@@ -139,9 +139,9 @@ span.code_table_2 {
 
 div .code_table_top_snippet {
   height:2.2em; 
-  background-color: rgba(85, 165, 217, 0.87);
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
+  background-color: rgba(75, 100, 141, 0.16);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
   border:2px solid black;
   /* margin-bottom: 0px; */
   display: flex;
@@ -556,6 +556,7 @@ table.docutils tr,
 .docutils td {
   border:2px solid rgb(67, 62, 62);
   background-color: #32bfea31;
+  text-align: left;
 }
 .docutils tr {
   background-color: #32bfea11;
@@ -597,8 +598,8 @@ table.docutils tr,
     overflow: auto;
     /* margin: auto; */
     /* display: block; */
-      margin-left: 1em;
-      margin-right: 1em;
+      /* margin-left: 1em;
+      margin-right: 1em; */
     /* border: 3px dotted rgba(30, 143, 255, 0.387); */
 }
 .rst-content table.docutils{

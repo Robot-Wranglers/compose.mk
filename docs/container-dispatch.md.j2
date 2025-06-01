@@ -44,7 +44,10 @@ The example above uses the simplest dispatch style, but we plan to stay organize
 
 In such cases name-collisions might be inevitable, and you'll want fine-grained controls over namespacing to get something closer to an "absolute path" for the dispatch mechanics.  The next example is equivalent to the first, and begins to shed light on how the [`compose.import` macro arguments]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) can be used to create user-defined [syntactic sugar](https://en.wikipedia.org/wiki/Syntactic_sugar).
 
-{{macros.embed_demo('demos/container-dispatch-2.mk', github=github)}}
+{{macros.embed_demo(
+    'demos/container-dispatch-2.mk', 
+    bottom_right=macros.link_mirror('demos/cmk/container-dispatch-2.cmk'),
+    github=github)}}
 
 Similar to "private" targets with a `self.*` naming convention, using a blocky unicode symbol like `▰` isn't *actually* required, and of course you can call your namespace anything you want.  There's a few reasons this weird looking style is a good idea though, and docs and demos will stick to it as a convenient naming convention. 
 
@@ -88,7 +91,30 @@ $ docker compose -f docker-compose.yml \
     run --entrypoint bash alpine -c "make self.demo"
 ```
 
----------------------------
+### Container-Agnostic Dispatch
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Sometimes you want a **target** that *always* runs in a container, but can be safely called from the container *or* the host.  See the tests below for usage information about the `containerized.target` macro:
+
+{{macros.embed_demo(
+    'demos/container-agnostic-2.mk', 
+    bottom_right=macros.link_mirror(
+      'demos/cmk/container-agnostic.cmk',
+      link=macros.repo_url('demos/cmk/container-agnostic.cmk', github=github)),
+    github=github)}}
+
+To avoid name-collisions use "." as prefix for the the "private" target, as seen in the example above.
+
+--------------------------
+
+Sometimes you want a **script** that *always* runs in a container, but can be safely called from the container or the host.  See the tests below for usage information about the `containerized.script` macro:
+
+{{macros.embed_demo('demos/container-agnostic.mk', 
+    bottom_right=macros.link_mirror(
+      'demos/cmk/container-agnostic.cmk',
+      link=macros.repo_url('demos/cmk/container-agnostic.cmk', github=github)),
+    github=github)}}
+
 
 ### Other Kinds of Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -97,10 +123,11 @@ So far we've just looked at using dispatch with [imported tool containers]({{mkd
 
 Target dispatch comes in other flavors too though, from scripts or [from CLI]({{mkdocs.site_relative_url}}/raw-docker/#other-docker-utilities), and works with:
 
-* External compose files as we saw above 🍦
-* [Inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) 🍰
-* [Stock-images]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-tasks-in-containers) 🍭
-* [Inlined containers]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile) 🍓
+* 🍦 External compose files as we saw above
+* 🍰 [Inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) 
+* 🍭 [Stock-images]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-tasks-in-containers)
+* 🍓 [Inlined containers]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile) 
+
 
 Whether you're using `compose.mk` as a library, a stand-alone tool, or a framework, **this simple pattern for dispatching targets in containers is one of the main features, and it's surprisingly powerful.**  
 

@@ -29,8 +29,12 @@ services:
     build:
       context: .
       dockerfile_inline: |
-        FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
-        RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
+        FROM ${IMG_ALPINE_BASE:-alpine:3.22}
+        RUN apk add -q --update --no-cache coreutils build-base bash procps-ng wget
+        # Download and compile make 4.3
+        RUN wget http://ftp.gnu.org/gnu/make/make-4.3.tar.gz
+        RUN tar -xzf make-4.3.tar.gz
+        #RUN cd make-4.3; ./configure && make && make install
 endef 
 
 # After the inline, just call `compose.import.string` on it to 
@@ -52,7 +56,5 @@ self.internal_task:
 # Import has already modified the `inlined.services` namespace 
 # with familiar verbs from docker compose, like "build", "stop",
 # "ps", etc.  Now we can use them.
-demo.compose_verbs: \
-	inlined.services.stop \
-	inlined.services.build
+demo.compose_verbs: inlined.services.stop inlined.services.build
 

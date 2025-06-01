@@ -1,0 +1,39 @@
+{% import 'macros.j2' as macros -%}
+
+Using `macros.api_link_many`:
+
+{{macros.api_link_many(['mk.def'],mkdocs)}}
+
+
+{# 
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Missing target, Using `macros.parse_target_help('compose.mk', 'doesnt.exist',..`:
+
+{{macros.parse_target_help('compose.mk', 'doesnt.exist', github=github)}}
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Parametric target, Using `macros.parse_target_help('compose.mk', 'flux.echo/%',..`:
+
+{{macros.parse_target_help('compose.mk', 'flux.echo/%', github=github)}}
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Nonparametric target, Using `macros.parse_target_help('compose.mk', 'flux.ok',..`:
+
+{{macros.parse_target_help('compose.mk', 'flux.ok', github=github)}}
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Using `macros.parse_help('compose.mk', 'Dockerfile',..`:
+
+{{macros.parse_help('compose.mk', 'Dockerfile', github=github)}}
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Using `macros.parse_module_help('compose.mk', 'Dockerfile',..`:
+
+{{macros.parse_module_help('compose.mk', 'Dockerfile', github=github)}}
+<br/>
+#}

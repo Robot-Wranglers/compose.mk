@@ -1,6 +1,5 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret!
-# demos/cmk/xpra.cmk: 
-#   Demonstrating GUI capabilities with XPra and i3, served via HTML5.
+# Demonstrating GUI capabilities with XPra and i3, served via HTML5.
 #
 # USAGE: ./demos/cmk/xpra.cmk serve
 

@@ -1,13 +1,11 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret
-# demos/interpreter-3.mk: 
-#   Demonstrating compose.mk as an alternate interpreter for make.
-#   This is mostly used for inheriting signals/supervisors.  
+# Demonstrating compose.mk as an alternate interpreter for make.
+# This is mostly used for inheriting signals/supervisors.  
 #
 # Main docs: https://robot-wranglers.github.io/compose.mk/signals/
 #
 # USAGE: 
 #   ./demos/interpreter-3.mk
-#
 
 include compose.mk
 
@@ -19,7 +17,8 @@ from optparse import OptionParser
 def main():
     parser = OptionParser(usage="usage: %prog [options] filename",version="%prog 1.0")
     parser.add_option("-f", "--foo", dest="foo", default='foo', help="set foo option")
-    parser.add_option("-b", "--bar", action="store_true", dest="bar", default=False, help="set bar option")
+    parser.add_option("-b", "--bar", 
+        action="store_true", dest="bar", default=False, help="set bar option")
     (options, args) = parser.parse_args()
     if options.bar:
         print("bar is set")

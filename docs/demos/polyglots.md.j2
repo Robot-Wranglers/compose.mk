@@ -18,6 +18,7 @@ Polyglots come in a few basic types and this page tries to cover all the main ca
     * [Compiled Languages](#compiled-languages)
     * [Foreign Code as First Class](#foreign-code-as-first-class)
     * [Templating](#templating-languages)
+    * [Special Guests](#special-guests)
 
 All of these examples are in plain Makefile.  **For a cleaner and much more elegant approach**, see [the equivalent idiom in CMK-lang]({{mkdocs.site_relative_url}}/compiler/#polyglot-example).
 
@@ -32,7 +33,6 @@ Simple polyglots where you want to *assume the interpreter is already available*
       'demos/cmk/code-objects.cmk',
       link=mkdocs.site_relative_url+'/compiler/#polyglot-example'),
     github=github)}}
-
 
 ### Containerized Interpreters 
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -152,8 +152,22 @@ Here we use [jinjanator](https://pypi.org/project/jinjanator/), a CLI for use wi
 
 {{macros.embed_demo('demos/j2-templating.mk', github=github)}}
 
-
 This prints "*hello foo!*" x3 and one "*bye foo!*" as expected, per the template.  In keeping with [other structured IO patterns]({{mkdocs.site_relative_url}}/standard-lib#structured-io) in `compose.mk`, we prefer JSON, generating it with `jb` and configuring `jinjanator` to use it.. but this can be easily changed to work with environment variables or yaml instead.
+
+### Special Guests
+<hr style="width:100%;border-bottom:3px solid black;">
+
+For practical reasons there are 2 specific languages that have the status of being special guests, i.e. `bash` and `awk`.
+
+Technically this is a special case of [Local Interpreters, No Containers](#local-interpreters-no-containers), but it's worth mentioning separately since this can be really useful and the interpreters are usually available whenever `make` is.  These polyglots are supported by {{macros.api_link('io.awker',mkdocs,'def_name')}} and {{macros.api_link('io.basher',mkdocs,'def_name,optional_args')}}.
+
+{{macros.embed_demo('demos/guests.mk', github=github)}}
+
+As you can see above, both kinds of guests support piped input by default, and `io.basher` optionally supports argument-proxy.  As usual for polyglots, content inside define-blocks isn't messed with, and we don't need to double-escape `$`.
+
+Internally, `io.awker` is frequently used in cases where `make` is simply not up to necessary string-manipulation, but using something like a python-stack via docker is just too slow.  
+
+Typically `io.basher` might be used as a stepping stone to port existing bash scripts towards native make-targets: You can simply embed any small existing script, incorporate it into existing automation, and avoid immediately translating bashisms to makeisms until you finish a proof of concept.  You can also think of `io.basher` as a direct way to turn existing scripts into [pseudo-functions]({{mkdocs.site_relative_url}}/style/#arguments-parameters-pipes).
 
 ### Other Polyglot Examples
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -174,7 +188,7 @@ Although it isn't exactly a polyglot, the [Notebooking Demo]({{mkdocs.site_relat
 !!! tip "Tip"
     The [*`mk.def.*`* targets]({{mkdocs.site_relative_url}}/api#api-mk) **always leave the data inside the define-blocks completely untouched**, meaning that there's no requirement for escaping the contents. Strings, tabs, spaces, and things like `$` are always left alone.
 
-    This also means the **content is fairly static**, i.e. *no pre-execution templating*.  This is a feature!  It discourages JIT code-generation in favor of more structured interactions via parameters-passing, environment variables, pipes, etc.
+    This also means the **content is fairly static**, i.e. *no pre-execution templating*.  This is a feature!  It discourages JIT code-generation in favor of more structured interactions via parameter-passing, environment variables, pipes, etc.
 
 It comes up sometimes that people want to have polyglots with pure `make`, not for building weird hybrid applications in the `compose.mk` sense, but just to get decent string manipulation abilities or similar. Historically the suggested approaches involved sketchy `.ONESHELL` hacks[^1], but comes with several issues.
 

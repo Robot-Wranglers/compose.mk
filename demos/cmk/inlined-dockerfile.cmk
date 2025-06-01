@@ -1,6 +1,5 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret!
-# demos/cmk/inlined-dockerfile.cmk: 
-#   CMK-lang translation of demos/inlined-dockerfile.mk
+# CMK-lang translation of demos/inlined-dockerfile.mk
 # USAGE: ./demos/cmk/inlined-dockerfile.cmk
 
 ⫻ Dockerfile.my_container

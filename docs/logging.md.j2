@@ -51,7 +51,7 @@ The [docs for compose.mk's built-in tool wrappers]({{mkdocs.site_relative_url}}/
 ##### Use Gum for Banners 
 ---------------------------------------------
 
-Even though {{macros.api_link('io.print.banner',mkdocs,arg='label')}} detects terminal width, it isn't fancy otherwise.  A related target is {{macros.api_link('io.draw.banner',mkdocs,arg='label')}}, which prints dividers with [charmbracelet/gum](https://github.com/charmbracelet/gum).  *If you have a local copy of `gum` then it is used, otherwise, we fall back to docker.*
+Even though {{macros.api_link('io.print.banner',mkdocs,arg='label')}} detects terminal width, it isn't fancy otherwise.  A related target is {{macros.api_link('io.draw.banner',mkdocs,arg='label')}}, which prints dividers with [charmbracelet/gum](https://github.com/charmbracelet/gum).
 
 {{macros.img_link("demo-gum.gif", mkdocs, "90%")}}
 
@@ -74,7 +74,7 @@ $ label=banner ./compose.mk io.figlet
 ░██░░░██  ███████  ░██  ░██ ░██  ░██░███████ ░██ ░ 
 ░██  ░██ ██░░░░██  ░██  ░██ ░██  ░██░██░░░░  ░██   
 ░██████ ░░████████ ███  ░██ ███  ░██░░██████░███   
-░░░░░    ░░░░░░░░ ░░░   ░░ ░░░   ░░  ░░░░░░ ░░░    
+ ░░░░░    ░░░░░░░░ ░░░   ░░ ░░░   ░░  ░░░░░░ ░░░    
 ```
 
 To add color, you can use a context manager and any of the colors that `compose.mk` natively understands.
