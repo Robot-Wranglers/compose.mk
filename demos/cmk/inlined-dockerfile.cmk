@@ -25,4 +25,5 @@ test.raw:
 		-x -c "true" > /dev/null
 
 self.dispatch_test:
-	cmk.log(Testing target from inside the inlined-container--\n  `uname -a`)
+	cmk.log(Testing target from inside the inlined-container)
+	cmk.log(host details: `uname -a`)

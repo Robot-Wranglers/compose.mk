@@ -26,7 +26,8 @@ All of these examples are in plain Makefile.  **For a cleaner and much more eleg
 
 Simple polyglots where you want to *assume the interpreter is already available* are easy to express with {{macros.api_link('mk.def.dispatch', mkdocs, arg='interpreter>,<def_block_name')}}.
 
-{{macros.embed_demo('demos/local-interpreter.mk', 
+{{macros.embed_demo(
+    'demos/local-interpreter.mk', 
     bottom_right=macros.link_mirror(
       'demos/cmk/code-objects.cmk',
       link=mkdocs.site_relative_url+'/compiler/#polyglot-example'),
@@ -40,7 +41,8 @@ When there's a stock image available for a container and no customization needed
 
 To illustrate, here's a simple target in elixer and 3 ways to run it.
 
-{{macros.embed_demo('demos/elixir.mk', 
+{{macros.embed_demo(
+    'demos/elixir.mk', 
     bottom_right=macros.link_mirror(
       'demos/cmk/code-objects.cmk',
       link=mkdocs.site_relative_url+'/compiler/#polyglot-example'),

@@ -86,11 +86,11 @@ document.addEventListener('DOMContentLoaded', function() {
             span.className = classes;
             text.parentNode.replaceChild(span, text); return span; 
         };
-        document.querySelectorAll('div.cmk-lang:not(.nohighlight) code').forEach(
-            node => {
-                node.className+=" language-cmk";
-                Prism.highlightElement(node)
-        });
+        // document.querySelectorAll('div.cmk-lang:not(.nohighlight) code').forEach(
+        //     node => {
+        //         node.className+=" language-cmk";
+        //         Prism.highlightElement(node)
+        // });
         
         document.querySelectorAll('div.highlight:not(.nohighlight) code').forEach(
             node => {

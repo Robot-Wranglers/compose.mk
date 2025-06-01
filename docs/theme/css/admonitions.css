@@ -94,23 +94,24 @@ div .admonition {
   }
   
   /* outline admonition */
-  .admonition.outline {
+.admonition.outline {
     border-left-color: #efefef;
     border: 1px dotted;
-    background-color: #efefef;
-  }
-  .admonition.outline .admonition-title {
-    background-color: lightskyblue;
-    color: black;
-    font-family: Lato, proxima-nova, Helvetica Neue, Arial, sans-serif;;
-    font-weight:500;
-    font-size: 1.2em;
-  }
-  .admonition.outline .admonition-title:before {
-    content: "⠀";
-    margin-right: 10px;
-    background-image: url('data:image/svg+xml,<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-baseline-density-small"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 3h16" /><path d="M4 9h16" /><path d="M4 15h16" /><path d="M4 21h16" /></svg>');
-  } 
+    font-size: 90%;
+    font-weight: unset;
+    background-color: rgba(68, 138, 255, 0.1);
+}
+.admonition.outline .admonition-title {
+  background-color: rgba(0, 184, 212, 0.1);
+  border: 1px dotted;
+  color: rgb(64, 62, 62);
+  font-size: 1.2em;
+}
+.admonition.outline .admonition-title:before {
+  content: "⠀";
+  margin-right: 10px;
+  background-image: url('data:image/svg+xml,<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-pinned"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 4v6l-2 4v2h10v-2l-2 -4v-6" /><path d="M12 16l0 5" /><path d="M8 4l8 0" /></svg>');
+} 
   
 /* goal admonitions */
 .admonition.goals {

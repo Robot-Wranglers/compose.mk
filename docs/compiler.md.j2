@@ -5,21 +5,24 @@
 
 To avoid freaking out people who are just interested in [tools]({{mkdocs.site_relative_url}}/tool-mode) or [libraries]({{mkdocs.site_relative_url}}/standard-lib), the fact that [compose.mk is actually a programming language]({{mkdocs.site_relative_url}}/language) isn't emphasized in most docs/demos, and the shocking secret truth is safe to ignore.  If you *are* interested though, the [language overview]({{mkdocs.site_relative_url}}/language/#language-properties) is good background reading.
 
-You could say that `CMK = Makefile + compose.mk standard library + optional extra syntax`.  
+You could say that `compose.mk=Makefile + compose.mk standard library + optional extra syntax`.
 
-!!! outline "Overview"
-    *  The `compose.mk` language is called **CMK** or **CMK-lang**.
-    *  CMK is compiled into legal classic Makefile.  Files use the `.cmk` extension by convention.
-    *  CMK is a superset of Makefile. Makefile is always valid CMK; the reverse might not be true.
-    *  The compiler is completely contained inside `compose.mk`, and there are no other tools.
-    * The compiler itself is extensible, enabling new CMK dialects with user-defined config.
+!!! tip "TL;DR"
+    1. The `compose.mk` language is called **CMK** or **CMK-lang**.
+    1. Files use the `.cmk` extension by convention.
+    1. CMK is a superset of Makefile, compiled into legal classic Makefile.
+    1. Makefile is always valid CMK; the reverse might not be true.
+    1. The compiler is contained inside `compose.mk`, and there are no other tools.
+    1. The compiler is extensible, enabling new CMK dialects with user-defined config.
 
-Crucially, writing code in the CMK language **does not add new core capabilities** to the stuff that `compose.mk` already does *without* CMK.  In broad strokes, the point of CMK is to **eliminate lots of pesky dollar-signs and curly brackets** while it also **elevates various existing [container]({{mkdocs.site_relative_url}}/demos/matrioshka) and [polyglot]({{mkdocs.site_relative_url}}/demos/polyglots) idioms to native syntax.**  For more background about the compilation process itself, see [the implementation details section](#implementation-details).
+Crucially, writing code in the CMK language **does not add new core capabilities** to the stuff that `compose.mk` already does *without* CMK.  The point of CMK is to **eliminate lots of pesky dollar-signs and curly brackets** while it also **elevates various existing [container]({{mkdocs.site_relative_url}}/demos/matrioshka) and [polyglot]({{mkdocs.site_relative_url}}/demos/polyglots) idioms to native syntax.**  For more background about the compilation process itself, see [the implementation details section](#implementation-details).
 
 Whether you love `make` or passionately hate it, you'll probably agree that default syntax can be very annoying.  Since `compose.mk` goes to great lengths to fix the *other* big problems with practical general usage, syntax is the only the problem left!  This actually matters a lot, not just for adoption or usage as a daily driver, but because [notation is part of how we think.](https://dl.acm.org/doi/pdf/10.1145/1283920.1283935)
 
-!!! tip "Related Links"
-    All examples written in CMK rather than pure Makefile can be found in the {{macros.repo_link('demos/cmk',github=github)}} folder.  Almost all CMK demos are based on existing pure-Makefile demos, i.e. for any `demos/cmk/foo.cmk` there's a corresponding vanilla demo at `demos/foo.mk`.  
+### About CMK Demos
+<hr style="width:100%;border-bottom:3px solid black;">
+
+All examples written in CMK rather than pure Makefile can be found in the {{macros.repo_link('demos/cmk', github=github)}} folder  Almost all CMK demos are based on existing pure-Makefile demos, i.e. for any `demos/cmk/foo.cmk` there's a corresponding vanilla demo at `demos/foo.mk`.  
 
 ```bash {.cli_example}
 # Run "foo" demo directly, using interpreter via shebang
@@ -53,10 +56,10 @@ We'll get to the odd arrow syntax at the end of this section, but start with mos
 :  Awkward stuff like `$(call log.target, ...)` can be written as `cmk.log.target(..)` instead.  Additionally, although we don't use it here,  [compose.import statements]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) previously written as `$(eval $(call ..))` can be rewritten as simply `compose.import(..)`
 
 **Recursive Calls Rewritten:**
-:  Awkward stuff like `${make} foo` can be written as `this.foo` instead.  Recursive invocation of the current context is common, and absolutely critical for code-reuse.[^2] And the choice of `this` for a new keyword is actually configurable.. we'll get to that in the next section.
+:  Awkward stuff like `${make} foo` can be written as `this.foo` instead.  Recursive invocation of the current context is common, and absolutely critical for code-reuse.[^2] The choice of `this` for a new keyword is actually configurable too.. we'll get to that in the next section.
 
 **As for that arrow syntax?**
-:  These operators just help to make JSON IO feel more native, and are sugar to use `jq` and `jb` for parsing and pushing JSON, respectively.  If you glanced at the [original code]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) that's "ported" to CMK-lang here, then you might notice that the only code-transformation rules we really need to get from **CMK -> Makefile** are *very simple string substititions*.
+:  These operators just help to make JSON IO feel more native, and are sugar to safely use `jq` and `jb` for parsing and pushing JSON, respectively, regardless of whether those tools are available on the host.  If you glanced at the [original code]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) that's "ported" to CMK-lang here, then you might notice that the only code-transformation rules we really need to get from **CMK -> Makefile** in this case are just *very simple string substititions*.
 
 The next section explains the specific substitions that enable the code above at the same time as explaining "dialects" in general.
 
@@ -96,20 +99,20 @@ $ ./compose.mk mk.get/cmk.default.dialect
   ],
   [
     "this.",
-    "make -rs --warn-undefined-variables -f ./compose.mk -f <your_makefile_here> "
+    "make -rs --warn-undefined-variables -f ./compose.mk "
   ],
   ...
 ]
 ```
 
-Fallback works as advertised, and you can also see that there's actually yet another layer of expansion with a default value for tool versions that supports user-override.  Therefore *besides* being visually easy to parse and clarifying intent, the **usage of the arrow operators results in portable code with no extra tool installation.**
+Fallback works as advertised, and you can also see that there's actually yet another layer of expansion with a default value for tool versions that supports user-override.  Therefore *besides* being visually easy to parse and clarifying intent, the **usage of the arrow operators results in portable code with no extra tool installation.**  
 
 ### Compose File Example
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Let's revisit the code from the [inlined compose-file demo]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files), and port it to CMK.
+Let's revisit the code from the [inlined compose-file demo]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files), and port it to CMK.  Like the original demo, this embeds a compose file, creates target-scaffolding for the containers involved, and demonstrates task-dispatch for them.  
 
-Like the original demo, this embeds a compose file, creates target-scaffolding for the containers involved, and demonstrates task-dispatch for them.  But this time we introduce the `⋘ name ..body.. ⋙` syntax for compose files.  *(NB: This is unicode and `⋘` isn't `<<<` !)*
+But this time we introduce the `⋘ name ..body.. ⋙` syntax for compose files.  *(NB: Unicode ahead, `⋘` isn't `<<<` !)*
 
 {{macros.embed_demo(
     'demos/cmk/inlined-composefile.cmk', 
@@ -120,8 +123,10 @@ Like the original demo, this embeds a compose file, creates target-scaffolding f
 
 Most of the differences here with the original demo are pretty obvious, and alternate equivalents are shown to make what's happening more clear, but let's walk through it.
 
-1. As discussed in the [basic example](#basic-example) our CMK port does **not** need an `include compose.mk`.  1. Here we skip the [`compose.import.string(..)`]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) that the original code used to create [target scaffolding for services]({{mkdocs.site_relative_url}}/bridge), and after declaration of services with `⋘ name ..body.. ⋙` all target handles are available immediately.  
-1. We replaced a more naive *"echo ..."* command with a call to `cmk.log` that's using some color.  
+!!! closer_look "Closer Look"
+    1. As discussed in the [basic example](#basic-example) our CMK port does **not** need an `include compose.mk`.  
+    1. Here we skip the [`compose.import.string(..)`]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) that the original code used to create [target scaffolding for services]({{mkdocs.site_relative_url}}/bridge), and after declaration of services with `⋘ name ..body.. ⋙` all target handles are available immediately.  
+    1. We replaced a more naive *"echo ..."* command with a call to `cmk.log` that's using some color.  
 
 Most interestingly though, `<container_name>.dispatch(<target_name>)` now looks like a normal function invocation.  Also notice that `alternate_style1` shows that stacking up *multiple rewrite rules* for transpiler substition works the way you'd expect.
 
@@ -164,7 +169,8 @@ We haven't seen the last two yet, because the [compose file example](#compose-fi
 
 CMK particularly shines at cleaning up the idioms you can see in the [polyglot index]({{mkdocs.site_relative_url}}), and almost every example is more clear and concise.  
 
-{{macros.embed_demo('demos/cmk/code-objects.cmk', 
+{{macros.embed_demo(
+    'demos/cmk/code-objects.cmk', 
     bottom_right=macros.link_mirror(
       'demos/code-objects.mk',
       base=mkdocs.site_relative_url+'/demos/polyglots'),
@@ -175,7 +181,7 @@ The example above introduces different syntax for bound vs unbound code, i.e. wh
 ### Dockerfile Example
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Let's revisit the code from the [inlined Dockerfile demo]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile), and port it to CMK.  Syntax for inlining Dockerfile's uses `⫻`, which is unicode, and **not** `///`.  
+Let's revisit the code from the [inlined Dockerfile demo]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile), and port it to CMK.  *(NB: Unicode ahead, `⫻`, isn't `///`!)*
 
 Note that the `Dockerfile.` prefix as part of the block-name is required for declaration, but afterwards reference to the image/container won't use it.
 

@@ -114,7 +114,7 @@ Jinja macros used in building docs (not make macros :)
 <a id="{{link_prefix}}"></a>{% set use_type= (type=='cmk' and 'Makefile') or type %}{{code_table(fname, 
     type=type, github=github, 
     link_prefix=link_prefix, code_table_2=extra_label, class=class)}}<details id="{{link_prefix}}_details" open><summary style="display:none;">Summary</summary>
-```{{use_type}} {%raw%}{{%endraw%}{{class}} {{'.language-' + use_type}} {{'.cmk-lang' if fname.endswith('.cmk') else ''}}{%raw%}}{%endraw%}
+```{{use_type}} {%raw%}{{%endraw%}{{class}} {{'.language-' + use_type}} {{'.language-cmk' if fname.endswith('.cmk') else ''}}{%raw%}}{%endraw%}
 {{open(fname,'r').read().strip()}}
 ```
 {{code_table_bottom(fname, bottom_middle=bottom_middle,bottom_right=bottom_right, title=title, link_prefix=link_prefix, type=type, github=github, class=class)}}<a id="{{link_prefix}}_bottom"></a></details>{%- endmacro -%}
