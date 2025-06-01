@@ -33,25 +33,16 @@ Running it looks like this:
 
 Quick links to the related API are found below.
 
-{{macros.api_link_many('io.select',mkdocs)}} {{macros.api_link_many('flux.select',mkdocs)}} 
+{{macros.api_link_many(['io.select','flux.select'],mkdocs)}}
 
 #### User Input Idioms 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 If you want to select something besides a file, a make target, etc, it is usually best to use {{macros.api_link('io.selector', mkdocs,arg='choice_generator>,<choice_handler')}}, then define your own simple targets for the generator and handler.
 
-Using a dispatch'y approach like the ones mentioned above is tidy and usually good enough, but lower-level access is also possible.  
+Using a dispatch'y approach like the ones mentioned above is tidy and usually good enough, but lower-level access is also possible.  Another useful idiom is the **choices..choice..chosen** pattern with the `io.get.choice` macro.  Consider the following example:
 
-Another useful idiom is the **choices..choice..chosen** pattern with the `io.get.choice` macro.  Consider the following example:
-
-```Makefile {.snippet language-makefile}
-include compose.mk
-demo.:
-	header="Choose a moirai" \
-	&& choices="clotho lachesis atropos" \
-	&& ${io.get.choice} \
-	&& echo "chosen=$${chosen}"
-```
+{{macros.embed_demo('demos/tui/user-input-2.mk', github=github)}}
 
 Above, `${io.get.choice}` expects `choices` and optionally `header` as set, and emits `chosen` for later use.  In the middle is `gum choose`, running with or without the local tool available.
 

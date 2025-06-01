@@ -34,7 +34,6 @@ Without further delay, let's get into it.
 ### Goals
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{#### Basic Goals#}
 !!! goals "Basic Goals"
     **Configuration:** 
     :  We want Jupyter lab minimally preconfigured, mostly to demonstrate the capability.  See {{macros.repo_link('demos/data/jupyter/lab/settings/overrides.json',github=github)}}.  Including kernels and support tooling, the configuration surface for server-side jupyter is so large that beyond a simple `pip install`, it actually has the characteristics of a **distribution**.  The challenges of how to manage, encapsulate, and then automate that in a "local first" way are actually a pretty good fit for `compose.mk`.
@@ -44,8 +43,6 @@ Without further delay, let's get into it.
 
     **Custom, containerized kernels:**
     :  Adding/removing jupyter kernels is hard and requires a handful of files in exactly the right spot to specify the behaviour, possibly with a lot of custom code.  We want to remove as much of that friction as possible at the same time as making the whole process more dynamic, basically allowing users to **expose arbitrary commands in arbitrary containers as jupyter kernels directly, and without custom code**.
-
-{#### Interface Goals#}
 
 !!! goals "Interface Goals"
     **WUI Mode**: 
@@ -59,8 +56,6 @@ Without further delay, let's get into it.
 
     **CLI Mode:** 
     :  Basically offering fine-grained lifecycle control and individual entrypoints for all the primitive actions that enable the above, i.e. verbs like *server.stop / server.start / notebook.run / notebook.preview*, etc.
-
-{#### Notebook Goals#}
 
 !!! goals "Notebook Goals"
     **We insist on [jupytext](https://jupytext.readthedocs.io/en/latest/):**
@@ -77,9 +72,9 @@ Ultimately, we want to expose kernels for the following tools:
 
 1. [Alloy specification language](https://en.wikipedia.org/wiki/Alloy_(specification_language))
 1. [Z3 Solver](https://github.com/Z3Prover/z3), with and without python-bindings
-1. [Lean4 Prover](https://leanprover-community.github.io/learn.html), in script or theorem mode ^[2]
+1. [Lean4 Prover](https://leanprover-community.github.io/learn.html), in script or theorem mode [^2]
 
-But we want to accomplish more than a few specific kernels for our lab setup: we want to end up with **a recipe for converting any group of containers into a group of kernels.**
+We also want to accomplish more than a few specific kernels for our lab setup: we want to end up with **a recipe for converting any group of containers into a group of kernels.**
 
 For the official jupyter docs about custom kernels see [here](https://jupyter-client.readthedocs.io/en/latest/kernels.html) and [here](https://jupyter-client.readthedocs.io/en/latest/wrapperkernels.html).  It can be a pretty involved process, and after it's working it still needs to be packaged/released.  Let's see if we can address some of that to end up with something that feels reproducible and self-contained.
 
@@ -90,9 +85,7 @@ The code below satisfies all the requirements in ~150 LoC, excluding code commen
 
 What you see here is basically the necessary glue that connects everything else together. It's well-commented, but there are definitely some prerequisites!  To *really* grok it, it's helpful to have understood the rest of the `compose.mk` tutorials, and already have some knowledge of `jupyter` and/or `make`.  But.. don't worry much if you can't understand parts of the implementation.  Again, unlike other tutorials, here we're less focused on exposition and more focused on delivering [the goals](#goals). Feel free to even skip over the code here and [jump directly to results / usage info](#results-usage).
 
-```Makefile 
-{{open('demos/notebooking.mk').read()}}
-```
+{{macros.embed_demo('demos/notebooking.mk', github=github)}}
 
 ### Results & Usage
 <hr style="width:100%;border-bottom:3px solid black;">

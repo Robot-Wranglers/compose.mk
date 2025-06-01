@@ -170,8 +170,7 @@ The [pre/post hooks](#pre-post-hooks) have exactly the same limitation, but a di
 
 All targets related to signals/supervisors can be found under the `mk.interrupt` and `mk.super` namespaces, respectively.  These targets are for low-level internal use, and even hacking directly on `compose.mk` source probably won't require editing them, considering the [other techniques available](#inheritance-interpreters).  Still, quick links to the relevant parts of the API are provided below for reference:
 
-{{macros.api_link_many('mk.super', mkdocs)}}
-{{macros.api_link_many('mk.interrupt', mkdocs)}}
+{{macros.api_link_many(['mk.super','mk.interrupt'], mkdocs)}}
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -192,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 [^1]: For people that have seen ' -- ' usage before but don't really know how it works, this isn't part of the shell itself.  It's a convention that is *almost* a guarantee, assuming [POSIX compliant getopt](https://pubs.opengroup.org/onlinepubs/9699919799.2018edition/functions/getopt.html)
 [^2]: Determining the full CLI that invoked `make` is actually pretty hard, especially if you want portability.  If you've been wondering about `procps` and `procps-ng` package references that are scattered around and [recommended for dispatch]({{mkdocs.site_relative_url}}/integration/#docker-compose-integration), this is the reason.
-[^3]: Issues with proxying `--long-opt=..` is probably a bug and not a *fundamental* limitation, but this whole topic is so obscure it's probably not worth fixing =P
+[^3]: Issues with proxying `--long-opt=..` is probably a bug and not a fundamental limitation, but this whole topic is so obscure it's probably not worth fixing =P
 [^4]: The incantation `${MAKE_CLI#*ls}` uses [bash parameter expansion](https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html) and the special variable `MAKE_CLI` that's provided by `compose.mk`.
 [^5]: [wiki://Shebang](https://en.wikipedia.org/wiki/Shebang_(Unix))
 [^6]: [wiki://polyglot](https://en.wikipedia.org/wiki/Polyglot_(computing))

@@ -37,7 +37,9 @@ $ cat ./demos/cmk/foo.cmk | ./compose.mk mk.compiler
 
 Let's revisit the JSON emit/consume example that's part of the [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics).  The original code was simple, but rewriting this in CMK is even better and much more pretty:
 
-{{macros.embed_demo('demos/cmk/structured-io.cmk', type='Makefile',github=github)}}
+{{macros.embed_demo(
+  'demos/cmk/structured-io.cmk',type='cmk',
+  github=github)}}
 
 We'll get to the odd arrow syntax at the end of this section, but start with most basic stuff first. 
 
@@ -109,7 +111,8 @@ Let's revisit the code from the [inlined compose-file demo]({{mkdocs.site_relati
 
 Like the original demo, this embeds a compose file, creates target-scaffolding for the containers involved, and demonstrates task-dispatch for them.  But this time we introduce the `⋘ name ..body.. ⋙` syntax for compose files.  *(NB: This is unicode and `⋘` isn't `<<<` !)*
 
-{{macros.embed_demo('demos/cmk/inlined-composefile.cmk', 
+{{macros.embed_demo(
+    'demos/cmk/inlined-composefile.cmk', 
     bottom_right=macros.link_mirror(
       'demos/inlined-composefile.mk',
       base=mkdocs.site_relative_url+'/demos/matrioshka'),
@@ -149,10 +152,10 @@ Template variables that are supported:
 
 | Name       | Purpose                                                    |
 |------------|------------------------------------------------------------|
-| *__NAME__* | The block's name                                           |
-| *__REST__* | Everything that comes after `sugar_end` up to newline [^3] |
-| *__WITH__* | The contents of the with-clause, if one was used.          |
-| *__AS__*   | The contents of the as-clause, if one was used.            |
+| `__NAME__` | The block's name                                           |
+| `__REST__` | Everything that comes after `sugar_end` up to newline [^3] |
+| `__WITH__` | The contents of the with-clause, if one was used.          |
+| `__AS__`   | The contents of the as-clause, if one was used.            |
 
 We haven't seen the last two yet, because the [compose file example](#compose-file-example) in the previous section does not use them.  Read on in the next section for more details.
 
@@ -176,11 +179,12 @@ Let's revisit the code from the [inlined Dockerfile demo]({{mkdocs.site_relative
 
 Note that the `Dockerfile.` prefix as part of the block-name is required for declaration, but afterwards reference to the image/container won't use it.
 
-{{macros.embed_demo('demos/cmk/inlined-dockerfile.cmk', 
-      bottom_right=macros.link_mirror(
-        'demos/inlined-dockerfile.mk',
-        link=mkdocs.site_relative_url+'/demos/matrioshka#inlined-dockerfile'),
-      github=github)}}
+{{macros.embed_demo(
+    'demos/cmk/inlined-dockerfile.cmk', 
+    bottom_right=macros.link_mirror(
+      'demos/inlined-dockerfile.mk',
+      link=mkdocs.site_relative_url+'/demos/matrioshka#inlined-dockerfile'),
+    github=github)}}
 
 It's much cleaner than the original now: no need for `$(eval $(call ..))` to clutter up the space, and first-class support means there's no need to memorize relevant parts of the `compose.mk` API.
 
@@ -279,9 +283,8 @@ $ ./compose.mk mk.def.read/cmk.default.sugar
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-<script>
+{# <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Wait for MkDocs to fully render the page including ToC
     setTimeout(function() {
         const heading = document.getElementById('raw-docker-support');
         const img = document.createElement('img');
@@ -292,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function() {
         //heading.appendChild(img);
     }, 100); // Small delay to ensure ToC is already processed
 });
-</script>
+</script> #}
 
 [^1]: Note that during compilation for CMK code, this isn't just a naive a find/replace, because we do have to leave define-blocks alone
 [^2]: Actually `compose.mk` takes recursive invocation so seriously that a significant effort is invested in fixing problems with `${MAKE}`. This results in the less shouty usage of `${make}`, which is also more robust, reliable, and predictable.  In `compose.mk` source code, there are more than 250 usages of `${make}`, but extensions can avoid the pain.  Literally if `self` was `${self}` and `this` was `${this}` everywhere, then the resulting RSI would be a public health crisis!

@@ -22,9 +22,14 @@ $(eval $(call compose.import, demos/data/docker-compose.yml))
 __main__: init clean build test docs
 
 init: mk.stat docker.stat
-validate:
-	ls demos/*[.]mk|./compose.mk flux.each/mk.validate
-	ls demos/tui/*[.]mk|./compose.mk flux.each/mk.validate
+validate: validate.makefiles validate.markdown
+validate.markdown:
+	${make} docs.jinja_templates | ${stream.fold} | ${stream.peek} | ${stream.space.to.nl} \
+		| xargs -I% bash -x -c "${make} validate.markdown/%"
+validate.markdown/%:; pynchon jinja render $
+validate.makefiles:
+	ls demos/*[.]mk | ./compose.mk flux.each/mk.validate
+	ls demos/tui/*[.]mk | ./compose.mk flux.each/mk.validate
 
 clean: flux.stage.clean
 	@# Only used during development; normal usage involves build-on-demand.
@@ -38,17 +43,20 @@ build: tux.require
 	${jb} foo=bar | ${jq} .
 
 normalize: # NOP
-# nord-darker
+pygments.nord: pygments.css/nord-darker
 pygments.css/%:; pygmentize -S ${*} -f html 
 
 test: validate integration-test demos smoke-test 
 itest integration-test:; ./demos/itest.mk
+	@# Runs the integration-test suite.
+
 stest smoke-test:
+	@# Runs the smoke-test suite
 	ls tests/*.sh | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 
 demos demos.test demo-test:
-	# set -x && ls demos/*.mk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
-	set -x && ls demos/*.mk |grep -v lean| xargs -I% bash -x -c "./% || exit 255"
+	set -x && ls demos/*.mk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
+	# set -x && ls demos/*.mk |grep -v lean| xargs -I% bash -x -c "./% || exit 255"
 
 demos/cmk:
 	set -x && ls demos/cmk/*.cmk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
@@ -111,9 +119,10 @@ demo:
 docs: docs.jinja #docs.mermaid
 docs.build: docs.builder.build docs.builder.dispatch/.mkdocs.build
 docs.init:; pynchon --version
+docs.jinja_templates:; find docs | grep .j2 | sort  | grep -v macros.j2
 docs.jinja:
 	@# Render all docs with jinja
-	find docs | grep .j2 | sort  | grep -v macros.j2 \
+	${make} docs.jinja_templates \
 	| xargs -I% sh -x -c "make docs.jinja/% || exit 255"
 docs.jinja/% j/% jinja/%: docs.init
 	@# Render the named docs twice (once to use includes, then to get the ToC)
@@ -148,7 +157,7 @@ mkdocs.build build.mkdocs:; mkdocs build
 mkdocs.serve serve:; mkdocs serve --dev-addr 0.0.0.0:8000
 
 README.md:
-	set -x && pynchon jinja render README.md.j2 -o README.md
+	set -x && pynchon jinja render docs/README.md.j2 -o README.md
 
 ## BEGIN: CI/CD related targets
 ##

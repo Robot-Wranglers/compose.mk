@@ -21,10 +21,10 @@ There are two main reasons why native support for this is interesting:
 * First, `compose.mk` is both a [tool factory]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/) and [an application factory]({{mkdocs.site_relative_url}}/embedded-tui), and wanting to "package" your way into a frozen release comes up naturally.
 * Second, *project automation and pipelines* are also a big part of what `compose.mk` is used for, and compressing *that* down into a snapshotted "release" could be useful for stuff like *checkpointing/rollbacks*, or for topics in notebookes / reproducible research.  See also the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking) for a sketch of something like that.
 
-More philosophically: the ability to reference, run, and script over potentially *lots* of possibly customized containers in an organized way using `docker-compose.yml` and `compose.mk` without *explicitly shipping either* feels like [a different way to build and release tools](#discussion).  
-
- !!! thinking "Hmm.."
-    Put simply, [easy access to containers]({{mkdocs.site_relative_url}}/container-dispatch) [and multiple programming languages]({{mkdocs.site_relative_url}}/demos/polyglots) and [workflows]({{mkdocs.site_relative_url}}/demos/workflows) is usually stuff that we associate with microservices and distributed systems like Kubernetes, Jenkins or Airflow.  What happens if it is easy to design *undistributed* applications, tools, and pipelines with similar architectures?  
+!!! question "Hmm.."
+    More philosophically: the ability to reference, run, and script over potentially *lots* of possibly customized containers in an organized way using `docker-compose.yml` and `compose.mk` without *explicitly shipping either* feels like [a different way to build and release tools](#discussion).  
+    
+Put simply, [easy access to containers]({{mkdocs.site_relative_url}}/container-dispatch) [and multiple programming languages]({{mkdocs.site_relative_url}}/demos/polyglots) and [workflows]({{mkdocs.site_relative_url}}/demos/workflows) is usually stuff that we associate with microservices and distributed systems like Kubernetes, Jenkins or Airflow.  What happens if it is easy to design *undistributed* applications, tools, and pipelines with similar architectures?  
 
 Another point of view is that what we're really talking about is **the ability to export a project into a tool**.  Because let's be real: *No one wants to look at your project, because it's a mess of docs/examples/tests/support data, and they have to clone it, then understand how it's all organized before they can even try to use it.  Usually, even after a project is understood, it's not like you can *use* it directly, it must adapted or edited, or you go down a rabbit hole of dependencies.*  Self-extracting archives are far from *new*, but since they can actually help with some of this, they seem underutilized.
 
@@ -131,10 +131,11 @@ Here's an example where the generated executable we want to build will *take arg
   
 ```bash {.cli_example}
 $ archive=demos/ bin=archive.run script='bash -x -c' ./compose.mk mk.self 
-
 $ ./archive.run -- 'pwd; find .'
+
 ```
 ```bash {.cli_output}
+
 + pwd
 /home/user/.tmp.5idV3NHp6
 + find .

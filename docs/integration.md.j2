@@ -35,7 +35,7 @@ If you're looking to integrate with existing automation or you brought your own 
 
 A quick example of what your project Makefile should look like:
 
-```Makefile {.snippet} {.language-Makefile}
+```Makefile {.snippet .language-Makefile}
 # Include compose.mk for access to target API and macros.
 include compose.mk
 
@@ -46,8 +46,7 @@ $(eval $(call compose.import, docker-compose.yml))
 # At this point, scaffolded targets are defined for 
 # the tool containers mentioned in the compose file.
 # Now you can dispatch any task to any tool container.
-test: \
-	tool_container_name.dispatch/self.test
+test: tool_container_name.dispatch/self.test
 
 self.test:
 	echo hello world from container `uname -n -v`

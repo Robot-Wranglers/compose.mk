@@ -6,15 +6,14 @@
 The [language overview page]({{mkdocs.site_relative_url}}/language) discusses how `compose.mk` is secretly a programming language, even though it's perfectly fine to think of it terms of [a library]({{mkdocs.site_relative_url}}/standard-lib) or [a tool]({{mkdocs.site_relative_url}}/tool-overview).  More to the point though.. compose.mk is a matrioshka language, and maybe the *first one that's actually intended to be useful*.
 
 --------------
-
-!!! quote "Matrioshka Language"
+!!! commentary "Matrioshka Language"
     Matrioshka languages can be identified by their program forms, which will have multiple, distinct 'phases' with different syntactic and semantic rules. There are often two phases; the first gives a set of rules, and the second provides objects on which those rules are to be applied. *[--esolangs wiki](https://esolangs.org/wiki/Matrioshka_language)*
 
 --------------
 
 For `compose.mk`, the "objects" are containers or container specs that might be inlined or external, and/or [foreign code]({{mkdocs.site_relative_url}}/demos/polyglots#foreign-code-as-first-class).  The "rules" are tasks or task-groups.  First-class support for these as primitives turns out to be especially useful for things like [wrappers]({{mkdocs.site_relative_url}}/tool-overview#tool-wrappers), [tool-factories]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/#map-ansible-modules-to-targets), and even [app-factories]({{mkdocs.site_relative_url}}/advanced-tuis) as seen in the rest of the site documentation.
 
-This page is about identifying a through-line for the various more concrete work elsewhere, and you'll probably appreciate that if you prefer overviews that focus less on applications and more on **theory, architecture, and patterns**. If you want to take in a few simple and concrete matrioshka demos before you continue reading, [see instead this index of demos]({{mkdocs.site_relative_url}}/demos/matrioshka).
+This page is about identifying a through-line for the various more concrete work elsewhere, for those who prefer overviews that focus less on applications and more on **theory, architecture, and patterns**. If you want to take in a few simple and concrete matrioshka demos before you continue reading, [see instead this index of demos]({{mkdocs.site_relative_url}}/demos/matrioshka).
 
 ### Matrioshka Idiom Basics
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -100,28 +99,6 @@ Since `compose.mk` tool-container invocations [default to volume-mounts for the 
     For an extreme example of "fluency" across matrioshka layers, check out the [makeception demo]({{mkdocs.site_relative_url}}/demos/makeception), where we use `compose.mk` to embed 2 container definitions and to build and steer them.  What's really unusual about this example though, is that even *the build process* itself is encapsulated inside the same file: rather than monolithic top-to-bottom bash in the Dockerfile, provisioning tasks can be expressed as normal targets which are executed as usual, may call other targets, etc.  Besides allowing for "subroutines" and code-reuse, this also [tends to minimize and clean shell code in other ways]({{mkdocs.site_relative_url}}/standard-lib/#workflow-rationale)
     
     For an advanced example in service of a more conventional use-case, you might want to take a look at the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking), which uses 3 different containers (a formal-methods toolkit) to augment the behaviour of a 4th container (a jupyter lab server).")}}
-
-{#
-This might not seem like much, but we're already far beyond the flexibility of things like [bash heredocs](https://en.wikipedia.org/wiki/Here_document) or most libraries that do docker hand-holding.  ^[2]
-
-## Quick Links 
-<hr style="width:100%;border-bottom:3px solid black;">
-
-For those that just want to skip to practical examples, using basic [container dispatch idioms](#) with external files is matrioshka-like, and almost all of [the polyglot demos](#) are simple matrioshkas that define a runtime & execute foreign languages there. 
-
-**For demos that more directly focus on embedded containers and data**, here's a running index:
-
-* [Inlined containers containers and data]({{mkdocs.site_relative_url}}/demos/matrioshka) 
-    * [Inlined docker files]({{mkdocs.site_relative_url}}/demos/matrioshka#inlined-dockerfiles)
-    * [Extending inline docker files]({{mkdocs.site_relative_url}}/demos/matrioshka#extending-inlined-dockerfiles)
-    * [Inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka#inlined-compose-files)
-    * [Passing inlined data structures]({{mkdocs.site_relative_url}}/demos/matrioshka#passing-inlined-data-structures)
-* The [Theorem Proving demo](#) embeds a lean4 runtime, theorem, and code.
-* The [Custom Automation API demo]({{mkdocs.site_relative_url}}/demos/custom-automation-apis.md) wraps an Ansible runtime, then customizes it and exposes a different interface
-* The [Justfile demo]({{mkdocs.site_relative_url}}/demos/just.md) wraps a just-runner and a just-file, then customizes it and exposes a different interface
-
-The rest of this page is dedicated to general discussion of matrioshka design and idioms, so that the demos can remain small and focused.
-#}
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
