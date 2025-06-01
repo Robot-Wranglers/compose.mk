@@ -157,7 +157,7 @@ mkdocs.build build.mkdocs:; mkdocs build
 mkdocs.serve serve:; mkdocs serve --dev-addr 0.0.0.0:8000
 
 README.md:
-	set -x && pynchon jinja render README.md.j2 -o README.md
+	set -x && pynchon jinja render docs/README.md.j2 -o README.md
 
 ## BEGIN: CI/CD related targets
 ##
