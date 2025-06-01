@@ -1,7 +1,5 @@
 #!/usr/bin/env -S make -f
-# demos/code-objects.mk: 
-#   Demonstrating first-class support for foreign code-blocks in `compose.mk`.
-#
+# Demonstrating first-class support for foreign code-blocks in `compose.mk`.
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # USAGE: ./demos/code-objects.mk
 
@@ -11,14 +9,15 @@ include compose.mk
 python.img=python:3.11-slim-bookworm
 python.interpreter=python
 
-# Now define the python code
+# Define the python code
 define hello_world 
-print('hello world')
+import sys 
+print(f'hello world, from {sys.version_info}')
 endef
 
 # Import the code-block, creating additional target scaffolding for it.
-$(eval $(call polyglot.bind.container, \
-	hello_world, ${python.img}, ${python.interpreter}))
+$(call polyglot.import, def=hello_world \
+	img=${python.img} entrypoint=${python.interpreter})
 
 # With the new target-scaffolding in place, now we can use it.
 # First we preview the code with syntax highlighting, 

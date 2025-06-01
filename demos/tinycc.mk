@@ -1,6 +1,5 @@
 #!/usr/bin/env -S make -f
-# demos/tinycc.mk: 
-#   Demonstrating polyglots and running as first-class objects in `compose.mk`, .
+# Demonstrating compiled-language polyglots in `compose.mk`.
 #
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
@@ -30,7 +29,7 @@ tcc.interpreter/%:
 	rm ${*}.c
 
 # Declare the code-block as an object, bind it to the interpreter.
-$(eval $(call compose.import.code, hello_world, tcc.interpreter))
+$(call polyglot.import, def=hello_world bind=tcc.interpreter)
 
 # Use our new scaffolded targets for `preview` and `run`
 __main__: Dockerfile.build/tcc hello_world.preview hello_world.run

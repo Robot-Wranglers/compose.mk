@@ -21,20 +21,22 @@ document.addEventListener('DOMContentLoaded', function() {
         function:{pattern:/(\()(?:abspath|addsuffix|and|basename|call|dir|error|eval|file|filter(?:-out)?|findstring|firstword|flavor|foreach|guile|if|info|join|lastword|load|notdir|or|origin|patsubst|realpath|shell|sort|strip|subst|suffix|value|warning|wildcard|word(?:list|s)?)(?=[ \t])/,lookbehind:!0},
         operator:/(?:::|[?:+!])?=|[|@]/,
         punctuation:/[:;(){}]/}
+        
         compose_keywords={'cmk-compose-keyword': {pattern: /.*(stop|build|ps) /, alias:"token p .ni .ne"} };
         Prism.languages.insertBefore('bash', 'keyword', compose_keywords);
         Prism.languages.insertBefore('make', 'keyword', compose_keywords);
         Prism.languages.insertBefore('cmk', 'keyword', 
-            {'cmk-dockerfile-kw': {pattern: /RUN /, alias:"token target p .ni .ne"}});
+            {'cmk-dockerfile-kw': {pattern: /(RUN |FROM |ENV |SHELL |ENTRYPOINT |COMMAND )/, alias:"token target p .ni .ne"}});
+        
         cmk_cli_token={'cmk-cli-token': {pattern: / (?:compose[.]mk|[.]\/compose.mk)/,} };
         Prism.languages.insertBefore('bash', 'keyword', cmk_cli_token);
         Prism.languages.insertBefore('makefile', 'keyword', cmk_cli_token);
         
-        cmk_syntax={'cmk-syntax': {pattern: /(▰|⫻|\$|〚|⟧|⋙|🞹|⋘)/,}};
+        cmk_syntax={'cmk-syntax': {pattern: /(▰|⫻|\$|⟦|⟧|⋙|🞹|⋘)/,}};
         Prism.languages.insertBefore('bash', 'punctuation', cmk_syntax);
         Prism.languages.insertBefore('makefile', 'punctuation', cmk_syntax);
         
-        cmk_syntax={'cmk-compose-keyword': {pattern: /[.](dispatch)(\\|,)/,}};
+        cmk_syntax={'cmk-compose-keyword': {pattern: /([.](dispatch)(\\|,))/,}};
         Prism.languages.insertBefore('bash', 'keyword', cmk_syntax);
         Prism.languages.insertBefore('makefile', 'keyword', cmk_syntax);
         Prism.languages.insertBefore('makefile', 'punctuation', cmk_syntax);
@@ -42,25 +44,49 @@ document.addEventListener('DOMContentLoaded', function() {
         Prism.languages.insertBefore('bash', 'keyword', cmk_syntax);
         Prism.languages.insertBefore('makefile', 'keyword', cmk_syntax);
         
-        line_feed={'cmk-line-feed': {pattern: /(\\|▰| with | as |⫻|\$|〚|⟧|⋙|🞹|⋘)/,alias:"si punctuation"}};
+        line_feed={'cmk-line-feed': {
+            pattern: /(\\|▰|⫻|\$|⟦|⟧|⋙|🞹|⋘)/,alias:"si punctuation cmk-syntax"}};
         Prism.languages.insertBefore('bash', 'punctuation', line_feed);
         Prism.languages.insertBefore('makefile', 'punctuation', line_feed);
         
         Prism.languages.insertBefore('makefile', 'target', 
             {'cmk-dunder': {pattern: /(__main__|__init__|__name__)/,}});
-        
+            Prism.languages.insertBefore('makefile', 'target', 
+                {'cmk-dockerfile-kw': {pattern: /(RUN|FROM)/,}});
         Prism.languages.insertBefore('bash', 'keyword', {
             'cmk-fpath': {
                 pattern: /[.]\/(?:\.?\.?\/)?[\w.-]+\/[\w./-]+/, 
                 alias:"token no"} });
+        Prism.languages.insertBefore('makefile', 'comment', {
+            'cmk-shebang': {
+                pattern: /[#][!].*/, 
+                alias:"shebang important"},
+                'cmk-div': {
+                    pattern: /:::/, 
+                    // alias:"punctuation importan"
+                    },                
+            'cmk-dockerfile': {
+                pattern: /(?<=Dockerfile.).*?(?=[ \n])/g,
+                alias:"important"},
+            // 'cmk-as-statement': {
+            //     pattern: /^(?!#).*with.*(?<=as ).*?(?=\n|$)/g,
+            //     alias: "important"
+            // },
+        });
         
-        // FXN REGEX: slightly different for bash vs makefile
-        Prism.languages.insertBefore('bash', 'keyword', 
-            {'cmk-fxn': {
-                pattern: /(?:io|log|docker|flux|stage|mk|stream|tux)[.]([a-z._])+(?:(\/))/,} });
-        Prism.languages.insertBefore('makefile', 'keyword', 
-            {'cmk-fxn': {
-                pattern: /(?:io|log|cmk|docker|flux|stage|mk|stream|tux)[.]([a-z._])+(?:(\/|,|\())/,} });
+        Prism.languages.insertBefore('bash', 'keyword', {
+            'cmk-fpath': {
+                pattern: /[.]\/(?:\.?\.?\/)?[\w.-]+\/[\w./-]+/, 
+                alias:"token no"},
+            // FXN REGEX: slightly different for bash vs makefile
+            'cmk-fxn': {
+                pattern: /(?:io|log|docker|Dockerfile|flux|stage|mk|stream|tux)[.]([a-z._])+(?:(\/))/,},
+        });
+        
+        Prism.languages.makefile.target = {
+            pattern: /^(?!⨖)[^\s:]+(?=\s*:(?!=))/m,
+            alias: 'symbol'
+        };
         
         // must be before cmk_args 
         cmk_cli_keywords={'cmk-cli-keyword': {pattern: /\b(loadf|jb|jq)\b/, alias:"token p"} };
@@ -73,25 +99,66 @@ document.addEventListener('DOMContentLoaded', function() {
         Prism.languages.insertBefore('bash', 'keyword', cmk_args);
         Prism.languages.insertBefore('makefile', 'target', cmk_args);
         
-        Prism.languages.insertBefore('makefile', 'keyword', 
-            {'cmk-recursion': {pattern: /\b(?:make|self|this)/,} });
-        Prism.languages.insertBefore('makefile', 'keyword', 
-            {'cmk-syntax': {pattern: /(?:dispatch|run)/,} });
-        Prism.languages.insertBefore('makefile', 'punctuation', 
-            {'cmk-syntax': {pattern: /(?:dispatch|run)/,} });
-        
+        Prism.languages.insertBefore('makefile', 'keyword', {
+            'backtick-content': {
+                pattern: /`[^`\n]*`/,
+                inside: {
+                    'punctuation': /`/
+                }
+            },
+            'cmk-recursion': {pattern: /\b(?:make|self|this)/,}, 
+            'cmk-syntax': {pattern: /(?:dispatch|run|compose[.]import.* )/,},
+            'shell-command': {
+                pattern: /(?:echo|cat|apk|wget|tar|apt-get|pip3|pip|npm|ansible) /,
+                // alias:'important'
+                },
+            'shell-install': {
+                pattern: /(?:apk|apt-get) /,
+                // alias:''
+            },
+            'cmk-fxn': {
+                pattern: /(?:io|log|cmk|docker|Dockerfile|flux|stage|mk|stream|tux)[.]([a-z._])+(?:(\/|,|\())/,},
+            'cmk-integral-open':{
+                pattern: /^⨖(?!\s+with\b).*$/m,
+                inside: {
+                    'symbol': /^⨖/,
+                    'defname': /\b.*\b/,
+                }, alias:'token cmk-line-feed si punctuation cmk-syntax'},
+            // 'cmk-integral-close':{
+            //     pattern: /^⨖\s+with.+$/g,
+            //     alias:'token cmk-line-feed si punctuation cmk-syntax',
+            //     inside: { zonk: / as /, },
+            'cmk-integral-close': {
+                pattern: /⨖\s+with\s+(?:[^\r\n]*(?:\r?\n(?!\s*$))*)*[^\r\n]*/gm,
+                greedy: true,
+                // alias:'token',
+                inside: {
+                    'symbol': /^⨖/,
+                    'keyword-with': /\bwith\b/,
+                    'keyword-as': /\bas\b/,
+                    // 'with-value': /(?<=with\s+)\S+(?=\s+as)/,
+                    // 'as-value': /(?<=as\s+)\S+$/
+                    'keyword': /\b(?:with|as)\b/,
+                    // 'with-value': /\b(?!as)\w+\b/,
+                    'as-value':  /\b\w+\b$/,
+                    'with-value': /(?<![a-zA-Z0-9_])(?!as)[\w\/\:]+(?![a-zA-Z0-9_])/,
+                    }
+            },
+           // 'cmk-with':{
+            //     pattern: /(?<=^⨖\s+with\s+)\S+/gm,
+            //     alias:'token cmk-line-feed si punctuation cmk-syntax'},
+                // 'cmk-keyword': {
+            //     pattern: /(?: with | as )/,
+            // },
+            });
+        // Prism.languages.insertBefore('makefile', 'keyword', 
+        //     {'cmk-syntax': {pattern: /(?:dispatch|run)/,} });
         const wrapTextNodeWithSpan = (text, classes) => {                     
             const span = document.createElement('span');
             span.textContent = text.nodeValue; 
             span.className = classes;
             text.parentNode.replaceChild(span, text); return span; 
         };
-        // document.querySelectorAll('div.cmk-lang:not(.nohighlight) code').forEach(
-        //     node => {
-        //         node.className+=" language-cmk";
-        //         Prism.highlightElement(node)
-        // });
-        
         document.querySelectorAll('div.highlight:not(.nohighlight) code').forEach(
             node => {
             const textNodes = Array
@@ -155,6 +222,63 @@ function toggleCodeBlock(id, link) {
     codeBlock.style.display = isHidden ? "block" : "none";
     link.textContent = isHidden ? "⮝" : "⮟";
 }
+
+
+// function addImageToHeader(headerId, imgSrc) {
+//     const processedHeaderId = headerId.replace(/\s+/g, '-');
+//     // Get the heading element
+//     const heading = document.getElementById(processedHeaderId);
+//     // Check if heading exists
+//     if (!heading) {
+//       console.error(`Element with ID '${processedHeaderId}' not found`);
+//       return;
+//     }
+//     img = Object.assign(document.createElement('img'), 
+//         {src: imgSrc}, {style: 'height: 1.2em; margin-right:5px; vertical-align: middle;'});
+    
+//     heading.insertBefore(img, heading.firstChild);
+//   }
+  function addImageToHeader(headerId, imgSrc,style="") {
+    // Convert spaces to dashes in header-id
+    const processedHeaderId = headerId.replace(/\s+/g, '-');
+    const headers = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    // First try exact match (case-insensitive)
+    let heading = Array.from(headers).find(h => 
+      h.id && h.id.toLowerCase() === processedHeaderId.toLowerCase()
+    );
+    // If no exact match, try startsWith (case-insensitive)
+    if (!heading) {
+      heading = Array.from(headers).find(h => 
+        h.id && h.id.toLowerCase().startsWith(processedHeaderId.toLowerCase())
+      );
+    }
+    // If startsWith fails, try contains substring (case-insensitive)
+    if (!heading) {
+      heading = Array.from(headers).find(h => 
+        h.id && h.id.toLowerCase().includes(processedHeaderId.toLowerCase())
+      );
+    }
+    // Check if heading was found
+    if (!heading) {
+      console.error(`No header element found matching '${processedHeaderId}'`);
+      return;
+    }
+    // Create and configure the image element
+    const img = Object.assign(document.createElement('img'), 
+        {src: imgSrc}, {style: 'height:1.2em;margin-right:5px; vertical-align: middle;'+style});
+// const img = document.createElement('img');
+//     img.style.verticalAlign = 'middle';
+//     img.src = imgSrc;
+//     img.style.marginRight = '10px';
+    
+    // Insert the image before the first child of the heading
+    heading.insertBefore(img, heading.firstChild);
+  }
+  
+  // Example usage:
+  // addImageToHeader('overview', '../img/road_map.svg'); // Exact match
+  // addImageToHeader('section', '../img/icon.png'); // Could match 'section-1', 'section-intro', etc.
+  // addImageToHeader('intro', '../img/icon.png'); // Could match 'section-intro-text' via substring
 /**
  * Find contiguous blocks of spans with class "inside_define" and wrap them in divs
  * Plain text nodes between spans with the class should be included in the blocks

@@ -3,21 +3,28 @@
 ### Assertion Support
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Without real typing or any kind of static-analysis, `make` can benefit from a few ways to write more defensive code.  Nothing here is very fancy, but it might save you from reimplementing stuff.  
+Without real typing or great tools for static-analysis, `make` can benefit from a few ways to write more defensive code.  Nothing here is very fancy, but it might save you from reimplementing stuff.  
 
-Unlike most of the standard library, this section is heavy on macros and light on targets, because re-using it outside of `make` isn't necessarily more readable than the shell equivalent would be.
+{#Unlike most of the standard library, this section is heavy on macros and light on targets, because re-using it outside of `make` isn't necessarily more readable than the shell equivalent would be.#}
 
 #### Environment Assertions
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-{{macros.admonition_note("TODO","Documentation coming soon")}}
+We've already met one method for asserting environment variables are set as part of the [argument-parsing support](#bind-from-environment), because anything that's mentioned without a default is considered required.  
+
+See also:
+
+* {{macros.api_link('mk.assert.env',mkdocs,arg='v1,v2..')}}, available as a target or a macro.
 
 #### Filesystem Assertions
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-{{macros.admonition_note("TODO","Documentation coming soon")}}
+See also:
 
-#### Generic Assertions
-<hr style="width:95%;border-bottom:1px dashed black;">
+* {{macros.api_link('mk.require.tool',mkdocs,arg='tool-name')}}, basically a wrapper on `which`, and available as a target or a macro.
 
-{{macros.admonition_note("TODO","Documentation coming soon")}}
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	addImageToHeader('assertion-support','/{{mkdocs.config.site_name}}/img/assertion.svg')
+}, 100);});
+</script>

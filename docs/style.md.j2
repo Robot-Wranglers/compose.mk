@@ -1,22 +1,39 @@
 {% import 'macros.j2' as macros -%}
-
-## About Style
+## Style & Idioms
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Style should be practical rather than prescriptive[^1], but here's a few things that seem worth writing down.  This page is a work-in-progress.
+A catch-all section for some documentation that doesn't fit anywhere else.  This page is a work in progress, but here's a few things that seem worth writing down.
 
-Although much of this advice is applicable only to usage `compose.mk` or weird Makefiles in similar vein, some also applies to general Makefile.  CMK-lang is an optional *superset* of Makefile, and documented separately [here]({{mkdocs.site_relative_url}}/compiler), but much of this advice applies to that too.
+{{macros.subheader('Style')}} especially should be practical rather than prescriptive[^1]. Much of this advice is applicable only to usage of `compose.mk` specifically (or weird Makefiles in similar vein), but some advice here also applies to classical Makefile.  CMK-lang is an optional *superset of Makefile*, and documented separately [here]({{mkdocs.site_relative_url}}/compiler), but much of this advice applies to that too.
 
-Makefile is already a peculiar language because it handles 2 syntaxes simultaneously: one for shell, and one for Makefile-proper.  If you're using `compose.mk` for [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) or [matrioshkas]({{mkdocs.site_relative_url}}/demos/matrioshka), that can add even more syntax.  This can make readability challenging, but strong conventions can help a lot.
+* [Naming Conventions](#general-naming-conventions)
+* [Internal Style](#internal-style)
+* [Style for Extensions](#style-for-extensions)
+* [Performance and Currying](#performance-and-currying)
+* [From Style to Dialect](#from-style-to-dialect)
+
+--------------------------
+
+{{macros.subheader('Idioms')}} are scattered throughout the documentation.  Both the [standard library walkthrough]({{mkdocs.site_relative_url}}/standard-lib) and the [compiler docs]({{mkdocs.site_relative_url}}/compiler) are full of stuff that qualifies, but this page focuses on **through-lines, macros, and make-functions,** since other docs focuses on the more composable target API.
+
+* [Bind Declarations](#bind-declarations)
+* [Import Statements](#import-statements)
+* [Argument Parsing](#bind-declarations)
+
+### Python Inspiration
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Makefile is already a peculiar language because it handles 2 syntaxes simultaneously: one for shell, and one for Makefile-proper.  If you're using `compose.mk` for [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) or [matrioshkas]({{mkdocs.site_relative_url}}/demos/matrioshka) or [other supported idioms](#from-style-to-dialect), that can add even more syntax.  This can make readability challenging, but strong conventions can help a lot.
 
 With `compose.mk`, much inspiration is taken from python.  A few random examples: 
 
-* Default target is `__main__` unless `.DEFAULT_GOAL` is explicitly set; var for `__file__` also preset
-* Usage of `self` conventionally indicates a non-public interface
+* Default target is `__main__` unless `.DEFAULT_GOAL` is explicitly set
+* Double-under "specials" are set by default: `__file__`, `__interpreter__` &  `__interpreting__`
+* Usage of `self` conventionally indicates a non-public interface, e.g. with [compose.bind.target]({{mkdocs.site_relative_url}}/container-dispatch) 
 * Usage of make-prereqs as [pseudo-functions](#arguments-parameters-pipes) resembles decorators
-* Python-style docstrings for targets [are encouraged]({{mkdocs.site_relative_url}}/cli-help/#docstring-style)
+* Python-style docstrings for targets [are supported]({{mkdocs.site_relative_url}}/cli-help/#docstring-style)
 * [Emulation of]({{mkdocs.site_relative_url}}/signals/#at-exit-handlers) the `atexit` module semantics
-* Probably many other small things.
+* [Support for keyword-args]({{mkdocs.site_relative_url}}/standard-lib#argument-parsing)
 
 ### General Naming Conventions
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -28,54 +45,100 @@ With `compose.mk`, much inspiration is taken from python.  A few random examples
 1. Avoid custom functions in `make`, but if you need them, differentiate functions from vars using `_` as a prefix to indicate args are required.
 1. Differentiate "public" targets (i.e. the CLI's API) from internal helpers by using a `self.` prefix or simply `.`
 
+### Bind Declarations
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Bind declarations for targets are similar to function-decorators, and [actually look like decorators in CMK-lang]({{mkdocs.site_relative_url}}/compiler#bind-declarations).  But what is being "bound" to what here?
+
+Sometimes bind-declarations attach external variables as local defaults, allowing [targets to support keyword-args]({{mkdocs.site_relative_url}}/standard-lib#argument-parsing)
+
+!!! goals "<strong>Binding Variables and Scopes:</strong>"
+	* [bind.args.from_params]({{mkdocs.site_relative_url}}/standard-lib/#bind-from-parameters)
+	* [bind.args.from_env]({{mkdocs.site_relative_url}}/standard-lib/#bind-from-environment)
+	* [bind.args.from_json]({{mkdocs.site_relative_url}}/standard-lib/#bind-from-json)
+	* [bind.def.to_env]({{mkdocs.site_relative_url}}/standard-lib/#bind-def-env)
+
+Sometimes bind-declarations bind existing code(s) or targets, to an existing runtime context like a target or a container.
+
+!!! goals "<strong>Binding Tasks and Runtimes:</strong>"
+	* [compose.bind.target]({{mkdocs.site_relative_url}}/container-dispatch/#container-agnostic-dispatch)
+	* [compose.bind.script]({{mkdocs.site_relative_url}}/container-dispatch/#container-agnostic-dispatch)
+	* [docker.bind.script]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-scripts-in-containers)
+	* [mk.docker.bind.script]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-scripts-in-containers)
+
+Bind-declarations like in the 2nd category usually have an import-equivalent.  You can think of these as *import partials*, i.e. you bring your own target for the sake of being explicit, whereas with an [import statement](#import-statement) the target name would usually be implied.
+
+### Import Statements
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Whereas bind-declarations attach things, import-statements create (or "scaffold") new targets dynamically.  All of this is documented elsewhere, but this section puts the related stuff in one place.
+
+!!! goals "<strong>Targets from Docker Images or Dockerfiles:</strong>"
+	* [docker.import]({{mkdocs.site_relative_url}}/raw-docker)
+	* [docker.import.script]({{mkdocs.site_relative_url}}/raw-docker)
+	* [dockerfile.import_string]({{mkdocs.site_relative_url}}/raw-docker)
+
+!!! goals "<strong>Targets from Docker-Compose Services:</strong>"
+	* [compose.import]({{mkdocs.site_relative_url}}/bridge/#other-import-statements)
+	* [compose.import.as]({{mkdocs.site_relative_url}}/bridge/#multiple-compose-files)
+	* [compose.import.script]({{mkdocs.site_relative_url}}/polyglots/#special-guests)
+	* [compose.import.string]({{mkdocs.site_relative_url}}/bridge/#inlined-embedded-from-string)
+
+!!! goals "<strong>Targets from Foreign Code:</strong>"
+	* [polyglot.import]({{mkdocs.site_relative_url}}/demos/polyglots#foreign-code-as-first-class)
+	* [polyglots.import]({{mkdocs.site_relative_url}}/demos/polyglots/#binding-multiple-blocks-in-one-shot)
+
 ### Targets As Functions
 <hr style="width:100%;border-bottom:3px solid black;">
 
-!!! danger "<small>Mad Science</small>"
-	Targets-as-functions are pretty normal for lots of Makefile hackery, although many people would consider it an abuse!  Others might argue that strong notational conventions can sometimes elevate a hack into an art form. =P 
-	
-	For a more detailed look at this covering more advanced topics, see also the section on [performance and currying](#performance-and-currying), and a look at [homoiconicity in compose.mk]({{mkdocs.site_relative_url}}/language/#homoiconic).
+Targets-as-functions are pretty normal for lots of Makefile hackery, although many people would consider it an abuse!  Others might argue that strong notational conventions can sometimes elevate a hack into an art form. ;)
 
-The last example mentioning `flux.if.then` raises the question of how to handle parametric stuff, which gets a bit tricky.  Basically `compose.mk` needs a way to simulate "functions" and "arguments" from mere targets without wrecking readability.  Besides adding function-calls, this effectively makes prerequisites more powerful too, and somewhat more similar to function-decorators.  
+For a lot of different reasons, `compose.mk` needs some way to simulate "functions" and "arguments" from mere "targets" without wrecking readability.  This adds complexity, but is also very powerful, basically making the simple concept of flat DAGs like "clean -> build -> test" much more parametric.  Besides adding function-calls, it effectively makes prerequisites more expressive, and more like function-decorators.  
 
-Extensions for `compose.mk` (or just random Makefiles) might benefit from this also, so here's a suggested approach.
+Extensions for `compose.mk` (or just random Makefiles) can potentially benefit from judicious application of this technique also, so here's a suggested approach.
+
+For a more detailed look at advanced topics, see also the section on [performance and currying](#performance-and-currying), and a look at [homoiconicity in compose.mk]({{mkdocs.site_relative_url}}/language/#homoiconic).
 
 #### Arguments, Parameters, Pipes
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-1. Parametric targets should prefer a form like `module.target_name/<arg>`, i.e. use `/` to separate arguments.  This works fine for a single file-argument *(just parse with `echo ${*} | cut -d/ -f 1-`)*.  Bonus: this is unlikely to collide with your filesystem or require annoying usage of `.PHONY` everywhere.
-1. In case of multiple arguments, if the arity is fixed and arguments won't include `/`, use a form like `module.target_name/<arg1>/<arg2>`. Recipes can parse arguments with `echo ${*} | cut -d/ -f <arg_num>`
-1. In case of an unknown number of arguments or accepting more than one filepath, split on commas.
+Thinking of targets as functions raises the question of how we're going to pass data.  See also the [standard lib docs on argument-parsing]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-parsing-arguments).
 
-In case your targets-as-functions have argument(s) that need to include spaces, newlines, etc.. you have no choice but to use env-vars or pipes.  
+Parametric targets should prefer a form like `module.target_name/<arg>`, i.e. use `/` to separate target-name from arguments.  This works fine even for multiple file-arguments; parsing help is available from [`mk.unpack.arg(<arg_num>,<optional_default>)`]({{mkdocs.site_relative_url}}/standard-lib/#unpacking-arguments).  Since it's namespaced with a module-prefix, the target is unlikely to collide with your filesystem or require annoying usage of `.PHONY` everywhere.
 
-For clarity, targets that expect pipes should usually be considered members of the [*stream* module]({mkdocs.site_relative_url}}/api#api-stream) (e.g. `stream.target_name`), even if the implementation is part of extensions.  
+In case your targets-as-functions have argument(s) that need to include spaces, newlines, etc.. you have no choice but to use env-vars or pipes.  Prefer pipes where possible and consider [passing/parsing structured data]({{mkdocs.site_relative_url}}/standard-lib#structured-io), because env-vars tend to be harder to organize and/or leak out of intended scope.
 
-!!! tip "Related Links"
-	Runtime checks for required env-vars are good practice, and there is some [support for this in the standard library]({{mkdocs.site_relative_url}}/standard-lib#assertion-support).  For keyword-arguments, [structured io]({{mkdocs.site_relative_url}}/standard-lib#structured-io) can get you close.
+For clarity, targets that expect pipes should be considered honorary members of the [*stream* module]({mkdocs.site_relative_url}}/api#api-stream) (e.g. `stream.target_name`), even if the implementation is part of extensions.  
+
+Runtime checks for required env-vars are good practice, and there is some [support for this in the standard library]({{mkdocs.site_relative_url}}/standard-lib#assertion-support) too.
 
 ### Internal Style 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-**In terms of interface and in terms of internal *style***, `compose.mk` tends to avoid macros, function calls, and and other fancy Makefile'isms as much as possible because compared with targets, they are often more magical, less readable, less reusable, and less composable.  Still, there are many places where compromising on this makes sense. 
+**In terms of interface and in terms of internal *style***, `compose.mk` tends to avoid macros, function calls, and and other fancy Makefile'isms as much as possible.  Compared with targets, they are often more magical, less readable, less reusable, and less composable.  Still, there are many places where compromising on this makes sense. 
 
-1. For [logging](#logging-facilities), internal implementation of [autogenerated target scaffolding]({{mkdocs.site_relative_url}}/bridge), etc, we can't really avoid `$(call fxn, args)`.[^2]
+1. For things like [logging](#logging-facilities) and internal implementation of [autogenerated target scaffolding]({{mkdocs.site_relative_url}}/bridge), etc.. we can't really avoid `$(call fxn, args)`.[^2]
 1. Sometimes macros actually **improve** readability (for example writing *`${stream.stdin}`* instead of *`cat /dev/stdin`*). We adopt those approaches for clarity in places where they seem self-documenting.
-1. Macro expansion is also used sometimes as an optimization to avoid extra processes or recursive calls.  Still, macros are basically safe to ignore because in most cases there's a target-equivalent available.
+1. Macro expansion is used sometimes as an *optimization*, to avoid extra processes or recursive calls.  Still.. macros are *usually* safe to ignore, because in most cases there's a target-equivalent available.
 
 See the next section, and the section on [performance and currying](#performance-and-currying) for more detailed discussion.
 
 ### Style for Extensions 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-For code that's extending `compose.mk`, there's a range of options with most things.  In the spirit of pragmatism over prescription.. you'll probably want to choose based on what/who you're already working with.  Depending on your appetite for magic and syntactic sugar, you can opt for:
+For code that's extending `compose.mk`, there's a range of options with most things.  In the spirit of pragmatism over prescription.. you'll probably want to choose based on what/who you're already working with.  
+
+Depending on your appetite for magic and syntactic sugar, you could choose between:
 
 * Explicit container dispatch *(i.e. [typical usage]({{mkdocs.site_relative_url}}/container-dispatch) `<container>.dispatch/<target>`)*
 * Implicit container dispatch *(i.e. [namespace-style dispatch]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch) `<ns>/<container>/<target>`)*
-* Explicit polyglot invocation *(i.e. [less magic]({{mkdocs.site_relative_url}}/demos/polyglots/#containerized-interpreters) and manual control)* 
-* Implicit polyglot invocation *(i.e. [more magic]({{mkdocs.site_relative_url}}/demos/polyglots/#foreign-code-as-first-class), using `polyglot.bind` or [CMK-lang]({{mkdocs.site_relative_url}}/compiler))*
 
-For new development though and depending on how many tool containers you use, implicit style might be more idiomatic.  *(See especially the [platform lifecycle demo]({{mkdocs.site_relative_url}}/demos/platform/) for clean and practical example usage with a concrete problem.)*
+For polyglots you could choose between:
+
+* Explicit polyglot invocation *(i.e. [less magic]({{mkdocs.site_relative_url}}/demos/polyglots/#containerized-interpreters) and manual control)* 
+* Implicit polyglot invocation *(i.e. [more magic]({{mkdocs.site_relative_url}}/demos/polyglots/#foreign-code-as-first-class), using `polyglot.import` or [CMK-lang]({{mkdocs.site_relative_url}}/compiler))*
+
+For new development though and depending on how many tool containers you use, implicit style might be more idiomatic.  *(See the [platform lifecycle demo]({{mkdocs.site_relative_url}}/demos/platform/) for clean and practical example usage with a concrete problem.)*
 
 Revisiting the earlier idea that "sometimes macros improve readability" and knowing that many targets have equivalent macros, there's often a similar choice about implicit vs explicit style:
 
@@ -120,7 +183,7 @@ However, many targets in `compose.mk` also have macro-equivalents, which is more
 
 ```Makefile {.snippet .language-makefile}
 # macro that accepts implicit arguments
-foo=echo doing something
+foo=echo doing something with 
 
 # target equivalent 
 foo/%:
@@ -142,23 +205,23 @@ Above an implicit-style target saves a process and cleans syntax, but it only wo
 Here's the *naive* way to use the argument somewhere in the middle of the expansion.. this is instructive and a useful trick, but we can do better.
 
 ```Makefile {.snippet .language-makefile}
-# a private macro that requires explicit arguments
+# Private macro that requires explicit arguments
 self.hello=printf "hello ${1}\n" 
 
-# primary target, available for API-style usage or from CLI
+# Primary target, available for API-style usage or from CLI
 # this MUST use private macro to avoid infinite-recursion.
 hello/%:
 	$(call self.hello, ${*})
 
 # public macro, cleaning syntax for library-style reuse of target.
-hello=${make} printf/
+hello=${make} hello/
 
-# implicitly reusing `hello/%` target, via macro. 
+# Implicitly reusing `hello/%` target, via macro. 
 # this is basically using an internal API / library style call
 implicit-style:
 	${hello}/world
 
-# explicitly reusing `hello/%` target, via recursion.
+# Explicitly reusing `hello/%` target, via recursion.
 # this is basically using the "external" API via CLI.
 explicit-style:
 	${make} hello/world
@@ -168,26 +231,26 @@ Above, `implicit-style` is only syntactic sugar that cleans up a bit but can't a
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-Unfortunately though the last version of the `hello/%` implementation is a bit ugly, plus we needed *both* a public version of the macro and a private helper version.  One way to deal with this is basically *using currying* to ensure that arguments can appear at the end even if they are used in the middle.  Doing this with bash does make the macro itself *more* ugly, but cleans up both syntax and efficiency of implementations elsewhere:
+Unfortunately though the last version of the `hello/%` implementation is a bit ugly, plus we needed *both* a public version of the macro and a private helper version.  One way to deal with this is similar to currying, ensuring that arguments can appear at the end even if they are used in the middle.  Doing this with bash does make the macro itself *more* ugly, but cleans up both syntax and efficiency of implementations elsewhere:
 
 ```Makefile {.snippet .language-makefile}
 
-# public macro that accepts optional/implicit arguments.
-# accepts argument at the end, currying it towards middle
-hello=bash -x -c 'printf "$${1\#/}\n"' -- 
+# Public macro that accepts optional/implicit arguments.
+# Accepts argument at the end, currying it towards middle
+hello=bash -c 'printf "$${1\#/}\n"' -- 
 
-# parametric usage via CLI-API can now 
-# use public macro for it's internal implementation
+# Parametric usage via CLI-API can use the 
+# public macro for it's internal implementation
 hello/%:
 	${hello}/${*}
 
-# implicit-style achieves code reuse using  
+# Implicit-style achieves code reuse using  
 # a library-style call, but it still uses public macro.
 implicit-style:
 	${hello}/alice
 
-# explicit-style reuses code via CLI API and recursion.
-# looks *almost* like implicit-style, refactoring between 
+# Explicit-style reuses code via CLI API and recursion.
+# Looks almost like implicit-style, thus refactoring between 
 # implicit/explicit style is easy.
 explicit-style:
 	${make} hello/bob
@@ -197,7 +260,7 @@ Two main things are happening now in the `hello` macro at the top.  The first is
 
 Implicit-style is not only more *pretty* than explicit-style now, it's also significantly more efficient, and we eliminated not just *one* usage of `$(call)` but all of them in the future.  When in doubt about whether an internal API exists, you can default to using the explicit approach with the CLI, and easily refactor later for any necessary performance optimizations.
 
--------------------------------------------
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 To really emphasize the notational improvements, let's set aside our separate targets for `implicit-style` and `explicit-style`, add prerequisites, and put it all together:  Now prerequisites, explicit style, and implicit style have a uniform style.
 
@@ -209,7 +272,7 @@ bonus: hello/alice hello/bob
 
 ```
 
-So yeah, this hack is maybe not that appealing for something so simple.  But by using define/endef, of course the `hello` macro might be a large multiline, might be doing something much more complicated.  To put it another way, eliminating `$(call)` enhances readability, and while replacing it with `bash` actually decreases efficiency, a clean invocation of `bash` is still better than recursive calls to `make`.  
+Obviously, this hack is maybe not that appealing for something so simple.  But by using `define .. endef`, of course the `hello` macro might be a large multiline, might be doing something much more complicated.  To put it another way, eliminating `$(call)` enhances readability, and while replacing it with `bash` actually decreases efficiency, a clean invocation of `bash` is usually often much better than recursive calls to `make`.
 
 A pretty good compromise overall.. balancing readability, code reuse, consistent notation, and ensuring public APIs remain accessible but private APIs are usable, all at the same time.  
 
@@ -218,12 +281,28 @@ A pretty good compromise overall.. balancing readability, code reuse, consistent
 
 Somewhere at the limit of style, syntax, and sugar you run into ideas like dialects[^3], extensible programming[^4], language-oriented programming[^5] and DSLs.  To support this type of thing, CMK-lang allows for [direct control]({{mkdocs.site_relative_url}}compiler/#user-defined-extensions) of some aspects of the language syntax.  See also the [main docs for Compiler & Dialects]({{mkdocs.site_relative_url}}/compiler).
 
+### References
 <hr style="width:100%;border-bottom:3px solid black;">
 
-[^1]: Sure, *that* is the reason that `compose.mk` doesn't currently follow it's own style guide *completely*. =P  But it's gradually getting normalized.
+[^1]: Sure, *that* is the reason that `compose.mk` doesn't currently follow it's own style guide *completely*! But it's gradually getting normalized.
 [^2]: Note that [CMK-lang]({{mkdocs.site_relative_url}}/compiler) converts `$(call fxn, args)` to `fxn(args)`.
 [^3]: [CMK-lang]({{mkdocs.site_relative_url}}/compiler) also replaces `${make} foo` with `this.foo`.
 [^4]: Wiki on [Dialects, flavors and implementations](https://en.wikipedia.org/wiki/Programming_language#Dialects,_flavors_and_implementations)
 [^5]: [https://en.wikipedia.org/wiki/Extensible_programming](https://en.wikipedia.org/wiki/Extensible_programming)
 [^6]: [https://en.wikipedia.org/wiki/Language-oriented_programming](https://en.wikipedia.org/wiki/Language-oriented_programming)
 [^7]: [https://www.oreilly.com/library/view/managing-projects-with/0596006101/ch10.html](https://www.oreilly.com/library/view/managing-projects-with/0596006101/ch10.html)
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	addImageToHeader('style-for-extensions','/{{mkdocs.config.site_name}}/img/code-dots.svg')
+	addImageToHeader('internal-style','/{{mkdocs.config.site_name}}/img/code-dots.svg')
+	addImageToHeader('from-style-to-dialect','/{{mkdocs.config.site_name}}/img/code-dots.svg')
+	addImageToHeader('performance-and-currying','/{{mkdocs.config.site_name}}/img/implementation.svg')
+	addImageToHeader('arguments-parameters-pipes','/{{mkdocs.config.site_name}}/img/template.svg')
+	addImageToHeader('targets-as-functions','/{{mkdocs.config.site_name}}/img/lambda.svg')
+	addImageToHeader('style-idioms','/{{mkdocs.config.site_name}}/img/road_map.svg')
+	addImageToHeader('python-inspiration','/{{mkdocs.config.site_name}}/img/python.svg')
+	addImageToHeader('import-statements','/{{mkdocs.config.site_name}}/img/import.svg')
+	addImageToHeader('bind-declarations','/{{mkdocs.config.site_name}}/img/paperclip.svg')
+}, 100);});
+</script>

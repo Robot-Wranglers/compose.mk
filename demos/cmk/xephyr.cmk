@@ -1,6 +1,5 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret!
-# demos/cmk/xephyr.cmk: 
-#   Demonstrating compose.mk GUI capabilities with Xephyr and i3 window manager.
+# Demonstrating compose.mk GUI capabilities with Xephyr and i3 window manager.
 #
 # USAGE: ./demos/cmk/xephyr.cmk gui
 
@@ -80,10 +79,13 @@ configs:
 
 # Top-level helpers, these require Xephyr 
 # on the host and starts a stand-alone XOrg server.
+
 xephyr.init: xephyr.require xephyr.start
+
 xephyr.require:
 	@# Assert Xephyr is available or fail with error message
 	cmk.require.tool(Xephyr, Try installing package 'xserver-xephyr' to continue.)
+
 xephyr.start:
 	@# Start Xephyr in the background.
 	Xephyr -ac -screen ${APP_DIMS} -br -reset -terminate ${APP_DISPLAY} &

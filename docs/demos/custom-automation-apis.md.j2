@@ -9,7 +9,7 @@ This demo describes one way to very quickly expose custom automation APIs using 
 
 When it comes to automation, combining different tools that might be in different containers together is part of the job, but at the end of the day you always want a *coherent vocabulary of verbs that operate on your domain.*  
 
-Those verbs might just be the classic *build/clean/test*, but even then you're often orchestrating across different containers. And your vocabulary might look more like *build/deploy*, or if things get complicated enough, your vocabulary might develop more object-oriented instructions, like *queue.stop* and *cluster.create*.  So that's an automation API in broad strokes, and `compose.mk` has the tools to build it.
+Those verbs might be the classic *build/clean/test*, but even then you're often orchestrating across different containers. And your vocabulary might look more like *build/deploy*, or if things get complicated enough, your vocabulary might develop more object-oriented instructions, like *queue.stop* and *cluster.create*.  So that's an automation API in broad strokes, and `compose.mk` has the tools to build it.
 
 ### A Concrete Use-Case
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -17,6 +17,8 @@ Those verbs might just be the classic *build/clean/test*, but even then you're o
 **For our purposes here, we need a concrete use-case that's pretty small, so we'll talk about hacking Ansible.**  
 
 The rest of this page is a tutorial about how to do that, but the involvement of ansible *specifically* is not that important.  If you're more interested in *patterns, architectures, and theory*.. you might prefer to [start here instead]({{mkdocs.site_relative_url}}/matrioshka/#matrioshka-bridge-pattern).  If you want to see a similar demo with different base technology, you can see a smaller bridge-building project [in the justfile demo]({{mkdocs.site_relative_url}}/demos/just), or a larger project with jupyter in [the notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).
+
+This demo doesn't have lots of prerequisites, but it does us jq/jb to parse/create JSON.  See the [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib#structured-io-basic) for more background.
 
 ### Hijacking Ansible
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -45,48 +47,72 @@ As an exercise.. let's look at what `compose.mk` can bring to adress some of tha
 
 Typically, you would want to begin by sketching out an ansible container inside a docker-compose file, then use `compose.import` to [autogenerate related targets]({{mkdocs.site_relative_url}}/bridge).  Just to keep things simple though and to demonstrate [raw docker support in compose.mk]({{mkdocs.site_relative_url}}/raw-docker) at the same time, we'll embed the ansible container directly.
 
-Without further delay, here's some well-commented code that achieves the goals.
-
-
-<hr style="width:95%;border-bottom:1px dashed black;">
-
 {{macros.embed_demo('demos/ansible-adhoc.mk', github=github)}}
 
-Maybe not *beautiful* to read, but the implementation is small and the result is powerful. 
+The implementation is small, and the result is powerful.  As mentioned above, `make ansible.adhoc/ping` works as expected to call the [ping module](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/ping_module.html), and to call the [docker_image_info](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_image_info_module.html) module with arguments. Output looks like this:
 
-As mentioned above, `make ansible.adhoc/ping` works as expected to call the [ping module](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/ping_module.html), and to call the [docker_host_info](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_host_info_module.html) module with arguments, we can write `echo images=yes | make ansible.adhoc.args/docker_host_info`.  The argument-passing is somewhat awkward for *people*, but it supports JSON, so this is already fairly usable from/for other automation. For common use-cases, you just make a more friendly alias, as is done with `list_images` above. 
+```bash {.cli_example}
+$ ./demos/ansible-adhoc.mk ansible.adhoc/ping
+```
+```bash {.cli_output}
+③  ≣ docker.run // img=compose.mk:Ansible 
+{
+  "_ansible_no_log": false,
+  "action": "ping",
+  "ansible_facts": {
+    "discovered_interpreter_python": "/usr/bin/python3"
+  },
+  "changed": false,
+  "invocation": {
+    "module_args": {
+      "data": "pong"
+    }
+  },
+  "ping": "pong"
+}
+```
+
+The argument-passing is somewhat awkward for *people*, but it supports JSON, so this is already fairly usable from other automation. For common use-cases, you just make a more friendly alias, as is done with the `list_images` target above. 
 
 !!! closer_look "Closer Look"
-    The eagle-eyed reader will have noticed that `docker_host_info` actually returns data, i.e. it is using the **host docker socket**, because under the hood, {{macros.api_link("docker.dispatch",mkdocs,arg='target')}} [shares the socket and the working directory automatically]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults).  Effectively the ansible container can orchestrate tasks on the host in many respects, even though the host doesn't have ansible.
+    The eagle-eyed reader will have noticed that `docker_image_info` actually returns data, i.e. it is using the **host docker socket**, because under the hood, {{macros.api_link("docker.dispatch",mkdocs,arg='target')}} [shares the socket and the working directory automatically]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults).  Effectively the ansible container can orchestrate tasks on the host in many respects, even though the host doesn't have ansible.
 
 ### Discussion
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The examples for this demo might feel contrived, but the [technique itself is more important]({{mkdocs.site_relative_url}}/matrioshka#matrioshka-bridge-pattern) than the involvement of ansible. 
+The examples for this demo might feel contrived, but the [technique itself is more interesting]({{mkdocs.site_relative_url}}/matrioshka#matrioshka-bridge-pattern) than the involvement of ansible.  Although.. ansible *does* have lots of random cool utilities, even if the friction involved to actually use them might feel daunting.  So, our new targets now make it easy to pull in a discrete chunk of ansible very quickly without having to "ansible all the things".  
 
-Actually, `ansible` has lots of random cool utilities, even if the friction involved to actually use them might feel daunting.  But our new targets now make it easy to pull in a discrete chunk of ansible very quickly without having to "ansible all the things".  As a more practical example, one can imagine raiding the [kubernetes.core.k8s module](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_module.html) for useful stuff:
+As a more practical example, you can imagine raiding the [kubernetes.core.k8s module](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_module.html) for useful stuff:
 
 ```Makefile {.snippet .language-makefile}
 
 # Set your KUBECONFIG first
-
 k8s: ansible.adhoc.args/kubernetes.core.k8s
-cluster.purge:; echo namespace=testing kind=Deployment delete_all=true | make k8s
+cluster.purge:
+	${jb} namespace=testing kind=Deployment delete_all=true \
+		| make k8s
 ```
 
-And importing something like `cluster.purge` is what we were really aiming at originally: *a verby high-level and domain-specific API*, with tasks accessible individually or in groups from CLI, or available to programmatically chain together as DAGs.
+Importing something like `cluster.purge` is what we were aiming at originally: *a verby high-level and domain-specific API*, with tasks accessible individually or in groups from CLI, or available to programmatically chain together as DAGs.
 
-**Where this really gets interesting is larger projects.**  Suppose for example that your `cluster.create` operation is using a terraform container, and you work at a place that mostly writes golang code.  Whereas using `ansible` previously wasn't a good *cultural fit*, once you strip away the detail and expose an interface as we've seen here, it doesn't feel like as much of a commitment to a whole ecosystem, and that makes it easier to combine tools.  
+Where this gets really interesting is larger projects.  Suppose for example that your `cluster.create` operation is using a terraform container, and you work at a place that mostly writes golang code.  Whereas using `ansible` previously wasn't a good *cultural fit*, once you strip away the detail and expose an interface as we've seen here, it doesn't feel like as much of a commitment to a whole ecosystem, and that makes it easier to combine tools.  
 
-Although `Makefile` isn't anyone's favorite programming language, notice how the hypothetical `cluster.purge` target above is very effective at reducing friction for new contributions.  Ignoring the *implementation* and focusing on the custom automation API that we're exposing.. we're talking about one line or so in one file now, and it's reasonably accessible to devops, engineers, and data-science. If you're looking at just the `cluster.purge` operation, then you might say the list of topics that are safe to ignore now includes *yaml, python, pip, docker*, and arguably even includes ansible/kubernetes.
+Although `Makefile` isn't anyone's favorite programming language, notice how the hypothetical `cluster.purge` target is very effective at reducing friction for new contributions.  Focusing just on the custom automation API that we're exposing and now able to compose.. we're talking about one line in one file now, and it's reasonably accessible to devops, engineers, data-science, etc.  If you're looking at just the `cluster.purge` operation as an action, all you need is the right kubeconfig and otherwise it doesn't care if you're working on a local cluster, a production one, or running from CI.  A powerful abstraction, since the list of stacks and topics that are *safe to ignore now* basically includes *yaml, python, pip, docker*, and ansible itself too.
 
-Really, `compose.mk` is a foundation to build on, and it doesn't make assumptions about your domain.  But combining `compose.mk` with your own toolkit and building a *new* vocabulary is where it really starts to shine.  
+Combining `compose.mk` with your own toolkit and building a new vocabulary is where it really starts to shine, because really, `compose.mk` is a foundation to build on, and it doesn't make assumptions about your domain.
 
-!!! tip "Related links"
-    See also the [packaging demo]({{mkdocs.site_relative_url}}/demos/packaging#example-tui-to-executable), which bundles this demo into a frozen release / stand-alone tool.
-    
-    For a similar demo with different base technology, see another bridge-building project like this [in the justfile demo]({{mkdocs.site_relative_url}}/demos/just), or a larger bridge-building project with `jupyter` in [the notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).
-
-    For a larger example of this kind where `compose.mk` is used for orchestrating kubernetes tools, see a preview of the [sibling project at k8s-tools.git]({{jinja.vars.k8stools_docs_url}}).  (Among other things, it actually ships with the ansible tooling we've built here.)  
+!!! related_links "Related Links"
+    * See also the [packaging demo]({{mkdocs.site_relative_url}}/demos/packaging#example-extension-to-executable), which bundles this demo into a frozen release / stand-alone tool.
+    * For a similar demo with different base technology, see another bridge-building project like this [in the justfile demo]({{mkdocs.site_relative_url}}/demos/just), or a larger bridge-building project with `jupyter` in [the notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).
+    * For a larger example of this kind where `compose.mk` is used for orchestrating kubernetes tools, see a preview of the [sibling project at k8s-tools.git]({{jinja.vars.k8stools_docs_url}}).  Amongst other things, it actually ships with the [ansible tooling]({{jinja.vars.k8stools_docs_url}}/demos/ansible), similar to what we've built here.
 
 <hr style="width:100%;border-bottom:3px solid black;">
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	addImageToHeader('discussion','/{{mkdocs.config.site_name}}/img/discussion.svg');
+  addImageToHeader('a-concrete-use-case','/{{mkdocs.config.site_name}}/img/ansible.svg')
+  addImageToHeader('hijacking-ansible','/{{mkdocs.config.site_name}}/img/ansible.svg')
+  addImageToHeader('map-ansible-modules-to-targets','/{{mkdocs.config.site_name}}/img/ansible.svg')
+}, 100);});
+</script>

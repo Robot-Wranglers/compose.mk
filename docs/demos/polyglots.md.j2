@@ -2,69 +2,95 @@
 ## Polyglots & Working with Foreign Languages
 <hr style="width:100%;border-bottom:3px solid black;">
 
-This section collects several demos of working with foreign languages.  Polyglots in `compose.mk` are roughly comparable to justfile shebang recipes[^6], but perhaps more similar in spirit to graal polyglots[^7] with less bootstrap and baggage.
-
-Because `compose.mk` also adds native support for docker, [including inlined Dockerfiles]({{mkdocs.site_relative_url}}/raw-docker), you can use polyglots with *arbitrary containerized interpreters*, with or without customizing stock images.  There's also some support for communication *between* polyglots.  For details see the [section on pipes](#exotic-targets-and-pipes) and/or the [stages documentation]({{mkdocs.site_relative_url}}/stages).  For topics related to yielding control to polyglots, see the [signals and supervisors docs]({{mkdocs.site_relative_url}}/signals/#advanced-examples).
-
-------------
-
-Polyglots come in a few basic types and this page tries to cover all the main categories, but there's an index of [more involved examples](#other-polyglot-examples) at the end.  
-
-!!! road_map "Quick Links"
+!!! related_links "Quick Links"
     * [Local Interpreters, No Containers](#local-interpreters-no-containers)
     * [Containerized Interpreters](#containerized-interpreters)
     * [Custom Containerized Interpreters](#custom-containerized-interpreters)
     * [Exotic Targets & Pipes](#exotic-targets-pipes)
     * [Compiled Languages](#compiled-languages)
     * [Foreign Code as First Class](#foreign-code-as-first-class)
-    * [Templating](#templating-languages)
+    * [Importing files as targets](#importing-files-as-targets)
+    * [Templating Languages](#templating-languages)
+    * [Special Guests](#special-guests)
 
-All of these examples are in plain Makefile.  **For a cleaner and much more elegant approach**, see [the equivalent idiom in CMK-lang]({{mkdocs.site_relative_url}}/compiler/#polyglot-example).
+This section collects several demos of working with foreign languages.  Polyglots in `compose.mk` are roughly comparable to justfile shebang recipes[^6], but perhaps more similar in spirit to graal polyglots[^7] with less bootstrap and baggage.
+
+Because `compose.mk` also adds native support for docker, [including inlined Dockerfiles]({{mkdocs.site_relative_url}}/raw-docker), you can use polyglots with *arbitrary containerized interpreters*, with or without customizing stock images.  There's also some support for communication *between* polyglots.  For details see the [section on pipes](#exotic-targets-and-pipes) and/or the [stages documentation]({{mkdocs.site_relative_url}}/stages).  For topics related to yielding control to polyglots, see the [signals and supervisors docs]({{mkdocs.site_relative_url}}/signals/#advanced-examples).
+
+Polyglots come in a few basic types and this page tries to cover all the main categories, but there's an index of [more involved examples](#other-polyglot-examples) at the end.  
+
+All of these examples are in plain Makefile.  **For cleaner syntax and better ergonomics**, check out [the equivalent idioms in CMK-lang]({{mkdocs.site_relative_url}}/compiler/#polyglot-examples).
 
 ### Local Interpreters, No Containers
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Simple polyglots where you want to *assume the interpreter is already available* are easy to express with {{macros.api_link('mk.def.dispatch', mkdocs, arg='interpreter>,<def_block_name')}}.
+There are a few ways to express simple polyglots where you want to *assume the interpreter is already available on the host*.
+
+For arbitrary interpreters use `polyglot.dispatch/<interpreter>,<def_block_name>` like this:
 
 {{macros.embed_demo(
     'demos/local-interpreter.mk', 
     bottom_right=macros.link_mirror(
       'demos/cmk/code-objects.cmk',
-      link=mkdocs.site_relative_url+'/compiler/#polyglot-example'),
+      link=mkdocs.site_relative_url+'/compiler/#polyglot-examples'),
     github=github)}}
 
+Note that the polyglot execution inherits the environment from `make`, so that passing data with environment variables is pretty easy.  For shell and awk, see also the [section for special guests](#special-guests).
 
 ### Containerized Interpreters 
 <hr style="width:100%;border-bottom:3px solid black;">
 
 When there's a stock image available for a container and no customization needed, there are few equivalent idioms that you can choose from, depending on your taste.  
 
-To illustrate, here's a simple target in elixer and 3 ways to run it.
+To illustrate, here are 2 ways to express a target written in elixer-lang.
 
 {{macros.embed_demo(
-    'demos/elixir.mk', 
+    'demos/elixir-1.mk', 
     bottom_right=macros.link_mirror(
       'demos/cmk/code-objects.cmk',
-      link=mkdocs.site_relative_url+'/compiler/#polyglot-example'),
+      link=mkdocs.site_relative_url+'/compiler/#polyglot-examples'),
     github=github)}}
 
-Behind the scenes both `demo.elixir1` and `demo.elixir2` are just abstracting away the boring details of "*happens in a container*" and "*create/clean a temp file*" [^2].  In `demo.elixir3`, you can see a more explicit version that might be useful for clarity, but note that this leaves temp files around after errors.
+{#
+The example above uses **high-level polyglot helpers**, and illustrates *binding vs importing*, which are important and distinct operations here and elsewhere for `compose.mk`.
 
-!!! question "If this still feels or looks awkward"
-    That's because **it really kind of is**. This illustrates the low-level support for polyglots of this type, and helps build intuition for how it works.  See the section for [foreign code as first-class](#foreign-code-as-first-class), or check out [the equivalent idiom in CMK-lang]({{mkdocs.site_relative_url}}/compiler/#polyglot-example).
+Whereas the act of **binding** is similar to a function-decorator and requires that you "bring your own target" and write declarations around it, **importing** actually creates a target.  See also [style/idioms documentation on the subject]({{mkdocs.site_relative_url}}/style/#bind-declarations)
+#}
 
+This example uses **binding** rather than **importing**, which is an important distinction that comes up in a few places for `compose.mk`.  *(For more information see the [style/idioms documentation on the subject]({{mkdocs.site_relative_url}}/style/#bind-declarations))*
+
+For polyglot support that feels more "native", you'll probably want to use **importing** instead, as documented in the section for [foreign code as first-class](#foreign-code-as-first-class), or use the [the equivalent idioms in CMK-lang]({{mkdocs.site_relative_url}}/compiler/#polyglot-examples).
+
+Using **lower-level polyglot helpers** is also possible, and can be done with pure targets and no Makefile-functions.  While it's not necessarily recommended for direct use, it does help to build intuition about how this stuff works under the hood and power-users might need extra flexibility.  See [the appendix for details](#low-level-helpers).
 
 ### Custom Containerized Interpreters
 <hr style="width:100%;border-bottom:3px solid black;">
 
-This case is not necessarily very different from the last section or [the other embedded container tutorials]({{mkdocs.site_relative_url}}/demos/matrioshka/) so let's have some fun with it.  See the [Lean 4 demo]({{mkdocs.site_relative_url}}/demos/lean) for a more involved example.
+Using locally-defined containers is mostly the same as the previous example, except that a Dockerfile is inlined, and that `polyglot.import`, uses `local_img=..` instead of `img=..`.
 
-Besides handling the challenge of a custom container, that demo also shows handling an additional complication that's pretty common, i.e. where the interpreter's invocation must *also* be customized.
+For this example, we'll use R to plot a sine-curve.  
+
+{{macros.embed_demo(
+    'demos/r.mk', 
+    bottom_right=macros.link_mirror(
+      'demos/cmk/code-objects.cmk',
+      link=mkdocs.site_relative_url+'/compiler/#polyglot-examples'),
+    github=github)}}
+
+Above, we also use the `env=..` argument to `polyglot.import`, indicating that we want pass-through of environment variables into the docker context.  To allow multiple env-vars, use `env=v1|v2|v3`.
+
+As a bonus, this demo also includes console-friendly result previews:
+
+{{macros.img_link(
+  "demo-R.png", 
+  mkdocs, class="cli_output")}}
+
+See [the other embedded container tutorials]({{mkdocs.site_relative_url}}/demos/matrioshka/) or the [Lean 4 demo]({{mkdocs.site_relative_url}}/demos/lean) for a more involved example.  That demo also shows handling an additional complication that's pretty common, i.e. where the interpreter's invocation must *also* be customized.
 
 ### Exotic Targets & Pipes
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Amongst other things, the example below demonstrates that unix pipes still work the way you would expect with exotic targets.
+The example below demonstrates that unix pipes still work the way you would expect with polyglot-targets.
 
 This might be important for passing data to other languages, and by combining [stage usage]({{mkdocs.site_relative_url}}/stages), and/or [using structured data]({{mkdocs.site_relative_url}}/standard-lib#structured-data), it also means it's very easy to have bidirectional data flow between different languages or back and forth from `compose.mk` itself.
 
@@ -73,44 +99,61 @@ This might be important for passing data to other languages, and by combining [s
 ### Containerized Script+Deps with UV
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Another variation on {{macros.api_link('docker.run.def',mkdocs,arg='def_block_name')}} usage, but here's a different flavor.  Using [uv](https://docs.astral.sh/uv/), we defer to a python script itself for deciding both the requirements *and* the runtime version.  
+For variety let's use {{macros.api_link('docker.run.def',mkdocs,arg='def_block_name')}}, which is one of a few [low level helpers](#low-level-helpers).  This example has a different flavor, because by using [uv](https://docs.astral.sh/uv/), we can defer to a python script for deciding both the requirements *and* the runtime version.
 
 {{macros.embed_demo('demos/uv.mk', github=github)}}
 
-By default this caches nothing including the dependencies or the python version, and it's hard to say exactly where that is useful, but it is kind of remarkable for being an extreme kind of "late-binding".
+As mentioned in code comments, this bootstraps JIT and caches neither the dependencies nor the python version.  Hard to say exactly where that is useful, but it is an interesting example for being an extreme kind of "late-binding".
 
 To get UV to leverage more caching, you can use a volume.  This can be done by modifying the script accordingly but also directly via the CLI by settings `docker_args` like this:
 
 ```bash {.cli_example}
 $ docker_args="-v ${HOME}/.cache:/root/.cache" ./demos/uv.mk 
 ```
-See the official docs for caching [here](https://docs.astral.sh/uv/concepts/cache).
+
+See the official docs for UV caching here[^9].
 
 ### Compiled Languages
 <hr style="width:100%;border-bottom:3px solid black;">
 
-If you want to use a compiled language, you *could* use `compose.mk` to setup a just-in-time compile-on-demand pipeline, but rather than insisting on this you're probably better off [thinking in terms of containers instead]({{mkdocs.site_relative_url}}/demos/matrioshka).  
+You *could* use `compose.mk` to create a pretty transparent compile-on-demand pipeline just before running, but that would be awkward. Usually with compiled languages you're probably better off [thinking in terms of containers]({{mkdocs.site_relative_url}}/demos/matrioshka) instead of starting from polyglots.  If you insist though, here's a few tips.
 
-Still, this is a perfect time to bring up FFI[^5] approaches, whereby languages like Elixir can dip into Erlang, Scala can dip into Java, etc.  For the sake of variety and sticking closer to the idea of compiled languages, here's C via julia's FFI, embedded in `compose.mk`.  
+#### Without FFI 
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+For simple use-cases *without* FFI[^5] you can sometimes get another tool to handle the "compile on demand" thing.  As long as you can find an image with an interpreter or build one in-place, you can wire stuff up pretty easily.  For example, with `tinycc`:
+
+{{macros.embed_demo('demos/tinycc.mk', github=github)}}
+
+For java, try `JShell`, and for rust try `rust-script`.
+
+#### With FFI
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Typically the cleanest and most generic thing you can do here might involve FFI approaches[^5], where languages like Elixir can dip into Erlang, or Scala can dip into Java, etc.
+
+For the sake of variety and sticking closer to the idea of compiled languages, here's C via julia's FFI, with the julia embedded in `compose.mk`.  
 
 {{macros.embed_demo('demos/julia.mk', github=github)}}
 
-See also the [official docs](https://docs.julialang.org/en/v1/manual/calling-c-and-fortran-code/) for julia + C.
-
------------------
-
-For simple use-case *without* FFI and letting someone else handle the "compile on demand" thing, you might be able to get by with `tinycc`.
-
-{{macros.embed_demo('demos/tinycc.mk', github=github)}}
+See also the official docs for julia + C.[^8]
 
 ### Foreign Code as First Class
 <hr style="width:100%;border-bottom:3px solid black;">
 
+We've already met `polyglot.import`, and the lower level helpers for `polyglot.dispatch`, `docker.bind`, and `polyglot.dispatch`, but so far focused more on examples than discussion.  See the [style and idioms documentation]({{mkdocs.site_relative_url}}/style/#bind-declarations) for an overview of binding vs importing.
+
+Amongst all these related helpers, `polyglot.import` is the most generic.  It actually *creates* new targets and supports several arguments, including configurable namespacing, environment variable pass-through, and other conveniences.  Read on for more detailed examples and discussion.  And if you're all in on polyglotting, make sure to check out [the equivalent idioms in CMK-lang]({{mkdocs.site_relative_url}}/compiler/#polyglot-examples).
+
+
+{#
 As seen in the [first elixir demo](#containerized-interpreters) low-level support for polyglots offers a few methods for invocation, depending on your appetite for abstraction.  Some ways will seem more magical than others.
 
-If you *like* magic, then you will be interested to know that it's possible to treat foreign code as basically a first class object.  Whereas the elixir demo shows low-level "raw" support for polyglots, this section describes an intermediate abstraction that's still pure Makefile.  If you're all in on polyglotting, make sure to check out [the equivalent idiom in CMK-lang]({{mkdocs.site_relative_url}}/compiler/#polyglot-example).
+If you *like* magic, then you will be interested to know that it's possible to treat foreign code as basically a first class object.  Whereas the elixir demo shows low-level "raw" support for polyglots, this section describes an intermediate abstraction that's still pure Makefile.  
+#}
 
-One caveat with this approach is that it's not an optimized code-path yet, and it's currently much slower than other techniques on this page.  The cost for that is a delay in startup though, so many types of blocking or compute-heavy use-cases won't suffer much.
+{#One caveat with this approach is that it's not an optimized code-path yet, and it's currently much slower than other techniques on this page.  The cost for that is a delay in startup though, so many types of blocking or compute-heavy use-cases won't suffer much.
+#}
 
 #### Bind Blocks to Containerized Interpreters
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -122,24 +165,26 @@ A more typical use-case passes the name of the code block involved, plus the det
 {{macros.embed_demo('demos/code-objects.mk', 
     bottom_right=macros.link_mirror(
       'demos/cmk/code-objects.cmk',
-      link=mkdocs.site_relative_url+'/compiler/#polyglot-example'),
+      link=mkdocs.site_relative_url+'/compiler/#polyglot-examples'),
     github=github)}}
 
 #### Bind Blocks to Targets
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-Sometimes you can't use an interpreter directly like this, because maybe you need to pass arguments.  In this case the solution is to set up a unary target as a shim, i.e. something that accepts a filename and does the rest of whatever you need.  After you have a target instead of a container.. you can use `polyglot.bind.target` like so:
+Sometimes you can't use an image/interpreter directly as seen above, because maybe you need to pass arguments to the interpreter or otherwise customize its startup.  In this case the solution is to set up a unary target as a shim, i.e. something that accepts a filename and does the rest of whatever you need.  
 
-{{macros.embed_demo('demos/code-objects-3.mk', github=github)}}
+We've already seen an example of this earlier [with Julia](#with-ffi), where `polyglot.import` uses arguments like `def=<codeblock_name> bind=<target_name>`.  In this example we'll additionally pass arguments for `namespace`, to control where our new `run` and `preview` targets are created, and plus an argument for `env`, to control what environment variables from the host are passed through to the polyglot.
 
-See also the [lean demo]({{mkdocs.site_relative_url}}/demos/lean), which needs a similar shim.
+{{macros.embed_demo('demos/code-objects-2.mk', github=github)}}
+
+See also the [lean demo]({{mkdocs.site_relative_url}}/demos/lean), which needs a similar shim to modify the interpreter invocation.
 
 #### Binding Multiple Blocks in One Shot
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 A variation in this pattern is to use `polyglots.bind.*`.  Note that in this version, the word *polyglots* is plural!  This version supports binding multiple chunks of code to the same interpreter.  
 
-{{macros.embed_demo('demos/code-objects-2.mk', github=github)}}
+{{macros.embed_demo('demos/code-objects-3.mk', github=github)}}
 
 In the example above, we passed `[.]py`, which pattern-matches against *all available define-block names* and binds each of them to `python.interpreter`.
 
@@ -152,13 +197,49 @@ Here we use [jinjanator](https://pypi.org/project/jinjanator/), a CLI for use wi
 
 {{macros.embed_demo('demos/j2-templating.mk', github=github)}}
 
-
 This prints "*hello foo!*" x3 and one "*bye foo!*" as expected, per the template.  In keeping with [other structured IO patterns]({{mkdocs.site_relative_url}}/standard-lib#structured-io) in `compose.mk`, we prefer JSON, generating it with `jb` and configuring `jinjanator` to use it.. but this can be easily changed to work with environment variables or yaml instead.
+
+### Special Guests
+<hr style="width:100%;border-bottom:3px solid black;">
+
+For practical reasons there are 2 specific languages that have the status of being special guests, i.e. `bash` and `awk`. Technically this is a special case of [Local Interpreters, No Containers](#local-interpreters-no-containers), but it's worth mentioning separately since this can be really useful, and because the interpreters are usually available whenever `make` is.  
+
+#### compose.import.script
+<hr style="width:95%;border-bottom:1px dashed black;">
+{#{macros.subheader('compose.import.script')}#}
+
+In the case of bash, the simplest way to convert a script into a target is to use the `compose.import.script` macro.
+
+{{macros.embed_demo(
+    'demos/script-dispatch-host.mk', 
+    bottom_right=macros.link_mirror(
+      'demos/cmk/script-dispatch-host.cmk',
+      link=mkdocs.site_relative_url+'/compiler/#polyglot-examples'),
+    github=github)}}
+
+This `compose.import.script` macro is convenient but it comes up frequently that you might want lower-level access with more flexibility (like with piped stdin, or script-arguments).  See the next section for details.
+
+#### Using `io.awk` and `io.bash`
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Meet {{macros.api_link('io.awk',mkdocs,'def_name')}} and {{macros.api_link('io.bash',mkdocs,'def_name,optional_args')}}
+
+Use-cases include things like:
+
+* **Fast or sophisticated string-manipulation.** Internally, `io.awk` is frequently used in cases where `make` is simply not up to necessary string-manipulation task, but using something like a python-stack via docker is just too slow.  *(Most of [the compiler]({{mkdocs.site_relative_url}}/compiler) is built this way.)
+
+* **Porting existing shell, piecewise.** Typically `io.bash` is a stepping stone in a process of moving existing bash scripts towards native make-targets. You can simply embed any small existing script, incorporate it into existing automation, and avoid immediately translating bashisms to makeisms until you finish a proof of concept.  You can also think of `io.bash` as a direct way to turn existing scripts into [pseudo-functions]({{mkdocs.site_relative_url}}/style/#arguments-parameters-pipes).
+
+See the test-suite below for usage hints.
+
+{{macros.embed_demo('demos/guests.mk', github=github)}}
+
+As you can see above, both kinds of guests support piped input by default, and `io.bash` optionally supports argument-proxy.  As usual for polyglots, content inside define-blocks isn't messed with, and we don't need to double-escape `$`.
 
 ### Other Polyglot Examples
 <hr style="width:100%;border-bottom:3px solid black;">
 
-That's it for the basic taxonomy of different polyglots.  Again, if you want a much more native look and feel for this stuff and aren't committed to staying backwards compatible with classic Makefile, then it's easy to adapt these examples to the much cleaner [CMK-lang style]({{mkdocs.site_relative_url}}/compiler/#polyglot-example) polyglots. 
+That's it for the basic taxonomy of different polyglots.  Again, if you want a much more native look and feel for this stuff and aren't committed to staying backwards compatible with classic Makefile, then it's easy to adapt these examples to the much cleaner [CMK-lang style]({{mkdocs.site_relative_url}}/compiler/#polyglot-examples) polyglots. 
 
 For bigger demos that are related, see also these examples which are more concrete and closer to real life:
 
@@ -168,18 +249,36 @@ For bigger demos that are related, see also these examples which are more concre
 
 Although it isn't exactly a polyglot, the [Notebooking Demo]({{mkdocs.site_relative_url}}/demos/notebooking) is also related and adds support to jupyter for several languages.
 
-#### Implementation Details 
+### Implementation Details 
 <hr style="width:100%;border-bottom:3px solid black;">
  
 !!! tip "Tip"
     The [*`mk.def.*`* targets]({{mkdocs.site_relative_url}}/api#api-mk) **always leave the data inside the define-blocks completely untouched**, meaning that there's no requirement for escaping the contents. Strings, tabs, spaces, and things like `$` are always left alone.
 
-    This also means the **content is fairly static**, i.e. *no pre-execution templating*.  This is a feature!  It discourages JIT code-generation in favor of more structured interactions via parameters-passing, environment variables, pipes, etc.
+    This also means the **content is fairly static**, i.e. *no pre-execution templating*.  This is a feature!  It discourages JIT code-generation in favor of more structured interactions via parameter-passing, environment variables, pipes, etc.
 
 It comes up sometimes that people want to have polyglots with pure `make`, not for building weird hybrid applications in the `compose.mk` sense, but just to get decent string manipulation abilities or similar. Historically the suggested approaches involved sketchy `.ONESHELL` hacks[^1], but comes with several issues.
 
 The approach used by `compose.mk` still has some limitations[^3], but it is overall much more robust and reliable than previous approaches, and easily supports multiple polyglots side-by-side, and alongside more traditional targets.  Most of this stuff hinges on multi-line define-blocks, plus the ability of `compose.mk` to [handle some reflection]({{mkdocs.site_relative_url}}/standard-lib/#reflection-support).  *(See the API for [*`mk.*`*]({{mkdocs.site_relative_url}}/api#api-mk) for more details.)*
 
+### Appendix 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+#### Low-level Helpers
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+**Low-level polyglot helpers** are not necessarily for direct use, but it does help build intuition about how this stuff works, and power-users might need extra flexibility.  For illustration purposes:
+
+{{macros.embed_demo(
+    'demos/elixir-2.mk', 
+    bottom_right=macros.link_mirror(
+      'demos/cmk/code-objects.cmk',
+      link=mkdocs.site_relative_url+'/compiler/#polyglot-examples'),
+    github=github)}}
+
+Behind the scenes both `alt1` and `alt2` are just abstracting away the boring details of "*happens in a container*" and "*create/clean a temp file*" [^2].  In `alt3`, you can see a more explicit version that might be useful for clarity, but note that this leaves temp files around after errors.
+
+### References
 <hr style="width:100%;border-bottom:3px solid black;">
 
 [^1]: [ONESHELL hackery](http://web.archive.org/web/20200515180041/https://agdr.org/2020/05/14/Polyglot-Makefiles.html)
@@ -187,5 +286,18 @@ The approach used by `compose.mk` still has some limitations[^3], but it is over
 [^3]: Yeah, sorry, you might be out of luck if your language of choice actually uses `define` and `endef` keywords.  If you think you have a reasonable use-case, please do [create an issue describing it]({{github.repo_url}}/issues).
 [^4]: For minimal basic templating  *without* an extra container, you could use [the local-interpreter strategy](#local-interpreters-no-containers) with [`m4`](https://en.wikipedia.org/wiki/M4_(computer_language)), which is usually present anywhere `make` is.
 [^5]: [Foreign_function_interface](https://en.wikipedia.org/wiki/Foreign_function_interface)
-[^6]: [justfile shebang recipes](https://github.com/casey/just?tab=readme-ov-file#shebang-recipes)
-[^7]: [graal polyglots](https://www.graalvm.org/latest/reference-manual/polyglot-programming/)
+[^6]: [Justfile shebang recipes](https://github.com/casey/just?tab=readme-ov-file#shebang-recipes)
+[^7]: [Graal polyglots](https://www.graalvm.org/latest/reference-manual/polyglot-programming/)
+[^8]: [Julia/C FFI](https://docs.julialang.org/en/v1/manual/calling-c-and-fortran-code/)
+[^9]: [UV caching docs](https://docs.astral.sh/uv/concepts/cache)
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        const h3Elements = document.querySelectorAll('h3');
+        h3Elements.forEach((h3, index) => {
+           	addImageToHeader(h3.id,'/{{mkdocs.config.site_name}}/img/code-asterisk.svg')
+        });
+    }, 100);
+});
+</script>

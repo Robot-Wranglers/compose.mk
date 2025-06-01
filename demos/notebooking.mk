@@ -1,13 +1,12 @@
 #!/usr/bin/env -S make -f
-# demos/notebooking.mk: 
-#   Demonstrates building a highly customized and self-contained console application,
-#   where all the application components bootstrap themselves on demand.
+# Demonstrates building a highly customized and self-contained console app,
+# where all the application components bootstrap themselves on demand.
 #
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.
 # See the main docs: https://robot-wranglers.github.io/compose.mk/demos/notebooking
 #
-#   USAGE: ./demos/notebooking.mk lab.tui
-#   USAGE: ./demos/notebooking.mk lab.pipeline
+# USAGE: ./demos/notebooking.mk lab.tui
+# USAGE: ./demos/notebooking.mk lab.pipeline
 #░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 include compose.mk
@@ -40,10 +39,10 @@ jq.img.filter=[ .cells[] \
 jq.imgcount.filter=${jq.img.filter} | length
 
 # Autogenerate target scaffolding for each kernel container
-$(eval $(call compose.import, ${jupyter.root}/docker-compose.fmtk.yml, fmtk))
+$(call compose.import, file=${jupyter.root}/docker-compose.fmtk.yml, namespace=fmtk)
 
 # Autogenerate scaffolding for the jupyter-lab container.
-$(eval $(call compose.import, ${jupyter.root}/docker-compose.jupyter.yml, jupyter))
+$(call compose.import, file=${jupyter.root}/docker-compose.jupyter.yml, namespace=jupyter)
 
 ## Next section uses the service scaffolding to create target-handles for language 
 ## kernels dynamically.  Although `compose.import` already created handles for all 
@@ -56,19 +55,18 @@ $(eval $(call compose.import, ${jupyter.root}/docker-compose.jupyter.yml, jupyte
 
 # Maps compose-services to future kernels
 # Loop over the kernel list, and creating a target handle for each.
-kernel_services=$(call compose.services, ${jupyter.root}/docker-compose.fmtk.yml)
+kernel_services=$(call compose.get_services, ${jupyter.root}/docker-compose.fmtk.yml)
 kernel_target_names=$(foreach svc, ${kernel_services}, kernel.$(svc))
 $(foreach svc, \
 	${kernel_services}, \
 	$(eval  kernel.$(svc)/%:; $${make} fmtk/$(svc).command/$${*}))
 
+# A target to list available kernels.  Importantly, this is kernels according 
+# to compose.mk, *not* jupyter, and it is how we bootstrap the jupyter kernels.
+#
+# Returns both the kernels that are directly mapped from compose-services 
+# as well as *any targets defined in this file* matching the "kernel.*" pattern.
 kernels.list:
-	@# A target to list available kernels.  Importantly, this is kernels according 
-	@# to compose.mk, *not* jupyter, and it is how we bootstrap the jupyter kernels.
-	@#
-	@# Returns both the kernels that are directly mapped from compose-services 
-	@# as well as *any targets defined in this file* matching the "kernel.*" pattern.
-	@#
 	quiet=1 \
 	&& ( echo "${kernel_target_names}" \
 		&&  ${make} mk.targets.filter.parametric/kernel. ) \
@@ -157,8 +155,8 @@ lab.notebook.run/% lab.notebook.exec/%:
 	${make} lab.dispatch.quiet/self.notebook.exec/${*}
 
 lab.notebook.preview/%:
-	@# Shows input and execution for a single notebook.
-	@# Console friendly, colored markdown rendering, and usable from the host.
+	@# Shows input and execution for a single notebook. 
+	@# Console friendly, colored markdown rendering.
 	bname=`basename ${*}` \
 	&& label="`basename -s.ipynb ${*}`" ${make} io.draw.banner \
 	&& header="${dim_ital}$${bname} ${sep} ${no_ansi}" \
@@ -178,7 +176,7 @@ lab.notebook.preview/%:
 	  || true
 
 lab.notebook.imgcount/%:; cat ${*} | ${jq} -r '${jq.imgcount.filter}'
-	@# Returns an integer for the number of images found in the given notebook
+	@# Return the number of images found in the given notebook
 	
 lab.notebook.preview.img/%:
 	$(call log.target, ${dim_cyan}Image #${bold}${cyan}$${i}\n)
@@ -214,8 +212,8 @@ lab.notebooks.normalize normalize: lab.dispatch/self.notebooks.normalize
 	@# Normalize / synchronize all notebook representations.
 
 lab.notebooks.preview: flux.starmap/lab.notebook.preview,lab.notebooks
-	@# Previews input, then executes the notebook and displays just output.
-	@# (This is a pipeline, but we ignore order and don't do IO between notebooks)
+	@# Previews input, then execute notebook, displaying only output.
+	@# This is a pipeline, but ignores order, & has no IO across notebooks
 
 lab.running:; strict=1 ${make} lab.ps
 	@# Succeeds only if the lab is currently running.
@@ -227,7 +225,8 @@ lab.serve.background: lab.up.detach
 	@# Non-blocking jupyter lab webserver
 
 lab.summary: lab.wait lab.test 
-	@# Waits for jupyterlab to ready, then describes available kernels / notebooks
+	@# Waits for jupyterlab to ready, 
+	@# then describes available kernels / notebooks
 	$(call log.target, ${dim_cyan}Available notebooks:)
 	${make} lab.notebooks | ${stream.indent}
 	$(call log.target, ${dim_cyan}Markdown notebooks:)
@@ -256,7 +255,8 @@ self.notebook.exec/%:
 	jupyter execute ${*} --inplace
 
 self.notebooks.normalize:
-	@# Didirectional sync from ipynb / notebooks-as-code markdown for each notebook.  
+	@# Sync from ipynb <--> notebooks-as-code markdown
+	@# bidirectionally and for each notebook.  
 	$(call log.target, Pairing and syncing all markdown notebooks with ipynbs)
 	${make} self.notebook.normalize/${jupyter.notebook.root}/*.md
 self.notebook.normalize/%:

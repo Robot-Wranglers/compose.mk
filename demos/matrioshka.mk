@@ -43,7 +43,7 @@ endef
 
 # After the inline exists, we can call `compose.import.string`,
 # autogenerating target scaffolding for each service.
-$(eval $(call compose.import.string,  inlined.services,  TRUE))
+$(call compose.import.string, def=inlined.services)
 
 # Top level entrypoint, we just kick off provisioning and dispatch stages.
 __main__: demo.build demo.dispatch demo.summary

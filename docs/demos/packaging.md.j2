@@ -7,11 +7,16 @@ One of the strangest features of `compose.mk` is that it can **create self-extra
 
 {{macros.img_link("escher.jpg", mkdocs, "78%",class=" ")}}
 
-Besides offering [generic access to makeself](#makeself-reference), `compose.mk` offers simple support for bundling a project Makefile plus any dependencies **into a single executable file.**  Dependencies might include things like `compose.mk` itself, data files, and any docker compose file you're using.
+Besides offering [generic access to makeself](#makeself-reference), `compose.mk` offers simple support for bundling a project Makefile, plus any dependencies, **into a single executable file.**  Dependencies might include things like `compose.mk` itself, data files, and any docker compose file you're using.
 
-{{macros.commentary("This technique is more like packaging or bundling than compilation, because there's no way to remove the dependency on `make`, and we still need an interpreter after decompressing archives. This caveat is often safe to ignore though since `make` is nearly as ubiquitous as shell.", title='Terminology')}}
+!!! commentary "Terminology"
+    This technique is more like packaging or bundling than compilation, because there's no way to remove the dependency on `make`, and we still need an interpreter after decompressing archives. This caveat is often safe to ignore though since `make` is nearly as ubiquitous as shell.
+    
+    For a simpler approach to packaging that doesn't require archives, see instead the documentation for [guests and payloads]({{mkdocs.site_relative_url}}/standard-lib#forks-guests-and-payloads).
+    
+    For the separate topic of transpiling CMK-lang to Makefile, see instead the [compiler docs]({{mkdocs.site_relative_url}}/compiler).
 
-Packaging can remove the explicit dependency on the rest of the stack represented by your project filesystem state though, **resulting in frozen 'release' where you can set a custom entrypoint.**
+Packaging can remove the explicit dependency on the rest of the stack represented by your project filesystem state though, **resulting in frozen 'release' where you can set a custom entrypoint.**  
 
 ### Use-Cases & Motivation
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -147,5 +152,3 @@ $ ./archive.run -- 'pwd; find .'
     A major limitation of `makeself` is that *passing arguments to the generated executable always requires the ` -- ` syntax that you see above.*  
 
 To pass arguments to `makeself` you can put stuff before the ` -- `.  Mostly this isn't useful because `compose.mk` already uses `makeself` in such a way that `--quiet --noprogress` is implied for pipe-safety.  For debugging workflows though, check out `--keep` to preserve the uncompressed archive, and `--noexec` to disable the script execution.  See also the output of `./archive.run --help`, which provides help for `makeself` and **not** for whatever you've packaged with it.
-
-<hr style="width:100%;border-bottom:3px solid black;">

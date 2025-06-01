@@ -5,7 +5,12 @@
 
 This demo describes one way to express platform lifecycle automation using `compose.mk`, focusing on **data and control flows** without doing any real work.  If you want something that's more than a toy, see the WIP sibling project that's focused on kubernetes over at [k8s-tools]({{jinja.vars.k8stools_docs_url}}/demos/cluster-lifecycle).
 
-This demo shows examples of idioms like [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch), [structured io]({{mkdocs.site_relative_url}}/standard-lib/#structured-io), and [workflow helpers]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).
+!!! related_links "Related Links"
+    Idioms used in this demo include:
+    
+    * [Container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) 
+    * [Structured io]({{mkdocs.site_relative_url}}/standard-lib/#structured-io)
+    * [Workflow helpers]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support)
 
 ### Basic Platforming 
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -14,11 +19,11 @@ Consider the following Makefile:
 
 {{macros.embed_demo(
     'demos/platform.mk', github=github,
-    bottom_right=macros.link_mirror('demos/cmk/platform-lme.mk'), )}}
+    bottom_right=macros.link_mirror('demos/cmk/platform-lme.cmk'), )}}
 
 Above we use [namespace-style syntax]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch) for the [container dispatch idiom]({{mkdocs.site_relative_url}}/container-dispatch) to call tasks in containers, and we use `jb` to emit JSON, pretending we are running `terraform output -json` or similar.  
 
-Also note the usage of `${jb}` instead of `jb`, which [is expanded]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) to use `jb` directly if available, or fall back to docker.
+Also note the usage of `${jb}` instead of `jb`, which [is expanded]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) to use `jb` directly if available, or fall back to docker. (See the [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib#structured-io))
 
 It's powerful, concise, expressive, and already orchestrating tasks across two containers defined in some external compose-file.  The syntax is configurable, and it's even starting to look object-oriented.  
 
@@ -74,9 +79,17 @@ If it doesn't yet feel like a "real" programming language compared with vanilla 
     bottom_right=macros.link_mirror('demos/platform-lme.mk'), 
     github=github)}}
 
-Feels like it's zeroing in a minimum-viable description length for the sort of problem it's tackling.  👍 It's a neat party trick that `compose.mk` has features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.  In spirit, `flux.*` similar to things like [declarative pipelines in Jenkins](https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline), and that's the way you'll probably want to use it.
+Feels like it's zeroing in a minimum-viable description length for the sort of problem it's tackling.  👍 
 
-For a full blown project, see a preview of the WIP sister project at [k8s-tools.git]({{jinja.vars.k8stools_docs_url}}/demos/cluster-lifecycle), which also breaks down automation into platforms, infrastructure, and app phases.
+It's a neat party trick that `compose.mk` has features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.  In spirit, `flux.*` is more similar to things like [declarative pipelines in Jenkins](https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline), and that's the way you'll probably want to use it.
+
+Again, for a full blown project, see a preview of the WIP sister project at [k8s-tools.git]({{jinja.vars.k8stools_docs_url}}/demos/cluster-lifecycle), which also breaks down automation into platforms, infrastructure, and app phases, but sets up and provisions a real cluster.
 
 <hr style="width:100%;border-bottom:3px solid black;">
  
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	addImageToHeader('discussion','/{{mkdocs.config.site_name}}/img/discussion.svg');
+	addImageToHeader('basic-platforming','/{{mkdocs.config.site_name}}/img/basics.svg')
+}, 100);});
+</script>

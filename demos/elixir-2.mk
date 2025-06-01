@@ -1,9 +1,8 @@
 #!/usr/bin/env -S make -f
-# demos/elixir.mk: 
-#   Demonstrating polyglots using elixir.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-#   See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
-#   USAGE: ./demos/elixir.mk
+# Demonstrating polyglots using elixir (low-level helpers)
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
+# USAGE: ./demos/elixir-1.mk
 
 include compose.mk
 
@@ -20,21 +19,22 @@ puts("elixir World!")
 System.halt(0)
 endef
 
+__main__: alt1 alt2 alt3
+ 
 # Now show three equivalent ways to run the code inside the container
-__main__: demo.elixir1 demo.elixir2 demo.elixir3
-
-# Classic style invocation, using simplest available helper
-demo.elixir1:
+alt1:
+	@# Classic style invocation, using simplest available helper
 	img=${elixir.img} entrypoint=${elixir.interpreter} \
 		def=hello_world ${make} docker.run.def
-	
-# Another way, using piping and streamsmacros & pipes
-demo.elixir2:
+
+alt2:
+	@# Another way, using piping and streams
 	${mk.def.read}/hello_world \
 		| ${stream.to.docker}/${elixir}
 
-# Fully manual style, handling your own tmpfiles, and sticking to targets
-demo.elixir3:
+alt3:
+	@# Fully manual style, handling your own temp files,
+	@# and sticking to targets instead of using pipes
 	${mk.def.to.file}/hello_world/temp-file
 	cmd=temp-file ${make} docker.image.run/${elixir}
 	rm -f temp-file

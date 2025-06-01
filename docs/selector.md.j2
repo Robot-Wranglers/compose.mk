@@ -24,7 +24,7 @@ $ ./compose.mk mk.select/demos/no-include.mk
 # Looping runner
 $ ./compose.mk flux.loopf/mk.select/demos/no-include.mk
 ```
-{{macros.img_link("user-input.gif", mkdocs, "60%",class="cli_output")}}
+{{macros.img_link("user-input.gif", mkdocs, "95%",class="cli_output")}}
 
 ### Interactive Container-Selection
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -44,34 +44,16 @@ This should work for most containers regardless of their default entrypoint, and
 As with the `mk.select` example above, we can use {{macros.api_link('flux.loopf',mkdocs,arg='target_name')}} to easily turn this into a a simple looping interface:
 
 ```bash {.cli_example}
-$ ./compose.mk flux.loopf/compose.select/demos/data/docker-compose.minimal.yml
+$ ./compose.mk \
+    flux.loopf/compose.select/demos/data/docker-compose.minimal.yml
 ```
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Wait for MkDocs to fully render the page including ToC
-    setTimeout(function() {
-        const heading = document.getElementById('interactive-target-selection');
-        const img = document.createElement('img');
-        img.style.height = '2em'; img.style.verticalAlign = 'middle';
-        img.src = '../img/makefile.png'; 
-        heading.insertBefore(img, heading.firstChild);
-        //img.style.marginRight = '10px';
-        //heading.appendChild(img);
-    }, 100); // Small delay to ensure ToC is already processed
-});
-document.addEventListener('DOMContentLoaded', function() {
-    // Wait for MkDocs to fully render the page including ToC
-    setTimeout(function() {
-        const heading = document.getElementById('interactive-container-selection');
-        const img = document.createElement('img');
-        img.style.height = '2.5em'; img.style.verticalAlign = 'bottom';
-        img.src = '../img/compose.png'; 
-        heading.insertBefore(img, heading.firstChild);
-        //img.style.marginRight = '10px';
-        //heading.appendChild(img);
-    }, 100); // Small delay to ensure ToC is already processed
-});
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	addImageToHeader('selectors','/{{mkdocs.config.site_name}}/img/user.svg')
+	addImageToHeader('interactive-target-selection','/{{mkdocs.config.site_name}}/img/makefile.png', style="height:2.2em;")
+	addImageToHeader('interactive-container-selection','/{{mkdocs.config.site_name}}/img/compose.png', style="margin-top:-10px;height:2.2em;")
+}, 100);});
 </script>

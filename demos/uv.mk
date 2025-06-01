@@ -1,12 +1,10 @@
 #!/usr/bin/env -S make -f
-# demos/uv.mk: 
-#   Demonstrate polyglots with compose.mk.  
-#   Python code running in a container, with dependencies and no venv, using uv. 
-#   No caching! Note that this implicitly pulls not only dependencies but even 
-#   the python version is also lazy and built just in time, immediately prior to use.
+# Demonstrate polyglots with compose.mk.  Python code running in a container, 
+# with dependencies and no venv, using uv. No caching! Note that this implicitly 
+# pulls not only dependencies but the python version itself is lazy and built 
+# just in time.
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.
 # USAGE: ./demos/uv.mk
 
 include compose.mk
@@ -32,19 +30,10 @@ r = requests.get(
 print(r.status_code)
 endef
 
-## Now run the code in the container, classic style invocation.
+# Run the code in the container, using low-level helpers.
 __main__:
 	img=${uv.img} \
 	entrypoint=${uv.interpreter} \
 	cmd="run --script" \
 	def=uv.hello_world \
 	${make} docker.run.def
-
-## More idiomatic approach: using target partials
-demo.uv.alt: uv.script/uv.hello_world
-
-uv.script/%:
-	set -a; cmd="run --script"\
-	; ${mk.def.read}/${*} | ${make} uv
-
-uv:; ${stream.to.docker}/${uv.img},${uv.interpreter}

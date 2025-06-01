@@ -4543,6 +4543,11 @@ a:hover {
 a:visited {
   color: #9b59b6;
 }
+h3 a:visited,
+h3 a {
+  color: black;
+}
+
 html {
   height: 100%;
 }

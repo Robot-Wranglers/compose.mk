@@ -19,7 +19,7 @@ Type "# into separate tmux panels.  Each exits, leaving only the default shell."
 Enter 2
 Sleep 2
 Set PlaybackSpeed 2
-Type "./compose.mk tux.mux/io.bash,io.wait/5,io.wait/7,io.wait/9,io.wait/11"
+Type "./compose.mk tux.mux/io.shell,io.wait/5,io.wait/7,io.wait/9,io.wait/11"
 Sleep 3.3
 Enter
 Sleep 10

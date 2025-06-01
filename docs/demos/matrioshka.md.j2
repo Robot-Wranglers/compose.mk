@@ -3,8 +3,8 @@
 ## Embedded Containers & Data
 <hr style="width:100%;border-bottom:3px solid black;">
 
-!!! danger "<small>Mad Science</small>"
-    See [this section]({{mkdocs.site_relative_url}}/matrioshka/#has-science-gone-too-far) for more discussion on that point, and if you're more interested in patterns and theory, then you might prefer to start [here]({{mkdocs.site_relative_url}}/matrioshka).
+!!! warning "<small>Mad Science</small>"
+    Reasonable people might consider this to be mad science.  See [this section]({{mkdocs.site_relative_url}}/matrioshka/#has-science-gone-too-far) for more discussion on that point, and if you're more interested in patterns and theory, then you might prefer to start [here]({{mkdocs.site_relative_url}}/matrioshka).
 
 Sometimes it's useful to declare **inlined containers and data** alongside the same automation that is making use of those containers.  You'll have to exercise some judgement about when and where that is a *good idea*, but since tool containers tend to be small and change infrequently, **being self-contained reduces change-related friction and context-switching** that's associated with external repositories, external registries, and external files.
 
@@ -46,17 +46,12 @@ Building on the [Custom Automation APIs demo]({{mkdocs.site_relative_url}}/demos
 <hr style="width:100%;border-bottom:3px solid black;">
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Wait for MkDocs to fully render the page including ToC
-    setTimeout(function() {
-        const heading = document.getElementById('embedded-containers-data');
-        const img = document.createElement('img');
-        img.style.height = '2em'; img.style.verticalAlign = 'bottom';
-        img.src = '../../img/mat.png'; 
-        heading.insertBefore(img, heading.firstChild);
-        img.style.marginRight = '10px';
-        //img.style.marginLeft = '10px';
-        //heading.appendChild(img);
-    }, 100); // Small delay to ensure ToC is already processed
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+       	addImageToHeader('embedded-containers-data','/{{mkdocs.config.site_name}}/img/mat.png',style="height:2.2em;")
+        const h3Elements = document.querySelectorAll('h3');
+        h3Elements.forEach((h3, index) => {
+           	addImageToHeader(h3.id,'/{{mkdocs.config.site_name}}/img/code-dots.svg')
+        });
+        }, 100); // Small delay to ensure ToC is already processed
 });
 </script>

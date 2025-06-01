@@ -3,40 +3,38 @@
 ## Language Overview
 <hr style="width:100%;border-bottom:3px solid black;">
 
-You might already be aware that `compose.mk` offers a [standard library for working with `make`]({{mkdocs.site_relative_url}}/standard-lib), a sort of stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview), and [a TUI framework]({{mkdocs.site_relative_url}}/embedded-tui), but now you've reached the page that will finally reveal the shocking secret truth: **compose.mk is actually a programming language!** 😮  More specifically, `compose.mk` is a matrioshka language, and maybe the *first one that's actually intended to be useful*.  
-
-!!! tip "Related Links"
-    See [here]({{mkdocs.site_relative_url}}/compiler/#basic-example), [here]({{mkdocs.site_relative_url}}/compiler/#compose-file-example), [here]({{mkdocs.site_relative_url}}/compiler/#dockerfile-example) for quick examples.
-
-    For a discussion more focused on patterns, see the [matrioshka automata page]({{mkdocs.site_relative_url}}/matrioshka) for more information about packing programs inside of programs.
+You might already be aware that `compose.mk` offers a [standard library for working with `make`]({{mkdocs.site_relative_url}}/standard-lib), a sort of stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview), and [a TUI framework]({{mkdocs.site_relative_url}}/embedded-tui), but now you've reached the page that will finally reveal the shocking secret truth: **compose.mk is actually a programming language!** 😮  More specifically, `compose.mk` is a [matrioshka language]({{mkdocs.site_relative_url}}/matrioshka), and maybe the *first one that's actually intended to be useful*.  
 
 The rest of this page focuses on other language-related features and serves as an alternate to the [main landing page]({{mkdocs.site_relative_url}}/overview). If you prefer overviews to focus less on applications and more on **theory, architecture, and patterns**, you've come to the right place.
+
+**Related Links:** See [here]({{mkdocs.site_relative_url}}/compiler/#basic-example), [here]({{mkdocs.site_relative_url}}/compiler/#compose-file-example), [here]({{mkdocs.site_relative_url}}/compiler/#dockerfile-example) if you're looking for concrete examples.  For a discussion more focused on patterns, see the [matrioshka automata page]({{mkdocs.site_relative_url}}/matrioshka) to learn about packing programs inside of programs.
 
 ### Language Properties
 <hr style="width:100%;border-bottom:3px solid black;">
 
 **As a language,** you could say that `compose.mk` is multi-paradigm and has the following properties:
 
-* Inherits macros, declarative style, incremental computing[^1], and basic DAGs[^2] from `make`
-* Inherits tacit programming[^3] and a preference for [pipes & streams]({{mkdocs.site_relative_url}}/standard-lib#structured-io-stream-types-pipes) from the unix shell
-* Very untyped, but supports some [structured data]({{mkdocs.site_relative_url}}/standard-lib#structured-io)
-* Supports extensible programming[^5]
+1. Inherits macros, declarative style, incremental computing[^1], and basic DAGs[^2] from `make`
+1. Inherits tacit programming[^3] and a preference for [pipes & streams]({{mkdocs.site_relative_url}}/standard-lib#structured-io-stream-types-pipes) from the unix shell
+1. Very untyped, but some support for [structured data]({{mkdocs.site_relative_url}}/standard-lib#structured-io) and [file and stream kinds]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-stream-types-pipes)
+1. Supports extensible programming[^5]
     * via container support generally, but also 
     * via [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [dynamically]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch) [assigned syntax]({{mkdocs.site_relative_url}}/compiler/#user-defined-extensions)
-* Supports functional programming[^6] and data flow programming[^7] 
-    * via [flux]({{mkdocs.site_relative_url}}/standard-lib/#workflow-rationale) generally, and via [flux workflows]({{mkdocs.site_relative_url}}/demos/workflows), [etc]({{mkdocs.site_relative_url}}/demos/platform)
-* Supports reflective programming[^4] and lightweight aspect-oriented programming[^10]
+1. Supports functional programming[^6] and data flow programming[^7] 
+    * via [flux]({{mkdocs.site_relative_url}}/standard-lib/#workflow-rationale) generally, especially via [flux workflows]({{mkdocs.site_relative_url}}/demos/workflows), [etc]({{mkdocs.site_relative_url}}/demos/platform)
+    * and also via [other helpers]({{mkdocs.site_relative_url}}/standard-lib/#functional-style)
+1. Supports reflective programming[^4] and lightweight aspect-oriented programming[^10]
     * via e.g. [mk.*]({{mkdocs.site_relative_url}}/standard-lib/#reflection-support) and [pre/post hooks]({{mkdocs.site_relative_url}}/signals/#pre-post-hooks)
-* Inclines towards concatenative style[^8] and stack-oriented programming[^9]
+1. Inclines towards concatenative style[^8] and stack-oriented programming[^9]
     * partly via default `make` target execution semantics
     * partly via [compose.mk stage-stacks]({{mkdocs.site_relative_url}}/stages)
-* Supports *some* OOP implicitly 
+1. Supports modules and *something* like OOP implicitly
     * via container layers, or via yaml inheritance in composefiles
-    * via make-includes, via target-chaining, via syntax conventions for target names, etc
+    * via make-includes, via target-chaining, via namespacing conventions for targets, etc
 
 Further, you could say that `compose.mk` is an [interpreted language](#interpreters-transpilation) that is implemented *in* `make`, but in some sense it also runs *on* `make` by hijacking it as a kind of [gadget](https://en.wikipedia.org/wiki/Gadget_(computer_science)).  
 
-Also related but harder to categorize, the [packaging support]({{mkdocs.site_relative_url}}/demos/package) is *almost* a language feature in that it effectively allow us to **release frozen artifacts**.  This topic is different [from compilation]({{mkdocs.site_relative_url}}/compiler), but it's somewhat inspired by the idea of image-based persistence[^11].
+Also related but harder to categorize, the [packaging support]({{mkdocs.site_relative_url}}/demos/package) is *almost* a language feature in that it effectively allow us to **release frozen artifacts**.  For a simpler approach to packaging that doesn't require archives, see instead the documentation for [guests and payloads]({{mkdocs.site_relative_url}}/standard-lib#forks-guests-and-payloads).  These capabilities are inspired by the idea of image-based persistence[^11].
 
 ### Homoiconic?
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -75,9 +73,11 @@ $ ./compose.mk flux.or/flux.ok,flux.fail
 $ echo flux.or/flux.ok,flux.fail | ./compose.mk mk.kernel
 ```
 
-The example above is simplistic, but there are other ways that `compose.mk` can [act as an interpreter]({{mkdocs.site_relative_url}}/signals/#inheritance-interpreters), and even support transpilation for a *syntactically different* language that transforms to classical Makefile.  For more details, see the [Compiler & Dialects docs]({{mkdocs.site_relative_url}}/compiler).
+This example is simplistic, but there are other ways that `compose.mk` can [act as an interpreter]({{mkdocs.site_relative_url}}/signals/#inheritance-interpreters), and even support transpilation for a *syntactically different* language that transforms to classical Makefile.  For more details, see the [Compiler & Dialects docs]({{mkdocs.site_relative_url}}/compiler).
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+### References
+<hr style="width:100%;border-bottom:3px solid black;">
+
 [^1]: [https://en.wikipedia.org/wiki/Incremental_computing](https://en.wikipedia.org/wiki/Incremental_computing)
 [^2]:  [https://en.wikipedia.org/wiki/Directed_acyclic_graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph)
 [^3]:  [https://en.wikipedia.org/wiki/Tacit_programming](https://en.wikipedia.org/wiki/Tacit_programming)
@@ -89,3 +89,11 @@ The example above is simplistic, but there are other ways that `compose.mk` can 
 [^9]:  [https://en.wikipedia.org/wiki/Stack-oriented_programming](https://en.wikipedia.org/wiki/Stack-oriented_programming)
 [^10]: [https://en.wikipedia.org/wiki/Aspect-oriented_programming](https://en.wikipedia.org/wiki/Aspect-oriented_programming)
 [^11]: [https://en.wikipedia.org/wiki/Smalltalk#Image-based_persistence](https://en.wikipedia.org/wiki/Smalltalk#Image-based_persistence)
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+{{macros.header_images([
+	['language overview','overview'],
+], mkdocs)}}
+}, 100);});
+</script>

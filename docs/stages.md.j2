@@ -1,17 +1,19 @@
 {% import 'macros.j2' as macros -%}
 
-## Stages & Stacks
+## Stacks & Stages 
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Stages **add support for persistent data via a named stack**, plus basic *`push/pop/peek`* operators.
 
+Any task associated with `compose.mk` is able to use a stack just by mentioning it, regardless of whether it is inside or outside of a container.
+
 {{macros.img_link("escher-babel.png", mkdocs, "58%",align='center', class=" ")}}
 
-Any task associated with `compose.mk` should be able to use a stack just by mentioning it, regardless of whether it is inside or outside of a container.  Stacks live on the filesystem usually at the project root, and are JSON-backed.  Ultimately the *push/pop/etc* operators are implemented with `jq` and `jb`, using local tools if available but falling back to docker for a portable implementation.  *(For more background, see the docs on [structured IO ]({{mkdocs.site_relative_url}}/standard-lib#structured-io) and [proxy wrappers]({{mkdocs.site_relative_url}}/tool-overview#tool-wrappers).)*
+Stacks live on the filesystem usually at the project root, and are JSON-backed.  Ultimately the *push/pop/etc* operators are implemented with `jq` and `jb`, using local tools if available but falling back to docker for a portable implementation.  *(For more background, see the docs on [structured IO ]({{mkdocs.site_relative_url}}/standard-lib#structured-io) and [proxy wrappers]({{mkdocs.site_relative_url}}/tool-overview#tool-wrappers).)*
 
 Other than the datastructure itself, there are few restrictions or isolation guarantees about how that data is used, or where it's used from.  By default, **there are no isolation guarantees at the level of PIDs, parent PIDs, or container.**  However, isolation per `compose.mk` managed project is usually implicit, because **stages are uniquely determined by the stage name and the working directory when the stage is used.**
 
-Since access to the stage-stack "just works" from the docker host, a container, or a nested container, and works inside or outside the particular subshell for any existing make-target, this adds a lot of missing flexibility for "crosswise" communication that task-DAGs and pipelining would usually struggle with.
+Since access to the stage-stack should "just work" from the docker host or a container, and works inside or outside the particular subshell for any existing make-target, this adds a lot of missing flexibility for "crosswise" communication that task-DAGs and pipelining would usually struggle with.
 
 **The point of stacks and stages is to have something small, fast, and light** that you use out of the box or build on top of.  Stage-stacks in `compose.mk` are a project-local datastructure that feels native, is basically dependency free, and is actually kind of scalable.  After all.. `jq` will be happy to chug through a very large pile of JSON indeed, and file IO is a bottleneck, switching to [shared memory is straightforward](https://datawookie.dev/blog/2021/11/shared-memory-docker/).
 
@@ -43,19 +45,20 @@ $ ./compose.mk flux.stage.enter/BUILD
 ╚═══════════════════════════════════════════════════════════╝
 ⇄ flux.stage // BUILD //  stack file @ .flux.stage.BUILD
 Φ flux.stage.push // BUILD 
-⇄ io.stack.push // stack@.flux.stage.BUILD ⋘⋘⋘
+⇄ io.stack.push // stack@.flux.stage.BUILD ⋘
   {"stage.entered":"Mon 24 Feb 2025 08:53:39 PM PST"}
 ```
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
+{#<img src=/{{mkdocs.config.site_name}}/img/stack-push.svg>#}
 **Pushing data** works with pipes:
 
 ```bash {.cli_example}
 $ echo '{"data":789}' | ./compose.mk flux.stage.push/BUILD
 
 Φ flux.stage.push // BUILD 
-⇄ io.stack.push // stack@.flux.stage.BUILD ⋘⋘⋘
+⇄ io.stack.push // stack@.flux.stage.BUILD ⋘
   {"data":789}
 ```
 
@@ -67,19 +70,21 @@ $ ./compose.mk jb foo=bar | ./compose.mk flux.stage.push/BUILD
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
+{#<img src=/{{mkdocs.config.site_name}}/img/stack-pop.svg>#}
+
 **Popping data** is pipe-safe JSON for downstream, but stderr is annotated for humans.
 
 ```bash {.cli_example}
 $ ./compose.mk flux.stage.pop/BUILD
 Φ flux.stage.pop // BUILD
-⇄ io.stack.pop // stack@.flux.stage.BUILD ⋙⋙⋙
+⇄ io.stack.pop // stack@.flux.stage.BUILD ⋙
 {
   "data": 789
 }
 
 $ ./compose.mk flux.stage.pop/BUILD
 Φ flux.stage.pop // BUILD
-⇄ io.stack.pop // stack@.flux.stage.BUILD ⋙⋙⋙
+⇄ io.stack.pop // stack@.flux.stage.BUILD ⋙
 {
   "stage.entered": "Mon 24 Feb 2025 08:53:39 PM PST"
 }
@@ -88,8 +93,6 @@ $ ./compose.mk flux.stage.exit/BUILD
 Φ flux.stage.clean // BUILD //  removing stack file @  .flux.stage.BUILD
 ```
 
-<br/>
-
 ### Stage Idioms
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -97,7 +100,7 @@ If you're scripting with stages, the main difference is that `flux.stage.enter` 
 
 {{macros.embed_demo('demos/stages-idiom.mk', github=github)}}
 
-In this case when `validate` succeeds, there stage file is cleaned like we'd expect, and if there's a crash then partial results can be inspected.  There are various ways to write this, like replacing calls to `./compose.mk` with `${make}` expansions, or using macros instead of targets, but the idea is the same.  
+In this case when `validate` succeeds the stage file is cleaned like we'd expect, and if there's a crash then partial results can be inspected.  There are various ways to write this, like replacing calls to `./compose.mk` with `${make}` expansions, or using macros instead of targets, but the idea is the same.  
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
@@ -105,7 +108,9 @@ In this case when `validate` succeeds, there stage file is cleaned like we'd exp
 
 {{macros.embed_demo('demos/stage-wrapper.mk', github=github)}}
 
-<hr style="width:95%;border-bottom:1px dashed black;">
+{#<hr style="width:95%;border-bottom:1px dashed black;">#}
+
+----------------------------------------------
 
 Another source of usage hints about stages is the test-suite, so it's included below for reference.
 
@@ -145,9 +150,18 @@ Eventually, the basic stack-operators might expand to include lightweight patter
 More philosophically, native support for stacks gives `compose.mk` a new capability, in terms of stuff like [programming](https://en.wikipedia.org/wiki/Tacit_programming) [paradigms](https://en.wikipedia.org/wiki/Stack-oriented_programming).  The stack is also a convenient way to communicate [between polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [across matrioshka layers]({{mkdocs.site_relative_url}}/matrioshka/#advanced-matrioshka-idioms).  And, for what it's worth, now you can pretty directly architect your automation in terms of [pushdown automata](https://en.wikipedia.org/wiki/Pushdown_automaton) or [queue machines](https://en.wikipedia.org/wiki/Queue_automaton) :)
 
 
+### References
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{#
-[^2]: See the docs for [Supervisors & Signals]({{mkdocs.site_relative_url}}/signals)
-#}
 [^1]: Nope, this isn't perfectly thread safe.. but *(famous last words)* YAGNI
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+addImageToHeader('stacks-stages','/{{mkdocs.config.site_name}}/img/stack-push.svg')
+addImageToHeader('stage-idioms','/{{mkdocs.config.site_name}}/img/idiom.svg')
+addImageToHeader('support-for-non-json-artifacts','/{{mkdocs.config.site_name}}/img/question.svg')
+addImageToHeader('stage-api','/{{mkdocs.config.site_name}}/img/api.svg')
+addImageToHeader('stage-basics','/{{mkdocs.config.site_name}}/img/basics.svg')
+addImageToHeader('why-stacks-though','/{{mkdocs.config.site_name}}/img/question.svg');
+}, 100);});
+</script>

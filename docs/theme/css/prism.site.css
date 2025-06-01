@@ -137,7 +137,18 @@ span.se { color:mediumturquoise; font-weight:bolder; }
 .token.punctuation { 
     font-weight:bolder; font-size: 105%; 
     color: white; }
-
+.token.shell-install,
+.token.shell-install .err{
+    color: #ac6262;
+    font-weight:bolder;
+    font-size:110%;
+}
+.token.shell-command,
+.token.shell-command .nb {
+    color: #ac6262;
+    font-weight:bolder;
+    font-size:110%;
+}
 .cli_example .token.property,
 .cli_example .token.tag,
 .cli_example .token.boolean,
@@ -149,9 +160,18 @@ span.se { color:mediumturquoise; font-weight:bolder; }
     color: #c92c2c;
 }
 
+span.cmk-with-statement .err{
+    color: #d83dc0;
+    font-size: bigger; font-style: bold;
+}
+span.cmk-as-statement .err{
+    color: #d83dc0;
+    font-size: bigger; font-style: bold;
+}
+
 span.cmk-recursion span.n,
 span.token.cmk-recursion {
-    color: #87bd51;
+    color: #f7ff02;
     font-style: italic;
 }
 .cli_example .token.selector,
@@ -272,19 +292,14 @@ span.p {
 
     padding-left: 4em;
 }
-.cli_example pre .line-highlight
-{
+.cli_example pre .line-highlight{
     margin-top: 0;
 }
-.command-line-prompt
-{
+.command-line-prompt{
     font-size: 100%;
-
     display: block;
     float: left;
-
     margin-right: 1em;
-
     -webkit-user-select: none;
        -moz-user-select: none;
         -ms-user-select: none;
@@ -292,53 +307,62 @@ span.p {
     text-align: right;
     letter-spacing: -1px;
     pointer-events: none;
-
     border-right: 1px solid #999;
 }
 
-.command-line-prompt > span:before
-{
+.command-line-prompt > span:before{
     display: block;
-
     padding-right: .8em;
-
     content: ' ';
-
     opacity: .7;
 }
 
-.command-line-prompt > span[data-user]:before
-{
+.command-line-prompt > span[data-user]:before{
     content: '[' attr(data-user) '@' attr(data-host) '] $';
 }
 
-.command-line-prompt > span[data-user='root']:before
-{
+.command-line-prompt > span[data-user='root']:before{
     content: '[' attr(data-user) '@' attr(data-host) '] #';
 }
 
-.command-line-prompt > span[data-prompt]:before
-{
+.command-line-prompt > span[data-prompt]:before{
     content: attr(data-prompt);
 }
 
-.command-line-prompt > span[data-continuation-prompt]:before
-{
+.command-line-prompt > span[data-continuation-prompt]:before{
     content: attr(data-continuation-prompt);
 }
 
-.command-line span.token.output
-{
+.command-line span.token.output{
     /* Make shell output lines a bit lighter to distinguish them from shell commands */
     opacity: .7;
 }
 /* DEFAULTS, effecting embedded files and unspecified tokens for command-lines, etc */
 .hll { background-color: #3B4252 }
+
+/* Comment */
 .c { 
-    color: #616E87; 
+    color: white; 
     /* color: #9D9681; */
     /* color: #BEC25795;  */
-    font-style: bold } /* Comment */
+    font-style: bold 
+    background-color: #31314b;
+    /* opacity: 60%; */
+    background-color: #30353c;
+}
+div.language-makefile pre code {
+    /* color: #e7afe7; */
+    /* color: #b6b0f7d9; */
+    color:snow;
+    /* background-color: #24241d; */
+    /* white-space: pre;
+    word-wrap: normal;
+    display: block;
+    padding: 12px; */
+    /* border-left:5px dotted green; */
+    font-size: 105%;
+}
+
 /* Error */
 .err { 
     /* color: #BF616A;  */
@@ -351,7 +375,11 @@ span.p {
     color: #A7B3BF;
     font-weight: bold } /* Keyword */
 .l { color: #c3f3f9e7 ; } /* Literal */
-.n { color: lightblue; } /* Name */
+.n { 
+    color: lightblue;
+    font-weight: bolder;
+    font-size: 115%;
+} /* Name */
 .snippet .n { 
     /* color: #a7b80e90; */
     color:thistle;
@@ -368,23 +396,36 @@ span.p {
 }
 .cpf { color: #616E87; font-style: italic } /* Comment.PreprocFile */
 /* Comment.Single */
-.c1, .c { 
-    /* color:#B6CADFD6; */
-    /* color: #CBCFD3D6; */
-	/* color: thistle; */
-    color: #639ebbde;
-	/* color: #fb9c9cd9; */
-
+.c1, .c {
+    color: #c2cff7;
+    background-color: #554d464d;
     /* font-style: italic; */
-    /* color: #BEC257;  */
-    /* color: #585448; */
-    font-size:100%;
-    /* color: #9D9681; */
-    /* color: #BEC25795;  */
-    font-style: bold } /* Comment */
+    font-size: 115%;
+    font-weight: bolder;
+    opacity: 70%;
+}
+/* Comment */
 .snippet .c {
     /* color: #dfd6818b; */
+    font-size:98%;
+    color: #fdefa4b8;
+    /* background-color: #554d464d; */
+    /* font-style: italic; */
+    font-size: 98%;
+    /* font-weight: bolder; */
+    /* opacity: 70%; */
 }
+.dense .c {
+    /* color: #dfd6818b; */
+    /* color: #bdb56c; */
+    color: #fff557;
+    /* background-color: #554d464d; */
+    /* font-style: italic; */
+    font-size: 90%;
+    /* font-weight: bolder; */
+    /* opacity: 70%; */
+}
+
 .cli_example .c1, .cli_example .c { 
     /* color: #616E87;  */
     /* font-style: italic; */
@@ -420,7 +461,10 @@ span.p {
 .ld { color: #D8DEE9 } /* Literal.Date */
 .m { color: #90dd73; } /* Literal.Number */
 .s { color: #A3BE8C } /* Literal.String */
-.na { color: #8FBCBB } /* Name.Attribute */
+.na { 
+    /* color: #8FBCBB  */
+    color: #47BF3D;
+    } /* Name.Attribute */
 .nb { color: #81A1C1; } /* Name.Builtin */
 .language-makefile .nb {
     color: #c8d2dc;
@@ -557,6 +601,7 @@ span.p {
 .token.symbol {
     color: #ffa07a;
 }
+
 .token.target.inside_define {
     color: #9ae152;
 }
@@ -701,13 +746,91 @@ div .snippet {
     -webkit-hyphens: none;
        -moz-hyphens: none;
             hyphens: none;
-
     color: whitesmoke;
     background: black;
     /* border-left: 4px solid #f0b37e; */
     text-shadow: 0 1px rgba(0, 0, 0, .3);
-
         -ms-hyphens: none;
+}
+span.err {
+    color:snow;
+    font-size: 120%;
+}
+
+.cmk-dockerfile-kw,.cmk-dockerfile-kw .err { 
+    font-size: 120%;
+    font-weight: bolder;
+    color: #79f;
+    opacity:80%;
+}
+.cmk-div { 
+        /* color:red; */
+    font-weight:120%;
+    text-decoration: underline;
+    /* opacity:90%; */
+    color:whitesmoke;
+    background-color: #f6640c2e;
+    font-size:85%;
+}
+.cmk-integral-close .nf .token.symbol {
+    color: #00e0e0;
+    /* font-size:115%; */
+}
+.token.cmk-integral-close .token.symbol .err {
+    opacity: 100%;
+    color: #00e0e0;
+    font-weight:bolder;
+    font-size: 120%;
+}
+.token.cmk-integral-open .token.defname .err {
+    /* color:rgb(217, 255, 0); */
+    font-weight:bolder;
+    font-size: 115%;
+}
+.token.backtick-content {
+    font-style: oblique;
+    color:thistle;
+}
+.token.backtick-content .token.punctuation {
+    font-size: 120%;
+    font-weight: 120%;
+    /* text-decoration: underline; */
+    /* color: red;
+    background-color: black; */
+}
+/* .token.cmk-integral-close  */
+.token.cmk-integral-close .token.keyword-as .err,
+.token.cmk-integral-close .token.keyword-with .err,
+.token.cmk-integral-close .token.symbol,
+.token.keyword-with
+{
+    /* color: #0093ff; */
+    /* color:rgb(217, 255, 0); */
+    /* font-weight:bolder; */
+    /* color: #00e0a1; */
+    color: #00e0e0;
+    font-size: 110%;
+    font-style: oblique;
+    font-weight:bolder;
+}
+
+.token.with-value .err, 
+.token.with-value .o,
+.token.with-value .n, {
+    color: lightgreen;
+    /* color:red; */
+    /* background-color:#272822; */
+    font-size: 120%;
+    font-weight:bolder;
+    opacity: 100%;
+}
+
+.token.as-value .err,
+.token.as-value .n {
+    color: #e0c800;
+    font-size: 118%;
+    opacity: 100%;
+    /* font-weight: bolder; */
 }
 .token.url-link {
     font-size:90%;
@@ -724,27 +847,21 @@ div .snippet {
     opacity:100%;
     font-weight:bolder;
     font-size: 115%;
-    /* color:rgba(199, 205, 162, 0.883); */
 }
 .token.cmk-syntax .n {
     color: #00e0e0;
     opacity:100%;
-    /* font-weight:bolder; */
-    /* font-size: 115%; */
-    /* color:rgba(199, 205, 162, 0.883); */
 }
 .token.cmk-dunder {
     color: snow;
     font-size: larger;
     font-weight: bolder;
-    /* color:rgba(199, 205, 162, 0.883); */
 }
 .inside_define {
     font-size:smaller;
     color: snow;
     font-weight:bolder;
     opacity:70%;
-    /* background-color: rgba(25, 24, 4, 0.526); */
 }
 .test_suite {
     background-color: red;
@@ -774,9 +891,10 @@ div .snippet {
 }
 .token.cmk-cli-token{ color:lightcyan;}
 .token.cmk-fxn span.n, .token.cmk-fxn { 
-    /* color:rgba(37, 189, 146, 0.88);*/
+    color:rgba(37, 189, 146, 0.88);
     /* color: rgba(125, 200, 223, 0.88); */
-    color: rgb(149, 191, 204);
+    /* color: rgb(149, 191, 204); */
+    /* color: rgb(51, 255, 55); */
     /* color:rgba(73, 187, 212, 0.883); */
     font-weight:bolder;
 }
@@ -791,21 +909,24 @@ span.token.cmk-fxn span.p
     color: rgba(206, 225, 88, 0.88);
     font-weight:bolder;
 }
-
+.language-bash .c1 {
+    color: #d0ca6b;
+    font-weight:bolder;
+}
 /* DOCSTRING style comments  */
 .c .token.comment{
-    color: snow;
     /* background-color: #31314b; */
-    opacity: 60%;
-    background-color: #5c3f26;  
-}
-
+    opacity: 100%;
+    /* color: #00cfff; */
+    color: #f0e79c;
+    background-color: #263131;
+    font-size: 108%;}
 .token.comment,
 .snippet .token.prolog,
 .snippet .token.doctype,
 .snippet .token.cdata
 {
-    color: #86c1fc;
+    color: #dce4ec;
 }
 .highlight.language-markdown pre code {
     color: #cad0dd;
@@ -831,9 +952,7 @@ span.token.cmk-fxn span.p
     color: #efefef;
 }
 .token.target:not(.inside_define){
-    /* color: rgb(62, 213, 251); */
     color: rgba(86, 231, 255, 0.83);
-    /* color:snow; */
 }
 .snippet .token.boolean,
 .snippet .token.number
@@ -878,7 +997,27 @@ span.token.cmk-fxn span.p
 {
     color: #66d9ef;
 }
-.token.important,.token.important .nv {
+div.api_docs pre {
+    margin:0px;
+}
+div.api_docs.nohighlight {
+    border: 5px solid #0db7ed61;
+    margin-top: 1em;
+    background: snow;
+}
+.token.important,
+.cmk-shebang .c,
+.cmk-shebang .ch, 
+.language-bash .shebang .ch {
+    color: #eef07c;
+    font-weight: bolder;
+    background: #373737;
+    font-weight: bolder;
+    font-size: larger;
+    font-style: oblique;
+}
+.token.important,
+.token.important .nv {
     color: lightgreen;
     background-color:#272822;
 }
@@ -898,9 +1037,9 @@ span.token.cmk-fxn span.p
     color:burlywood;
     } */
 .nt {
-/* color: #c4d7e8; */
+color: #e8e6c4;
 font-size: larger;
-color: #a9cae8;
+/* color: #a9cae8; */
 }
 
 

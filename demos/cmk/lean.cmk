@@ -1,6 +1,5 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret!
-# demos/cmk/inlined-dockerfile.cmk: 
-#   CMK-lang translation of demos/lean.mk
+# CMK-lang translation of demos/lean.mk
 #
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 #
@@ -9,20 +8,24 @@
 #
 # USAGE: ./demos/cmk/lean.cmk
 
-# Look, it's a minimal Dockerfile for running lean4 
+# Look, a minimal Dockerfile for running lean4 
 # See also: https://leanprover-community.github.io/install/debian.html
 ⫻ Dockerfile.Lean
 FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
 SHELL ["/bin/bash", "-x", "-c"]
 RUN apt-get -qq update && apt-get install -qq -y git make curl sudo procps
-RUN curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf > /usr/local/bin/elan-init.sh
-RUN bash /usr/local/bin/elan-init.sh -y --default-toolchain leanprover/lean4:v4.17.0
+RUN curl -sSf \
+  https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+  > /usr/local/bin/elan-init.sh
+RUN bash /usr/local/bin/elan-init.sh -y \
+  --default-toolchain leanprover/lean4:v4.17.0
 RUN cp /root/.elan/bin/lean /usr/local/bin 
 RUN cp /root/.elan/bin/lake /usr/local/bin 
 ENV PATH="$PATH:/root/.elan/bin/"
 RUN lean --help
 RUN lake new default
-RUN cd default && printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' >> lakefile.toml
+RUN cd default \
+  && printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' >> lakefile.toml
 RUN cd default && lake update && lake build
 RUN elan --version; lean --version; leanc --version; lake --version; 
 ENTRYPOINT ["lean"]
@@ -30,14 +33,14 @@ ENTRYPOINT ["lean"]
 
 # Look, it's hello-world in scriptwise lean-lang
 # https://lean-lang.org/functional_programming_in_lean/hello-world/running-a-program.html
-〚 my.script
+⟦ my.script
 def main : IO Unit := IO.println "Hello, world!"
 ⟧ with lean.run.script as target
 
 # Look, it's a theorem we might want to prove
 # https://leanprover-community.github.io/logic_and_proof/classical_reasoning.html
 # https://lean-lang.org/theorem_proving_in_lean4/propositions_and_proofs.html
-〚 my.theorem 
+⟦ my.theorem 
 section
 open Classical
 example : A ∨ ¬ A := by

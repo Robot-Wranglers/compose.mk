@@ -3,14 +3,13 @@
 ## Loading Compose Files
 <hr style="width:100%;border-bottom:3px solid black;">
 
-For simple use-cases where you have a compose-file, and want some of the `compose.mk` features, but you **don't have a project Makefile**, it's possible to skip some of the steps in the [usual integration]({{mkdocs.site_relative_url}}/bridge) by letting `loadf` generate integration for you just in time.
+For use-cases where you have a compose-file, and want some of the `compose.mk` features, but you **don't have a project Makefile**, you can skip [the usual integration]({{mkdocs.site_relative_url}}/quickstart#docker-compose-integration) by letting `loadf` generate integration for you just in time.
 
-The general usage looks like this:
+General usage looks like this:
 
 ```bash  {.cli_example} 
 $ ./compose.mk loadf <path_to_compose_file> <other_instructions>
 ```
-<br/>
 
 ### Basic Usage
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -19,7 +18,7 @@ If no additional downstream targets are passed, the default behaviour is to open
 
 {{macros.img_link("loadf-1.gif", mkdocs)}}
 
-See instead [the selector docs]({{mkdocs.site_relative_url}}/selector) for interactively selecting a container instead of opening all of them. 
+See instead [the selector docs]({{mkdocs.site_relative_url}}/selector#interactive-container-selection) for interactively selecting a container instead of opening all of them. 
 
 ### Arbitrary Downstream Targets
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -48,7 +47,6 @@ debian
 Ultimately though, using the TUI for quick and convenient inspection is probably the main use case.  Here's a few more examples along those lines:
 
 ```bash  {.cli_example}
-
 # Opens 3 panes with container-shells
 $ ./compose.mk loadf demos/data/docker-compose.yml \
        tux.open.service_shells/debian,alpine,debian
@@ -59,9 +57,22 @@ $ ./compose.mk loadf demos/data/docker-compose.yml \
 
 # Opens 2 panes of bash-shells for the TUI container itself
 $ ./compose.mk loadf demos/data/docker-compose.yml \
-       tux.open/io.bash,io.bash
+       tux.open/io.shell,io.shell
 ```
-!!! tip "Related Links"
-    See also the [Embedded TUI docs]({{mkdocs.site_relative_url}}/embedded-tui/#zero-config-tuis) for other examples that are using `loadf`, discussion of default pane layouts, etc.
+
+### Related Links
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The [Embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui/#zero-config-tuis) documentation has other examples that are using `loadf`, discussion of default pane layouts, etc.
+
+For more details about available targets, see the [bridge documentation]({{mkdocs.site_relative_url}}/bridge#target-scaffolding).
 
 <hr style="width:100%;border-bottom:3px solid black;">
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	addImageToHeader('basic-usage','/{{mkdocs.config.site_name}}/img/basics.svg')
+	addImageToHeader('related-links','/{{mkdocs.config.site_name}}/img/links.svg')
+	addImageToHeader('loading-compose-files','/{{mkdocs.config.site_name}}/img/compose.png',style="margin-top:-10px;height:2.2em;")
+}, 100);});
+</script>

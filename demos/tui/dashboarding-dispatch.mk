@@ -19,5 +19,5 @@ test:; echo testing
 # The "top" pane will run the test target in a loop forever
 # The "bottom" pane will run clean/build sequentially, then wait.
 top: flux.loopf/test
-bottom: docker.image.dispatch/${golang.base}/flux.and/clean,build,io.bash
+bottom: docker.image.dispatch/${golang.base}/flux.and/clean,build,io.shell
 demo.ui: tux.open.horizontal/top,bottom

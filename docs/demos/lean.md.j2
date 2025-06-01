@@ -3,24 +3,22 @@
 ## Theorem Proving in a Makefile??
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Realistically most people are not sitting around and wondering whether they can prove Euclid[^1] or Gödel[^2] by using some wild [matrioshka doll]({{mkdocs.site_relative_url}}/matrioshka) of a Makefile.  But then again, people do get up to all kinds of weird things. 🤔
+!!! tip "Tip"
+    This demo is a variation on many others that are [using inlined data and container-definitions]({{mkdocs.site_relative_url}}/demos/matrioshka) and/or [working with foreign languages]({{mkdocs.site_relative_url}}/demos/polyglots). This is an instance of [a custom containerized interpreter]({{mkdocs.site_relative_url}}/demos/polyglots/#custom-containerized-interpreters), and also demonstrates **custom interpreter invocations**.
 
---------------
+Realistically most people are not sitting around and wondering whether they can prove Euclid[^1] or Gödel[^2] by using some wild [matrioshka doll]({{mkdocs.site_relative_url}}/matrioshka) of a Makefile.  But then again, people do get up to all kinds of weird things. 🤔
 
 For the purposes of this demo, we'll use `compose.mk` to take the [Lean4 prover](https://leanprover-community.github.io) for a test drive, and for starters just prove the law of the excluded middle.
 
-It's fun, self-contained, and marginally practical!  Partly because more academic tools like lean frequently do not have official containers =P, but mostly because this is part of a [larger demo about notebooking]({{mkdocs.site_relative_url}}/demos/notebooking).  **Note that this demo is big,** so if you're not interested in running the notebooking demo later then you may not want to run this one.  Lean/lake/mathlib toolchain here takes significant time to build, and the image on disk afterwards is ~10gb.
+It's fun, self-contained, and marginally practical!  Partly because more academic tools like lean frequently do not have official containers =P, but mostly because this is part of a [larger demo about notebooking]({{mkdocs.site_relative_url}}/demos/notebooking).  
 
-
-!!! tip "Tip"
-    This demo is really just a variation on many others that are [using inlined data and container-definitions]({{mkdocs.site_relative_url}}/demos/matrioshka) and [working with foreign languages]({{mkdocs.site_relative_url}}/demos/polyglots) but this case is an instance of [a custom containerized interpreter]({{mkdocs.site_relative_url}}/demos/polyglots/#custom-containerized-interpreters), and also demonstrates *custom interpreter invocations*.
-
-
-The lean demo comes in 2 flavors. The [first one](#lean-demo) is using `compose.mk` as a library, i.e. pure Makefile. The [second version](#lean-demo-cmk) uses `compose.mk` as an interpreter, i.e. [CMK-lang]({{mkdocs.site_relative_url}}/compiler), which helps to clean up the syntax a bit and clarify intent.  Otherwise the two demos are exactly the same.
+!!! danger "Caveat"
+    **Note that this demo is big,** and the lean/lake/mathlib toolchain here takes significant time to build, and the image on disk afterwards is ~10gb. If you're not interested in running the notebooking demo later then you may not want to run this one.  
 
 ### Lean Demo
 <hr style="width:100%;border-bottom:3px solid black;">
 
+The lean demo comes in 2 flavors. The [first one](#lean-demo) is using `compose.mk` as a library, i.e. pure Makefile. 
 
 {{macros.embed_demo('demos/lean.mk', 
     bottom_right=macros.link_mirror(
@@ -30,11 +28,14 @@ The lean demo comes in 2 flavors. The [first one](#lean-demo) is using `compose.
 ### Lean Demo (CMK)
 <hr style="width:100%;border-bottom:3px solid black;">
 
+The 2nd version of the demo is mostly the same, but uses `compose.mk` as an interpreter, and is expressed in [CMK-lang]({{mkdocs.site_relative_url}}/compiler), which compiles to Makefile.  This helps to clean up the syntax a bit and clarify intent.
+
 {{macros.embed_demo('demos/cmk/lean.cmk',
     bottom_right=macros.link_mirror(
         "demos/lean.mk",link="#lean-demo"),
     github=github)}}
 
+### References
 <hr style="width:100%;border-bottom:3px solid black;">
 
 [^1]: [https://leanprover-community.github.io/100.html#65](https://leanprover-community.github.io/100.html#65)

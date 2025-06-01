@@ -18,7 +18,7 @@ Look, **no target bodies!**  The declarative flavor is nice, and this is frequen
 
 Running it looks like this:
 
-{{macros.img_link("dashboarding.gif", mkdocs, "66%")}}
+{{macros.img_link("dashboarding.gif", mkdocs, "93%")}}
 
 It's really no surprise that the implementation is small, since it only needs minor changes compared with the CLI version we saw earlier.
 
@@ -48,8 +48,7 @@ Eagle-eyed readers will have noticed that our fake *clean/build/test* targets do
 
 Of course, if your automation fails to run inside the embedded TUI container, then it would probably also fail to run inside any fresh environment... or in other words, your automation is already broken =P
 
-!!! info "Info"
-    Regardless of whether you want to use the TUI, the way to begin to address this problem may involve some combination of [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) with internal or externally-defined Dockerfiles, compose-files, etc.  In many cases though, tool containers are already available, and already ship with basics like `make` and `bash`.  For this situation, we can again get away with very minimal changes.
+Regardless of whether you want to use the TUI, the way to begin to address this problem may involve some combination of [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) with internal or externally-defined Dockerfiles, compose-files, etc.  In many cases though, tool containers are already available, and already ship with basics like `make` and `bash`.  For this situation, we can again get away with very minimal changes.
 
 To see what it looks like, let's suppose for the next example that we need golang tools available for *clean/build* phases.  
 
@@ -62,7 +61,7 @@ The tightest way to describe this is very functional, but not very pretty.  We'l
 !!! closer_look "Closer Look"
     The magic line above uses `docker.image.dispatch/<image>/<target>`, and in this case the image is `golang:1.24-bookworm`.  (To stick with the declarative style, we have to escape the colon to declare a legal prerequisite target.)
 
-Above, we've also changed the *clean/build* targets to actually *use* golang tools.  And we changed `flux.and` arguments to include `io.bash` at the end so that the interactive shell we're left with in that pane is *running inside the golang container*, and not the TUI container.
+Above, we've also changed the *clean/build* targets to actually *use* golang tools.  And we changed `flux.and` arguments to include `io.shell` at the end so that the interactive shell we're left with in that pane is *running inside the golang container*, and not the TUI container.
 
 -----------------------------
 
@@ -72,7 +71,22 @@ For demonstrating that, we'll include the last example and just change the `bott
 
 {{macros.embed_demo('demos/tui/dashboarding-dispatch-2.mk', github=github)}}
 
-
-That's pretty much it for the basics of low-config TUIs.  In the [next section]({{mkdocs.site_relative_url}}/advanced-tuis), we'll cover more advanced usage.
-
+#### Next Steps
 <hr style="width:100%;border-bottom:3px solid black;">
+
+That's it for the basics of low-config TUIs.  In the [next section]({{mkdocs.site_relative_url}}/advanced-tuis), we'll cover more advanced usage.
+
+{#
+<hr style="width:100%;border-bottom:3px solid black;">
+#}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+{{macros.header_images([
+	['next steps','next'],
+	['mixing in container dispatch','dispatch'],
+	['basic example','basics'],
+	['low-config-tuis','tui'],
+], mkdocs)}}
+}, 100);});
+</script>

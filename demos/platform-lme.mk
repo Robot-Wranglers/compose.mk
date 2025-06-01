@@ -1,8 +1,7 @@
 #!/usr/bin/env -S make -f
-# demos/platform-lme.mk: 
-#  Elaborating the `platform.mk` demo to include handlers for logging, metrics, & events.
-#  We use namespace-style dispatch here to run commands in docker, and use `compose.mk`
-#  workflows to describe data-flow. 
+# Elaborating the `platform.mk` demo to include handlers for logging, metrics, & events.
+# We use namespace-style dispatch here to run commands in docker, and use `compose.mk`
+# workflows to describe data-flow. 
 #
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # See the main docs:  http://robot-wranglers.github.io/compose.mk/demos/platform/

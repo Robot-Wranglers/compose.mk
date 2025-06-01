@@ -9,7 +9,7 @@ include compose.mk
 
 # Import all the services in the compose file, 
 # including the "debian" container, into the root namespace
-$(eval $(call compose.import, demos/data/docker-compose.yml))
+$(call compose.import, file=demos/data/docker-compose.yml)
 
 # Basic dispatch style: Run `self.demo` target in the debian container
 __main__: debian.dispatch/self.demo

@@ -1,0 +1,20 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+# CMK-lang equivalent of demos/script-dispatch-host.mk.
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# See also: http://robot-wranglers.github.io/compose.mk/compiler
+#
+# USAGE: ./demos/cmk/script-dispatch-host.cmk
+
+# Look, here's a simple shell script 
+define script.sh
+set -x
+printf "multiline stuff\n"
+for i in $(seq 2); do
+    echo "Iteration $i"
+done
+endef
+
+# Directly imports script to target of same name.
+compose.import.script(def=script.sh)
+
+__main__: script.sh

@@ -1,0 +1,137 @@
+{% import 'macros.j2' as macros -%}
+
+### Argument Parsing
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Various approaches to argument-parsing are supported by `compose.mk`, including some support for keyword-arguments.  This section is *not* necessarily related to CLI parsing *(see the [signals and supervisors docs]({{mkdocs.site_relative_url}}/signals) for that)*.  Argument-parsing here refers mainly to *structured IO between* targets, i.e. [targets-as-functions]({{mkdocs.site_relative_url}}/style/#targets-as-functions).  
+
+There are 3 ways to pass data to targets, and `compose.mk` provides helpers for each:
+
+1. [Use parametric targets](#bind-from-parameters)
+1. [Passing JSON on stdin/stdout](#bind-from-JSON)
+1. [Set environment](#bind-from-environment) prior to call, read it during the invocation
+
+#### Bind from JSON
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Keyword-args for use with targets are easy to get with a combination of stdin, stdout, jq, jb, as [we've seen previously](#structured-io-basics).  
+
+Pairing that with `bind.args.from_json`, you can unpack the input automatically, making it available to the rest of the target-body.
+
+{{macros.embed_demo('demos/kwarg-parsing.mk', 
+    bottom_right=macros.link_mirror(
+        "demos/cmk/kwarg-parsing.cmk",
+        link=mkdocs.site_relative_url+"/compiler/#bind-declarations"),
+    github=github)}}
+
+Above, basically `bind.args.from_json` takes a **bind specification**, and uses it to import a subset of JSON key/vals as shell variables.  The bind-specification just describes that subset, optionally providing defaults when keys are missing.  Anything without a default is considered "required".  You can think of this idiom as a decorator, and [in CMK-lang it actually looks like one.]({{mkdocs.site_relative_url}}/compiler/#bind-declarations).
+
+```bash {.cli_example}
+$ ./demos/kwarg-parsing.mk
+```
+```bash {.cli_output}
+shape=triangle color=red name=default
+```
+
+**Note that this sets shell variables,** not make-variables, so names must be referenced with `$${double_dollars}`.
+
+**The fine print:** Usage assumes simple keyword-style dictionaries, and this isn't really designed to handle quoted stuff, multilines, etc.  If names already exist in the environment, this overwrites the values!  This also isn't optimized for speed of execution, but it's easy to read/write and eliminates lots of boilerplate.
+
+#### Bind from Environment
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Using `bind.args.from_env`, you can set/load defaults without anticipating an input pipe at all.  
+{{macros.embed_demo('demos/kwarg-parsing-2.mk', 
+    bottom_right=macros.link_mirror(
+        "demos/cmk/kwarg-parsing-2.cmk",
+        link=mkdocs.site_relative_url+"/compiler/#bind-declarations"),
+    github=github)}}
+
+```bash {.cli_example}
+$ ./demos/kwarg-parsing-2.mk
+```
+```bash {.cli_output}
+shape=circle color=blue
+```
+
+**Note that this sets shell variables,** not make-variables, so names must be referenced with `$${double_dollars}`.  Note also that this is a useful way to set defaults *regardless* of whether you expected the data to be available in the environment.
+
+**The fine print:** The same caveats exist here as with [bind.args.from_json](#bind-from-json) in terms of shadowing existing variables, so you should pay attention to scope, and probably want to pipeline your entire target-body using `.. && .. `.
+
+<a id=bind-def-env></a>
+
+{#
+#### Bind **to** Environment
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+It's also possible to bind data *to* the environment, starting with data that appears inside define-blocks.  (This isn't actually related to argument parsing, but is documented here anyway for symmetry with the last section.)
+#}
+
+#### Bind from Parameters
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+AKA `bind.posargs`, this can only be used with parametric make-targets.  By default, it sets convenience-names for dealing with comma-separated positional variables, but arbitrary delimiters are supported too.
+
+**Note that this sets shell variables,** not make-variables, so names must be referenced with `$${double_dollars}`.  All of the following variables will be defined, but might be empty:
+
+<table class=docutils-wrap align=center width=95%>
+   <caption>Variables created by `bind.posargs`</caption>
+    <tr>
+    <th><small>Variable</small></th>
+      <th><small>Description</small></th>
+    </tr>
+    <tr><td><code>_1st</code></td><td>1st positional argument</td></tr>
+    <tr><td><code>_2nd</code></td><td>2nd positional argument</td></tr>
+    <tr><td><code>_3rd</code></td><td>3rd positional argument</td></tr>
+    <tr><td><code>_4th</code></td><td>4th positional argument</td></tr>
+    <tr><td><code>_head</code></td><td>Head of pos-args list</td></tr>
+    <tr><td><code>_tail</code></td><td>Tail of pos-args list</td></tr>
+</table>
+
+
+{{macros.embed_demo('demos/parsing-parameters.mk', 
+    bottom_right=macros.link_mirror(
+        "demos/cmk/kwarg-parsing.cmk",
+        link=mkdocs.site_relative_url+"/compiler/#bind-declarations"),
+    github=github)}}
+
+```bash {.cli_example}
+$ ./demos/parsing-parameters.mk
+```
+```bash {.cli_output}
+1st=one 2nd=two 3rd=three 4th=
+head=one tail=two,three
+
+1st=one 2nd=two 3rd=three 4th=
+head=one tail=two/three
+```
+
+#### Functions with Keyword Args
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+!!! danger "Advanced Topic"
+    This is an advanced topic and safe for new users to ignore!
+
+You might have noticed that internal functions for stuff like [import statements]({{mkdocs.site_relative_url}}/bridge) also support named arguments.  Building your own functions that support kwargs looks like this:
+
+{{macros.embed_demo('demos/kwarg-parsing-3.mk', 
+    bottom_right=macros.link_mirror(
+        "demos/cmk/kwarg-parsing.cmk",
+        link=mkdocs.site_relative_url+"/compiler/#bind-declarations"),
+    github=github)}}
+
+
+```bash {.cli_example}
+$ ./demos/kwarg-parsing-3.mk
+```
+```bash {.cli_output}
+A default triangle
+A yellow circle
+A black square
+```
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	addImageToHeader('argument-parsing','/{{mkdocs.config.site_name}}/img/template.svg')
+}, 100);});
+</script>

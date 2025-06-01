@@ -90,7 +90,7 @@ What you see here is basically the necessary glue that connects everything else 
 ### Results & Usage
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Earlier we planned for **WUI Mode**, a **TUI Mode**, a **Pipeline Mode**, a **CLI Mode**, plus **frozen releases**, so let's see how we did.  If you've got the `compose.mk` [repo checked out]({{mkdocs.site_relative_url}}/integration#for-developers), you can interact with this demo directly as `./demos/notebooking.mk <target>`.  Jump [directly to CLI Mode](#cli-mode) for a more complete discussion of usage, but since pipelining is maybe the most surprising and useful feature, we'll start there.  
+Earlier we planned for **WUI Mode**, a **TUI Mode**, a **Pipeline Mode**, a **CLI Mode**, plus **frozen releases**, so let's see how we did.  If you've got the `compose.mk` [repo checked out]({{mkdocs.site_relative_url}}/quickstart#for-developers), you can interact with this demo directly as `./demos/notebooking.mk <target>`.  Jump [directly to CLI Mode](#cli-mode) for a more complete discussion of usage, but since pipelining is maybe the most surprising and useful feature, we'll start there.  
 
 Quick links for the other topics are below:
 
@@ -154,14 +154,13 @@ $ ./demos/notebooking.mk lab.notebook.preview
 # Synchronize changes between .md and .ipynb notebooks
 $ ./demos/notebooking.mk lab.notebooks.normalize
 ```
-<br/>
 
 ### TUI Mode
 <hr style="width:100%;border-bottom:3px solid black;">
 
 **For TUI mode**, use `./demos/notebooking.mk lab.tui`.  We've already seen a preview since there's a [video at the top of the page](#notebooking-ensembles).  As planned this starts and tails the webserver in one pane, opening a TUI browser in another.  For other usage and customization details see also the [general TUI docs]({{mkdocs.site_relative_url}}/embedded-tui) and [default keybindings info]({{mkdocs.site_relative_url}}/embedded-tui/#default-keybindings).
 
-The TUI here is more a proof-of-concept than a truly useful feature here, but one thing that's pretty interesting is that the TUI browser (as seen [at the top](#notebooks-ensembles)) turns out to be surprisingly usable even for complex interactive sites like jupyter.. thanks [carbonyl](https://github.com/fathyb/carbonyl)! 
+The TUI here is more a proof-of-concept than a truly useful feature. But one thing that's pretty interesting is that the TUI browser (as seen [at the top](#notebooks-ensembles)) turns out to be surprisingly usable even for complex interactive sites like jupyter.. thanks [carbonyl](https://github.com/fathyb/carbonyl)! 
 
 Since the carbonyl browser is just another container and can also share the network at the *docker layer* instead of via port-forwarding as is done here.. this raises the very intriguing possibility of using `compose.mk` to **daemonize and visualize** completely network-sandboxed interfaces to custom versions of other "runner" services like jupyter, rundeck, argo.
 
@@ -223,8 +222,6 @@ Now that we've effectively created a recipe for mapping **containers** -> **targ
 #### Appendix: Main Jupyter Container
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{#**Via: {{macros.repo_link('demos/data/jupyter/docker-compose.jupyter.yml', github)}}**#}
-
 {{macros.embed_demo(
     'demos/data/jupyter/docker-compose.jupyter.yml',
     class='.language-yaml', type='yaml', github=github)}}
@@ -234,7 +231,6 @@ Now that we've effectively created a recipe for mapping **containers** -> **targ
 
 Below you can see the definitions for all the containers involved the formal-methods toolkit.  Due to size constraints, TLA+ integration is left as an exercise to the reader [but here's a hint](https://github.com/kevinsullivan/TLAPlusDocker/blob/main/.devcontainer/Dockerfile)^[3] =)
 
-{#**Via: {{macros.repo_link('demos/data/jupyter/docker-compose.fmtk.yml', github)}}**#}
 
 {{macros.embed_demo('demos/data/jupyter/docker-compose.fmtk.yml', class='.language-yaml', type='yaml {data-lang="yaml"}', github=github)}}
 
@@ -243,15 +239,11 @@ Below you can see the definitions for all the containers involved the formal-met
 
 We need a base kernel to extend, so this is a version of the official jupyter example that defers to the environment for most of it's configuration.  With this in place, we only need to override a few key values to use a `compose.mk` task (or anything else really).  See the usage of `.kernel.json.template` in the main code for more details.
 
-{#**Via: {{macros.repo_link('demos/data/jupyter/kernel.base/basek.py', github)}}**#}
-
 {{macros.embed_demo('demos/data/jupyter/kernel.base/basek.py', type='python',github=github)}}
 
 ----------------------------
 
 And the template JSON used with overrides for each of the individual kernels:
-
-{#**Via: {{macros.repo_link('demos/data/jupyter/kernel.base/kernel.json.template', github)}}**#}
 
 {{macros.embed_demo('demos/data/jupyter/kernel.base/kernel.json.template', type='json',github=github)}}
 
@@ -275,9 +267,22 @@ If your own vibes are everywhere continuous but nowhere differentiable, then you
 {{bash('cat '+fname+"| awk 'BEGIN {in_header=0; header_count=0} /^---$/ && header_count==0 {in_header=1; header_count=1; next} /^---$/ && in_header==1 {in_header=0; next} !in_header {print}'").replace('###','#####')}}
 {%endfor%}
 
+### References
 <hr style="width:100%;border-bottom:3px solid black;">
+
 [^1]: See the official [nbclient docs](https://github.com/jupyter/nbclient)
 [^2]: We already got a [head start with a lean container in an earlier demo]({{mkdocs.site_relative_url}}/demos/lean)
 [^3]: Actually fleshing out the formal-methods toolkit with many more containers is tempting, but this demo is a limited-space proof of concept so that it can [actually run end-to-end in github actions](#action-pipeline).
 [^4]: AKA carbonyl, reusing the trick from [here]({{mkdocs.site_relative_url}}/advanced-tuis/#understanding-widgets)
 [^5]: If you're a jupyter expert and know a *better way* to get custom kernels in a dynamic way, please do [create an issue describing it]({{github.repo_url}}/issues) so this demo can be slimmed and hardened.
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	addImageToHeader('project-as-tool','/{{mkdocs.config.site_name}}/img/tool.svg');
+	addImageToHeader('cli-mode','/{{mkdocs.config.site_name}}/img/terminal-2.svg');
+	addImageToHeader('tui-mode','/{{mkdocs.config.site_name}}/img/tui.svg');
+	addImageToHeader('discussion','/{{mkdocs.config.site_name}}/img/discussion.svg');
+	addImageToHeader('wui-mode','/{{mkdocs.config.site_name}}/img/world-www.svg');
+	addImageToHeader('pipeline-mode','/{{mkdocs.config.site_name}}/img/pipeline.svg');
+}, 100);});
+</script>

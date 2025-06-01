@@ -1,0 +1,94 @@
+{% import 'macros.j2' as macros -%}
+
+### Admonitions 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+#### Admonitions Used
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+!!! related_links "Related Links"
+    Depending on how you're using it.. you'll need a playbook, maybe a config file and an inventory file, not to mention a python stack, and you'll need the ansible version itself pinned.  
+
+!!! question "The Problem"
+    Depending on how you're using it.. you'll need a playbook, maybe a config file and an inventory file, not to mention a python stack, and you'll need the ansible version itself pinned.  
+    
+    Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+    
+Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+
+!!! goals "Goals"
+    * No ansible-dependency on our host (of course we'll use docker)
+    * Full access to ansible-modules via the command line
+    * Full access to ansible-modules in `make` world, e.g. as composable target prerequisites
+    * Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+
+!!! road_map "Road Map"
+    road_map Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+
+!!! outline "Outline type"
+    * commentary Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+
+!!! danger "Danger Type"
+    danger GUIs + docker is a complex topic.  <font color=red>This page is under construction.</font>  
+
+#### Admonitions Not Used
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+
+!!! commentary "Commentary type"
+    commentary Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+
+!!! info "Info Type"
+    info Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+
+!!! important "Important type!"
+    important Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+
+!!! warning "Warning Style"
+    warning Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+
+!!! quote "Quote type"
+    quote Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+
+!!! note "Note type"
+    note Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+!!! abstract "abstract type"
+    abstract Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+!!! info "info type"
+    info Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+!!! tip "tip type"
+    tip Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+!!! success "success type"
+    success Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+!!! failure "failure type"
+    failure Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+
+!!! question "Question type"
+    question Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+!!! bug "Bug type"
+    bug Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+!!! example "example type"
+    example Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+## Macros 
+------------------------
+
+**advanced_topic:**
+{{macros.advanced_topic("GUIs + docker is a complex topic.  <font color=red>This page is under construction.</font>")}}
+
+**very_optional:**
+{{macros.very_optional("very_optional Nulla et euismod nulla.")}}
+
+{{macros.admonition_note("admonition_note","Nulla et euismod nulla.")}}
+
+{{macros.admonition_info("admonition_info","Nulla et euismod nulla.")}}
+
+{{macros.admonition("danger", "admonition_danger Advanced topic","Nulla et euismod nulla.")}}
+
+**closer_look**
+{{macros.closer_look("The eagle-eyed reader will have noticed that the shells we opened are running inside the TUI container. The project folder is already volume-mounted though, as is the hosts docker-socket. From here, you can imagine setting different working directories for each browser, or even different yazi builds with very different configuration and plugins. ")}}
+    
+**commentary**
+{{macros.commentary("The eagle-eyed reader will have noticed that the shells we opened are running inside the TUI container. The project folder is already volume-mounted though, as is the hosts docker-socket. From here, you can imagine setting different working directories for each browser, or even different yazi builds with very different configuration and plugins. ")}}

@@ -8,6 +8,6 @@
 include demos/tui/dashboarding-dispatch.mk
 golang.base?=docker.io/golang:1.24-bookworm
 bottom: golang.dispatch/chain
-chain: flux.and/clean,build,io.bash
+chain: flux.and/clean,build,io.shell
 golang.dispatch/%:
 	${docker.image.dispatch}/${golang.base}/${*}

@@ -1,6 +1,5 @@
 #!/usr/bin/env -S make -f
-# demos/etl-json.mk: 
-#   Described a JSON-backed ETL pipeline with `compose.mk`
+# Describes a JSON-backed ETL pipeline with `compose.mk`
 #
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.
 # USAGE: ./demos/etl-json.mk
@@ -10,7 +9,7 @@ include compose.mk
 
 # Declare an ETL pipeline, using `flux.pipeline` to bind tasks together.
 # Roughly equivalent to => `make extract | make transform | make load`
-etl: flux.pipeline/extract,transform,load
+etl: flux.pipeline.verbose/extract,transform,load
 
 # Declare a "safe" version of the pipeline that handles failure/cleanup
 etl.safe: flux.try.except.finally/etl,etl.failed,etl.cleanup

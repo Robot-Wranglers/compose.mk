@@ -7,8 +7,10 @@
 
 include compose.mk
 
-$(eval $(call compose.import.as, ▰, demos/data/docker-compose.build-tools.yml))
-$(eval $(call compose.import.as, 🜹, demos/data/docker-compose.docs-tools.yml))
+$(call compose.import.as, namespace=▰ \
+	file=demos/data/docker-compose.build-tools.yml)
+$(call compose.import.as, namespace=🜹 \
+	file=demos/data/docker-compose.docs-tools.yml)
 
 __main__: build docs 
 

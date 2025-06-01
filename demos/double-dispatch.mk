@@ -8,7 +8,7 @@
 
 include compose.mk
 
-$(eval $(call compose.import, demos/data/docker-compose.yml, ▰))
+$(call compose.import,file=demos/data/docker-compose.yml namespace=▰)
 
 # User-facing top-level default target, with two dependencies
 __main__: ▰/debian/self.demo ▰/alpine/self.demo

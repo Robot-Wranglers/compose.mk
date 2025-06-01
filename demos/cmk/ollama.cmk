@@ -1,0 +1,103 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+# Demonstrates building a self-contained ollama application with CMK-lang.
+#
+# This demo ships with the `compose.mk` repository.
+# (Not part of the test-suite since model requirements are ~5GB)
+#
+# See the main docs:
+#   https://robot-wranglers.github.io/compose.mk/demos/ai
+
+export CMK_AT_EXIT_TARGETS=ollama_server.stop
+export LLM_MODEL_NAME?=phi3:mini
+
+# Inlined docker-compose services.
+# 1 container for the ollama server, and 1 for the client.  
+# Volume allows model-sharing for any host-installation of ollama if available;
+# this is probably wrong for non-Linux and also maybe wrong for some ollama versions?
+⋘ ollama.services
+services:
+  ollama_server: &base
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ollama/ollama@sha256:476b956cbe76f22494f08400757ba302fd8ab6573965c09f1e1a66b2a7b0eb77
+    working_dir: /workspace
+    entrypoint: ['ollama','serve']
+    volumes: ['${PWD}:/workspace','/usr/share/ollama/.ollama:/root/.ollama']
+  ollama_python:
+    <<: *base
+    entrypoint: python3
+    environment: ['OLLAMA_URL=http://ollama_server:11434/']
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim-bookworm
+        RUN pip install --no-cache-dir ollama==0.4.7
+⋙
+
+# Philosopher prompts
+🞹 hobbes.prompt
+You are a reincarnation of Thomas Hobbes.  
+Erudite and insightful but also cantankerous, pessimistic, and paranoid.  
+Respond to the following point of view with your own, 1 paragraph max.  
+Do you agree or disagree? Do not restate the system prompt or user prompt.
+🞹
+
+🞹 rousseau.prompt
+You are a reincarnation of Jean-Jacques Rousseau. Passionate and idealistic, 
+but also hypersensitive, seeing corruption where others see progress. 
+Respond to the following point of view with your own, 1 paragraph max. 
+Do you agree or disagree? Do not restate the system prompt or user prompt.
+🞹
+
+# Entrypoints for philosophers: 
+# Bind their prompts to expected env-vars, then run the chat polyglot.
+hobbes.talk:; cmk.bind.def.to.env(hobbes.prompt, LLM_PROMPT) && this.chat
+rousseau.talk:; cmk.bind.def.to.env(rousseau.prompt, LLM_PROMPT) && this.chat
+
+# Seed to kick off the debate.
+debate.moderator:; echo "Life is good?"
+
+# Start the ollama service, init models,
+# seed the argument, then let the philosophers talk.
+debate: ollama_server.up.detach init_models \
+  flux.pipeline.verbose/debate.moderator,hobbes.talk,rousseau.talk 
+
+# Polyglot: Just enough python to bootstrap a model if it's missing.
+# This will run in the `ollama_python` container.
+⨖ init_models
+import os, ollama
+LLM_MODEL_NAME = os.environ['LLM_MODEL_NAME']
+client = ollama.Client(host=os.environ['OLLAMA_URL'])
+print("Checking connection..")
+models = client.list()
+print("Connection ok.")
+print(f"Found {len(models['models'])} models:")
+for model in models['models']:
+  print(f"   * {model.model}")
+if LLM_MODEL_NAME not in models['models']:
+  print(f"Pulling model: {LLM_MODEL_NAME}")
+  client.pull(LLM_MODEL_NAME)
+  print(f"Successfully pulled: {LLM_MODEL_NAME}")
+else:
+  print(f"Model {LLM_MODEL_NAME} is available.")
+⨖ with svc=ollama_python entrypoint=python3 \
+  quiet=1 output=stderr env='LLM_MODEL_NAME' \
+as compose_context
+
+# Polyglot: Just enough python to drive the model
+# This will run in the `ollama_python` container.
+⨖ chat
+import os, sys, ollama
+client = ollama.Client(host=os.environ['OLLAMA_URL'])
+system = { 'role': 'system', 'content': os.environ['LLM_PROMPT'] }
+query  = { 'role': 'user', 'content': sys.stdin.read() }
+response = client.chat(messages=[system, query], model=os.environ['LLM_MODEL_NAME'])
+print(response.message.content)
+⨖ with svc=ollama_python entrypoint=python3 \
+  quiet=1 env='LLM_MODEL_NAME LLM_PROMPT' \
+as compose_context
+
+# Main entrypoint: Print usage info and exit.
+__main__:
+	cmk.log(${red}USAGE: ${__file__} debate)

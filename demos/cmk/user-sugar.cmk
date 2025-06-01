@@ -1,14 +1,13 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret!
-# demos/cmk/user-sugar.cmk: 
-#   Showing user-defined rules for CMK -> Makefile transpilation.
-#   You can define cmk_dialect and cmk_sugar individually or together.
+# Showing user-defined rules for CMK -> Makefile transpilation.
+# You can define cmk_dialect and cmk_sugar individually or together.
 #   
 # cmk_dialect ::: [
 #   ["cmk.io.","${make} io."], 
 #   ["this.","${make} "]
 # ] :::
 # cmk_sugar ::: [
-#   ["𒀹","𒀺","$(eval $(call compose.import.string,__NAME__,TRUE))"]
+#   ["𒀹","𒀺","$(call compose.import.string, def=__NAME__ import_to_root=TRUE)"]
 # ] :::
 #
 # USAGE: ./demos/cmk/user-sugar.cmk

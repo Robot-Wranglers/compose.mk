@@ -1,15 +1,13 @@
 #!/usr/bin/env -S make -f
-# demos/lean.mk: 
-#   This example shows an embedded container with a lean+mathlib container, 
-#   plus enough glue code for dispatch so that we can abstract away the container usage.
-#   Included is a script and a theorem that we'll test with, but of course external files 
-#   are supported as well.
+# Demonstrates an embedded container with a lean+mathlib container, 
+# plus enough glue code for dispatch so that container usage is abstracted away.
+# Included is a script and a theorem that we'll test with, but of course external files 
+# are supported as well.
 #
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/demos/lean
-#           http://robot-wranglers.github.io/compose.mk/demos/polyglots
 #
 # USAGE: ./demos/lean.mk
+# DOCS: http://robot-wranglers.github.io/compose.mk/demos/lean
 
 include compose.mk
 
@@ -70,13 +68,11 @@ __main__: \
 	lean.run.script/my.script \
 	lean.run.theorem/my.theorem
 
-# Top-level helpers. 
-# These write embedded script/theorem to disk before use, 
+# Helpers that write embedded script/theorem to disk before use, 
 # run them inside the container, and clean up afterwards.
 lean.run.script/%:; lean_args="--run" ${make} lean.run.generic/${*}
 
 lean.run.generic/% lean.run.theorem/%:
-	${io.mktemp} \
-	&& ${make} mk.def.to.file/${*}/$${tmpf} \
+	${io.mktemp} && ${make} mk.def.to.file/${*}/$${tmpf} \
 	&& img=Lean cmd="$${lean_args:-} $${tmpf}" \
 		${make} mk.docker

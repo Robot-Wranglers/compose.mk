@@ -1,0 +1,214 @@
+{% import 'macros.j2' as macros -%}
+## Icons
+
+* https://tabler.io/icons
+* https://icons.getbootstrap.com/
+
+## Documentation Demos
+<hr style="width:100%;border-bottom:3px solid black;">
+!!! outline "Outline type"
+    * [Admonitions Demos](admonitions/)
+    * [Inlined Examples](#inlined-examples)
+    * [Syntax Highlighting / API](#api)
+    * [File Embeddings](#file-embeddings)
+    * [CLI Showcase](#cli-showcase)
+
+### Images
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Using img_link with reset class:
+
+{{macros.img_link("escher-babel.png", mkdocs, "58%",align='center', class=" ")}}
+
+------------------
+
+Using `img_link class=cli_output align=center`:
+
+```bash {.cli_example .language-bash}
+$ ./demos/cmk/xephyr.cmk 
+```
+{{macros.img_link("gui1.gif", mkdocs, "95%", align='center',class="cli_output")}}
+
+------------------
+
+Fixed width, no args:
+
+{{macros.img_link("tui-extension-1.png", mkdocs, "350px")}}
+
+### File Embeddings
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Using `macros.embed_demo`:
+
+{{macros.embed_demo('demos/logging.mk', github=github)}}
+
+Using `macros.embed_demo` where type=yaml :
+
+{{macros.embed_demo('demos/data/docker-compose.yml', github=github, type='yaml')}}
+
+### Inlined Examples
+<hr style="width:100%;border-bottom:3px solid black;">
+
+* Numero uno `echo key=val | ./compose.mk jb`
+* The second: `./compose.mk mk.def.read/cmk.default.dialect`
+* Random: `echo testing | random --stuff`
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+* mkdocs, readthedocs 
+* jinja2, pynchon
+* [prismjs](https://prismjs.com/index.html) 
+* [tabler icons](https://tabler.io/icons)
+### Snippets
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Using `macros.code_table` with class="cli_example snippet":
+
+{{macros.code_table('title', github=github, title='my title')}}
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Using `Makefile {.snippet .language-Makefile}`:
+
+```Makefile {.snippet .language-Makefile}
+# Include compose.mk for access to target API and macros.
+include compose.mk
+
+# If you brought tool containers, you'll want to import them.
+# Call the bridge-building macro to get targets for each service.
+$(call compose.import, docker-compose.yml)
+
+# At this point, scaffolded targets are defined for 
+# the tool containers mentioned in the compose file.
+# Now you can dispatch any task to any tool container.
+test: tool_container_name.dispatch/self.test
+    ${make} io.print.banner/label
+
+self.test:
+	echo hello world from container `uname -n -v`
+    compose.mk fooo bar 
+    ./compose.mk fooo bar 
+    ${self} io.print.banner/label
+    this.test 
+    ${make} io.print.banner/label
+    ./path/to/place
+    "./path/to/place"
+    printf ./path/to/place
+	
+```
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+### Admonitions
+<hr style="width:100%;border-bottom:3px solid black;">
+
+[See the full list here](admonitions/)
+
+### API
+<hr style="width:100%;border-bottom:3px solid black;">
+
+#### `macros.api_link`
+
+**Render individual api-links with some options for customizing appearance**
+
+These polyglots are supported by {{macros.api_link('io.awk',mkdocs,'def_name')}} and {{macros.api_link('io.shell',mkdocs,'def_name,optional_args')}}
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+
+#### `macros.api_link_many`
+
+
+**Render groups or namespaces of api-links in a table**
+
+2 targets using `macros.api_link_many(['io.awk','io.shell'], mkdocs,arg='defname')`
+
+{{macros.api_link_many(['io.awk','io.shell'], mkdocs,arg='defname')}}
+
+2 namespaces using `macros.api_link_many(['flux.stage','io.stack'], mkdocs)`
+
+{{macros.api_link_many(['flux.stage','io.stack'], mkdocs)}}
+
+{#%include "meta/api.md.j2" %#}
+
+### CLI Showcase
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Pairing `bash  {.cli_example}` and `json {.cli_output}`:
+
+```bash {.cli_example}
+$ ./compose.mk mk.parse/compose.mk
+```
+```json {.language-json .cli_output}
+{
+  ..
+  "mk.parse/%": {
+    "file": "compose.mk",
+    "lineno": 2056,
+    "chain": [],
+    "type": "implicit",
+    "docs": [
+      " Parses the given Makefile, returning JSON output that describes the targets, docs, etc. This parsing is \"deep\", i.e. it returns docs & metadata for *included* targets as well. This uses a dockerized version of the pynchon[1] tool.",
+      "",
+      " REFS:",
+      "* `[1]`: https://github.com/robot-wranglers/pynchon/",
+      ""
+    ],
+    "prereqs": [],
+    "regex": "mk.parse/.*",
+    "implementors": []
+  },
+  ..
+```
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Using `bash  {.cli_example} {.command-line}`:
+
+```bash  {.cli_example} {.command-line}
+# Output JSON using `jb`
+$ echo key=val | ./compose.mk jb
+{"key":"val"}
+
+# Parse JSON using `jq`
+$ echo key=val | ./compose.mk jb | ./compose.mk jq -r .key
+val
+
+# Alternate approach, outputting JSON without input-pipes.
+# Fine for simple stuff, not suitable for more complicated use cases.
+$ ./compose.mk jb key=val foo=bar
+{"key":"val"}
+```
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Using `bash  {.cli_example}`:
+
+```bash {.cli_example data-prompt="$"}
+$ ./compose.mk mk.def.read/cmk.default.dialect
+[
+  ["🡆", "${stream.stdin} | ${jq} -r"],
+  ["🡄", "${jb}"],
+  ["this.", "${make} "]
+  ...
+]
+```
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Using `bash  {.cli_example}`:
+
+``` bash {.cli_example}
+# Opens 3 panes with container-shells
+$ ./compose.mk loadf ./demos/data/docker-compose.yml \
+    tux.open.service_shells/debian,alpine,debian
+
+# Equivalently, using lower-level generic targets
+$ ./compose.mk loadf ./demos/data/docker-compose.yml \
+    tux.open/debian.shell,alpine.shell,debian.shell
+
+# Opens 2 panes of bash-shells for the TUI container itself
+$ ./compose.mk loadf ./demos/data/docker-compose.yml tux.open/io.shell,io.shell
+```
+
+### References
+<hr style="width:95%;border-bottom:1px dashed black;">

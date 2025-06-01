@@ -1,6 +1,5 @@
 #!/usr/bin/env -S make -f
-# demos/etl-img.mk:
-#   Describes an image pipeline with `compose.mk`.
+# Describes an image pipeline with `compose.mk`.
 #
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # USAGE: ./demos/etl-img.mk 
@@ -30,8 +29,5 @@ transform:; ${stream.stdin} | cmd="png:- jpg:-" ${make} convert
 # Under the hood, `stream.img.preview` target uses a dockerized `chafa`.
 load: stream.img.preview
 
-# One last thing: since this pipeline is using images,
-# we need to stop `flux.pipeline` from showing us the
-# intermediate stages, or else we'll just get binary data.
-# Using `flux.pipeline.quiet` defaults to no previews.
-etl: flux.pipeline.quiet/extract,transform,load
+# Putting it together..
+etl: flux.pipeline/extract,transform,load

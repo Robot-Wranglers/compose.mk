@@ -1,116 +1,30 @@
+# See the demo docs: https://robot-wranglers.github.io/compose.mk/demos/RAG
 services:
-  rag: &base
-    image: compose.mk:rag
+  ollama: &base
     build:
       context: .
       dockerfile_inline: |
         FROM ollama/ollama@sha256:476b956cbe76f22494f08400757ba302fd8ab6573965c09f1e1a66b2a7b0eb77
-        RUN apt-get update -qq && apt-get install -qq -y software-properties-common
-        RUN add-apt-repository ppa:deadsnakes/ppa
-        RUN apt-get update -qq && apt-get install -y -qq wget python3.11 python3.11-dev python3.11-venv
-        RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && update-alternatives --config python3
-        RUN wget https://bootstrap.pypa.io/get-pip.py && python3.11 get-pip.py && rm get-pip.py
-        RUN pip install --no-cache-dir langchain==0.3.22 langchain-community==0.3.20 
-        RUN pip install --no-cache-dir ollama==0.4.7 sentence-transformers==4.0.2 faiss-cpu==1.10.0 
-        RUN pip install --no-cache-dir tqdm==4.67.1 unstructured[md]==0.17.2
-        RUN pip install --no-cache-dir langchain-ollama
-        RUN pip install --no-cache-dir langchain-huggingface
     working_dir: /workspace
-    # configs:
-    #   - source: rag.py
-    #     target: rag.py
-    entrypoint: ["python3.11","/opt/rag.py"]
-    links:
-      - ragd 
-    volumes:
-      - ${PWD}:/workspace
-      # - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-      # - ${PWD}/docs:/app/docs
-      # - ${PWD}/demos/data/llm:/app/data
-      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
-      # - /usr/share/ollama/.ollama:/root/.ollama
-    environment: 
-      OLLAMA_HOST: ragd
-    configs:
-      - source: rag.py
-        target: /opt/rag.py
-
-    # OLLAMA_MODELS
-    # depends_on:
-    #   - ollama
-# volumes:
-#   ollama_data:
-
-  ragd: 
-    <<: *base
-    # ports:
-    #   - "11434:11434"
     entrypoint: ['ollama','serve']
-    links: []
     volumes:
-      - ${PWD}:/workspace
-      # - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-      # - ${PWD}/docs:/app/docs
-      # - ${PWD}/demos/data/llm:/app/data
-      # - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+      # NB: this allows model-sharing for any host-installation of ollama if 
+      # it's available. Probably wrong for non-Linux and also maybe wrong for 
+      # some ollama versions?
       - /usr/share/ollama/.ollama:/root/.ollama
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
-configs:
-  rag.py:
-    content: |
-      import os
-      import sys 
-      import faiss
-      from langchain_community.document_loaders import DirectoryLoader
-      from langchain_text_splitters import RecursiveCharacterTextSplitter
-      from langchain_community.vectorstores import FAISS
-      # from langchain_community.embeddings import OllamaEmbeddings
-      # from langchain_community.llms import Ollama
-      from langchain_ollama import OllamaLLM
-      from langchain.chains import RetrievalQA
-      from langchain_huggingface import HuggingFaceEmbeddings
-
-      OLLAMA_HOST=os.environ.get('OLLAMA_HOST','ragd')
-      OLLAMA_PORT=os.environ.get('OLLAMA_PORT','11434')
-      DB_PATH = "faiss_index"
-
-      # Load and split documents
-      loader = DirectoryLoader("docs/", glob="*.md", show_progress=True)
-      documents = loader.load()
-      text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-      docs = text_splitter.split_documents(documents)
-
-      # Initialize embeddings
-      # embeddings = OllamaEmbeddings(model="phi3:mini")
-      # embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-en")
-      embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-      # Check if FAISS index exists
-      if os.path.exists(DB_PATH):
-      # if False:
-          print("Loading existing FAISS index...")
-          vectorstore = FAISS.load_local(DB_PATH, embeddings, allow_dangerous_deserialization=True)
-      else:
-          print("Generating new FAISS index...")
-          vectorstore = FAISS.from_documents(docs, embeddings)
-          vectorstore.save_local(DB_PATH)  # Save to disk for reuse
-
-      retriever = vectorstore.as_retriever()
-
-      llm = OllamaLLM(model="phi3:mini",base_url=f"http://{OLLAMA_HOST}:{OLLAMA_PORT}")
-
-      # Create RAG chain
-      qa_chain = RetrievalQA.from_chain_type(llm, retriever=retriever)
-
-      # Run query
-      query=' '.join(sys.argv[1:])
-      print(f'Running query: {query}')
-      # query = "Describe features related to markdown"
-      response = qa_chain.invoke(query)
-
-      print(response.get('result', 'RAG result failure?'))
+      # Share the hosts working directory- this is for document ingestion
+      - ${PWD}:/workspace
+  ollama_python: 
+    <<: *base
+    entrypoint: python3
+    depends_on: ['ollama'] 
+    links: ['ollama']
+    environment:
+      - OLLAMA_URL=http://ollama:11434/
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim-bookworm
+        RUN pip install --no-cache-dir ollama==0.4.7
+        RUN apt-get update -qq && apt-get install -qq -y \
+          make procps curl iputils-ping curl
