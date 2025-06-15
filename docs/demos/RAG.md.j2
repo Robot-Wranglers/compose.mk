@@ -25,8 +25,6 @@ CITATIONS:
 - /workspace/docs/but-why.md ("Polyglots Considered...")
 ```
 
---------------
-
 The way this demo works is that you specify a corpus with a file pattern glob, and then provide a verb like `summarize`, `ask` or `chat` to select how you want to interact with the corpus.  You can override the models used by the backend, but the default models are `phi3:mini` for the LLM and `all-MiniLM-L6-v2` for the embeddings.  
 
 This demo is **local only**, **CLI-friendly**, and as long as you have `make` and `docker` it will bootstrap itself.  Users can therefore enjoy: *no daemons required, no manual installation of python dependencies, no API tokens, and no admonitions to "open this thing in your web browser", no open ports.*  And the pirates of course.  Pirates describing [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots).
@@ -214,7 +212,7 @@ You can download the agent [here]({{mkdocs.site_relative_url}}/artifacts/docs.ag
 
 {#**Via: {{macros.repo_link('demos/data/docker-compose.rag.yml', github=github)}}**#}
 
-{{macros.embed_demo('demos/data/docker-compose.rag.yml', type='python', github=github)}}
+{{macros.embed_demo('demos/data/docker-compose.rag.yml', type='yaml', github=github)}}
 
 <hr style="width:100%;border-bottom:3px solid black;">
 

@@ -1,6 +1,5 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret!
-# demos/cmk/inlined-composefile.cmk: 
-#   CMK-lang translation of demos/inlined-composefile.mk
+# CMK-lang translation of demos/inlined-composefile.mk
 # USAGE: ./demos/cmk/inlined-composefile.cmk
 
 ⋘ inlined.services

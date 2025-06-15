@@ -1,6 +1,5 @@
 #!/usr/bin/env -S make -f
-# demos/code-objects.mk: 
-#   Demonstrating first-class support for foreign code-blocks in `compose.mk`.
+# Demonstrating first-class support for foreign code-blocks in `compose.mk`.
 #
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # USAGE: ./demos/code-objects.mk
@@ -11,7 +10,7 @@ include compose.mk
 python.img=python:3.11-slim-bookworm
 python.interpreter=python
 
-# Now define the python code
+# Define the python code
 define hello_world 
 print('hello world')
 endef

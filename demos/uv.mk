@@ -1,11 +1,10 @@
 #!/usr/bin/env -S make -f
-# demos/uv.mk: 
-#   Demonstrate polyglots with compose.mk.  
-#   Python code running in a container, with dependencies and no venv, using uv. 
-#   No caching! Note that this implicitly pulls not only dependencies but even 
-#   the python version is also lazy and built just in time, immediately prior to use.
+# Demonstrate polyglots with compose.mk.  
+# Python code running in a container, with dependencies and no venv, using uv.
+# No caching! Note that this implicitly pulls not only dependencies but also
+# the python version is also lazy and built just in time, immediately prior to use.
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.
 # See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
 # USAGE: ./demos/uv.mk
 

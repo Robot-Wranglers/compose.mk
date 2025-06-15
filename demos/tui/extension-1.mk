@@ -1,9 +1,8 @@
 #!/usr/bin/env -S make -f
-# demos/tui/extension-1.mk:
-#   Minimal demo for extending the embedded TUI.  See docs for more discussion.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.
+# Minimal demo for extending the embedded TUI.  See docs for more discussion.
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.
 #
-#   USAGE: ./demos/tui/extension-1.mk
+# USAGE: ./demos/tui/extension-1.mk
 
 include compose.mk
 

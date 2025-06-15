@@ -1,9 +1,8 @@
 #!/usr/bin/env -S make -f
-# demos/elixir.mk: 
-#   Demonstrating polyglots using elixir.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-#   See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
-#   USAGE: ./demos/elixir.mk
+# Demonstrating polyglots using elixir.
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
+# USAGE: ./demos/elixir.mk
 
 include compose.mk
 
@@ -28,7 +27,7 @@ demo.elixir1:
 	img=${elixir.img} entrypoint=${elixir.interpreter} \
 		def=hello_world ${make} docker.run.def
 	
-# Another way, using piping and streamsmacros & pipes
+# Another way, using piping and streams
 demo.elixir2:
 	${mk.def.read}/hello_world \
 		| ${stream.to.docker}/${elixir}

@@ -1,51 +1,52 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret!
-# demos/rag.mk: 
-#   Demonstrates building a self-contained RAG pipeline with compose.mk, 
-#   docker-compose, ollama and langchain.  No host dependencies, host ports, etc
+# Demonstrates building a self-contained RAG pipeline with compose.mk, 
+# docker-compose, ollama and langchain.  No host dependencies, no host ports.
 #
-# This demo ships with the `compose.mk` repository but does NOT run as part of the 
-# test-suite, because model requirements are ~5GB.
+# This demo ships with the `compose.mk` repository, but 
+# does NOT run as part of the test-suite (model requirements are ~5GB)
 #
-# See the main docs: https://robot-wranglers.github.io/compose.mk/demos/RAG
+# See the main docs:
+#   https://robot-wranglers.github.io/compose.mk/demos/RAG
 #
-#   USAGE: 
-#     # Ask a one-shot question
-#     glob='docs/*.md' query='what is this project about?' ./demos/cmk/rag.cmk ask
+# USAGE: 
+#  # Ask a one-shot question
+#  glob='docs/*.md' query='what is this project about?'
+#     ./demos/cmk/rag.cmk ask
 #
-#     # Interactively chat with a glob 
-#     glob='docs/*.md' ./demos/cmk/rag.cmk chat
+#  # Interactively chat with a glob 
+#  glob='docs/*.md' ./demos/cmk/rag.cmk chat
 
 ## Create target-scaffolding for all containers in compose file.
 compose.import(demos/data/docker-compose.rag.yml)
 
-## These are default values in the python script anyway, 
-## but this is here to be explicit and allows for user overrides.
+# These are default values in the python script anyway, 
+# but this is here to be explicit and allows for user overrides.
 export EBD_MODEL_NAME?=all-MiniLM-L6-v2
 export LLM_MODEL_NAME?=phi3:mini
 export OLLAMA_PORT?= 11434
 
-## Don't override this one- 
-## this detects if ollama is available on the host, or if not uses compose service
+# Don't override this one- 
+# Detects if ollama is available on the host, or if not uses compose service
 export OLLAMA_HOST:=$(shell \
 	${io.curl.stat} http://localhost:${OLLAMA_PORT} \
 	&& echo localhost || echo ollama_server)
 
-## Nix some of the logging output for clarity, add macros
-## to stream-line the repetitive parts of wrapper-targets
+# Nix some of the logging output for clarity, add macros
+# to stream-line the repetitive parts of wrapper-targets
 export quiet=1
 export rag_script=demos/data/rag.py
 export glob?=docs/*.md
 corpus_count=$${glob} (${yellow}`ls $${glob} | wc -l`${no_ansi_dim} files total)
 
-__main__:; cmk.log(${red}USAGE: See https://robot-wranglers.github.io/compose.mk/demos/RAG/)
+__main__:
+	cmk.log(${red}USAGE: See https://robot-wranglers.github.io/compose.mk/demos/RAG/)
 
-## Preparing to dispatch commands into the `rag` service defined in the compose file.
-## This uses the scaffolded target created by `compose.import` call at the top.
-## This is a partial, not ready to run until it gets a `cmd`.  See targets below
+# Helper to dispatch commands to `rag` service defined in the compose file.
+# This uses the scaffolded target created by `compose.import` call at the top.
+# This is a partial, not ready to run until it gets a `cmd`.  See targets below
 wrapper=${make} rag ${streams.join} | ${stream.as.log}
 
-## Begin simple wrapper targets, 
-## one for each of the python script subcommands
+# Begin simple wrapper targets, 1 for each python script subcommand
 init:
 	@# Ensure given model is available to ollama, downloading if needed.
 	@# Implied by `ingest`, `ask`, and `chat`.
@@ -72,15 +73,15 @@ chat:
 	cmk.log.target(Chatting with corpus: ${corpus_count})
 	cmd="${rag_script} chat '$${glob}'" this.rag
 
-## A new verb, this builds on top of the python script's API instead of just using it.
+# New verb, this builds on top of the script's API instead of just using it
 summarize:
 	@# An alias for `ask` that summarizes files matching the given pattern.
 	query="summarize all of the content" this.ask
 
-## Default behaviour for docker compose is to bring up containers 
-## that are required by `depends_on`, but it never shuts them down!
-## Thus when `rag` container `depends_on` `ollama_server`, we still
-## need to clean up.
+# Default behaviour for docker compose is to bring up containers 
+# that are required by `depends_on`, but it never shuts them down!
+# Thus when `rag` container `depends_on` `ollama_server`, we still
+# need to clean up.
 export CMK_AT_EXIT_TARGETS=stop
 
 stop: ollama_server.stop

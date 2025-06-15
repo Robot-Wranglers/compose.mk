@@ -71,7 +71,9 @@ Actually, `ansible` has lots of random cool utilities, even if the friction invo
 # Set your KUBECONFIG first
 
 k8s: ansible.adhoc.args/kubernetes.core.k8s
-cluster.purge:; echo namespace=testing kind=Deployment delete_all=true | make k8s
+cluster.purge:
+	echo namespace=testing kind=Deployment delete_all=true \
+		| make k8s
 ```
 
 And importing something like `cluster.purge` is what we were really aiming at originally: *a verby high-level and domain-specific API*, with tasks accessible individually or in groups from CLI, or available to programmatically chain together as DAGs.

@@ -1,6 +1,5 @@
 #!/usr/bin/env -S make -f
-# demos/tinycc.mk: 
-#   Demonstrating polyglots and running as first-class objects in `compose.mk`, .
+# Demonstrating compiled-language polyglots in `compose.mk`.
 #
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots

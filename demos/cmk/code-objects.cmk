@@ -1,6 +1,5 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret!
-# demos/cmk/code-objects.cmk: 
-#   CMK-lang translation of demos/code-objects.mk
+# CMK-lang translation of demos/code-objects.mk
 # USAGE: ./demos/cmk/code-objects.cmk
 
 # Main entrypoint, showing how to preview and run embedded code.

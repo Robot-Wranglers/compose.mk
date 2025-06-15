@@ -54,7 +54,10 @@ In the code, the differences start right away.  See the shebang at the top of th
 
 {{macros.embed_demo('demos/interpreter.mk', github=github)}}
 
-Using `compose.mk` to "interpret" your makefile isn't as magical as it sounds.  You can think of it as effectively *inserting **your** makefile at the bottom of the compose.mk source code,* then running the resulting temporary file as usual with `make`.  As a result of this simple operation though, there are two important side-effects.  First, your source code has access to the entire `compose.mk` API implicitly regardless of any `include`, and second, you inherit the `compose.mk` extensions to signals.
+Using `compose.mk` to "interpret" your makefile isn't as magical as it sounds.  You can think of it as effectively *inserting **your** makefile at the bottom of the compose.mk source code,* then running the resulting temporary file as usual with `make`.  As a result of this, there are two important side-effects for project automation:
+
+1. Automation has access to `compose.mk` API implicitly (regardless of any `include`)
+1. Automation inherits the `compose.mk` extensions to signals
 
 !!! closer_look "Closer Look"
     The next extremely magical line is the call to `mk.yield`, where the argument is the command line that you want to *yield execution to*.  We yield in this case to `ls $${MAKE_CLI#*ls}`, where the right side expands to "the full command line, *after* the word `ls`".[^4]
@@ -63,7 +66,7 @@ At this point as long as the file is executable, then `./demos/interpreter.mk ls
 
 You can skip the usage of `compose.mk` as an interpreter by invoking the file as `make -f demos/interpreter.mk ls /`, which *does work*, but includes a `Supervisor not found` message at the end.  And whereas `./demos/interpreter.mk` runs `__main__` and exits early with success, `make -f ./demos/interpreter.mk` fails because it does not exit early.
 
-!!! danger Achtung 
+!!! danger "Caveat" 
     A subtle but **potentially serious issue** with this approach is that `./demos/interpreter.mk ls -la` works as expected, but `./demos/interpreter.mk ls --help` actually returns *help for make* and **not** *help for ls*.. implying that our intent to proxy the "rest" of the command line still has some limitations, and it actually depends on the content of that command line.
 
 If you're only interested in proxy for **positional arguments** then this won't matter, meanwhile **option-proxy** works in some cases but must always be tested carefully.
@@ -96,17 +99,24 @@ Anyway, using it looks like this:
 
 ```bash {.cli_example}
 $ ./demos/interpreter-3.mk my-normal-target
-
+```
+```bash {.cli_output}
 hello normal make target
+```
 
+```bash {.cli_example}
 $ ./demos/interpreter-3.mk 
-
+```
+```bash {.cli_output}
 hello python opt parse
 bar is set
 foo is my.foo
+```
 
+```bash {.cli_example}
 $ ./demos/interpreter-3.mk script.run -- --help
-
+```
+```bash {.cli_output}
 hello python opt parse
 Usage: python_script [options] filename
 
@@ -130,7 +140,8 @@ Here's the output:
 
 ```bash {.cli_example}
 $ ./demos/interpreter-4.mk main_target
-
+```
+```bash {.cli_output}
 hello pre-hook
 hello main
 hello post-hook

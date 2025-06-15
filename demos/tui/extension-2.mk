@@ -1,11 +1,12 @@
 #!/usr/bin/env -S make -f
-# demos/tui/extension-2.mk: 
-#   Second TUI extension.  This keeps the yazi file-browser from
-#   the first version, and adds a target-selector and a web browser.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.
+# Building on demos/tui/extension.mk. This keeps the yazi file-browser 
+# from the first version, and adds a target-selector and a web browser.
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.
 #
-#   USAGE: ./demos/tui/extension-2.mk
-#   See the docs for more discussion: https://robot-wranglers.github.io/compose.mk/advanced-tuis
+# See the docs for more discussion: 
+#  https://robot-wranglers.github.io/compose.mk/advanced-tuis
+#
+# USAGE: ./demos/tui/extension-2.mk
 
 # Pickup where the first extension left off 
 include demos/tui/extension-1.mk

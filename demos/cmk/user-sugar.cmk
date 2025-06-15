@@ -1,7 +1,6 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret!
-# demos/cmk/user-sugar.cmk: 
-#   Showing user-defined rules for CMK -> Makefile transpilation.
-#   You can define cmk_dialect and cmk_sugar individually or together.
+# Showing user-defined rules for CMK -> Makefile transpilation.
+# You can define cmk_dialect and cmk_sugar individually or together.
 #   
 # cmk_dialect ::: [
 #   ["cmk.io.","${make} io."], 

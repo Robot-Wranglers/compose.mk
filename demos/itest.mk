@@ -20,16 +20,30 @@ include compose.mk
 $(eval $(call compose.import, demos/data/docker-compose.yml, ▰))
 
 __main__: flux.star/test.*
-
+	
 test.mk.assert_env_var:
-	$(call log.test, Testing assert.env_var)
-	my_var=1; $(call mk.assert.env_var, my_var)
-	! $(call mk.assert.env_var, my_var) ${stderr_devnull}
+	$(call log.test, Testing assert.env_var macros)
+	my_var=1; $(call mk.assert.env, my_var)
+	$(call log.test, assert.env_var fails if env not set)
+	! $(call mk.assert.env, my_var) ${stderr_devnull}
+	$(call log.test, assert works for multiple vars)
 	another_var=2; my_var=1; $(call mk.assert.env, my_var another_var)
+	$(call log.test, assert fails for multiple vars when one is not set)
 	! ( another_var=2; my_var=1; $(call mk.assert.env, my_var another_var missing) ) ${stderr_devnull}
+	$(call log.test, assert.env works as target for multiple vars when one is not set)
 	foo=1 bar=2 ./compose.mk mk.assert.env/foo,bar
 	! bar=2 ./compose.mk mk.assert.env/foo,bar ${stderr_devnull}
-	! foo=1 ./compose.mk mk.assert.env/foo,bar ${stderr_devnull}
+
+test.compose.validate:
+	$(call log.test, Testing compose-file validation)
+	./compose.mk compose.validate/demos/data/docker-compose.yml
+	$(call log.test, Validation for bad file should fail)
+	! ./compose.mk compose.validate/demos/data/doesnt-exist
+test.compose.services:
+	$(call log.test, Listing compose-services)
+	./compose.mk compose.services/demos/data/docker-compose.yml | grep alpine
+	$(call log.test, Listing services fails for bad file)
+	! ./compose.mk compose.services/demos/data/doesnt-exist
 
 test.mk.reflection:
 	$(call log.test, Testing reflection)

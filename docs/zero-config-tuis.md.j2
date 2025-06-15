@@ -18,7 +18,7 @@ For a simple demo that's just exercising containerized `tmux`, geometry, and dis
 ```bash {.cli_example}
 $ ./compose.mk tux.demo
 ```
-{{macros.img_link("tui-tte.gif", mkdocs, "350px",class="cli_output")}}
+{{macros.img_link("tui-tte.gif", mkdocs, "90%",class="cli_output")}}
 
 Embedded TUI capapbilities are usually pulled/built just-in-time and on request, then cached afterwards. So besides doing some basic testing, this has the effect of "priming" the TUI for the other examples below.
 
@@ -30,7 +30,7 @@ For a more involved example of dashboarding, try {{macros.api_link('docker.comma
 ```bash {.cli_example}
 $ ./compose.mk docker.commander  
 ```
-{{macros.img_link("docker.commander.gif", mkdocs, "350px",class="cli_output")}}
+{{macros.img_link("docker.commander.gif", mkdocs, "90%",class="cli_output")}}
 
 
 #### Working with Compose-Files
@@ -122,7 +122,7 @@ $ layout=horizontal \
         mk.include/demos/no-include.mk \
         tux.open/flux.loopf/test,flux.wrap/clean:build
 ```
-{{macros.img_link("zero-config-tui.gif", mkdocs, "60%", class="cli_output")}}
+{{macros.img_link("zero-config-tui.gif", mkdocs, "90%", class="cli_output")}}
 
 Expanding on this.. you could add the `io.bash` target to the comma-separated list of `tux.open` arguments for an additional pane featuring an interactive shell.  Or you could add the {{macros.api_link('io.env',mkdocs,arg='var_prefix')}} target to dump a list of relevant environment variables for this project.  You get the idea.
 
