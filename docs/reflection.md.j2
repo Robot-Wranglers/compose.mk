@@ -71,7 +71,7 @@ $ ./compose.mk mk.validate/Makefile mk.validate/compose.mk
 #### Reading Defines
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-Reading `define ... endef` blocks from makefiles is important for several different `compose.mk` features that rely on embedded data.  And crucially, the contents of those blocks **must not be mangled**, escaped, interpolated, etc.  This feature is the foundation that all sorts of other stuff is built on, including support for [polyglots](#) and [the embedded tui](#) as well as [inlined Dockerfiles](#), etc.
+Reading `define ... endef` blocks from makefiles is important for several different `compose.mk` features that rely on embedded data.  And crucially, the contents of those blocks **must not be mangled**, escaped, interpolated, etc.
 
 ```bash {.cli_example}
 $ ./compose.mk mk.def.read/Dockerfile.stream.pygmentize
@@ -80,6 +80,8 @@ $ ./compose.mk mk.def.read/Dockerfile.stream.pygmentize
 FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
 RUN apk add -q --update py3-pygments
 ```
+
+This feature is the foundation that all sorts of other stuff is built on, including support for [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [the embedded tui]({{mkdocs.site_relative_url}}/embedded-tui) as well as [inlined Dockerfiles]({{mkdocs.site_relative_url}}/raw-docker), etc.
 
 {{macros.api_link_many(['mk.def'],mkdocs)}}
 
@@ -100,14 +102,16 @@ For a more practical example, see [this section]({{mkdocs.site_relative_url}}/co
 
 There are various ways to enumerate available targets for the current runtime, either restricting it to targets defined in the local file, or adding targets from `include` as well.  
 
-One nice thing about this is the ability to easily dispatch *all targets matching a given pattern*.  See the API for {{macros.api_link('flux.star',mkdocs,arg='pattern')}}, or the following example of how it's used in the test suite:
+One nice thing about this is the ability to easily dispatch *all targets matching a given pattern*.  
 
-{{macros.embed_demo('demos/inlined-dockerfile.mk', github=github)}}
+{{macros.embed_demo('demos/flux.star.mk', github=github)}}
+
+See also the API docs for {{macros.api_link('flux.star',mkdocs,arg='pattern')}}.
 
 #### Dynamic Includes and Targets
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-To a certain extent, `compose.mk` can do experimental *runtime* modification of `make` itself (or at least simulate it).  Under the hood, this works by using code-generation to create a new Makefile just in time, and then [turning execution over to it]({{mkdocs.site_relative_url}}/signals/).  Also somewhat related is [the interpreter]({{mkdocs.site_relative_url}}/signals/#inheritance-interpreters), and [the CMK compiler]({{mkdocs.site_relative_url}}/compiler).
+To a certain extent, `compose.mk` can do *runtime* modification of `make` itself (or at least simulate it).  Under the hood, this works by using code-generation to create a new Makefile just in time, and then [turning execution over to it]({{mkdocs.site_relative_url}}/signals/).  Also somewhat related is [the interpreter]({{mkdocs.site_relative_url}}/signals/#inheritance-interpreters), and [the CMK compiler]({{mkdocs.site_relative_url}}/compiler).
 
 **Create a new target dynamically.** Here's an example that creates a new target on the fly, assigning it to an existing target that simply returns success.  After the new target is defined, it can be used on the same command line.
 
@@ -139,3 +143,72 @@ The command above is similar to `make -f .. -f .. ` but retains the compose.mk A
 include compose.mk
 include demos/no-include.mk
 ```
+
+#### Forks, Guests, and Payloads
+<hr style="width:100%;border-bottom:3px solid black;">
+
+!!! note "Note"
+    For bundling a lot of files and/or additional data, see also the [packaging demo]({{mkdocs.site_relative_url}}/demos/packaging), which provides similar capabilities via self-extracting archives.  This method is more lightweight and tactical.
+
+For a few specific use-cases, `compose.mk` has the ability to fork it's own source code.  Helpers related to this are in the `mk.fork` namespace.  All unary targets require a filename, and nullary ones assume that input is on stdin.
+
+{{macros.api_link_many(['mk.fork'],mkdocs)}}
+
+In each case, targets return the source code that results from *merging the given file-contents with the current source-context.*  Merges happen in specific sections, and each section has different semantics.
+
+**Guests** 
+: are expected to be Makefile source code.  It's appended after the main body of source, similar to [dynamic includes](#dynamic-includes-and-targets).
+
+**Payloads** 
+: are expected to be raw data, and this input is always wrapped with `define PAYLOAD .. endef`.  This could be JSON, [polyglot source code]({{mkdocs.site_relative_url}}/demos/polyglots), or anything else.
+
+**Services** 
+: are expected to be docker-compose.  This input is always wrapped with `define SERVICES .. endef`, and afterwards [`_compose.import.string`]({{mkdocs.site_relative_url}}/bridge/#inlined-embedded-from-string) is used, bringing all that [service scaffolding]({{mkdocs.site_relative_url}}/bridge) into the root namespace.
+
+You can use overrides in these sections together to **bundle projects as tools**, or to **bundle extensions + core libraries + related containers into a single script**.
+
+The *average use-case* looks like this:
+
+```bash {.cli_example}
+# Output new executable script to "./tool.mk"
+$ bin=./tool.mk ./compose.mk mk.fork/Makefile,docker-compose.yml
+
+# Result is executable.
+# Also has access to project automation library, 
+# and all the tool containers have target scaffolding
+$ ./tool.mk debian.ps
+$ ./tool.mk debian.shell
+$ ./tool.mk debian.dispatch/...
+```
+```bash {.cli_output}
+..
+```
+
+Above, `mk.fork` is just helper that uses the `mk.fork.*` primitives, but you can also use them piecewise:
+
+```bash {.cli_example}
+# Starting with `compose.mk` as a base, create 
+# a "forked" script that wraps the project makefile
+$ cat Makefile | ./compose.mk mk.fork.guest > fork1.mk
+$ chmod +x fork1.mk
+
+# Use the fork to generate the next fork,
+# this time setting default services from the docker-compose file
+$ cat docker-compose.yml | ./fork1.mk mk.fork.services > fork2.mk
+
+# Cleanup, rename result
+$ rm fork1.mk
+$ chmod +x fork2.mk
+$ mv fork2.mk tool.mk
+```
+```bash {.cli_output}
+..
+```
+
+See the related {{macros.repo_link("demos/payload.mk", github=github)}} tests for more details.
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	addImageToHeader('reflection-support','/{{mkdocs.config.site_name}}/img/reflection.svg')
+}, 100);});
+</script>

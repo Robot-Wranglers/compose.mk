@@ -1,8 +1,7 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret!
-# demos/cmk/platform-lme.cmk: 
-#  A version of demos/platform-lme.mk ported from Makefile to CMK-lang.
-#  See the other file for more details and docs, and the tutorial at 
-#  http://robot-wranglers.github.io/compose.mk/demos/platform/
+# A version of demos/platform-lme.mk ported from Makefile to CMK-lang.
+# See the other file for more details and docs, and the tutorial at 
+# http://robot-wranglers.github.io/compose.mk/demos/platform/
 #
 # Implementing a fake setup for platform bootstrap:
 #   1. Infrastructure is configured by the terraform container, 
@@ -15,7 +14,7 @@
 
 .DEFAULT_GOAL=platform.setup.observable
 
-compose.import(demos/data/docker-compose.platform.yml, ▰)
+compose.import(file=demos/data/docker-compose.platform.yml namespace=▰)
 
 # Map targets to containers.  A public, top-level target. 
 platform.setup.basic: \

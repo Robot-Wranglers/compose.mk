@@ -9,7 +9,7 @@ include compose.mk
 
 adder/%:
 	@# Unpacks the comma-separated arguments and adds them together.
-	expr $(call mk.unpack_arg, 1) + $(call mk.unpack_arg, 2)
+	expr $(call mk.unpack.arg, 1) + $(call mk.unpack.arg, 2)
 
 add7/%:
 	@# Defining a partial function explicitly, nothing fancy

@@ -12,10 +12,10 @@ cat docs/img/icon.png | ./compose.mk stream.chafa
 # Use `stream.chafa` to preview an image on the console with chafa (alternate)
 cat docs/img/icon.png | ./compose.mk stream.img.preview
 
-# preview image without streams
+# Preview image without streams
 ./compose.mk io.preview.img/docs/img/icon.png
 
-# preview multiple images
+# Preview multiple images
 find docs/img/icon.png | ./compose.mk flux.each/io.preview.img
 
 # Use `stream.glow` to preview markdown
@@ -24,13 +24,16 @@ cat README.md | ./compose.mk stream.glow
 # Use `stream.glow` to preview markdown (alternate)
 cat README.md | ./compose.mk stream.markdown
 
-# Use `stream.pygmentize` to syntax-highlight code with pygments (guess lexer, default style)
+# Use `stream.pygmentize` to syntax-highlight code 
+# This uses pygments, default style, and a best-guess lexer
 cat Makefile | ./compose.mk stream.pygmentize
 
-# Use `stream.pygmentize` to syntax-highlight code with pygments (explicit lexer)
+# Use `stream.pygmentize` to syntax-highlight code 
+# This uses pygments with an explicit lexer and default style
 cat Makefile | lexer=Makefile ./compose.mk stream.pygmentize 
 
-# Use `stream.pygmentize` to syntax-highlight code with pygments (explicit style and lexer)
+# Use `stream.pygmentize` to syntax-highlight code
+# This uses pygments with an explicit style and lexer
 cat Makefile | style=monokai lexer=Makefile ./compose.mk stream.pygmentize 
 
 # # Use `stream.json.pygmentize` to preview JSON (minified)
@@ -39,7 +42,8 @@ cat Makefile | style=monokai lexer=Makefile ./compose.mk stream.pygmentize
 # Use `stream.json.pygmentize` to preview JSON (expanded)
 ./compose.mk jb key=val | ./compose.mk jq . | ./compose.mk stream.json.pygmentize
 
-# Use `stream.peek` to preview data somewhere in the middle of a pipe and pass it on
+# Use `stream.peek` to preview data.
+# Put this somewhere in the middle of a pipe
 ./compose.mk jb key=val | ./compose.mk stream.peek | ./compose.mk jq .
 
 # Pull data from yaml with yq

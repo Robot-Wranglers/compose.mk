@@ -43,7 +43,7 @@ docs/container-support.md
 docs/contributing.md
 docs/example-platform-1.mmd
 docs/example-platform-2.mmd
-docs/integration.md
+docs/quickstart.md
 docs/limitations.md
 docs/logging.md
 docs/macro-arguments.md
@@ -73,3 +73,5 @@ docs/admon.md
 docs/api/*.md
 docs/meta.md
 docs/assertions.md
+docs/meta/*md
+docs/functional.md

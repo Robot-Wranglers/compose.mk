@@ -1,6 +1,5 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret!
-# demos/cmk/inlined-dockerfile.cmk: 
-#   CMK-lang translation of demos/inlined-dockerfile.mk
+# CMK-lang translation of demos/inlined-dockerfile.mk
 # USAGE: ./demos/cmk/inlined-dockerfile.cmk
 
 ⫻ Dockerfile.my_container
@@ -13,6 +12,9 @@ __main__: test.scaffold test.runner test.raw
 test.scaffold: \
 	my_container.build \
 	my_container.dispatch(self.dispatch_test)
+self.dispatch_test:
+	cmk.log(Testing target from inside the inlined-container)
+	cmk.log(host details: `uname -a`)
 
 test.runner:
 	cmk.log.test_case(Low level access to run commands)
@@ -24,6 +26,3 @@ test.raw:
 	docker run --entrypoint sh ${my_container.img} \
 		-x -c "true" > /dev/null
 
-self.dispatch_test:
-	cmk.log(Testing target from inside the inlined-container)
-	cmk.log(host details: `uname -a`)

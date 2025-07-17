@@ -1,0 +1,23 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+# CMK-lang equivalent of demos/script-dispatch-custom.mk.
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# See also: http://robot-wranglers.github.io/compose.mk/compiler
+#
+# USAGE: ./demos/script-dispatch-custom.mk
+
+⫻ Dockerfile.my_container
+FROM debian/buildd:bookworm
+# .. other customization here ..
+⫻
+
+⨖ example-1.sh
+echo hello `hostname` at `uname -a` 
+⨖ with my_container as local_context
+
+export var1=hello-world
+
+⨖ example-2.sh
+echo variable exported: ${var1:-not set}
+⨖ with img=my_container env='var1' quiet=1 as local_context
+
+__main__: example-1.sh example-2.sh

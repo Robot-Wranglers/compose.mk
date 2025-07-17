@@ -1,10 +1,7 @@
 #!/usr/bin/env -S make -f
-# demos/j2-templating.mk: 
-#   Demonstrates templating in jinja.
+# Demonstrates templating in jinja.
 #
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See ./demos/cmk/j2-templating.mk for an equivalent but syntactically cleaner example using CMK-lang.
-#
 # USAGE: ./demos/j2-templating.mk
 
 include compose.mk
@@ -32,7 +29,7 @@ render/%:
 
 # Import the template-block, binding the 
 # interpreter & creating `*.j2.run` targets
-$(eval $(call polyglots.bind.target, [.]j2, render))
+$(call polyglots.import, pattern=[.]j2 bind=render)
 
 # Generates JSON with `jb`, then pushes it into the template renderer.
 # This shows how to call targets using generated symbols, 

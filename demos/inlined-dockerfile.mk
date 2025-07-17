@@ -1,44 +1,47 @@
 #!/usr/bin/env -S make -f
-# demos/inlined-dockerfile.mk: 
-#   Part of the `compose.mk` repo, runs as part of the test-suite.
-#   Demonstrates inlining a Dockerfile, building it, then working with the container.
+# Demonstrates inlining a Dockerfile, 
+# building it, then working with the container.
+#
+# Part of the `compose.mk` repo, runs as part of the test-suite.
 #
 # USAGE: ./demos/inlined-dockerfile.mk
 
 include compose.mk
 
-# A minimal inlined dockerfile.  You can install anything or nothing here,
-# but let's have the minimal stuff that's required for using target dispatch.
+# Minimal inlined dockerfile.  
+# You can install anything or nothing here, but let's 
+# have the minimal stuff that's required for using target dispatch.
 define Dockerfile.demo_dockerfile
 FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
 RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
 endef
 
-# Entrypoint.  Ensures the container is built, then runs all the tests.
-__main__: __init__ flux.star/test
-__init__: Dockerfile.build/demo_dockerfile
-
-# After build, image is always at 'compose.mk:<def_name>'
+# After build, image is always at 'compose.mk:<def_name>'.
+# This "absolute" name is expected by `docker.*` targets, 
+# but the prefix is implied for `mk.docker.*`.
 inlined_img=compose.mk:demo_dockerfile
 
+# Entrypoint.  Ensures the container is built, then runs all the tests.
+__main__: Dockerfile.build/demo_dockerfile flux.star/test
+
 test.1.image_created_and_available:
-	$(call log.test, image is created and available to docker)
+	$(call log.test, Image is created and available to docker)
 	docker image inspect ${inlined_img} > /dev/null
 	docker run --entrypoint sh ${inlined_img} -x -c "true" > /dev/null
 
 test.2.mk.docker.dispatch:
-	$(call log.test, omits prefix & does target-dispatch)
+	$(call log.test, Omits image prefix & does target-dispatch)
 	img=demo_dockerfile ${make} mk.docker.dispatch/self.demo.dispatch
 self.demo.dispatch:
 	printf "Running inside the inlined-container:\n"
 	uname -a
 
 test.3.docker.dispatch:
-	$(call log.test, expects prefix & accepts targets)
+	$(call log.test, Expects image prefix & accepts targets)
 	img=${inlined_img} ${make} docker.dispatch/self.demo.dispatch
 
 test.4.docker.run.sh:
-	$(call log.test, gives low-level access to container)
+	$(call log.test, Low-level access to container)
 	entrypoint=sh cmd='-c "pwd"' \
 		img=${inlined_img} ${make} docker.run.sh 
 	
@@ -51,7 +54,5 @@ test.6.quiet_build:
 	quiet=0 force=1 ${make} Dockerfile.build/demo_dockerfile
 
 test.7.docker.lambda.target:
-	$(call log.test, docker.lambda builds/runs Dockerfile in 1 step w/o tag)
+	$(call log.test, Builds/runs Dockerfile in 1 step with docker.lambda)
 	cmd='pwd' ${make} docker.lambda/demo_dockerfile
-	
-

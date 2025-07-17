@@ -1,19 +1,18 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret!
-# demos/cmk/code-objects.cmk: 
-#   CMK-lang translation of demos/code-objects.mk
+# CMK-lang translation of demos/code-objects.mk
 # USAGE: ./demos/cmk/code-objects.cmk
 
 # Main entrypoint, showing how to preview and run embedded code.
 __main__: \
-	hello_world1.preview \
-	hello_world1.run \
-	hello_world2.run hello_world3.run \
-	hello_world4.preview 
+	hello_world1.preview hello_world1.run \
+	hello_world2.run \
+	hello_world3.run \
+	hello_world4.preview
 
 # Code bound to a containerized interpreter using literals.
 elixir.img=elixir:otp-27-alpine
 elixir.interpreter=elixir
-〚 hello_world1
+⟦ hello_world1
 import IO, only: [puts: 1]
 puts("elixir World!")
 System.halt(0)
@@ -21,21 +20,22 @@ System.halt(0)
 
 # Code bound to a containerized interpreter using variables.
 # In this case, you can accept user-overrides from env-vars.
-python.interpreter=python
-python.img?=python:3.11-slim-bookworm
-〚 hello_world3
+export python_interpreter=python
+export python_img?=python:3.11-slim-bookworm
+⟦ hello_world3
 print('hello world 2')
-⟧ with ${python.img}, ${python.interpreter} as container
-
+⟧ with $${python_img}, $${python_interpreter} as container
 
 # Code bound to a target-as-interpreter.
 # Target must be parametric, then do something with the parameter!
-〚 hello_world2
+⟦ hello_world2
 hello world2 !
-⟧ with show.file as target
+⟧ with my_interpreter as target
 
-# An example target, as used above.
-show.file/%:; cat ${*}
+# A custom interpreter, as used above.
+# This always takes a file argument as a parameter:
+# we do nothing except for displaying the file-contents.
+my_interpreter/%:; cat ${*}
 
 # Unbound code block: only `.preview` target is available 
 # unless you bind something else to `.interpreter` later

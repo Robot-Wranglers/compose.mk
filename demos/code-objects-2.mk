@@ -1,32 +1,37 @@
 #!/usr/bin/env -S make -f
-# demos/code-objects-2.mk: 
-#   Demonstrating first-class support for foreign code-blocks in `compose.mk`.
+# Demonstrating first-class support for foreign code-blocks in `compose.mk`.
 #
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# USAGE: ./demos/code-objects-2.mk
+# USAGE: ./demos/code-objects.mk
 
 include compose.mk
 
-# First we pick an image and interpreter for the language kernel.
+# Look, it's a python script 
+define hello_world.py
+import os 
+print(f'hello {os.environ["planet"]} {os.environ["index"]}')
+endef
+
+# Pick an image and interpreter for the language kernel.
+# Uses a stock-image but modifies the default invocation.
 python.img=python:3.11-slim-bookworm
-python.interpreter=python 
+my_interpreter/%:
+	cmd="python -O -B ${*}" \
+		${make} docker.image.run/${python.img}
 
-# Now define several chunks of python code
-define hello_world_1.py 
-print('hello world 1')
-endef
+# Constants we can share with subprocesses or polyglots
+export planet=earth
+export index=616
 
-define hello_world_2.py 
-print('hello world 2')
-endef
-
-# Bind multiple code-blocks, 
-# creating additional target scaffolding for each
-$(eval $(call polyglots.bind.container, \
-	[.]py, ${python.img}, ${python.interpreter}))
+# Import the code-block to a specific namespace, 
+# creating scaffolding for `run` and `preview`, while 
+# passing through certain parts of this environment
+$(call polyglot.import, \
+	def=hello_world.py bind=my_interpreter \
+		namespace=WORLD env='planet index')
 
 # With the new target-scaffolding in place, now we can use it.
 # First we preview the code with syntax highlighting, 
 # then run the code inside the bound interpreter.
-__main__: hello_world_1.py.preview hello_world_1.py.run hello_world_2.py.run
+__main__: WORLD.preview WORLD.run
 

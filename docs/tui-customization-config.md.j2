@@ -8,7 +8,7 @@
 
 How does this work?  The behaviour above relies on a few things.  First, the `compose.mk:tux` container supports docker-in-docker style host-socket sharing with zero configuration.  This means that the TUI can generally do all the same container orchestration tasks as the docker host.  
 
-Without actually writing any custom code, there are many ways to customize the way that the TUI starts and the stuff that's running inside it.  By combining the TUI with the [`loadf` target,]({{mkdocs.site_relative_url}}/compose.mk#loading-compose-files) you can leverage existing compose files but skip [the usual integration with a project Makefile]({{mkdocs.site_relative_url}}/integration).
+Without actually writing any custom code, there are many ways to customize the way that the TUI starts and the stuff that's running inside it.  By combining the TUI with the [`loadf` target,]({{mkdocs.site_relative_url}}/compose.mk#loading-compose-files) you can leverage existing compose files but skip [the usual integration with a project Makefile]({{mkdocs.site_relative_url}}/quickstart).
 
 {{macros.img_link("tui-1.gif", mkdocs)}}
 

@@ -48,7 +48,7 @@ endef
 
 # After the inline exists, we get access to scaffolded 
 # container targets by calling  `compose.import.string` on it.
-$(eval $(call compose.import.string,  just.services))
+$(call compose.import.string, def=just.services)
 
 # A small container-api, considered "private". Targets below run inside the container,
 # so we can directly use `just` here without assuming it is available on the host.

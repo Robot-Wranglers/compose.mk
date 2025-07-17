@@ -1,6 +1,5 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret!
-# demos/cmk/user-dialect.cmk: 
-#   Demonstrating user-defined extensions for the CMK -> Makefile compiler.
+# Demonstrating user-defined extensions for the CMK -> Makefile compiler.
 #
 # cmk_dialect ::: [ 
 #  ["⏩️", "${stream.stdin} | ${jq} -r"],

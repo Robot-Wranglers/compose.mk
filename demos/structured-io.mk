@@ -1,8 +1,7 @@
 #!/usr/bin/env -S make -f
-# demos/structured-io.mk: 
-#   Show output/input using JSON.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-#   USAGE: ./demos/structured-io.mk
+# Demonstrates target input/output using JSON.
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# USAGE: ./demos/structured-io.mk
 
 include compose.mk
 
@@ -14,5 +13,6 @@ emit:
 consume:
 	${stream.stdin} | ${jq} .key
 
+# Exercise the pipeline
 __main__:
 	${make} emit | ${make} consume

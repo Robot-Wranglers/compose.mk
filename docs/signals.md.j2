@@ -54,7 +54,10 @@ In the code, the differences start right away.  See the shebang at the top of th
 
 {{macros.embed_demo('demos/interpreter.mk', github=github)}}
 
-Using `compose.mk` to "interpret" your makefile isn't as magical as it sounds.  You can think of it as effectively *inserting **your** makefile at the bottom of the compose.mk source code,* then running the resulting temporary file as usual with `make`.  As a result of this simple operation though, there are two important side-effects.  First, your source code has access to the entire `compose.mk` API implicitly regardless of any `include`, and second, you inherit the `compose.mk` extensions to signals.
+Using `compose.mk` to "interpret" your makefile isn't as magical as it sounds.  You can think of it as effectively *inserting **your** makefile at the bottom of the compose.mk source code,* then running the resulting temporary file as usual with `make`.  As a result of this, there are two important side-effects for project automation:
+
+1. Automation has access to `compose.mk` API implicitly (regardless of any `include`)
+1. Automation inherits the `compose.mk` extensions to signals
 
 !!! closer_look "Closer Look"
     The next extremely magical line is the call to `mk.yield`, where the argument is the command line that you want to *yield execution to*.  We yield in this case to `ls $${MAKE_CLI#*ls}`, where the right side expands to "the full command line, *after* the word `ls`".[^4]
@@ -63,7 +66,7 @@ At this point as long as the file is executable, then `./demos/interpreter.mk ls
 
 You can skip the usage of `compose.mk` as an interpreter by invoking the file as `make -f demos/interpreter.mk ls /`, which *does work*, but includes a `Supervisor not found` message at the end.  And whereas `./demos/interpreter.mk` runs `__main__` and exits early with success, `make -f ./demos/interpreter.mk` fails because it does not exit early.
 
-!!! danger Achtung 
+!!! danger "Caveat" 
     A subtle but **potentially serious issue** with this approach is that `./demos/interpreter.mk ls -la` works as expected, but `./demos/interpreter.mk ls --help` actually returns *help for make* and **not** *help for ls*.. implying that our intent to proxy the "rest" of the command line still has some limitations, and it actually depends on the content of that command line.
 
 If you're only interested in proxy for **positional arguments** then this won't matter, meanwhile **option-proxy** works in some cases but must always be tested carefully.
@@ -96,17 +99,24 @@ Anyway, using it looks like this:
 
 ```bash {.cli_example}
 $ ./demos/interpreter-3.mk my-normal-target
-
+```
+```bash {.cli_output}
 hello normal make target
+```
 
+```bash {.cli_example}
 $ ./demos/interpreter-3.mk 
-
+```
+```bash {.cli_output}
 hello python opt parse
 bar is set
 foo is my.foo
+```
 
+```bash {.cli_example}
 $ ./demos/interpreter-3.mk script.run -- --help
-
+```
+```bash {.cli_output}
 hello python opt parse
 Usage: python_script [options] filename
 
@@ -130,7 +140,8 @@ Here's the output:
 
 ```bash {.cli_example}
 $ ./demos/interpreter-4.mk main_target
-
+```
+```bash {.cli_output}
 hello pre-hook
 hello main
 hello post-hook
@@ -149,9 +160,9 @@ Hooks are enabled by default since they don't affect peformance much, but it's p
 
 To setup one or more exit handlers, try using the `CMK_AT_EXIT_TARGETS` environment variable with space-separated target names.  This should run if `make` dies for any reason and even if it is killed, but cannot run if the wrapper process is killed.
 
-At-exit handlers defined this way are called whenever `mk.supervisor.exit` is called, which has the usual caveats that **you must be using a interpreter-style invocation,** and not running via `make -f ...`!  For more details, read on into the implementation section below.
+At-exit handlers defined this way are called whenever `mk.supervisor.exit` is called, which has the usual caveats that **you must be using a interpreter-style invocation,** and not running via `make -f ...`!  See the next section for more details.
 
-### Implementation
+### Implementation Details
 <hr style="width:100%;border-bottom:3px solid black;">
 
 If you're already very familiar with `make` and looking over the rest of this page, you might be wondering how this kind of semi-magical behavior can be achieved.   And since the answer to that question is frankly kind of ridiculous, this should probably be considered experimental =)  *With that sternly worded warning out of the way..* 
@@ -170,28 +181,22 @@ The [pre/post hooks](#pre-post-hooks) have exactly the same limitation, but a di
 
 All targets related to signals/supervisors can be found under the `mk.interrupt` and `mk.super` namespaces, respectively.  These targets are for low-level internal use, and even hacking directly on `compose.mk` source probably won't require editing them, considering the [other techniques available](#inheritance-interpreters).  Still, quick links to the relevant parts of the API are provided below for reference:
 
-{{macros.api_link_many(['mk.super','mk.interrupt'], mkdocs)}}
+{{macros.api_link_many(['mk.super', 'mk.interrupt'], mkdocs)}}
 
+### References
 <hr style="width:100%;border-bottom:3px solid black;">
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Wait for MkDocs to fully render the page including ToC
-    setTimeout(function() {
-        const heading = document.getElementById('signals-and-supervisors');
-        const img = document.createElement('img');
-        img.style.height = '2em'; img.style.verticalAlign = 'middle';
-        img.src = '../img/makefile.png'; 
-        heading.insertBefore(img, heading.firstChild);
-        //img.style.marginRight = '10px';
-        //heading.appendChild(img);
-    }, 100); // Small delay to ensure ToC is already processed
-});
-</script>
-
 [^1]: For people that have seen ' -- ' usage before but don't really know how it works, this isn't part of the shell itself.  It's a convention that is *almost* a guarantee, assuming [POSIX compliant getopt](https://pubs.opengroup.org/onlinepubs/9699919799.2018edition/functions/getopt.html)
-[^2]: Determining the full CLI that invoked `make` is actually pretty hard, especially if you want portability.  If you've been wondering about `procps` and `procps-ng` package references that are scattered around and [recommended for dispatch]({{mkdocs.site_relative_url}}/integration/#docker-compose-integration), this is the reason.
+[^2]: Determining the full CLI that invoked `make` is actually pretty hard, especially if you want portability.  If you've been wondering about `procps` and `procps-ng` package references that are scattered around and [recommended for dispatch]({{mkdocs.site_relative_url}}/quickstart/#docker-compose-integration), this is the reason.
 [^3]: Issues with proxying `--long-opt=..` is probably a bug and not a fundamental limitation, but this whole topic is so obscure it's probably not worth fixing =P
 [^4]: The incantation `${MAKE_CLI#*ls}` uses [bash parameter expansion](https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html) and the special variable `MAKE_CLI` that's provided by `compose.mk`.
 [^5]: [wiki://Shebang](https://en.wikipedia.org/wiki/Shebang_(Unix))
 [^6]: [wiki://polyglot](https://en.wikipedia.org/wiki/Polyglot_(computing))
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+    addImageToHeader('signals-and-supervisors','/{{mkdocs.config.site_name}}/img/makefile.png',style="height:2.2em;")
+	addImageToHeader('implementation-details','/{{mkdocs.config.site_name}}/img/implementation.svg')
+	addImageToHeader('for-developers','/{{mkdocs.config.site_name}}/img/api.svg')
+}, 100);});
+</script>

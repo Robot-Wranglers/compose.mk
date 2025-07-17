@@ -1,6 +1,5 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret!
-# demos/cmk/inlined-composefile.cmk: 
-#   CMK-lang translation of demos/inlined-composefile.mk
+# CMK-lang translation of demos/inlined-composefile.mk
 # USAGE: ./demos/cmk/inlined-composefile.cmk
 
 ⋘ inlined.services
@@ -32,8 +31,8 @@ services:
 self.internal_task:; cmk.log(Running inside ${red}`hostname`)
 
 # Dispatch demo:
-#  Runs the private target inside containers, using 
-#  syntax that looks like function-invocation.
+# Runs the private target inside containers, using 
+# syntax that looks like function-invocation.
 __main__: \
 	alice.dispatch(self.internal_task) \
 	bob.dispatch(self.internal_task)
@@ -44,14 +43,15 @@ alternate_style1:
 	this.alice.dispatch(self.internal_task) 
 	this.bob.dispatch(self.internal_task)
 
-# Equivalents for both of the above.
-#   This is the more "classic" style in pure Makefile,
-#   i.e. what compose.mk supports without any transpilation.
+# More "classic" style in pure Makefile. 
+# Equivalent to __main__, no target body required.
 alternate_style2: \
 	alice.dispatch/self.internal_task \
 	bob.dispatch/self.internal_task
 
+# More "classic" style in pure Makefile. 
+# Equivalent to alternate_style1, using target body.
 alternate_style3:
-	@# Equivalent to above, using target-body instead of prereqs
+	@# Equivalent to style1, just trading `${make}` for `this`.
 	${make} alice.dispatch/self.internal_task 
 	${make} bob.dispatch/self.internal_task

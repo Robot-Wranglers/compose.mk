@@ -1,7 +1,6 @@
 #!/usr/bin/env -S make -f
-# demos/julia.mk: 
-#   Demonstrating polyglots as first-class objects 
-#   in `compose.mk`, and compiled languages via FFI
+# Demonstrating polyglots as first-class objects in `compose.mk`, 
+# plus usage of compiled languages via FFI.
 #
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
@@ -10,11 +9,11 @@
 
 include compose.mk
 
-# First we pick an image and interpreter for the language kernel.
+# Pick an image and interpreter for the language kernel.
 julia.img=julia:1.10.9-alpine3.21
 julia.interpreter=julia 
 
-# Binds the docker image / entrypoint to a target, 
+# Bind the docker image / entrypoint to a target, 
 # then create a unary target for accepting a filename.
 julia:; ${docker.image.run}/${julia.img},${julia.interpreter}
 julia.interpreter/%:; ${docker.curry.command}/julia
@@ -72,7 +71,7 @@ println("Math operations on x = $x:")
 endef
 
 # Declare the above code-block as a first class object, and bind it to an interpreter.
-$(eval $(call compose.import.code, hello_world, julia.interpreter))
+$(call polyglot.import, def=hello_world bind=julia.interpreter)
 
 # Use our new scaffolded targets for `preview` and `run`
 __main__: hello_world.preview hello_world.run

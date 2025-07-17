@@ -11,50 +11,56 @@
 #           - driver: nvidia
 #             count: 1
 #             capabilities: [gpu]
+
+# NB: this allows model-sharing for any host-installation of ollama if 
+# it's available. Probably wrong for non-Linux and also maybe wrong for 
+# some ollama versions?
+# Share the hosts working directory- this is for document ingestion
+# NB: this allows model-sharing for the host-installation of 
+# hugging face if applicable.  Probably wrong for non-Linux and 
+# also maybe wrong for some library versions?
 services:
   ollama_server: &base
     build:
       context: .
       dockerfile_inline: |
         FROM ollama/ollama@sha256:476b956cbe76f22494f08400757ba302fd8ab6573965c09f1e1a66b2a7b0eb77
-        RUN apt-get update -qq && apt-get install -qq -y \
-          software-properties-common make procps curl
-        RUN add-apt-repository ppa:deadsnakes/ppa
-        RUN apt-get update -qq && apt-get install -qq -y \
-          wget python3.11 python3.11-dev python3.11-venv
-        RUN update-alternatives --install \
-              /usr/bin/python3 python3 /usr/bin/python3.11 1 \
-          && update-alternatives --config python3
-        RUN wget https://bootstrap.pypa.io/get-pip.py \
-          && python3.11 get-pip.py && rm get-pip.py
+    entrypoint: ['ollama','serve']
+    working_dir: /workspace
+    volumes:
+      - /usr/share/ollama/.ollama:/root/.ollama
+      - ${PWD}:/workspace
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+    environment:  &base_env
+      OLLAMA_HOST: ollama_server
+      LLM_MODEL: ${LLM_MODEL:-mistral}
+      EBD_MODEL_NAME: ${EBD_MODEL_NAME:-all-MiniLM-L6-v2}
+  ollama_python: 
+    <<: *base
+    entrypoint: ["python3.11"]
+    depends_on: ['ollama_server']
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim-bookworm
         RUN pip install 'torch==2.6.0+cpu' \
           --extra-index-url https://download.pytorch.org/whl/cpu
         RUN pip install --no-cache-dir \
           langchain==0.3.22 langchain-community==0.3.20 \
           langchain-huggingface==0.1.2 langchain-ollama==0.3.0 \
           ollama==0.4.7 sentence-transformers==4.0.2 faiss-cpu==1.10.0 \
-          tqdm==4.67.1 unstructured[md]==0.17.2 requests==2.32.3 \
-          click==8.1.8 rich==14.0.0 accelerate==1.6.0
-    entrypoint: ['ollama','serve']
-    volumes:
-      # NB: this allows model-sharing for any host-installation of ollama if 
-      # it's available. Probably wrong for non-Linux and also maybe wrong for 
-      # some ollama versions?
-      - /usr/share/ollama/.ollama:/root/.ollama
-  rag: 
+          unstructured[md]==0.17.2 click==8.1.8 \
+          accelerate==1.6.0 python-magic==0.4.27
+        RUN apt-get update -qq && apt-get install -y make procps
+  ollama_node:
     <<: *base
-    working_dir: /workspace
-    entrypoint: ["python3.11"]
-    links: ['ollama_server'] 
-    depends_on: ['ollama_server'] 
-    volumes:
-      # Share the hosts working directory- this is for document ingestion
-      - ${PWD}:/workspace
-      # NB: this allows model-sharing for the host-installation of 
-      # hugging face if applicable.  Probably wrong for non-Linux and 
-      # also maybe wrong for some library versions?
-      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
-    environment: 
-      OLLAMA_HOST: ollama_server
-      LLM_MODEL: ${LLM_MODEL:-phi3:mini}
-      EBD_MODEL_NAME: ${EBD_MODEL_NAME:-all-MiniLM-L6-v2}
+    depends_on: ['ollama_server']
+    # working_dir: /app
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM node:18-slim
+        WORKDIR /app
+        RUN npm init -y
+        RUN npm install @langchain/community @langchain/core langchain
+        RUN apt-get update -qq && apt-get install -y make procps

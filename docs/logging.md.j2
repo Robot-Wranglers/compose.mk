@@ -6,19 +6,19 @@
 One goal for `compose.mk` is to enable program output that is clean, curated, and human-friendly on stderr, and machine-friendly on stdout.  There are a few features available in support of this.  In general `compose.mk` prefers make-targets over make-functions and macros, because targets are more reusable.[^2]  Logging is a special case though, and might use all 3.
 
 #### Logging Basics
+<hr style="width:95%;border-bottom:1px dashed black;">
 
-* **Logging always goes to stderr so that targets remain pipe-safe**, including the `log.json` output.
-* **Log-messages have a prefix which is based on the call-depth**, which can help visually parse complex traces.
-* See the `compose.mk` source for other information about formatting colors and glyphs.  
+1. **Logging always goes to stderr so that targets remain pipe-safe**, including the `log.json` output.
+2. **Log-messages have a prefix which is based on the call-depth**, which can help visually parse complex traces.
 
-Tools for working with JSON are also discussed in more detail in the section on [Structured IO](#structured-io-basics).
+See the `compose.mk` source for other information about formatting colors and glyphs.  Tools for working with JSON are also discussed in more detail in the section on [Structured IO](#structured-io-basics).
 
 #### Log Functions 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 Lets look at the **`log.*` functions** that are suitable for use from your project Makefile.  
 
-The following example demonstrates basic logging, logging with formatting, and trace-logging.
+The following examples demonstrate basic logging, logging with formatting, and trace-logging.
 
 {{macros.embed_demo('demos/logging.mk', github=github)}}
 
@@ -44,14 +44,14 @@ The [docs for compose.mk's built-in tool wrappers]({{mkdocs.site_relative_url}}/
 
 {{macros.embed_demo('demos/section-dividers.mk', github=github)}}
 
-    In the `build` task above, you can see one way to call `io.print.banner` explicitly, which uses `${make}` as shorthand for "*the right way to call `make` recursively*".  As an equivalent, you can always use an invocation like `./compose.mk io.print.banner` instead, and this works from anywhere.  
-    
+In the `build` task above, you can see one way to call `io.print.banner` explicitly, which uses `${make}` as shorthand for "*the right way to call `make` recursively*".  As an equivalent, you can always use an invocation like `./compose.mk io.print.banner` instead, and this works from anywhere.
+
 {{macros.img_link("demo-io.gif", mkdocs, "90%")}}
 
 ##### Use Gum for Banners 
 ---------------------------------------------
 
-Even though {{macros.api_link('io.print.banner',mkdocs,arg='label')}} detects terminal width, it isn't fancy otherwise.  A related target is {{macros.api_link('io.draw.banner',mkdocs,arg='label')}}, which prints dividers with [charmbracelet/gum](https://github.com/charmbracelet/gum).  *If you have a local copy of `gum` then it is used, otherwise, we fall back to docker.*
+Even though {{macros.api_link('io.print.banner',mkdocs,arg='label')}} detects terminal width, it isn't fancy otherwise.  A related target is {{macros.api_link('io.draw.banner',mkdocs,arg='label')}}, which prints dividers with [charmbracelet/gum](https://github.com/charmbracelet/gum).
 
 {{macros.img_link("demo-gum.gif", mkdocs, "90%")}}
 
@@ -74,7 +74,7 @@ $ label=banner ./compose.mk io.figlet
 ░██░░░██  ███████  ░██  ░██ ░██  ░██░███████ ░██ ░ 
 ░██  ░██ ██░░░░██  ░██  ░██ ░██  ░██░██░░░░  ░██   
 ░██████ ░░████████ ███  ░██ ███  ░██░░██████░███   
-░░░░░    ░░░░░░░░ ░░░   ░░ ░░░   ░░  ░░░░░░ ░░░    
+ ░░░░░    ░░░░░░░░ ░░░   ░░ ░░░   ░░  ░░░░░░ ░░░    
 ```
 
 To add color, you can use a context manager and any of the colors that `compose.mk` natively understands.
@@ -85,3 +85,8 @@ To add color, you can use a context manager and any of the colors that `compose.
 
 For other TUI-components like this that fall short of a full-blown interface,  see [these docs for stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview). See also the [full documentation for all `io.*` targets]({{mkdocs.site_relative_url}}/api/#api-io)
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	addImageToHeader('logging-facilities','/{{mkdocs.config.site_name}}/img/logging.svg')
+}, 100);});
+</script>

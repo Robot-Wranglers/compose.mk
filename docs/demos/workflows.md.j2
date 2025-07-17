@@ -5,7 +5,7 @@
 
 We've previously met the [**`flux.*` target namespace**]({{mkdocs.site_relative_url}}/api#api-flux), and discussed how it [provides basic tooling for workflows]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).  
 
-This demo builds on those ideas and introduces `flux.pipeline` with some scripting to describe a miniature ETL. For this exercise we'll also use some of the idioms for [Structured IO]({{mkdocs.site_relative_url}}/standard-lib/#structured-input-output) and [Logging]({{mkdocs.site_relative_url}}/standard-lib/#logging-facilities) so that what we build is friendly reading for both people and machines.
+This demo builds on those ideas and introduces {{macros.api_link('flux.pipeline',mkdocs=mkdocs,arg='targets')}} to describe a miniature ETL. For this exercise we'll also use idioms for [Structured IO]({{mkdocs.site_relative_url}}/standard-lib/#structured-input-output) and [Logging]({{mkdocs.site_relative_url}}/standard-lib/#logging-facilities) so that what we build is friendly reading for both people and machines.
 
 ### Miniature ETL
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -18,14 +18,11 @@ Basically this works the way you'd expect, and we can execute the ETL end-to-end
 
 One benefit of `flux.pipeline` is getting previews of the results at different stages.  Running the example so far looks like this:
 
-{{macros.img_link("etl-json.png", mkdocs, "90%")}}
+{{macros.img_link("etl-json.png", mkdocs, "98%")}}
 
 Despite appearances, this is actually pipe-safe: the final output of `{"stage":"loaded"}` is the only thing on stdout, the rest is stderr.
 
-!!! road_map "Road Map"
-    See also the API docs for {{macros.api_link('flux.pipeline',mkdocs, arg='t1>,..<tn')}}.
-
-    The [platform lifecycle demo]({{mkdocs.site_relative_url}}/demos/platform) shows flow control with {{macros.api_link('flux.pipe.fork',mkdocs,arg='t1>,..,<tn')}}
+For related reading, see the API docs for {{macros.api_link('flux.pipeline',mkdocs, arg='t1>,..<tn')}}.  The [platform lifecycle demo]({{mkdocs.site_relative_url}}/demos/platform) shows flow control with {{macros.api_link('flux.pipe.fork',mkdocs,arg='target_list')}}
 
 ### Extending the Pipeline
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -41,10 +38,23 @@ For more information, see the api docs for [`docker.run.image`]({{mkdocs.site_re
 
 {# <hr style="width:95%;border-bottom:1px dashed black;"> #}
 
-It's a neat trick that `compose.mk` has some features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.
+It's a neat trick that `compose.mk` has some features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs. Actually `flux.*` is more similar in spirit to things like declarative pipelines in Jenkins[^1].  
 
-Actually `flux.*` is more similar in spirit to things like declarative pipelines in Jenkins[^1].  For other related documentation, see also the [workflow rationale docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-rationale) and the [Platform Lifecycle Demo]({{mkdocs.site_relative_url}}/demos/platform).
+!!! related_links "Related Links"
+    * The [workflow rationale docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-rationale) 
+    * The [Platform Lifecycle Demo]({{mkdocs.site_relative_url}}/demos/platform).
 
+### References
 <hr style="width:100%;border-bottom:3px solid black;">
 
 [^1]: [declarative pipelines in jenkins](https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline)
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+    addImageToHeader('miniature-etl','/{{mkdocs.config.site_name}}/img/list-check.svg')
+    addImageToHeader('extending-the-pipeline','/{{mkdocs.config.site_name}}/img/list-check.svg')
+    addImageToHeader('pipelining-workflow-basics','/{{mkdocs.config.site_name}}/img/basics.svg')
+	addImageToHeader('discussion','/{{mkdocs.config.site_name}}/img/discussion.svg');
+}, 100);});
+</script>

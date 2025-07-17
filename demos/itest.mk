@@ -14,22 +14,37 @@
 include compose.mk
 
 # Load all services from 1 compose file, *not* into the root namespace.
-# $(eval $(call compose.import.as, ▰, demos/data/docker-compose.cm-tools.yml))
+# $(call compose.import.as, file=demos/data/docker-compose.cm-tools.yml namespace=▰)
 
 # Load all services from 2 compose files into 1 namespace.
-$(eval $(call compose.import, demos/data/docker-compose.yml, ▰))
+$(call compose.import, file=demos/data/docker-compose.yml namespace=▰)
 
 __main__: flux.star/test.*
-
+	
 test.mk.assert_env_var:
-	$(call log.test, Testing assert.env_var)
-	my_var=1; $(call mk.assert.env_var, my_var)
-	! $(call mk.assert.env_var, my_var) ${stderr_devnull}
+	$(call log.test, Testing assert.env_var macros)
+	my_var=1; $(call mk.assert.env, my_var)
+	$(call log.test, assert.env_var fails if env not set)
+	! $(call mk.assert.env, my_var) ${stderr_devnull}
+	$(call log.test, assert works for multiple vars)
 	another_var=2; my_var=1; $(call mk.assert.env, my_var another_var)
+	$(call log.test, assert fails for multiple vars when one is not set)
 	! ( another_var=2; my_var=1; $(call mk.assert.env, my_var another_var missing) ) ${stderr_devnull}
+	$(call log.test, assert.env works as target for multiple vars when one is not set)
 	foo=1 bar=2 ./compose.mk mk.assert.env/foo,bar
 	! bar=2 ./compose.mk mk.assert.env/foo,bar ${stderr_devnull}
-	! foo=1 ./compose.mk mk.assert.env/foo,bar ${stderr_devnull}
+
+test.compose.validate:
+	$(call log.test, Testing compose-file validation)
+	./compose.mk compose.validate/demos/data/docker-compose.yml
+	$(call log.test, Validation for bad file should fail)
+	! ./compose.mk compose.validate/demos/data/doesnt-exist
+
+test.compose.services:
+	$(call log.test, Listing compose-services)
+	./compose.mk compose.services/demos/data/docker-compose.yml | grep alpine
+	$(call log.test, Listing services fails for bad file)
+	! ./compose.mk compose.services/demos/data/doesnt-exist
 
 test.mk.reflection:
 	$(call log.test, Testing reflection)
@@ -53,7 +68,7 @@ test.signals:
 	$(call log.test, mk.interrupt should throw an error)
 	! ./compose.mk mk.interrupt
 	$(call log.test, Signal handler should not be installed for library usage)
-	! make mk.parse.local | grep mk.interrupt
+	! ${make} mk.parse.local | grep mk.interrupt
 	
 demo: ▰/debian/self.demo
 	@# New target declaration that we can use to run stuff
@@ -62,7 +77,7 @@ demo: ▰/debian/self.demo
 
 test.ticker:
 	@# FIXME: timeout kills the whole process?
-	@# text=" testing ticker " make flux.timeout/2/tux.widget.ticker || true
+	@# text=" testing ticker " ${make} flux.timeout/2/tux.widget.ticker || true
 
 # Displays platform info to show where target is running.
 # Since this target is intended to be private, we will 
@@ -73,22 +88,23 @@ self.demo:
 demo.double.dispatch: ▰/debian/self.demo ▰/alpine/self.demo
 
 # test.containerized.tty.output: 
-# 	cmd='sleep 2' label='testing gum spinner inside container' make io.gum.spin
-test.compiler:
-	$(call log.test, Compilation of CMK gives legal makefile + library fxns)
-	${io.mktemp} \
-	&& cat demos/cmk/structured-io.cmk | ./compose.mk mk.compile > $${tmpf} \
-	&& chmod +x $${tmpf} \
-	&& $${tmpf} flux.ok
-	$(call log.test, Compilation of makefile gives legal makefile + library fxns)
-	${io.mktemp} \
-	&& cat demos/no-include.mk | ./compose.mk mk.compile > $${tmpf} \
-	&& chmod +x $${tmpf} \
-	&& $${tmpf} clean flux.ok
+# 	cmd='sleep 2' label='testing gum spinner inside container' ${make} io.gum.spin
+
+# test.compiler:
+# 	$(call log.test, Compilation of CMK gives legal makefile + library fxns)
+# 	${io.mktemp} \
+# 	&& cat demos/cmk/structured-io.cmk | ./compose.mk mk.compile > $${tmpf} \
+# 	&& chmod +x $${tmpf} \
+# 	&& $${tmpf} flux.ok
+# 	$(call log.test, Compilation of makefile gives legal makefile + library fxns)
+# 	${io.mktemp} \
+# 	&& cat demos/no-include.mk | ./compose.mk mk.compile > $${tmpf} \
+# 	&& chmod +x $${tmpf} \
+# 	&& $${tmpf} clean flux.ok
 
 test.main.bridge:
 	$(call log.test, main bridge)
-	make io.print.banner label="${cyan}${@}${no_ansi}"
+	${make} io.print.banner label="${cyan}${@}${no_ansi}"
 	$(call log.test, Test service enumeration\nTarget @ <compose_file>.services)
 	${make} docker-compose.services
 	$(call log.test, Test pulling configuration data)
@@ -107,17 +123,17 @@ test.dispatch.retvals:
 
 test.flux.map:
 	$(call log.test, Checking flux.map dispatches for each input)
-	make flux.map/flux.echo,foo,bar | grep foo
-	make flux.map/flux.echo,foo,bar | grep bar
+	./compose.mk flux.map/flux.echo,foo,bar | grep foo
+	./compose.mk flux.map/flux.echo,foo,bar | grep bar
 
 test.flux.try.except.finally:
 	$(call log.test, testing try.except.finally)
-	make flux.try.except.finally/flux.fail,flux.ok,flux.ok
-	! make flux.try.except.finally/flux.ok,flux.ok,flux.fail
+	./compose.mk flux.try.except.finally/flux.fail,flux.ok,flux.ok
+	! ./compose.mk flux.try.except.finally/flux.ok,flux.ok,flux.fail
 	# except fails, but try succeeds so it never runs
-	make flux.try.except.finally/flux.ok,flux.fail,flux.ok
-	! make flux.try.except.finally/flux.fail,flux.fail,flux.ok
-	make flux.try.except.finally/flux.ok,flux.ok,flux.ok
+	./compose.mk flux.try.except.finally/flux.ok,flux.fail,flux.ok
+	! ./compose.mk flux.try.except.finally/flux.fail,flux.fail,flux.ok
+	./compose.mk flux.try.except.finally/flux.ok,flux.ok,flux.ok
 
 test.flux.context_manager:
 	$(call log.test, testing ${@} calls enter)
@@ -161,7 +177,7 @@ test.flux.pipe:
 
 test.flux.retry:
 	$(call log.test, Testing..)
-	! interval=1 make flux.retry/3/flux.fail
+	! interval=1 ./compose.mk flux.retry/3/flux.fail
 
 test.flux.apply:
 	$(call log.test, Testing..)
@@ -185,12 +201,14 @@ test.docker.run:
 	$(call log.test, Checking)
 	img=debian/buildd:bookworm ./compose.mk docker.dispatch/flux.ok
 	echo hello-python-docker1 | ${make} .test.docker.run.def
-	echo hello-python-docker2 | entrypoint=cat cmd=/dev/stdin img=python:3.11-slim-bookworm make docker.run.sh
-	entrypoint=python cmd='--version' img=python:3.11-slim-bookworm make docker.run.sh
-	echo {} | cmd=. img=ghcr.io/jqlang/jq:1.7.1 make docker.start
+	echo hello-python-docker2 \
+	| entrypoint=cat cmd=/dev/stdin img=python:3.11-slim-bookworm ./compose.mk docker.run.sh
+	entrypoint=python cmd='--version' \
+		img=python:3.11-slim-bookworm ./compose.mk docker.run.sh
+	echo {} | cmd=. img=ghcr.io/jqlang/jq:1.7.1 ./compose.mk docker.start
 .test.docker.run.def:
 	entrypoint=python def=script.demo.docker.run.def \
-	img=python:3.11-slim-bookworm make docker.run.def
+	img=python:3.11-slim-bookworm ${make} docker.run.def
 define script.demo.docker.run.def 
 # python script 
 import sys

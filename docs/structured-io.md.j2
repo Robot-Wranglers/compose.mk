@@ -1,14 +1,14 @@
 {% import 'macros.j2' as macros -%}
 
-### Structured IO
+### [Structured IO](#structured-io)
 <hr style="width:100%;border-bottom:3px solid black;">
 
-An annoying lack of structured output options for `make` is something that it has in common with lots of other[^8] classic unix tools.  Making matters worse, if you're working *inside* of make, then you're probably constantly annoyed by the lack of any support for keyword-args.  
+An annoying lack of structured output options for `make` is something that it has in common with lots of other[^8] classic unix tools.  And if you're working with Makefiles, then you're probably sad about the missing support for keyword-args.  
 
 Part of the explanation for this is just that a Makefile might be using any random tools with any kind of output format, but that's sort of inevitable for automation.  The other part is just a missing approach to idioms and tools, and `compose.mk` can help with that.  
 
 !!! commentary "Terminology"
-    *"Structured"* is intentionally vague here, and there's a few ways it's applicable to basic features in `compose.mk`. Usually [structured just means means JSON](#structured-io-basics) [^6].  There is also support for a concept of [stream types](#structured-io-stream-types-pipes), which isn't *really* typed, but at least lets you tell markdown content from image content, newline-delimited vs space-delimited, etc.  And in terms of datastructures, there is [basic support for stacks and stages]({{mkdocs.site_relative_url}}/stages).  For things like sets datastructures, see also the (unrelated) [GMSL](https://mxe.cc/gmsl.html) library.
+    *"Structured"* is intentionally vague here, and there's a few ways it's applicable to basic features in `compose.mk`. Usually [structured just means means JSON](#structured-io-basics) [^6].  There is also support for a concept of [stream types](#structured-io-stream-types-pipes), which isn't *really* typed, but at least lets you tell markdown content from image content, newline-delimited vs space-delimited, etc.  And in terms of datastructures, there is [basic support for stacks and stages]({{mkdocs.site_relative_url}}/stages), and [basic support for keyword-args](#argument-parsing)  For things like sets datastructures, see also the (unrelated) [GMSL](https://mxe.cc/gmsl.html) library.
 
 The main benefit of the approach that `compose.mk` takes to structured data comes from **exposing tools like [`jq`](https://github.com/jqlang/jq), [`jb`](https://github.com/h4l/json.bash), and [`yq`](https://github.com/mikefarah/yq) without explicitly depending on them.**  How does that work?  Basically `compose.mk` will use local tools if they are available, and fall back to using dockerized versions of them if necessary.  Other than that, `compose.mk` tries to stay out of the way of `jq` and `jb` and let them do what they do.
 
@@ -24,15 +24,23 @@ The `jb`[^3], `jq`[^4], and `yq`[^5] tools are so much revered, they are wrapped
 ```bash  {.cli_example} {.command-line}
 # Output JSON using `jb`
 $ echo key=val | ./compose.mk jb
+```
+```bash {.cli_output}
 {"key":"val"}
-
+```
+```bash  {.cli_example} {.command-line}
 # Parse JSON using `jq`
 $ echo key=val | ./compose.mk jb | ./compose.mk jq -r .key
+```
+```bash {.cli_output}
 val
-
+```
+```bash  {.cli_example} {.command-line}
 # Alternate approach, outputting JSON without input-pipes.
 # Fine for simple stuff, not suitable for more complicated use cases.
 $ ./compose.mk jb key=val foo=bar
+```
+```bash {.cli_output}
 {"key":"val"}
 ```
 
@@ -50,9 +58,9 @@ Luckily there are equivalent forms that are more idiomatic, still use local tool
         link=mkdocs.site_relative_url+"/compiler/#user-defined-dialects"),
     github=github)}}
 
-*Now `make emit | make consume` is doing basic IO with JSON,* and we haven't added any new dependencies.  
+*Now `make emit | make consume` is doing basic IO with JSON,* and we haven't added any new dependencies.  To actually get assignments for input variables in a way that's more automatic, see also the [parsing-arguments section](#argument-parsing) which builds on this example.
 
-Besides using JSON for structured output somewhere at the *end* of a pipeline for output, you can use it internally for target input as well.  In terms of style, it is *certainly unusual* for targets to use pipes like this, but it's definitely worthwhile for, well, structure.  (*The alternative to this is environment variables, and then you have to worry about variable scopes, so statelessness here is a major advantage.*) 
+Besides using JSON for structured output somewhere at the *end* of a pipeline for output, you can use it internally for target input as well.  In terms of style, it is certainly *unusual* for targets to use pipes like this, but it's definitely worthwhile for, well, structure.  (*The alternative to this is environment variables, and then you have to worry about variable scopes, so statelessness here is a major advantage.*) 
 
 Since you could also say that this goes part of the way towards emulating "keyword arguments", it also has the benefit of generalizing targets as [something closer to "functions"]({{mkdocs.site_relative_url}}/style/#targets-as-functions).
 
@@ -71,4 +79,10 @@ As a really simple example, targets that have to deal with streams will begin wi
 
 {{macros.embed_demo('demos/stdlib-stream-io.mk', github=github)}}
 
-The above isn't exhaustive, but you can see the sections below for more samples.
+The above isn't exhaustive; see the [full stream API]({{mkdocs.site_relative_url}}/api/#api-stream) for other helpers.
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	addImageToHeader('structured-io','/{{mkdocs.config.site_name}}/img/template.svg')
+}, 100);});
+</script>

@@ -1,0 +1,27 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+#
+# CMK-lang equivalent of demos/bind-script.mk.
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# See also: http://robot-wranglers.github.io/compose.mk/compiler
+#
+# USAGE: ./demos/cmk/bind-script.cmk
+
+compose.import(file=demos/data/docker-compose.yml)
+
+# Script-in-container using With/As-idiom
+⨖ script1.sh
+echo hello container `hostname`
+⨖ with alpine as compose_context
+
+# Script-in-container using Decorator-Idiom
+script2.sh: ᝏcompose.bind.script(svc=debian)
+define script2.sh
+	echo hello container `hostname`
+endef
+
+# Target scripts always run from the container, regardless of
+# whether they are called from the host or from inside the container.
+__main__: \
+	script1.sh alpine.dispatch/script1.sh \
+	script2.sh debian.dispatch/script2.sh
+

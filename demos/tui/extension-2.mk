@@ -1,11 +1,12 @@
 #!/usr/bin/env -S make -f
-# demos/tui/extension-2.mk: 
-#   Second TUI extension.  This keeps the yazi file-browser from
-#   the first version, and adds a target-selector and a web browser.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.
+# Building on demos/tui/extension.mk. This keeps the yazi file-browser 
+# from the first version, and adds a target-selector and a web browser.
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.
 #
-#   USAGE: ./demos/tui/extension-2.mk
-#   See the docs for more discussion: https://robot-wranglers.github.io/compose.mk/advanced-tuis
+# See the docs for more discussion: 
+#  https://robot-wranglers.github.io/compose.mk/advanced-tuis
+#
+# USAGE: ./demos/tui/extension-2.mk
 
 # Pickup where the first extension left off 
 include demos/tui/extension-1.mk
@@ -20,7 +21,7 @@ widget.logo: .tux.widget.img/demos/data/neo2.gif
 # If we're dockerized, getting the choice back from a fake tty is hard, 
 # but using the `io.selector` idiom makes it simple.
 #
-# In this cases the choices are exactly the fake tasks above, 
+# In this cases the choices are exactly the `task.*` targets below, 
 # so we just execute the chosen target, pause, and exit.
 widget.choice:
 	header="Choose a task to run:" \
@@ -33,7 +34,7 @@ widget.chooser: flux.loopf/widget.choice
 # Helper to return the targets matching "task.*" pattern
 self.tasks.list: mk.targets.filter/task.
 
-# Fake tasks to populate the chooser. These are just
+# Fake tasks to populate the chooser. These are only
 # placeholders and just print a banner with their name.
 task.1st:; label=${@} ${make} io.draw.banner
 task.2nd:; label=${@} ${make} io.draw.banner

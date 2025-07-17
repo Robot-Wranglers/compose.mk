@@ -8,7 +8,7 @@
 include compose.mk
 
 # Import the whole compose file (including "debian" container)
-$(eval $(call compose.import, demos/data/docker-compose.yml, ▰))
+$(call compose.import, file=demos/data/docker-compose.yml namespace=▰)
 
 # Namespaced dispatch style:
 #   This uses namespacing syntax that was configured as part 

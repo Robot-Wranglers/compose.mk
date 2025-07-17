@@ -45,14 +45,14 @@ nav:
   - Overview:
     - Introduction: 'overview.md'
     # - Features: 'overview#features-design-goals'
-    - Installation: 'integration.md'
+    - Quickstart: 'quickstart.md'
   - Docker Support: #bridge.md
     - 'Import Services from Compose': bridge.md 
     - 'Dispatch Tasks in Containers': container-dispatch.md
     - 'Raw Docker Support': 'raw-docker.md'
   - Standard Library: 
     - 'Library Overview': standard-lib.md
-    - 'Style Guide': style.md
+    - 'Style & Idioms': style.md
     - 'Full API': api.md
   - Stand Alone Mode:
     - 'Tool Overview': tool-overview.md
@@ -72,7 +72,7 @@ nav:
     - 'Pipelining & Workflow Basics': demos/workflows.md
     - 'Platform Lifecycle Example': demos/platform.md
     - 'Notebooks, Project-as-Tool': demos/notebooking.md
-    - 'RAG Demo / Obligatory AI': demos/RAG.md
+    - 'Obligatory AI Things': demos/ai.md
     - 'Theorem Proving': demos/lean.md
   - Misc Features:
       - 'CLI Help': cli-help.md
@@ -81,8 +81,8 @@ nav:
       - 'Self Extracting Executables': demos/packaging.md
   - CMK Language:
       - 'Language Overview': language.md
-      - 'Matrioshka Automata': matrioshka.md
       - 'Compiler & Dialects': compiler.md
+      - 'Matrioshka Automata': matrioshka.md
     # - 'Theorem Proving': demos/lean.md
     # - 'Justfile Interoperability': demos/just.md
     # - 'Makeception': demos/makeception.md

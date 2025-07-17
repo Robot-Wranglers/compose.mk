@@ -13,7 +13,7 @@ The [language overview page]({{mkdocs.site_relative_url}}/language) discusses ho
 
 For `compose.mk`, the "objects" are containers or container specs that might be inlined or external, and/or [foreign code]({{mkdocs.site_relative_url}}/demos/polyglots#foreign-code-as-first-class).  The "rules" are tasks or task-groups.  First-class support for these as primitives turns out to be especially useful for things like [wrappers]({{mkdocs.site_relative_url}}/tool-overview#tool-wrappers), [tool-factories]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/#map-ansible-modules-to-targets), and even [app-factories]({{mkdocs.site_relative_url}}/advanced-tuis) as seen in the rest of the site documentation.
 
-This page is about identifying a through-line for the various more concrete work elsewhere, for those who prefer overviews that focus less on applications and more on **theory, architecture, and patterns**. If you want to take in a few simple and concrete matrioshka demos before you continue reading, [see instead this index of demos]({{mkdocs.site_relative_url}}/demos/matrioshka).
+This page is about identifying a through-line for the more concrete work elsewhere, for those who prefer overviews that focus less on applications and more on **theory, architecture, and patterns**. If you want to take in a few simple and concrete matrioshka demos before you continue reading, [see instead this index of demos]({{mkdocs.site_relative_url}}/demos/matrioshka).
 
 ### Matrioshka Idiom Basics
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -38,15 +38,19 @@ More involved matrioshkas usually have [inlined containers or data]({{mkdocs.sit
 ### Has Science Gone Too Far?
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Of course, any place you can use embedded stuff with `compose.mk` is a special case, and nothing prevents you from using an external file.  But a determined individual can make a mess of anything, so it's probably worth pointing out that there are reasons for matrioshka-dolling that aren't totally insane.
+Any place you can use embedded stuff with `compose.mk` is a special case, and nothing prevents you from using an external file.  But a determined individual can make a mess of anything so it's probably worth pointing out that there are reasons for matrioshka-dolling that aren't totally insane.
 
 {{macros.img_link("mad-science.png", mkdocs, "90%",class=" ")}}
 
 Here's a few arguments that suggest matrioshka-dolling has some legitimate use-cases:
 
-* Sometimes having nested containers or data is just a way of keeping demos or prototypes *tight and small*, because being self-contained is the most legible or instructive.  On a related note, this is actually a pretty good format for a bug report / minimum reproducible example for some complex systems.
 * Since tool containers tend to be small and change infrequently, being self-contained reduces change-related friction that you usually get with external files, external repositories, and external registries.
+* Sometimes having nested containers or data is just a way of keeping demos/prototypes tight and small, because being self-contained is the most legible or instructive.  
 * Being self-contained is also at least *correlated* with other nice things like *stability and reproducibility*.
+* Matrioshkas are actually a pretty good format for a bug reports / minimum reproducible examples.
+* Matrioshkas are also a good format for test-cases of some distributed systems. [^3]
+
+Whether we're talking about bug reports, test-cases, or tutorials.. matrioshka's can help make things "batteries included" in the sense that *they are actually executable*, rather than a series of instructions asking you manually copy/paste a bunch of stuff in different files to get a test-harness going.
 
 The rest of this page develops more interesting arguments in terms of fancy stuff like *patterns, idioms, and metalanguages* but the simple justifications above are actually very practical.  Just don't be antisocial by embedding a gnarly and frequently-changing 300-line Dockerfile into your team's Makefile, and you'll be fine ;) 
 
@@ -75,7 +79,7 @@ Both of these demos are instances of a general pattern that goes like this:
 
 **By the time you get to step 4, the possibilities for composition are surprisingly powerful, expressive, and flexible**, in large part because the [homoiconicity]({{mkdocs.site_relative_url}}/language/#homoiconic) we discussed earlier starts to pay off.  Summarizing [the justfile demo]({{mkdocs.site_relative_url}}/demos/just), embedding a justfile is incidental since we could easily work with an external one, but again the interesting part again is a bridge across layers.  We lift part of the `just` interface, then besides changing/exposing that interface, we actually wrapped it and compose our way to new functionality.  As a result.. we end up with an interactive task selector in just one line.
 
-**Step 5 is where the real magic happens,** and the demos mentioned so far are just hints.  Demonstrating the potential for this seriously under realistic circumstances starts to want more tools and larger use-cases.. which is a challenge for brief examples.  See the [platforming demo for a sketch]({{mkdocs.site_relative_url}}/demos/platform), or the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).  See also a preview of the *(under construction!)* sister project [k8s-tools.git]({{jinja.vars.k8stools_docs_url}}) which uses `compose.mk` to automate cluster-lifecycles using more complex orchestration across a bigger toolbox.
+**Step 5 is where the real magic happens,** and the demos mentioned so far are just hints.  Demonstrating the potential for this seriously under realistic circumstances starts to want more tools and larger use-cases.. which is a challenge for brief examples.  See the [platforming demo for a sketch]({{mkdocs.site_relative_url}}/demos/platform), or the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).  See also a preview of the sister project @ k8s-tools[^3], which uses `compose.mk` to automate cluster-lifecycles using more complex orchestration across a bigger toolbox.
 
 ### Advanced Matrioshka Idioms 
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -94,28 +98,30 @@ As one example, [stage stacks]({{mkdocs.site_relative_url}}/stages) allow target
 
 Since `compose.mk` tool-container invocations [default to volume-mounts for the working directory and the docker socket automatically]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults), things like [structured io]({{mkdocs.site_relative_url}}/standard-lib#structured-io) can work reliably anywhere.  One consequence of this is a kind of "late binding" style, where basically you don't necessarily have to think much about whether tasks run on the host, or run on containers.
 
-
-!!! tip "Related Links"
-    For an extreme example of "fluency" across matrioshka layers, check out the [makeception demo]({{mkdocs.site_relative_url}}/demos/makeception), where we use `compose.mk` to embed 2 container definitions and to build and steer them.  What's really unusual about this example though, is that even *the build process* itself is encapsulated inside the same file: rather than monolithic top-to-bottom bash in the Dockerfile, provisioning tasks can be expressed as normal targets which are executed as usual, may call other targets, etc.  Besides allowing for "subroutines" and code-reuse, this also [tends to minimize and clean shell code in other ways]({{mkdocs.site_relative_url}}/standard-lib/#workflow-rationale)
-    
-    For an advanced example in service of a more conventional use-case, you might want to take a look at the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking), which uses 3 different containers (a formal-methods toolkit) to augment the behaviour of a 4th container (a jupyter lab server).")}}
-
+### Related Links
 <hr style="width:100%;border-bottom:3px solid black;">
 
-[^1]: https://en.wikipedia.org/wiki/Here_document
-[^2]: Like say, https://github.com/gabrieldemarmiesse/python-on-whales
+See the demos for [Embedded Containers & Data]({{mkdocs.site_relative_url}}/demos/matrioshka/) and the collection of [Polyglot Demos]({{mkdocs.site_relative_url}}/demos/matrioshka), which are all matrioshkas to some extent.
+
+For an extreme example of "fluency" across matrioshka layers, check out the [makeception demo]({{mkdocs.site_relative_url}}/demos/makeception), where we use `compose.mk` to embed 2 container definitions and to build and steer them.  The build process itself is encapsulated inside the same file: rather than monolithic top-to-bottom bash in the Dockerfile, provisioning tasks can be expressed as normal targets which are executed as usual, may call other targets, etc.  
+
+For an advanced example in service of a more conventional use-case, you might want to take a look at the [Notebooking Demo]({{mkdocs.site_relative_url}}/demos/notebooking), which uses 3 different containers (a formal-methods toolkit) to augment the behaviour of a 4th container (a jupyter lab server).")
+
+### References
+<hr style="width:100%;border-bottom:3px solid black;">
+
+[^1]: [wiki://Here Document](https://en.wikipedia.org/wiki/Here_document)
+[^2]: Like say, [python-on-whales](https://github.com/gabrieldemarmiesse/python-on-whales)
+[^3]: See also the *(under construction!)*  [sibling project @ k8s-tools]({{jinja.vars.k8stools_docs_url}})
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Wait for MkDocs to fully render the page including ToC
-    setTimeout(function() {
-        const heading = document.getElementById('matrioshka-automata');
-        const img = document.createElement('img');
-        img.style.height = '2em'; img.style.verticalAlign = 'bottom';
-        img.src = '../img/mat.png'; 
-        heading.insertBefore(img, heading.firstChild);
-        img.style.marginRight = '10px';
-        //img.style.marginLeft = '10px';
-        //heading.appendChild(img);
-    }, 100); // Small delay to ensure ToC is already processed
-});
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	addImageToHeader('matrioshka-automata','/{{mkdocs.config.site_name}}/img/mat.png',style="height:2.2em;")
+	{{macros.header_images([
+		['advanced-matrioshka-idioms','advanced.svg'],
+		['related links','link'], ['matrioshka-bridge-pattern','bridge'],
+		['has-science-gone-too-far','flask'],
+		['matrioshka-idiom-basics','basics'],
+	], mkdocs)}}
+}, 100);});
 </script>

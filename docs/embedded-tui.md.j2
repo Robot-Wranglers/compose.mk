@@ -3,11 +3,10 @@
 ## TUI Overview
 
 <hr style="width:100%;border-bottom:3px solid black;">
-
-First things first: a TUI is a *text-based user interface*. Not to be confused with a CLI, a TUI implies something more like a "console application".  
-
 !!! info "Overview"
-    The TUI capabilities of `compose.mk` are best thought of as an **interface-builder rather than a specific interface.**  Support for the TUI requires no dependencies except for `make` and `docker`.  It aims for low-config and sane defaults, so for high level usage it [requires no configuration at all]({{mkdocs.site_relative_url}}/zero-config-tuis).  Under the hood, the TUI uses a dockerized version of [tmux](https://github.com/tmux/tmux) for core drawing and geometry.
+    A TUI is a **text user interface**.  Not to be confused with a CLI, a TUI implies something more like a "console application".  The TUI capabilities of `compose.mk` are best thought of as an **interface-builder rather than a specific interface.**  
+    
+    Support for the TUI requires no dependencies except for `make` and `docker`.  It aims for low-config and sane defaults, so for high level usage it [requires no configuration at all]({{mkdocs.site_relative_url}}/zero-config-tuis).  Under the hood, the TUI uses a dockerized version of [tmux](https://github.com/tmux/tmux) for core drawing and geometry.
 
 
 There's a few ways to describe what the TUI actually *does*.
@@ -65,7 +64,7 @@ These elements, plus access to other tools like [gum](https://github.com/charmbr
 
 The TUI ships with some default keybindings that are aimed at keeping things pretty user-friendly even for those who are not already familiar with tmux.  
 
-{{bash("pattern='*Keybindings*' make mk.parse.block/compose.mk") }}
+{{bash("pattern='*Default TUI Shortcuts*' make mk.parse.block/compose.mk") }}
 
 ### Layout Basics
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -111,12 +110,24 @@ The main alternative to "horizontal" and "vertical" is called "spiral", and it l
 
 {{macros.img_link("tux.open-s.png", mkdocs, "400px")}}
 
-#### Up Next
-<hr style="width:95%;border-bottom:1px dashed black;">
+### Next Steps
+<hr style="width:100%;border-bottom:3px solid black;">
 
 These 3 layouts are enough for most use-cases, but `compose.mk` actually supports whatever `tmux` does and also whatever [dwindle](https://github.com/sunaku/home/blob/master/bin/tmux-layout-dwindle) supports.
 
 Of course, `flux.ok` is not very interesting, but it is the *simplest* target.  We'll move into more practical examples in the following sections, and almost everything else we'll look at is some variation of the principles above.
 
+{#
+### References 
 <hr style="width:100%;border-bottom:3px solid black;">
+#}
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+{{macros.header_images([
+	['tui overview','tui'],
+	['layout basics','basics'],
+	['next steps','next'],
+], mkdocs)}}
+}, 100);});
+</script>

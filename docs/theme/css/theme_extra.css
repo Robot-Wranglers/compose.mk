@@ -18,7 +18,13 @@ span .code_table_2{
   /* color:#0db7ed; */
   color:black;
 }
-
+.subheader { 
+  font-size:110%;
+  font-weight:bolder;
+  text-decoration: underline;
+  /* font-style: und; */
+  /* font-variant: ; */
+}
 .rst-content .highlight:not(.cli_output):not(.cli_example):not(.api_docs) pre code {
   font-size:100%;
 }
@@ -132,6 +138,9 @@ span.code_table_2 {
   left:-1em;
   margin-top: 2em; 
   margin-bottom: 0px;*/
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 /* .rst-content {
   background-color: red;
@@ -139,9 +148,9 @@ span.code_table_2 {
 
 div .code_table_top_snippet {
   height:2.2em; 
-  background-color: rgba(85, 165, 217, 0.87);
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
+  background-color: rgba(75, 100, 141, 0.16);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
   border:2px solid black;
   /* margin-bottom: 0px; */
   display: flex;
@@ -438,16 +447,27 @@ div .highlight {
  *
  * https://github.com/mkdocs/mkdocs/issues/718
  */
-a code {
+ a code {
     color: #2980B9;
+}
+a:hover {
+  font-weight: bolder;
+  /* font-size: 99%; */
 }
 a:hover code {
     color: #3091d1;
 }
-a:visited code {
-    color: #9B59B6;
+a {
+  color: #2980b9;
+  /* text-decoration: ; */
+  /* color:rgba(162, 94, 94, 0.358); */
 }
-
+a:visited code {
+  color: #843f9f;
+}
+.rst-content a:visited {
+  color: #127594;
+}
 /*
  * The CSS classes from highlight.js seem to clash with the
  * ReadTheDocs theme causing some code to be incorrectly made
@@ -556,6 +576,7 @@ table.docutils tr,
 .docutils td {
   border:2px solid rgb(67, 62, 62);
   background-color: #32bfea31;
+  text-align: left;
 }
 .docutils tr {
   background-color: #32bfea11;
@@ -573,9 +594,27 @@ table.docutils tr,
   margin: auto;
   display: block;
  } */
+.rst-content table.docutils-wrap td {
+  font-weight: bolder;
+  padding:5px 5px 5px 5px;
+  padding-left:unset;
+} 
  .rst-content table.docutils td {
   font-weight: bolder;
-  padding-left:3em;
+  padding-left:2em;
+}
+.rst-content table.docutils-wrap td.wrap {
+  white-space: normal;
+  word-wrap: break-word;
+  /* word-break: break-word; */
+}
+.rst-content table.docutils-wrap th {
+  background-color: snow;
+  /* font-size: 113%; */
+  background-color: #32bfea31;
+  border: 3px solid snow;
+  margin: 1em;
+  padding: 1em;
 }
 .rst-content table.docutils th {
   background-color: snow;
@@ -597,8 +636,8 @@ table.docutils tr,
     overflow: auto;
     /* margin: auto; */
     /* display: block; */
-      margin-left: 1em;
-      margin-right: 1em;
+      /* margin-left: 1em;
+      margin-right: 1em; */
     /* border: 3px dotted rgba(30, 143, 255, 0.387); */
 }
 .rst-content table.docutils{

@@ -33,7 +33,6 @@ Note that for help to render properly, your targets need to use the following st
 
 {{macros.embed_demo('demos/cli-help.mk', github=github)}}
 
-<br/>
 {#By itself, this enables **full** target listing with `make help`, including both the inherited targets from `compose.mk` as well as the new targets that are project specific.  #}
 
 #### Basic Integration
@@ -58,8 +57,6 @@ $ make help.local
 # Rendered help for 1 target 
 $ make mk.help.target/my-target
 ```
-
-<br/>
 
 #### Full Integration
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -100,14 +97,7 @@ Since help involves targets and target-metadata, it's also a special case of ref
 
 The implementation for help uses the `mk.help.*` family of targets, and if you want to customize help or error messages they might be useful.  
 
-See the API for:
-
-{% set targets=bash('./compose.mk mk.namespace.filter/mk.help') %}
-{% set targets=targets.split('\n') %}
-{%for target in targets %} {% set target=target.strip().replace('%','<arg>') %}{%if target%}
-* [`{{target}}`]({{mkdocs.site_relative_url}}/api#{{target.replace('<','').replace('>','').replace('/','').replace('.','')}}){%endif%}{%endfor%}
-
----------------------------
+{{macros.api_link_many(['mk.help'],mkdocs)}}
 
 Heavy lifting for parsing Makefile metadata comes from a dockerized version of the [pynchon tool]({{jinja.vars.pynchon_repo_url}}/blob/master/src/pynchon/util/makefile/__init__.py), which can parse help as well as more structural details like target-prerequisites / DAGs.  
 
@@ -143,6 +133,14 @@ $ ./compose.mk mk.parse/compose.mk
 And again, the special case of running `... help <target>` without actually **executing** the target is related to [supervisors and signals]({{mkdocs.site_relative_url}}/signals).
 #}
 
+### References
 <hr style="width:100%;border-bottom:3px solid black;">
 
 [^1]: See the docs for [Supervisors & Signals]({{mkdocs.site_relative_url}}/signals)
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	addImageToHeader('cli-help','/{{mkdocs.config.site_name}}/img/user.svg')
+	addImageToHeader('implementation-details','/{{mkdocs.config.site_name}}/img/implementation.svg')
+}, 100);});
+</script>

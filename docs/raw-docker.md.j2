@@ -4,7 +4,7 @@
 <hr style="width:100%;border-bottom:3px solid black;">
 
 !!! Info "Info"
-    **Note that functionality here is *use-case driven*** and so the [`docker.*` target api]({{mkdocs.site_relative_url}}/api/#api-docker) interface is not intended to be 1:1 with the docker CLI.  Using the docker CLI directly is still [idiomatic compose.mk]({{mkdocs.site_relative_url}}/style), so we're not looking to replace it.  Instead, the offerings here are all building on top of it or making common interactions somewhat smoother.
+    **Note that functionality here is *use-case driven*** and so the [`docker.*` target api]({{mkdocs.site_relative_url}}/api/#api-docker) interface is not intended to be 1:1 with the docker CLI.  Using the docker CLI directly is fine, so we're not looking to replace it.  Instead, the offerings here are building on top of it, or making common interactions somewhat smoother, or exposing a pure-docker interface that's similar to the [compose bridge]({{mkdocs.site_relative_url}}/bridge).
 
 Usually it's a good idea to separate task-definitions from the containers runtime, and [using the docker compose support]({{mkdocs.site_relative_url}}/bridge) is really the recommended way to arrange things.
 
@@ -25,9 +25,11 @@ In the first case, without sharing the working directory, tools could not do any
 ### Dispatch Tasks in Containers
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Dispatch for [imported tool containers from compose files]({{mkdocs.site_relative_url}}/bridge) is explained in detail [here]({{mkdocs.site_relative_url}}/container-dispatch), and [other sections of this page](#inlined-dockerfiles) show examples of dispatch used with an *embedded image*.
+Target-dispatch for [imported tool containers from compose files]({{mkdocs.site_relative_url}}/bridge) is explained in detail [here]({{mkdocs.site_relative_url}}/container-dispatch), and [other sections of this page](#inlined-dockerfiles) show examples of dispatch used with an *embedded image*.
 
-The situation is similar though for any other kind of **unmodified stock image**, as long as that image actually ships with `make`.  One of the smallest images preconfigured with `make` seems to be `debian/buildd`, so we'll use that here.  
+For **unmodified stock images**, the situation is similar, as long as that image actually ships with `make`.  One of the smallest images preconfigured with `make` is `debian/buildd`, so we'll use that here.  As mentioned in [the installation docs]({{mkdocs.site_relative_url}}/quickstart/#docker-compose-integration), lots of your daily-driver images probably already have `make` by default, including images for stuff like gcc, golang, maven, etc.
+
+The simplest way to use dispatch with existing targets is using {{macros.api_link('docker.dispatch',mkdocs,arg='target')}} directly:
 
 ```bash  {.cli_example}
 # Run the trivial `flux.ok` target inside the given image
@@ -38,23 +40,61 @@ $ img=debian/buildd:bookworm ./compose.mk docker.dispatch/flux.ok
 Φ flux.ok // succeeding as requested! 
 ```
 
-If you're doing something like the above frequently, then you can also use `compose.import.docker_image` to generate scaffolded targets that do the same thing:
+#### Using docker.import
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+If you're doing something like the above frequently, then you can also use `docker.image.import` to generate scaffolded targets that do the same thing:
 
 {{macros.embed_demo('demos/import-image.mk', github=github)}}
 
-As mentioned in [the installation docs]({{mkdocs.site_relative_url}}/integration/#docker-compose-integration), lots of your daily-driver images probably have `make` by default, including images for stuff like gcc, golang, maven, etc.
+Besides the `namespace.dispatch/..` helper and the main `namespace` target that are created and demonstrated above, this also creates a `namespace.shell` target that can be used to drop you into an interactive debugging shell for the container, and creates `${namespace.img}` that holds data for the image name.  Argument reference follows.
+
+{% include "includes/args/docker.import.md" %}
 
 ### Inlined Dockerfiles
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The [polyglot demos]({{mkdocs.site_relative_url}}/demos/polyglots) and [these mad-science demos]({{mkdocs.site_relative_url}}/demos/matrioshka) show various use-cases for working with embedded images.  Below you can see test-cases that are exercising related raw docker support.
+Working with inlined container definitions is mostly the same as working with stock images, but there are few things to keep in mind.
+
+1. Inlined Dockerfiles should be inside `define .. endef` blocks with a name like `Dockerfile.my_container` 
+1. Containers must be built before you can use them, typically with something like {{macros.api_link('Dockerfile.build',mkdocs,arg='my_container')}}.
+1. After build, containers are tagged as something like `compose.mk:my_container`
+
+Usually the `compose.mk:..` prefix for image tags can be omitted, for example by using {{macros.api_link('docker.dispatch',mkdocs,arg='target')}} instead of {{macros.api_link('mk.docker.dispatch',mkdocs,arg='target')}}.
+
+See the [polyglot demos]({{mkdocs.site_relative_url}}/demos/polyglots) and [matrioshka demos]({{mkdocs.site_relative_url}}/demos/matrioshka) for many examples of working with embedded images.  See also the equivalent idioms in [CMK-lang]({{mkdocs.site_relative_url}}/compiler/#dockerfile-example).  The rest of this section covers low-level support.
+
+#### Low Level Support
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Sometimes you might be interested in fine-grained control or more flexibility.  Below you can see test-cases that are exercising low-level support for raw docker.
 
 {{macros.embed_demo('demos/inlined-dockerfile.mk', github=github,
     bottom_right=macros.link_mirror(
       'demos/cmk/code-objects.cmk',
       link=mkdocs.site_relative_url+'/compiler/#dockerfile-example'))}}
 
+### Dispatch Scripts in Containers
+<hr style="width:100%;border-bottom:3px solid black;">
+
+[Dispatching tasks](#dispatch-tasks-in-containers) is usually more composable, but working with scripts can be more convenient for one-offs.  Script dispatch with stock-images looks like this:
+
+{{macros.embed_demo('demos/script-dispatch-stock.mk', github=github,
+        bottom_right=macros.link_mirror('demos/cmk/script-dispatch-stock.cmk',link=mkdocs.site_relative_url+'/compiler/#dockerfile-example')
+)}}
+
+For inlined-containers, the approach is similar:
+
+{{macros.embed_demo('demos/script-dispatch-custom.mk', github=github,
+    bottom_right=macros.link_mirror('demos/cmk/script-dispazzzztch.cmk',link=mkdocs.site_relative_url+'/compiler/#dockerfile-example')
+)}}
+
+
+{% include "includes/args/docker.bind.script.md" %}
+
 {#
+For similar functionality with compose-backed images, see the documentation [here]({{mkdocs.site_relative_url}}/container-dispatch#container-agnostic-dispatch).
+
 For an approach with better style and more native syntax, see also [this example in CMK-lang]({{mkdocs.site_relative_url}}/compiler/#dockerfile-example)
 #}
 
@@ -82,16 +122,15 @@ Below, you can find quick links for the [docker]({{mkdocs.site_relative_url}}/ap
 <hr style="width:100%;border-bottom:3px solid black;">
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Wait for MkDocs to fully render the page including ToC
-    setTimeout(function() {
-        const heading = document.getElementById('raw-docker-support');
-        const img = document.createElement('img');
-        img.style.height = '2em'; img.style.verticalAlign = 'middle';
-        img.src = '../img/docker.png'; 
-        heading.insertBefore(img, heading.firstChild);
-        img.style.marginRight = '10px';
-        //heading.appendChild(img);
-    }, 100); // Small delay to ensure ToC is already processed
-});
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+    {{macros.header_images([
+        ['tool-container-defaults','tool'],
+        ['dispatch-tasks-in-containers','dispatch'],
+        ['inlined-dockerfiles','dispatch'],
+        ['dispatch-scripts-in-containers','dispatch'],
+        ['other-docker-utilities','tool'],
+        ['full docker api','api'],
+    ], mkdocs)}}
+	addImageToHeader('raw-docker-support','/{{mkdocs.config.site_name}}/img/docker.png',style="margin-top:-10px;height:2.2em;")
+}, 100);});
 </script>
