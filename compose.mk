@@ -5425,7 +5425,7 @@ bind.compose.target=${compose.bind.target}
 
 # Used in CMK-Lang
 docker_context=$(call docker.bind.script, ${1})
-local_context=export build=Dockerfile.build; $(call mk.docker.bind.script, ${1})
+local_context=$(call mk.docker.bind.script, ${1} build=Dockerfile.build)
 compose_context=${compose.bind.script}
 bind.compose.bind.target=${compose.bind.target}
 bind.polyglot.bind.file=${polyglot.bind.file}
@@ -5441,15 +5441,15 @@ $(call _mk.unpack.kwargs,${1},img,${1}) \
 && export env=`printf "$${env}"|sed 's/ /,/g'` \
 && ([ -z "$${env}" ] \
 	|| $(call log.trace, $${_hdr} ${bold}env ${sep} ${green_flow_left}$${env})) \
-&& case $${build:-} in \
+&& case $(strip $${build:-}) in \
 	"") true;; \
-	*) $(call log.trace, building with $${build}/$${img}); build=$${build}/$${img};; \
+	*) $(call log.target, building with $${build}/$${img}); build=$${build}/$${img};; \
 esac \
 && $(call log.trace, docker.bind.script ${sep} def=$${def} img=$${img} entrypoint=$${entrypoint}) \
 && ${io.mktemp} && ${mk.def.read}/$${def} | ${stream.peek} > $${tmpf} \
 && ${trace_maybe} && entrypoint=$${entrypoint} cmd="$${cmd} $${tmpf}" ${make} $${build} docker.run.sh
 endef
-mk.docker.bind.script=$(call _mk.docker.bind.script,${1})
+mk.docker.bind.script=$(call _mk.docker.bind.script,${1} build=Dockerfile.build)
 define _mk.docker.bind.script
 $(call docker.bind.script, $(strip $(shell printf "$(if $(findstring img=,$(1)),$(1),img=$(strip $(1)))"| sed s'/img=/img=compose.mk:/')))
 endef

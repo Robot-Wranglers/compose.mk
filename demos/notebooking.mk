@@ -39,10 +39,10 @@ jq.img.filter=[ .cells[] \
 jq.imgcount.filter=${jq.img.filter} | length
 
 # Autogenerate target scaffolding for each kernel container
-$(call compose.import, file=${jupyter.root}/docker-compose.fmtk.yml, namespace=fmtk)
+$(call compose.import, file=${jupyter.root}/docker-compose.fmtk.yml namespace=fmtk)
 
 # Autogenerate scaffolding for the jupyter-lab container.
-$(call compose.import, file=${jupyter.root}/docker-compose.jupyter.yml, namespace=jupyter)
+$(call compose.import, file=${jupyter.root}/docker-compose.jupyter.yml namespace=jupyter)
 
 ## Next section uses the service scaffolding to create target-handles for language 
 ## kernels dynamically.  Although `compose.import` already created handles for all 
