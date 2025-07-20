@@ -19,7 +19,7 @@ Whether `compose.mk` is a tool, a library, a language, or a framework depends on
 **For programmatic usage,** 
 :  you can think of `compose.mk` as an attempt to provide a "[standard library]({{mkdocs.site_relative_url}}/standard-lib)" that extends vanilla `make`.  Besides advanced stuff like container support and [workflows]({{mkdocs.site_relative_url}}/demos/workflows), it also offers basic stuff like [clean, colored logging]({{mkdocs.site_relative_url}}/standard-lib#logging-facilities), and [structured IO]({{mkdocs.site_relative_url}}/standard-lib#structured-io).
 
-{{macros.subheader('As a framework,')}}
+As a framework,
 :  you can combine `compose.mk` [with docker-compose file(s)]({{mkdocs.site_relative_url}}/bridge) or [inlined container descriptions]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile), and very quickly expose [powerful, domain-specific automation APIs]({{mkdocs.site_relative_url}}/demos/custom-automation-apis) in your project Makefile to orchestrate tasks that might involve multiple containers.  [Dispatching make-targets *inside* these containers]({{mkdocs.site_relative_url}}/container-dispatch) turns out to be an especially powerful technique, and is supported for most containers.
 
 **As a stand-alone tool,** 

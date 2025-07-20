@@ -17,16 +17,12 @@ As a quick overview of what we'll accomplish: the basic plan is to throw togethe
 
 {{macros.img_link("notebooking-ui.gif", mkdocs, "95%",align='left')}}
 
-{#
-It's an advanced example using "idiomatic" `compose.mk`, and it's ambitious so we won't explain every little thing.  Suggested prereqs to read are: [the matrioshka bridge idiom]
-#}
-
 ---------------------------------
 
 Other background info about this demo before we dive in:
 
 * This example illustrates the [matrioshka bridge pattern]({{mkdocs.site_relative_url}}/matrioshka#matrioshka-bridge-pattern).  There are [other]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/) [examples]({{mkdocs.site_relative_url}}/demos/just) of this pattern, but this is one by far the most involved.
-* Unlike other demos, we need several external files for this demo, including notebooks, and can't lean on [tricks with embedded resources]({{mkdocs.site_relative_url}}/demos/matrioshka).  Rather than inlining we'll use files inside the {{macros.repo_link('demos/data/jupyter/notebooks', github=github)}} folder, but in the end we'll **still [generate a frozen release](#project-as-tool) that's self-contained**.  You can also browse the related containers/notebooks [at the bottom of this page](#appendix-main-jupyter-container)
+* Unlike other demos, we need several external files for this demo, including notebooks, and can't lean on [tricks with embedded resources]({{mkdocs.site_relative_url}}/demos/matrioshka).  Rather than inlining we'll use files inside the {{macros.repo_link('demos/data/jupyter/notebooks', name='jupyter/notebooks', github=github)}} folder, but in the end we'll **still [generate a frozen release](#project-as-tool) that's self-contained**.  You can also browse the related containers/notebooks [at the bottom of this page](#appendix-main-jupyter-container)
 * Unlike other demos, this example also **involves a server** as well as automation and pipelines i.e. the jupyter lab front-end.  Side-effects like port-forwarding would usually mean the loss of statelessness that makes complex automation practical, but despite the involvement of a server / interactive frontend here we'll see several unique ways that `compose.mk` still manages to keep things *fully-specified and completely reproducible*, and remains remarkably amenable to automation and pipelines.
 
 Without further delay, let's get into it.
@@ -36,7 +32,7 @@ Without further delay, let's get into it.
 
 !!! goals "Basic Goals"
     **Configuration:** 
-    :  We want Jupyter lab minimally preconfigured, mostly to demonstrate the capability.  See {{macros.repo_link('demos/data/jupyter/lab/settings/overrides.json',github=github)}}.  Including kernels and support tooling, the configuration surface for server-side jupyter is so large that beyond a simple `pip install`, it actually has the characteristics of a **distribution**.  The challenges of how to manage, encapsulate, and then automate that in a "local first" way are actually a pretty good fit for `compose.mk`.
+    :  We want Jupyter lab minimally preconfigured, mostly to demonstrate the capability.  See {{macros.repo_link('demos/data/jupyter/lab/settings/overrides.json',name='overrides.json',github=github)}}.  Including kernels and support tooling, the configuration surface for server-side jupyter is so large that beyond a simple `pip install`, it actually has the characteristics of a **distribution**.  The challenges of how to manage, encapsulate, and then automate that in a "local first" way are actually a pretty good fit for `compose.mk`.
 
     **Lifecycle Management:**
     :  We need to daemonize the front-end, but we need to be smart about it.  One use-case is letting users interact with notebooks and detached-daemonization is an option, but as potential kernel developers we might want it foregrounded for logs.  Notebooks and kernels can run without the webserver being live via stuff like `jupyter console`, but we also might want automation *over* the webserver, for example with `nbclient` [^1].

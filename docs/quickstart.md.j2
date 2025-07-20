@@ -26,7 +26,9 @@ $ ./compose.mk ...
 
 If you have `make` and `docker`, that's all the setup you'll need for stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview) usage.  While it's not really necessary or recommended.. you can always copy it to a bin folder too if you want.  *(See the [forks and versioning section](#forks-versioning) for more details.)*
 
-Note that since [various containers]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) are only pulled on demand, initial usage can be slow, but subsequent runs can take advantage of cache.  Read on for details about tighter integration with projects.
+Note that since [various containers]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) are only pulled on demand, initial usage can be slow, but subsequent runs can take advantage of cache.  
+
+Read on for details about tighter integration with projects, and see the [compatibility notes](#compatibility-notes) for details about docker versions / possible gotchas in OSX.
 
 ### Project Integration
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -79,20 +81,33 @@ Next, a few tips and tricks about the docker-compose config details:
 1. **Correct config keys for `working_dir` and `volumes` are crucial for project file IO,** which might include reading your project `Makefile` if you're using container dispatch.
 1. It's optional, but **there are cases where you'll want `docker` to be available inside tool-containers** and you also might want to share the hosts docker-socket.[^1]  The boilerplate above goes half way, defaulting to using a volume mount but stopping short of actually installing docker.  
 
+### Running with Docker
+<hr style="width:100%;border-bottom:3px solid black;">
+
 ### Compatibility Notes
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Platforms used in development for `compose.mk` include modern docker (say *25+*), recentish make (*3.8+*) and bash (*~5*) on both Linux and MacOS. Testing done in CI only uses Linux, and won't try every possible combination of versions. Still, **the goal is to support most things you'll encounter in the wild**, including OSX, out of the box.  But with MacOS you may see some of the usual problems with certain invocations to non-gnu OSX default `sed` / `ps` / `xargs`, etc.  Please report issues!  
+Platforms used in development for `compose.mk` include recentish docker, recentish make (*3.8+*) and bash (*5+*) on both Linux and MacOS.  Testing done in CI only uses Linux and won't try every possible combination of versions, but the goal is to support most things you'll encounter in the wild.
 
-Simple usage of `compose.mk` should work without problems even using BSD tools instead of GNU ones, but for some [advanced usage]({{mkdocs.site_relative_url}}/compiler) you'll probably encounter problems with MacOS's default `awk`.  
+**For docker,** recentish means a client at least 25+, engine at 20+ and while it's not a strict requirement, using docker-compose at 2.17.0+ is *strongly recommended*.  Otherwise you won't have access to `dockerfile_inline`, which is inconvenient and also breaks many demos.
+
+**For MacOS,** the [standard library]({{mkdocs.site_relative_url}}/standard-lib) should mostly Just Work.  For more [advanced]({{mkdocs.site_relative_url}}/compiler) [features]({{mkdocs.site_relative_url}}/bridge) though, there are the usual problems with BSD vs GNU tools, particularly `sed` and `awk`.
+
+Typically `/usr/local/bin` comes before `/usr/bin` in PATH, so this should leave your base installation untouched and still prefer GNU by default:
 
 ```bash {.cli_example}
 # Install a GNU awk
 $ brew install gawk
 $ cp /usr/local/bin/gawk /usr/local/bin/awk
+
+# Install a GNU sed
+$ brew install gnu-sed
+$ cp /usr/local/bin/gsed /usr/local/bin/sed
 ```
 
-Typically local-bin comes before /bin in PATH, so this should leave your base installation untouched but still prefer gawk by default.  Opting in to GNU tools on MacOS *everywhere* is a matter of taste, but might be worthwhile. See documentation for example [here](https://gist.github.com/skyzyx/3438280b18e4f7c490db8a2a2ca0b9da) and [here](https://github.com/pkill37/linuxify).
+Usage of other tools like `xargs` should be BSD/GNU agnostic so please report any issues!  Opting in to GNU tools on MacOS *everywhere* is a matter of taste, but might be worthwhile. See documentation for example [here](https://gist.github.com/skyzyx/3438280b18e4f7c490db8a2a2ca0b9da) and [here](https://github.com/pkill37/linuxify).
+
+Another edge case is that docker desktop in OSX is *increasingly problematic in general*, and also officially unsupported these days if you're still on Intel instead of Apple silicon.  Rancher-desktop is one possible work around.
 
 ### For Developers
 <hr style="width:100%;border-bottom:3px solid black;">

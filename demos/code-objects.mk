@@ -22,5 +22,5 @@ $(call polyglot.import, def=hello_world \
 # With the new target-scaffolding in place, now we can use it.
 # First we preview the code with syntax highlighting, 
 # then run the code inside the bound interpreter.
-__main__: hello_world.preview hello_world.run
+__main__: hello_world.preview hello_world
 

@@ -33,5 +33,5 @@ $(call polyglot.import, \
 # With the new target-scaffolding in place, now we can use it.
 # First we preview the code with syntax highlighting, 
 # then run the code inside the bound interpreter.
-__main__: WORLD.preview WORLD.run
+__main__: WORLD.preview WORLD
 

@@ -59,12 +59,12 @@ end
 
 # Main entrypoint.  Ensures the container is ready, 
 # then dispatches execution of both script and theorem
-__main__: Lean.build my.theorem.run my.script.run
+__main__: Lean.build my.theorem my.script
 
 # Top-level helpers. 
 # These write embedded script/theorem to disk before use, 
 # run them inside the container, and clean up afterwards.
 lean.run.script/%:; lean_args="--run" ${make} lean.run.generic/${*}
 
-lean.run.generic/% lean.run.theorem/%:
+lean.run.theorem/% lean.run.generic/%:
 	img=Lean cmd="$${lean_args:-} ${*}" ${make} mk.docker

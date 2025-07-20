@@ -328,7 +328,6 @@ export CMK_COMPOSE_FILE?=.tmp.compose.mk.yml
 export CMK_DIND?=0
 export verbose:=$(shell [ "$${quiet:-0}" == "1" ] && echo 0 || echo $${verbose:-1})
 export CMK_INTERNAL?=0
-# export CMK_SRC?=$(shell echo ${MAKEFILE_LIST} | sed 's/ /\n/g' | grep compose.mk)
 # export CMK_SRC:=$(shell echo ${MAKEFILE_LIST} | sed 's/ /\n/g' | grep compose.mk)
 export CMK_SRC=compose.mk
 export CMK_BIN?=${CMK_SRC}
@@ -412,7 +411,7 @@ jb=${jb.docker}
 json.from=${jb}
 jq=${jq.run}
 yq=${yq.run}
-_yml.stem=$(shell basename -s .yml `basename -s .yaml ${1}`)
+# _yml.stem=$(shell basename -s .yml `basename -s .yaml ${1}`)
 
 IMG_GUM?=v0.16.0
 GLOW_VERSION?=v1.5.1
@@ -497,8 +496,7 @@ compose.get.stem/%:; basename -s .yml `basename -s .yaml ${*}`
 	@# Returns a normalized version of the stem for the given compose-file.
 	@# (A "stem" is just the basename without a suffix.)
 	@#
-	@# USAGE:
-	@#  ./compose.mk compose.get.stem/<fname>
+	@# USAGE: ./compose.mk compose.get.stem/<fname>
 
 compose.images/%:; ${docker.compose} -f ${*} config --images
 	@# Returns all images used with the given compose file.
@@ -560,13 +558,14 @@ compose.select/%:
 	&& set -x && ${io.shell.isolated} ${__interpreter__} loadf ${*} $${chosen}.shell
 
 compose.services/%:
-	@# Returns space-delimited names for each non-abstract service defined by the given composefile.
+	@# Returns space-delimited names for non-abstract services defined by the given composefile.
 	@# Also available as a macro.
 	@#
 	@# USAGE:
 	@#   ./compose.mk compose.services/demos/data/docker-compose.yml
-	set -o pipefail && ${docker.compose} $${COMPOSE_EXTRA_ARGS:-} -f ${*} config --services \
-			2>/dev/null | sort | grep -v abstract |grep -v "no such file or directory" | ${stream.nl.to.space}
+	set -o pipefail \
+	&& ${docker.compose} $${COMPOSE_EXTRA_ARGS:-} -f ${*} config --services 2>/dev/null \
+	| sort | grep -v abstract | grep -v "no such file or directory" | ${stream.nl.to.space}
 
 compose.validate/%:
 	@# Validates the given compose file (i.e. asks docker compose to parse it)
@@ -591,7 +590,7 @@ compose.require:
 	docker info --format json | ${jq} -e '.ClientInfo.Plugins[]|select(.Name=="compose")'
 compose.size/%:
 	@# Returns image sizes for all services in the given compose file,
-	@#  i.e. JSON like `{ "repo:tag" : "human friendly size" }`
+	@# i.e. JSON like `{ "repo:tag" : "human friendly size" }`
 	@#
 	filter="`${make} compose.images/${*} | ${stream.as.grepE}`" \
 	&& ${make} docker.size.summary | grep -E "$${filter}" | ${jq.column.zipper}
@@ -632,6 +631,10 @@ jq.column.zipper=${jq} -R 'split(" ")' \
 	| ${jq} -s 'reduce .[] as $$item ({}; . + $$item)' \
 	| ${jq} 'to_entries | sort_by(.value) | from_entries' 
 
+docker.compose:=$(shell docker compose >/dev/null 2>/dev/null && echo docker compose || echo echo DOCKER-COMPOSE-MISSING;) 
+
+docker.containers.all:=docker ps --format json
+
 docker.clean:
 	@# This refers to "local" images.  Cleans all images from 'compose.mk' repository,
 	@# i.e. affiliated containers that are related to the embedded TUI, and certain things
@@ -645,21 +648,16 @@ docker.clean:
 		|| (${make} docker.images \
 			| ${stream.peek} | xargs -I% sh -c "docker rmi -f $${CMK_EXTRA_REPO}:% 2>/dev/null || true")
 
-docker.compose:=$(shell docker compose >/dev/null 2>/dev/null && echo docker compose || echo echo DOCKER-COMPOSE-MISSING;) 
-
-docker.containers.all:=docker ps --format json
-
 docker.image.entrypoint: 
 	@# Returns the current entrypoint for the given image.
 	$(call mk.assert.env, img)
 	docker inspect $${img} --format='{{.Config.Entrypoint}}'
 
-docker.image.sizes:
+docker.image.sizes:; ${make} docker.size.summary | ${jq.column.zipper}
 	@# Shows disk-size summaries for all images. 
 	@# Returns JSON like `{ "repo:tag" : "human friendly size" }`
 	@# See `docker.size.summary` for similar column-oriented output
-	@#
-	${make} docker.size.summary | ${jq.column.zipper}
+	
 # docker.image.stop/%:; img=${*} ${make} docker.image.stop
 docker.image.stop:
 	@# Stops one or more running instances launched from given image.
@@ -669,6 +667,7 @@ docker.image.stop:
 		| ${jq} -r ".|select(.Image==\"$${img}\").ID" \
 		| ${stream.nl.to.space}` \
 		img="" ${make} docker.stop 
+
 docker.size.summary:
 	@# Shows disk-size summaries for all images. 
 	@# Returns nl-delimited output like `repo:tag human_friendly_size`
@@ -777,10 +776,6 @@ docker.context/%:
 			${make} docker.context \
 			| ${jq.run} ".[]|select(.Name=\"${*}\")" -r; ;; \
 	esac
-
-# docker.copy:
-# docker create --name dummy IMAGE_NAME
-# docker cp dummy:/path/to/file /dest/to/file
 
 docker.def.is.cached/%:
 	@# Answers whether the named define has a cached docker image
@@ -994,6 +989,10 @@ docker.help: mk.namespace.filter/docker.
 
 docker.network.panic:; docker network prune -f
 	@# Runs 'docker network prune' for the entire system.
+docker.network.connect/%:
+	@# USAGE: ./compose.mk docker.network.connect/net1,net2
+	$(call bind.args.from_params) \
+	&& docker network connect $${_1st} $${_2nd}
 
 docker.panic: docker.stop.all docker.network.panic docker.volume.prune docker.system.prune
 	@# Debugging only!  This is good for ensuring a clean environment,
@@ -1049,7 +1048,10 @@ docker.run.sh:
 	&& image_tag="$${img}" \
 	&& entry=`[ "$${entrypoint:-}" == "none" ] && echo ||  echo "--entrypoint $${entrypoint:-bash}"` \
 	&& net=`[ "$${net:-}" == "" ] && echo ||  echo "--net=$${net}"` \
-	&& hostname=`[ "$${hostname:-}" == "" ] && echo "--hostname=$${img}" ||  echo "--hostname=$${hostname}"` \
+	&& case "$${hostname:-}"  in \
+		"") hostname="--hostname=$(shell echo $${img}| cut -d'@' -f1 | cut -d: -f1)";; \
+		*) hostname="--hostname=$${hostname}";; \
+	esac \
 	&& cmd="$${cmd:-$${script:-}}" \
 	&& disp_cmd="`echo $${cmd} | sed 's/${MAKE_FLAGS}//g'|${stream.lstrip}`" \
 	&& ( \
@@ -1108,7 +1110,7 @@ docker.socket:; ${make} docker.context/current | ${jq.run} -r .Endpoints.docker.
 	@# Returns the docker socket in use for the current docker context.
 	@# No arguments & pipe-friendly.
 
-docker.stat:
+docker.stat: docker.init
 	@# Show information about docker-status.  No arguments.
 	@#
 	@# This is pipe-friendly, although it also displays additional
@@ -1119,19 +1121,14 @@ docker.stat:
 	@#   { "version": .., "container_count": ..,
 	@#     "socket": .., "context_name": .. }
 	@#
-	$(call io.mktemp) && \
+	export CMK_INTERNAL=1 && $(call io.mktemp) && \
 	${make} docker.context/current > $${tmpf} \
 	&& $(call log.docker, ${@}) \
-	&& ${make} docker.init  \
-	&& echo {} \
-		| ${make} stream.json.object.append key=version \
-			val="`docker --version | sed 's/Docker " //' | cut -d, -f1|cut -d' ' -f3`" \
-		| ${make} stream.json.object.append key=container_count \
-			val="`docker ps --format json| ${jq.run} '.Names'|${stream.count.lines}`" \
-		| ${make} stream.json.object.append key=socket \
-			val="`cat $${tmpf} | ${jq.run} -r .Endpoints.docker.Host`" \
-		| ${make} stream.json.object.append key=context_name \
-			val="`cat $${tmpf} | ${jq.run} -r .Name`"
+	&& ${jb} \
+		version="`docker --version | sed 's/Docker " //' | cut -d, -f1|cut -d' ' -f3`" \
+		container_count="`docker ps --format json| ${jq.run} '.Names'|${stream.count.lines}`" \
+		socket="`cat $${tmpf} | ${jq.run} -r .Endpoints.docker.Host`" \
+		context_name="`cat $${tmpf} | ${jq.run} -r .Name`"
 
 docker.stop:
 	@# Stops one or more containers, with optional timeout,
@@ -1240,17 +1237,14 @@ io.awk/%:; ${stream.stdin} | awk -f <(${mk.def.read}/${*}) $${awk_args:-}
 	@# Must remain silent, does not support args.  
 	@# Also available as a macro.
 	@#
-	@# USAGE:
-	@#   io.awk/<def_name>
+	@# USAGE: io.awk/<def_name>
 
 io.bash=CMK_INTERNAL=1 ${make} io.bash
 io.bash/%:
 	@# Treats the given define-block name as a bash script.
 	@# Also available as a macro.
 	@#
-	@# USAGE:
-	@#   io.bash/<def_name>,<optional_args>
-	@#
+	@# USAGE: io.bash/<def_name>,<optional_args>
 	is_pipe="`[ -p /dev/stdin ] && echo pipe || echo 'no input'`" \
 	&& hdr="io.bash ${sep}${dim_cyan} ${*} ${sep}${dim}" \
 	&& $(call log.io, $${hdr} Running script with ${no_ansi_dim}$${is_pipe}) \
@@ -1698,7 +1692,7 @@ mk.__main__:
 	@# usage of `mk.supervisor.enter/<pid>` is ALWAYS present,
 	@# and that overrides default that would run with an empty CLI.
 	case `echo ${MAKEFILE_LIST}|${stream.count.words}` in \
-		1) case `echo ${MAKEFILE_LIST}|xargs basename` in \
+		1) case `echo ${MAKEFILE_LIST} | xargs basename` in \
 				compose.mk) (\
 					$(call log.trace,empty invocation for compose.mk-- returning help) \
 					&& ${make} help);; \
@@ -1810,7 +1804,7 @@ mk.help.module/%:
 	@# Shows help for the named module.
 	@# USAGE: ./compose.mk mk.help.module/<mod_name>
 	$(call io.mktemp) && export key="${*}" \
-	&& (${make} mk.parse.module.docs/${MAKEFILE} \
+	&& (CMK_INTERNAL=1 ${make} mk.parse.module.docs/${MAKEFILE} \
 		| ${jq} ".$${key}"  2>/dev/null | ${jq} -r '.[1:-1][]' 2>/dev/null  \
 	> $${tmpf}) \
 	; [ -z "`cat $${tmpf}`" ] && exit 0 \
@@ -1923,7 +1917,7 @@ endef
 # mk.aliases:
 # 	printf "alias mk.compile='${CMK_BIN} mk.compile'\n"
 
-mk.compile/% mk.compiler/%:; export __interpreting__=${*}; cat ${*} | (${mk.compile})
+mk.compile/% mk.compiler/%:; ls ${*} && export __interpreting__=${*} && cat ${*} | (${mk.compile})
 	@# Like `mk.compile`, but accepts file as argument instead of using stdin.
 
 mk.compile mk.compiler:
@@ -1992,9 +1986,6 @@ mk.src:
 # a version of (eval (call ..)) which attempts to simulate nargs.
 # used internally by transpiler-- it simplifies translation to assume  
 # this is always available from all interpretted contexts.
-define .eval.call
-eval.call=$(eval $(call $(if $(filter undefined,$(origin 1)),,$(1)),$(if $(filter undefined,$(origin 2)),,$(2)),$(if $(filter undefined,$(origin 3)),,$(3)),$(if $(filter undefined,$(origin 4)),,$(4))))
-endef
 define .awk.zip.linefeeds
 BEGIN { in_define = 0; continuation_line = "" }
 # Check for define block start
@@ -2082,7 +2073,7 @@ mk.preprocess.dialect:
 		| ${jq} -r ".[] | \" \
 		| awk -v old='\(.[0])' -v new='\(.[1])' '${.awk.preprocess.dialect}'\"" \
 		> $${parser_file} \
-	&& printf '\n'; ${mk.def.read}/.eval.call \
+	&& printf '\n' \
 	&& ${stream.stdin} \
 		| eval ${stream.stdin} `cat $${parser_file}` \
 	&& printf "# finished ${@} $${cmk_dialect}"
@@ -2214,9 +2205,15 @@ mk.interpret/%:
 		 && cat ${CMK_SRC} | tail -n1 ) \
 	> $${tmpf} \
 	&& $(call log.compiler.part2, ${dim}deduplicated includes from ${ital}$${fname}) \
+	&& $(call log.compiler.part1, checking for __main__) \
+	&& cat $${tmpf} | grep '^__main__:' > /dev/null \
+	; case $$? in \
+		0) $(call log.compiler.part2, ok);; \
+		1) $(call log.compiler.part2, missing) \
+			&& printf "__main__:; echo __main__ wasnt set" >> $${tmpf} ;; \
+	esac \
 	&& CMK_INTERNAL=0 ${make} mk.validate/$${tmpf} \
 	&& chmod +x $${tmpf} \
-	&& cp $${tmpf} .tmp.interpreting \
 	&& $(call log.trace, mk.interpret ${sep} ${dim_ital}$${continuation:-(no additional arguments passed)}) \
 	&& export __interpreting__=$${__interpreting__:-${*}} \
 	&& __script__=${__script__} MAKEFILE=$${tmpf} \
@@ -2370,7 +2367,7 @@ mk.parse.block/%:
 	@# EXAMPLE:
 	@#   pattern='*Keybindings*' make mk.parse.block/compose.mk
 	@#
-	${make} mk.parse.module.docs/${*} \
+	CMK_INTERNAL=1 ${make} mk.parse.module.docs/${*} \
 	| ${jq.run} "to_entries | map(select(.key | test(\".*$${pattern}.*\"))) | first | .value" \
 	| ${jq.run} -r '.[1:-1][]'
 
@@ -2443,7 +2440,7 @@ mk.set/%:
 	@# USAGE: ./compose.mk mk.set/<key>/<val>
 	$(eval $(shell echo ${*}|cut -s -d/ -f1):=$(shell echo ${*}|cut -s -d/ -f2-))
 
-mk.stat version:
+mk.stat:
 	@# Shows version-information for make itself  & compose.mk
 	@#
 	@# USAGE: ./compose.mk mk.stat
@@ -3024,10 +3021,12 @@ flux.map/% flux.for.each/%:
 	@#   flux.for.each/flux.echo,hello,world 
 	@#   flux.map/flux.echo,hello,world 
 	@#
-	printf "${*}" | cut -d, -f2- \
+	${io.mktemp} \
+	&& printf "${*}" | cut -d, -f2- \
 	| ${stream.comma.to.nl} \
 	| xargs -I% echo "${make} `printf "${*}" | cut -d, -f1`/%" \
-	| bash ${dash_x_maybe}
+	> $${tmpf} \
+	&& bash ${dash_x_maybe} $${tmpf}
 	
 flux.or/% flux.any/%:
 	@# Performs an 'or' operation with the named comma-delimited targets.
@@ -4484,6 +4483,8 @@ endef
 		done; \
 	done
 
+.tux.widget.img.rotate/%:; url=${*} ${make} .tux.widget.img.rotate
+	@# Like `.tux.widget.img.rotate`, but using parameters, not environment
 .tux.widget.img.rotate:
 	@# Like `.tux.widget.img`, but sets up a rotating version of the image.
 	display_target=.tux.img.rotate ${make} .tux.widget.img
@@ -4518,19 +4519,14 @@ endef
 	cmd="${*} --range 360 --center --display" \
 	${make} docker.image.run/${IMG_IMGROT}
 
-.tux.img.display/%:
+.tux.img.display/%:; chafa --clear --center on ${*}
 	@# Displays the named file using chafa, and centering it in the available terminal width.
 	@#
-	@# USAGE:
-	@#  ./compose.mk .tux.img.display/<fname>
-	@#
-	chafa --clear --center on ${*}
+	@# USAGE: .tux.img.display/<fname>
 
-# A container monitoring tool.  
-# https://github.com/moncho/dry https://hub.docker.com/r/moncho/dry
 .tux.widget.ctop:; img="${IMG_MONCHO_DRY}" ${make} io.wait/2 docker.start.tty
 	@# A container monitoring tool.  
-	
+	@# https://github.com/moncho/dry https://hub.docker.com/r/moncho/dry
 .tux.widget.lazydocker: .tux.widget.lazydocker/0
 .tux.widget.lazydocker/%:
 	@# Starts lazydocker in the TUI, then switches to the "statistics" tab.
@@ -4733,7 +4729,7 @@ endef
 # here, but note that these are not available for some versions of compose.
 define compose.get_services
 	$(shell if [ "${CMK_INTERNAL}" = "0" ]; then \
-		(${trace_maybe} && ${docker.compose} -f ${1} config --services)  ; \
+		(${trace_maybe} && ([ "$(strip ${1})" = "" ] && echo -n "" || ${docker.compose} -f ${1} config --services))  ; \
 	else echo -n ""; fi)
 endef
 
@@ -5021,10 +5017,12 @@ define _docker.import
 ifeq ($${CMK_INTERNAL},1)
 else
 $(call mk.unpack.kwargs, ${1}, img)
+$(call mk.unpack.kwargs, ${1}, file, undefined)
 $(call mk.unpack.kwargs, ${1}, namespace)
 ${kwargs_namespace}.img:=${kwargs_img}
 ${kwargs_namespace}.dispatch/%:; img=${kwargs_img} hostname=${kwargs_img} \
 	${make} docker.dispatch/$${*}
+${kwargs_namespace}.build:; tag=${kwargs_img} ${make} docker.build/$${kwargs_file}
 ${kwargs_namespace}.shell:; img=${kwargs_img} hostname=${kwargs_img} \
 	entrypoint=$${entrypoint:-sh} ${make} docker.run.sh 
 ${kwargs_namespace}:; img=${kwargs_img} hostname=${kwargs_img} ${make} docker.run.sh 
@@ -5032,11 +5030,11 @@ endif
 endef
 
 MAKE_PID := $(shell echo $$PPID)
-MAKE_ID := $(shell echo $$PPID | { h=5381; read p; for((i=0;i<$${#p};i++)); do printf -v c "%d" "'$${p:i:1}"; h=$$((h*33+c)); done; echo $$((h & 0x7FFFFFFF)); })
-# Alternative using date for more uniqueness
-MAKE_ID_ALT := $(shell printf "%d%s" $$PPID $$(date +%N 2>/dev/null || echo $$RANDOM))
-_pid_info= $(call log.io, Make PID: ${MAKE_PID} -- ${MAKE_ID} -- ${MAKE_ID_ALT} -- $$$$)
-pid_info:; ${_pid_info}
+# MAKE_ID := $(shell echo $$PPID | { h=5381; read p; for((i=0;i<$${#p};i++)); do printf -v c "%d" "'$${p:i:1}"; h=$$((h*33+c)); done; echo $$((h & 0x7FFFFFFF)); })
+# # Alternative using date for more uniqueness
+# MAKE_ID_ALT := $(shell printf "%d%s" $$PPID $$(date +%N 2>/dev/null || echo $$RANDOM))
+# _pid_info= $(call log.io, Make PID: ${MAKE_PID} -- ${MAKE_ID} -- ${MAKE_ID_ALT} -- $$$$)
+# pid_info:; ${_pid_info}
 
 # Helper macro, defaults to root-import with an optional dispatch-namespace.
 #
@@ -5334,19 +5332,19 @@ ${kwargs_namespace}.to.file:
 	&& echo $${tmpf}
 ${kwargs_namespace}.preview: ${kwargs_namespace}.with.file/io.preview.file
 ${kwargs_namespace}.run/%:; CMK_INTERNAL=1 ${make} mk.def.read/${kwargs_def}/$${*}
-${kwargs_namespace} ${kwargs_namespace}.run:
+${kwargs_namespace}:
 	@# ...
 	export env="$(subst ${space},${comma},${kwargs_env})" \
 	&& case "${kwargs_bind}" in \
 		None) $$(call log.io, \
-				${kwargs_namespace}.run ${sep}${no_ansi}${kwargs_def} unbound at import time) \
+				${kwargs_namespace} ${sep}${no_ansi}${kwargs_def} unbound at import time) \
 			; ${make} ${kwargs_namespace}.with.file/${kwargs_namespace}.interpreter \
 				|| exit 41 ;; \
 		*) $$(call log.io, \
-				${kwargs_namespace}.run ${sep}${dim} bound to ${no_ansi}${underline}${kwargs_bind}${no_ansi}) \
+				${kwargs_namespace} ${sep}${dim} bound to ${no_ansi}${underline}${kwargs_bind}${no_ansi}) \
 			&& ${make} ${kwargs_namespace}.with.file/${kwargs_bind} ;; \
 	esac
-${kwargs_namespace}.run=${make} ${kwargs_namespace}.run
+${kwargs_namespace}=${make} ${kwargs_namespace}
 endif
 endef
 
@@ -5482,7 +5480,7 @@ endef
 # Define 'help' target iff it is not already defined.  This should be inlined
 # for all files that want to be simultaneously usable in stand-alone
 # mode + library mode (with 'include')
-_help_id:=$(shell (uuidgen ${stderr_devnull} || cat /proc/sys/kernel/random/uuid 2>${devnull} || date +%s) | head -c 8 | tail -c 8)
+# _help_id:=$(shell (uuidgen ${stderr_devnull} || cat /proc/sys/kernel/random/uuid 2>${devnull} || date +%s) | head -c 8 | tail -c 8)
 define _help_gen
 (LC_ALL=C $(MAKE) -pRrq -f $(firstword $(MAKEFILE_LIST)) : ${stderr_devnull} | awk -v RS= -F: '/(^|\n)# Files(\n|$$)/,/(^|\n)# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' | sort | grep -E -v -e '^[^[:alnum:]]' -e '^$@$$' | LC_ALL=C sort| uniq || true)
 endef

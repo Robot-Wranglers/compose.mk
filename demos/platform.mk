@@ -14,7 +14,8 @@ __main__: platform.setup.basic
 # Import the platform compose file.
 # This generates target-scaffolding for terraform and ansible, 
 # and sets up syntactic sugar for target-dispatch under the "▰" namespace
-$(call compose.import.as, file=demos/data/docker-compose.platform.yml namespace=▰)
+$(call compose.import.as, \
+	namespace=▰ file=demos/data/docker-compose.platform.yml)
 
 # Implementing a fake setup for platform bootstrap:
 #   1. Infrastructure is configured by the terraform container, 

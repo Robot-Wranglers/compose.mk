@@ -253,11 +253,13 @@ Obviously there is another way.  Most operating systems do better, even with cha
 
 Anyone who has ever wanted to leave their ORM behind in favor of writing naked SQL knows this.  And anyone using [FFI style](https://en.wikipedia.org/wiki/Foreign_function_interface) programming in any number of languages, across any number of languages.  (See also the [julia polyglot demo]({{mkdocs.site_relative_url}}/demos/polyglots/#compiled-languages) if you're into that sort of thing.)  
 
-Some will find it controversial, but the biggest and best example of "polyglots considered reasonable" is something you'll find in distributed application design, next door to topics in microservices, heterogenous queue workers, serverless FaaS, etc.  The advantages and disadvantages of this type of thing have been much discussed, and it's definitely true that deciding good service-boundaries is hard, and it's also hard to even make good general statements about simple stuff like min/max values for service line-count.
+Some will find it controversial, but the biggest and best example of "polyglots considered reasonable" is distributed application design, microservices, heterogenous queue workers, serverless FaaS, etc.  The advantages and disadvantages of this type of thing have been much discussed.  And it's true that deciding good service-boundaries is hard, and it's difficult to make good general statements about even simple stuff, like best-practice for service line-count.
 
-Meanwhile though, the polyglot design approach for *non-distributed applications has basically never been tried*, unless we're counting edge-cases like notebooks, shell-scripting, build-processes, etc.  Those edge-cases are notoriously adhoc though and usually lacking useful structure, versioned dependencies, strategies for code re-use, etc.  No wonder, these kinds of undistributed polyglots are basically considered to be a necessary evil even when they are used.  
+Meanwhile though, the polyglot design approach for *non-distributed applications has basically never been tried*, unless we're counting edge-cases like notebooks, shell-scripting, build-processes, etc.  Those edge-cases are notoriously adhoc though and frequently lacking useful structure, or versioned dependencies, or coherent strategies for code re-use, etc.  No wonder these kinds of undistributed polyglots are considered to be a necessary evil even when they are used!  
 
-Although *mere philosophy* usually doesn't help to change minds, perhaps better tooling could.  One of the core features for `compose.mk` is providing lots of ways to incorporate foreign tools/languages, organize them, and orchestrate across them.  And compared with microservice guidelines, maybe rules of thumb for application-level polyglot designs are also easier to come by.  Here's a hot take:
+Although *mere philosophy* usually doesn't help to change minds, perhaps better tooling could.  One of the core features for `compose.mk` is providing lots of ways to incorporate foreign tools/languages, organize them, and orchestrate across them without external infrastructure.   Compared with microservice guidelines, maybe rules of thumb for application-level polyglot designs are also easier to come by.
+
+Here's a hot take:
 
 **What's a maximum length for foreign code?**
 : Well, ~20-30 LOC is probably a reasonable goal for any discrete chunk of foreign code, because this is the typical advice for maximum length of methods/functions.
@@ -304,12 +306,6 @@ To the extent you really *need* advanced Makefile features like eval-call macros
 
 In rare cases though, eval-call macros are the only option and it's worth it; implementations of make-macros can be powerful, and if you choose interfaces well then they can eventually reach a place where they are maintenance-free.  The first trick to this is, macros are best understood by how they are used, and not by how they are implemented.  *If use-cases and usage are clear*, then implementation won't matter much as long it's stable and portable.  The other trick is that there is no trick: keep it small, separate things into external libraries, test your public interfaces extensively.. just like any other software.
 
-Bonus reference material:
-
-* https://clarkgrubb.com/makefile-style-guide
-* https://gist.github.com/rueycheng/42e355d1480fd7a33ee81c866c7fdf78
-* https://www.gnu.org/software/make/manual/html_node/Quick-Reference.html
-
 #}
 
 ### References
@@ -319,5 +315,5 @@ Bonus reference material:
 [^2]: [Non-recursive Make Considered Harmful](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/03/hadrian.pdf)
 [^3]: [Unreasonable effectiveness of Makefiles](https://matt-rickard.com/the-unreasonable-effectiveness-of-makefiles)
 [^4]: [make vs just](https://github.com/casey/just?tab=readme-ov-file#what-are-the-idiosyncrasies-of-make-that-just-avoids)
-[^5]: Contrary to popular belief, art doesn't need to be beautiful, especially if it's helping the viewer to examine their own sense of what beauty is.  Sometimes art is also about demonstrating mastery of materials.
+[^5]: Contrary to popular belief, art doesn't need to be beautiful, especially if it's helping the viewer to examine their own sense of what beauty is.  Other times, art is about demonstrating mastery of materials.
 [^6]: [The language agnostic all purpose incredible makefile](https://web.archive.org/web/20230322145821/https://blog.mindlessness.life/2019/11/17/the-language-agnostic-all-purpose-incredible-makefile.html)
