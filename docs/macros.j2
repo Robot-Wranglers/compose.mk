@@ -145,7 +145,8 @@ addImageToHeader('{{hdr.replace(' ','-')}}','/{{mkdocs.config.site_name}}/img/{{
 {#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
 
 {% macro subheader(label, mkdocs={}) -%}
-<a class=subheader id="{{label}}"></a><h7><span class=subheader>{{label}}</span></h7>
+<div class=subheader_div></div>
+<a class=subheader id="{{label.lower().replace(',','').replace(' ','-')}}"></a><h7 class=subheader id="{{label.lower().replace(',','').replace('.','').replace('"','').replace("'",'').replace('?','').replace(' ','-')}}"><span class=subheader>{{label}}</span></h7>
 {%- endmacro -%}
 
 {% macro block_docs(pattern, mkdocs, arg='') -%}

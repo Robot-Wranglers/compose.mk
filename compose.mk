@@ -406,7 +406,7 @@ yq.run:=$(shell which yq 2>/dev/null || echo "${yq.docker}")
 jq.run:=$(shell which jq 2>/dev/null || echo "${jq.docker}")
 jq.run.pipe:=$(shell which jq 2>/dev/null || echo "${docker.run.base} -i -e key=$${key:-} -v `pwd`:/workspace -w/workspace ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}")
 yq.run.pipe:=$(shell which yq 2>/dev/null || echo "${docker.run.base} -i -e key=$${key:-} -v `pwd`:/workspace -w/workspace mikefarah/yq:$${YQ_VERSION:-4.43.1}")
-jb.docker:=docker container run --rm ghcr.io/h4l/json.bash/jb:$${JB_CLI_VERSION:-0.2.2}
+jb.docker:=docker container run $${docker_extra:-} --rm  ghcr.io/h4l/json.bash/jb:$${JB_CLI_VERSION:-0.2.2}
 jb=${jb.docker}
 json.from=${jb}
 jq=${jq.run}
@@ -873,8 +873,8 @@ docker.init.compose:
 	@# build/run/etc cannot happen without a file,
 	@# for that, see instead targets like '<compose_file_stem>.build'
 	@#
-	cver="`${docker.compose} version`" \
-	; $(call log.docker, ${@} ${sep} ${no_ansi_dim} version ${sep} ${ital}$${cver}${no_ansi})
+	compose_version="`${docker.compose} version`" \
+	; $(call log.docker, ${@} ${sep} ${no_ansi_dim} version ${sep} ${ital}$${compose_version}${no_ansi})
 
 docker.lambda/%:
 	@# Similar to `docker.def.run`, but eschews usage of tags 
@@ -1098,8 +1098,8 @@ docker.run/% docker.start/%:; img="${*}" entrypoint=none ${make} docker.run.sh
 	@# Starts the named docker image with the default entrypoint
 	@# USAGE: 
 	@#   ./compose.mk docker.start/<img>
-.docker.start/%:; ${make} docker.start/compose.mk:${*}
-	@# Like 'docker.start' but implicitly uses 'compose.mk' prefix. This is used with "local" images.
+# .docker.start/%:; ${make} docker.start/compose.mk:${*}
+# 	@# Like 'docker.start' but implicitly uses 'compose.mk' prefix. This is used with "local" images.
 
 docker.start.tty/%:; tty=1 ${make} docker.start/${*}
 	@# Like `docker.start/..`, but sets tty=1
@@ -1110,25 +1110,34 @@ docker.socket:; ${make} docker.context/current | ${jq.run} -r .Endpoints.docker.
 	@# Returns the docker socket in use for the current docker context.
 	@# No arguments & pipe-friendly.
 
-docker.stat: docker.init
-	@# Show information about docker-status.  No arguments.
+docker.stat: 
+	@# Show information about docker-status,
+	@# Includes version details for docker, docker-compose, container-count, 
+	@# docker socket, docker-related environment variables.
+	@# No arguments. Pipe-friendly.
 	@#
-	@# This is pipe-friendly, although it also displays additional
-	@# information on stderr for humans, specifically an abbreviated
-	@# table for 'docker ps'.  Machine-friendly JSON is also output
-	@# with the following schema:
-	@#
-	@#   { "version": .., "container_count": ..,
-	@#     "socket": .., "context_name": .. }
-	@#
-	export CMK_INTERNAL=1 && $(call io.mktemp) && \
-	${make} docker.context/current > $${tmpf} \
+	which docker >/dev/null 2>/dev/null \
+		&& CMK_INTERNAL=1 ${make} .docker.stat \
+		|| ($(call log.target, ${red}WARNING: Docker is missing!); printf "{}\n")
+.docker.stat:
+	$(call io.mktemp) \
+	&& ${make} docker.context/current > $${tmpf} \
 	&& $(call log.docker, ${@}) \
+	&& export env="`${make} io.env.json/DOCKER`" \
+	&& export docker_extra="-e env " \
 	&& ${jb} \
-		version="`docker --version | sed 's/Docker " //' | cut -d, -f1|cut -d' ' -f3`" \
-		container_count="`docker ps --format json| ${jq.run} '.Names'|${stream.count.lines}`" \
+		docker_bin=`which docker` \
+		docker_version="`\
+			docker --version | sed 's/Docker " //' | cut -d, -f1|cut -d' ' -f3`" \
+		compose_version="`${docker.compose} version \
+			|sed 's/Docker Compose version v//'||echo '?'`" \
+		container_count="`\
+			docker ps --format json \
+				| ${jq.run} '.Names' | ${stream.count.lines}`" \
 		socket="`cat $${tmpf} | ${jq.run} -r .Endpoints.docker.Host`" \
-		context_name="`cat $${tmpf} | ${jq.run} -r .Name`"
+		context_name="`cat $${tmpf} | ${jq.run} -r .Name`" \
+		@env:raw \
+	| ${jq} .
 
 docker.stop:
 	@# Stops one or more containers, with optional timeout,
@@ -1311,6 +1320,11 @@ io.env/% io.env.filter.prefix/%:
 _io.env=sed 's/,/\n/g' | xargs -I% sh -c "env | ${stream.grep.safe} | grep \"^%.*=\" || true" 
 io.env=bash -c 'echo $${1\#/} | ${_io.env}' -- 
 io.env.filter.prefix=${io.env}
+
+io.env.json/%:
+	@# Like `io.env/<prefix>` but returns JSON data.
+	env="`${make} io.env/${*} | ${stream.nl.to.space}`" \
+	&& ${jb} $${env}
 
 io.envp=CMK_INTERNAL=1 ${make} io.envp
 io.envp io.env.pretty: flux.pipeline/io.env,stream.ini.pygmentize
@@ -3687,8 +3701,8 @@ stream.echo:; ${stream.stdin}
 	@#   echo hello-world | ./compose.mk stream.echo
 
 # Extremely secure, for keeping hunter2 out of the public eye
-stream.grep.safe=grep -iv password | grep -iv passwd
-
+stream.grep.safe=grep -ivE 'password|passwd|key|cert'
+stream.grep.safe:; ${stream.grep.safe}
 # Run image previews differently for best results in github actions. 
 # See also: https://github.com/hpjansson/chafa/issues/260
 stream.img=${stream.stdin} \
@@ -5016,9 +5030,9 @@ docker.image.import=${docker.import}
 define _docker.import
 ifeq ($${CMK_INTERNAL},1)
 else
-$(call mk.unpack.kwargs, ${1}, img)
 $(call mk.unpack.kwargs, ${1}, file, undefined)
 $(call mk.unpack.kwargs, ${1}, namespace)
+$(call mk.unpack.kwargs, ${1}, img,compose.mk:$${kwargs_namespace})
 ${kwargs_namespace}.img:=${kwargs_img}
 ${kwargs_namespace}.dispatch/%:; img=${kwargs_img} hostname=${kwargs_img} \
 	${make} docker.dispatch/$${*}

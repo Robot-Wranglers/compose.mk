@@ -184,7 +184,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // }
         }); 
         
-        
         document.querySelectorAll('div.cli_example').forEach(block => { 
             block.className+=" language-bash language-shell-session";
             Prism.highlightElement(block); });
@@ -223,27 +222,13 @@ function toggleCodeBlock(id, link) {
     link.textContent = isHidden ? "⮝" : "⮟";
 }
 
-
-// function addImageToHeader(headerId, imgSrc) {
-//     const processedHeaderId = headerId.replace(/\s+/g, '-');
-//     // Get the heading element
-//     const heading = document.getElementById(processedHeaderId);
-//     // Check if heading exists
-//     if (!heading) {
-//       console.error(`Element with ID '${processedHeaderId}' not found`);
-//       return;
-//     }
-//     img = Object.assign(document.createElement('img'), 
-//         {src: imgSrc}, {style: 'height: 1.2em; margin-right:5px; vertical-align: middle;'});
-    
-//     heading.insertBefore(img, heading.firstChild);
-//   }
   function addImageToHeader(headerId, imgSrc,style="") {
+    if (!imgSrc.endsWith('.svg')) { imgSrc += '.svg'; }
     // Convert spaces to dashes in header-id
-    const processedHeaderId = headerId.replace(/\s+/g, '-');
-    const headers = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    const processedHeaderId = headerId.toLowerCase().replace(/\s+/g, '-').replace('?','-');
+    const headers = document.querySelectorAll('h1, h2, h3, h4, h5, h6, h7');
     // First try exact match (case-insensitive)
-    let heading = Array.from(headers).find(h => 
+    heading = Array.from(headers).find(h => 
       h.id && h.id.toLowerCase() === processedHeaderId.toLowerCase()
     );
     // If no exact match, try startsWith (case-insensitive)
@@ -266,19 +251,10 @@ function toggleCodeBlock(id, link) {
     // Create and configure the image element
     const img = Object.assign(document.createElement('img'), 
         {src: imgSrc}, {style: 'height:1.2em;margin-right:5px; vertical-align: middle;'+style});
-// const img = document.createElement('img');
-//     img.style.verticalAlign = 'middle';
-//     img.src = imgSrc;
-//     img.style.marginRight = '10px';
-    
     // Insert the image before the first child of the heading
     heading.insertBefore(img, heading.firstChild);
   }
-  
-  // Example usage:
-  // addImageToHeader('overview', '../img/road_map.svg'); // Exact match
-  // addImageToHeader('section', '../img/icon.png'); // Could match 'section-1', 'section-intro', etc.
-  // addImageToHeader('intro', '../img/icon.png'); // Could match 'section-intro-text' via substring
+
 /**
  * Find contiguous blocks of spans with class "inside_define" and wrap them in divs
  * Plain text nodes between spans with the class should be included in the blocks
