@@ -15,8 +15,10 @@ export SRC_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 export PROJECT_ROOT := $(shell dirname ${THIS_MAKEFILE})
 
 include compose.mk
+$(call mk.import.plugins, actions.mk docs.mk)
+$(call mk.import.plugin.maybe, local.mk)
 $(call compose.import, file=demos/data/docker-compose.yml)
-$(call mk.include.files, .github/actions.mk docs/docs.mk)
+
 __main__: init clean build test docs
 
 init: mk.stat docker.stat

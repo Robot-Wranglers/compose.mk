@@ -150,6 +150,7 @@ GLYPH_FLUX=${green}${_GLYPH_FLUX}${dim_green}
 GLYPH_DEBUG=${dim}(debug=${no_ansi}${verbose}${dim})${no_ansi}${dim}(quiet=${no_ansi}$(shell echo $${quiet:-})${dim})${no_ansi}${dim}(trace=${no_ansi}$(shell echo $${trace:-})${dim})
 GLYPH_SPARKLE=✨
 GLYPH_CHECK=✔
+GLYPH_XXX=${red}✗
 GLYPH_SUPER=${green}ᐂ${dim_green}
 GLYPH_NUMS=① ② ③ ④ ⑤ ⑥ ⑦ ⑧ ⑨ ⑩
 GLYPH.NUM=${dim_green}$(word $(shell echo $$((${1} + 1))),${GLYPH_NUMS})${no_ansi}
@@ -180,7 +181,6 @@ export MAKEFILE_LIST:=$(call strip,${MAKEFILE_LIST})
 export MAKE_FLAGS:=$(shell [ `echo ${MAKEFLAGS} | cut -c1` = - ] && echo "${MAKEFLAGS}" || echo "-${MAKEFLAGS}")
 export MAKEFILE?=$(firstword $(MAKEFILE_LIST))
 export TRACE?=$(shell echo "$${TRACE:-$${trace:-0}}")
-
 # Returns everything on the CLI *after* the current target.
 # WARNING: do not refactor as VAR=val !
 define mk.cli.continuation
@@ -250,6 +250,15 @@ log.io=$(call log,${GLYPH_IO} $(1))
 log.mk=$(call log, ${GLYPH_MK} ${1})
 log.tux=$(call log,${GLYPH_TUI} $(1))
 
+# loggers used at module level.
+export CMK_LOG_IMPORTS?=$(shell echo "$${CMK_LOG_IMPORTS:-0}")
+log.import=$$(shell [ $${CMK_LOG_IMPORTS} == 0 ] || $$(call \
+	log.mk, ${GLYPH_MK} ${dim}__import__ $${sep}$${dim} ${1}))
+log.import.part1=$$(shell [ $${CMK_LOG_IMPORTS} == 0 ] || $$(call \
+	log.part1, ${GLYPH_MK} ${dim}__import__  $${sep}$${dim} ${1}))
+log.import.part2=$$(shell [ $${CMK_LOG_IMPORTS} == 0 ] || $$(call log.part2, ${1}))
+log.import.error=$$(shell $$(call \
+	log.mk, ${red}${GLYPH_MK} ${dim}__import__ $${sep}$${dim} ${1}))
 # Logger suitable for loops.  
 define log.loop.top # Call this at the top
 printf "${log.prefix.makelevel}`echo "$(or $(1),)"| ${stream.lstrip}`${no_ansi}\n" >${stderr}
@@ -1869,7 +1878,8 @@ help.local:
 	&& printf "$${targets}" | ${stream.fold} | ${stream.as.log} \
 	&& printf '\n' \
 	&& printf "$${targets}" \
-	| xargs -I% sh ${dash_x_maybe} -c "${make} mk.help.target/%"
+	| xargs -I% echo mk.help.target/% | ${stream.nl.to.space} \
+	| ${make} mk.kernel
 
 help.local.filter/%:; filter="${*}" ${make} help.local
 	@# Like `help.local`, but filters local targets first using the given pattern.
@@ -1910,8 +1920,10 @@ mk.kernel:
 	@#  echo flux.and/flux.ok,flux.ok | ./compose.mk kernel
 	@#
 	instructions="`${stream.stdin} | ${stream.nl.to.space}`" \
-	&& printf "$${instructions}" | ${stream.as.log} \
-	&& set -x && ${make} $${instructions}
+	&& count=`printf "$${instructions}" | ${stream.count.words}` \
+	&& $(call log.target.part1, parsing input stream as instructions ) \
+	&& $(call log.target.part2, ${yellow}$${count}${no_ansi_dim} total) \
+	&& ${trace_maybe} && ${make} $${instructions}
 
 
 define cmk.default.sugar
@@ -2153,39 +2165,52 @@ mk.include/%:
 	@#
 	$(call mk.yield, MAKEFILE=${*} ${make} -f${*} ${mk.cli.continuation})
 
-# MACRO: mk.include.files
-# USAGE: $(call mk.include.files, f1 f2 ..) =>
+# MACRO: mk.import.files
+# USAGE: $(call mk.import.files, f1 f2 ..) =>
 #   include f1
 #   include f2
-mk.include.files=$(eval $(call _mk.include.files,${1}))
-define _mk.include.files
+mk.import.files=$(eval $(call _mk.import.files,${1}))
+define _mk.import.files
 $(eval __items__:=$(shell echo "${1}"))
 $(foreach item, ${__items__},\
-	$(call _mk.include.file, ${item}))
+	$(call _mk.require.plugin, prefix=. file=${item}))
 endef
-define _mk.include.file
-${nl}
-$(call log.import.1, mk.include.file ${sep} ${1})
-include $(strip ${1})
-$(call log.import.2, ${GLYPH_CHECK})
-endef
+# define _mk.include.file
+# ${nl}
+# $(call log.import.part1, mk.include.file ${sep} ${1})
+# include $(strip ${1})
+# $(call log.import.part2, ${GLYPH_CHECK})
+# endef
 
 export CMK_PLUGINS_DIR?=.cmk
-mk.require.plugins=$(eval $(call _mk.require.plugins,${1}))
+mk.import.plugins=$(eval $(call _mk.require.plugins,${1}))
 define _mk.require.plugins
 $(eval __items__:=$(shell echo "$(strip ${1})"))
 $(foreach item, ${__items__},\
-	$(call _mk.require.plugin, ${item}))
+	$(call _mk.require.plugin, file=${item}))
 endef
+mk.import.plugin=$(eval $(call _mk.require.plugin, file=$(strip ${1}) strict=1))
+mk.import.plugin.maybe=$(eval $(call _mk.require.plugin, file=$(strip ${1}) strict=0))
+
 define _mk.require.plugin
 ${nl}
-$(call log.import.1,mk.require.plugin ${sep} ${1})
-$(shell ls ${CMK_PLUGINS_DIR} 2>/dev/null > /dev/null || mkdir -p ${CMK_PLUGINS_DIR})
-ifeq ($(shell ${trace_maybe} && ls ${CMK_PLUGINS_DIR}/$(strip ${1}) && echo 0 || echo 1),1)
-$(call log.import.2, ${red}${CMK_PLUGINS_DIR}/$(strip ${1}) is missing)
+$(call mk.unpack.kwargs, ${1}, file, ${1})
+$(call mk.unpack.kwargs, ${1}, strict, 1)
+$(call mk.unpack.kwargs, ${1}, prefix, ${CMK_PLUGINS_DIR})
+$(shell ls ${kwargs_prefix} 2>/dev/null > /dev/null || mkdir -p ${kwargs_prefix})
+$(call log.import.part1, mk.require.plugin ${sep} ${dim}strict=${ital}${kwargs_strict} ${sep} ${dim_ital}${kwargs_file} )
+ifeq ($(shell ${trace_maybe} && ls ${kwargs_prefix}/${kwargs_file} 2>/dev/null >/dev/null && echo 0 || echo 1),1)
+ifeq (${kwargs_strict},1)
+$(call log.import.part2, ${GLYPH_XXX}${kwargs_prefix}/${kwargs_file}${no_ansi} (missing))
+$(call log.import.error, ${red}Declared plugin missing: ${bold}${kwargs_file})
+$(call log.import.error, Consider ${bold}mk.import.plugin.maybe${no_ansi} for conditional inclusion)
+$$(error CMK_PLUGIN_MISSING)
+else
+$(call log.import.part2, ${dim}${kwargs_prefix}/${kwargs_file}${no_ansi} ${GLYPH_XXX})
+endif
 else 
-include ${CMK_PLUGINS_DIR}/$(strip ${1})
-$(call log.import.2,${GLYPH_CHECK})
+include ${kwargs_prefix}/${kwargs_file}
+$(call log.import.part2, ${GLYPH_CHECK})
 endif
 endef
 
@@ -2311,7 +2336,8 @@ mk.namespace.list help.namespaces:
 	&& printf "$${tmp}\n" \
 	&& $(call log, ${no_ansi}${GLYPH_MK} help.namespaces ${sep} ${dim}count=${no_ansi}$${count} )
 
-mk.parse/%:
+_mk.parse=${pynchon} parse --markdown ${1} 2>/dev/null
+mk.parse/%:; $(call _mk.parse,${*})
 	@# Parses the given Makefile, returning JSON output that describes the targets, docs, etc.
 	@# This parsing is "deep", i.e. it returns docs & metadata for *included* targets as well.
 	@# This uses a dockerized version of the pynchon[1] tool.
@@ -2319,7 +2345,6 @@ mk.parse/%:
 	@# REFS:
 	@#   * `[1]`: https://github.com/elo-enterprises/pynchon/
 	@#
-	${pynchon} parse --markdown ${*} 2>/dev/null
 
 mk.pkg:
 	@# Like `mk.self`, but includes `compose.mk` source also.
@@ -2437,7 +2462,7 @@ mk.parse.targets/%:
 	@# USAGE: 
 	@#   ./compose.mk mk.parse.targets/<file>
 	@#
-	${make} mk.parse/${*} | ${jq.run} -r '. | keys[]'
+	$(call _mk.parse, ${*}) | ${jq.run} -r '. | keys[]'
 mk.parse.targets=${make} mk.parse.targets
 mk.targets.local=${mk.parse.targets} | sort | uniq
 mk.targets.local.public=${mk.targets.local} | grep -v '^self.' | grep -v '^[.]' | sort -V
@@ -5012,13 +5037,6 @@ endef
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-# loggers used at module level.
-log.import=$$(shell $$(call \
-	log.mk, ${GLYPH_MK} ${dim}__import__ $${sep} $${dim_cyan}$${MAKEFILE} $${sep}$${dim} ${1}))
-log.import.1=$$(shell $$(call \
-	log.part1, ${GLYPH_MK} ${dim}__import__ $${sep} $${dim_cyan}$${MAKEFILE} $${sep}$${dim} ${1}))
-log.import.2=$$(shell $$(call log.part2, ${1}))
-
 # Reroutes call into container if necessary, or otherwise executes the target directly
 #
 # USAGE:
@@ -5117,10 +5135,10 @@ define compose.import.generic
 $(eval target_namespace:=$(strip $(1)))
 $(eval compose_file:=$(strip $(3)))
 $(eval cached:=$(call io.string.hash,$(target_namespace)$(2)$(3)))
-$(call log.import.1,${compose_file})
+$(call log.import.part1,${dim}compose.import.generic ${sep} ${compose_file})
 ifndef $${cached}
 $$(eval ${cached} := 1)
-$(call log.import.2,${dim}namespace=${bold}${target_namespace})
+$(call log.import.part2,${dim}namespace=${bold}${target_namespace})
 
 $(eval import_to_root := $(if $(2), $(strip $(2)), FALSE))
 $(eval compose_file_stem:=$(shell basename -s.yaml `basename -s.yml $(strip ${3}`)))
@@ -5306,7 +5324,7 @@ $$(foreach \
 			$${compose_service_name}, \
 			${target_namespace}, ${import_to_root}, ${compose_file}, )))
 else
-$(call log.import.2,${GLYPH_CHECK} cached)
+$(call log.import.part2,${GLYPH_CHECK} cached)
 $(call log.import,double-import${no_ansi_dim}.. skipping)
 endif
 endef
