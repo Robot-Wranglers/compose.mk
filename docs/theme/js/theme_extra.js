@@ -175,13 +175,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     //console.log("unrecognized:",text.nodeValue);
                 }
             })
-            // if (node.nodeType === Node.TEXT_NODE) {
-            //     console.log(node.nodeName);
-            // } 
-            // else {
-            //     console.log(node.nodeName);
-            //     // console.log(node.innerHTML);
-            // }
         }); 
         
         document.querySelectorAll('div.cli_example').forEach(block => { 

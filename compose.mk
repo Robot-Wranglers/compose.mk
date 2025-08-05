@@ -2149,6 +2149,42 @@ mk.include/%:
 	@#
 	$(call mk.yield, MAKEFILE=${*} ${make} -f${*} ${mk.cli.continuation})
 
+# MACRO: mk.include.files
+# USAGE: $(call mk.include.files, f1 f2 ..) =>
+#   include f1
+#   include f2
+mk.include.files=$(eval $(call _mk.include.files,${1}))
+define _mk.include.files
+$(eval __items__:=$(shell echo "${1}"))
+$(foreach item, ${__items__},\
+	$(call _mk.include.file, ${item}))
+endef
+define _mk.include.file
+${nl}
+$(call log.import.1, mk.include.file ${sep} ${1})
+include $(strip ${1})
+$(call log.import.2, ${GLYPH_CHECK})
+endef
+
+export CMK_PLUGINS_DIR?=.cmk
+mk.require.plugins=$(eval $(call _mk.require.plugins,${1}))
+define _mk.require.plugins
+$(eval __items__:=$(shell echo "$(strip ${1})"))
+$(foreach item, ${__items__},\
+	$(call _mk.require.plugin, ${item}))
+endef
+define _mk.require.plugin
+${nl}
+$(call log.import.1,mk.require.plugin ${sep} ${1})
+$(shell ls ${CMK_PLUGINS_DIR} 2>/dev/null > /dev/null || mkdir -p ${CMK_PLUGINS_DIR})
+ifeq ($(shell ${trace_maybe} && ls ${CMK_PLUGINS_DIR}/$(strip ${1}) && echo 0 || echo 1),1)
+$(call log.import.2, ${red}${CMK_PLUGINS_DIR}/$(strip ${1}) is missing)
+else 
+include ${CMK_PLUGINS_DIR}/$(strip ${1})
+$(call log.import.2,${GLYPH_CHECK})
+endif
+endef
+
 mk.interpret!:
 	@# Like `mk.interpret`, but runs CMK preprocessing/transpilation step first. 
 	@#	
@@ -2333,7 +2369,7 @@ mk.require.tool/%:; $(call _mk.require.tool, ${*})
 # Helper for asserting that tools are available with support for error messages.
 # Alias for CMK-lang: 
 #  USAGE: cmk.require.tool(tool_name, Error if missing)
-_mk.require.tool=$(call log.part1,${GLYPH_IO} Looking for ${1} in path); which ${1} >/dev/null && $(call log.part2,${green}${GLYPH_CHECK} ${no_ansi_dim}`which ${1}`) || ($(call log.part2,${red} missing!);$(call log.io,${no_ansi}${bold}Error:${no_ansi} $(if $(filter undefined,$(origin 2)),Install tool and retry workflow.,$(2))); exit 1)
+_mk.require.tool=$(call log.part1,${GLYPH_MK} mk.require.tool ${sep} checking path for ${ital}${dim_cyan}$(strip ${1})); which ${1} >/dev/null && $(call log.part2,${green}${GLYPH_CHECK} ${no_ansi_dim}`which ${1}`) || ($(call log.part2,${red} missing!);$(call log.io,${no_ansi}${bold}Error:${no_ansi} $(if $(filter undefined,$(origin 2)),Install tool and retry workflow.,$(2))); exit 1)
 require.tool=${_mk.require.tool}
 
 mk.run/%:; ${io.shell.isolated} make -f ${*} 
@@ -4974,10 +5010,10 @@ endef
 
 # loggers used at module level.
 log.import=$$(shell $$(call \
-	log.io, __import__ $${sep} $${dim_cyan}.. $${sep}$${dim} ${1}))
+	log.mk, ${GLYPH_MK} ${dim}__import__ $${sep} $${dim_cyan}$${MAKEFILE} $${sep}$${dim} ${1}))
 log.import.1=$$(shell $$(call \
-	log.trace.part1, __import__ $${sep} $${dim_cyan}.. $${sep}$${dim} ${1}))
-log.import.2=$$(shell $$(call log.trace.part2, ${1}))
+	log.part1, ${GLYPH_MK} ${dim}__import__ $${sep} $${dim_cyan}$${MAKEFILE} $${sep}$${dim} ${1}))
+log.import.2=$$(shell $$(call log.part2, ${1}))
 
 # Reroutes call into container if necessary, or otherwise executes the target directly
 #
@@ -5080,7 +5116,7 @@ $(eval cached:=$(call io.string.hash,$(target_namespace)$(2)$(3)))
 $(call log.import.1,${compose_file})
 ifndef $${cached}
 $$(eval ${cached} := 1)
-$(call log.import.2,${bold}creating)
+$(call log.import.2,${dim}namespace=${bold}${target_namespace})
 
 $(eval import_to_root := $(if $(2), $(strip $(2)), FALSE))
 $(eval compose_file_stem:=$(shell basename -s.yaml `basename -s.yml $(strip ${3}`)))

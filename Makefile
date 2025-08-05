@@ -16,9 +16,7 @@ export PROJECT_ROOT := $(shell dirname ${THIS_MAKEFILE})
 
 include compose.mk
 $(call compose.import, file=demos/data/docker-compose.yml)
-include .github/actions.mk
-include docs/docs.mk
-
+$(call mk.include.files, .github/actions.mk docs/docs.mk)
 __main__: init clean build test docs
 
 init: mk.stat docker.stat
