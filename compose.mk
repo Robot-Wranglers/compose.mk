@@ -1013,6 +1013,10 @@ docker.prune.old:; docker system prune --all --force --filter "until=168h"
 docker.ps:; docker ps --format json | ${jq} .
 	@# Like 'docker ps', but always returns JSON.
 
+docker.rmi/%:
+	@# USAGE: Shortcut for `docker rmi ..` 
+	set -x && docker rmi $(pynchon.img) >/dev/null || true
+	
 docker.run.def:
 	@# Treats the named define-block as a script, then runs it inside the given container.
 	@#

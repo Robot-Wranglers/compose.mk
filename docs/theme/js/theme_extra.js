@@ -9,10 +9,7 @@ $('div.rst-content table').addClass('docutils');
 document.addEventListener('DOMContentLoaded', function() {
     // Wait for MkDocs to fully render the page including ToC
     setTimeout(function() {
-        // prominent link to project source
-        document.querySelectorAll('.wy-breadcrumbs').forEach(item => {
-            item.insertAdjacentHTML('beforeend', '<li class="wy-breadcrumbs-aside"><a href="https://github.com/robot-wranglers/compose.mk/" class="icon icon-github"> Project Source</a></li>');
-            
+
         Prism.languages.cmk={
         comment:{pattern:/(^|[^\\])#(?:\\(?:\r\n|[\s\S])|[^\\\r\n])*/,lookbehind:!0},string:{pattern:/(["'])(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1/,greedy:!0},"builtin-target":{pattern:/\.[A-Z][^:#=\s]+(?=\s*:(?!=))/,alias:"builtin"},
         target:{pattern:/^[^:=\s]+(?=\s*:(?!=))/m, alias:"symbol",inside:{variable:/\$+(?:(?!\$)[^(){}:#=\s]+|(?=[({]))/}},
@@ -177,11 +174,6 @@ document.addEventListener('DOMContentLoaded', function() {
             })
         }); 
         
-        document.querySelectorAll('div.cli_example').forEach(block => { 
-            block.className+=" language-bash language-shell-session";
-            Prism.highlightElement(block); });
-        document.querySelectorAll('div.highlight').forEach(block => {
-            Prism.highlightElement(block); });
         document.querySelectorAll('span.keyword-define').forEach(span => {
             let current = span.nextElementSibling;
             // Skip the first element after define
@@ -195,58 +187,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 current = current.nextElementSibling;
             }
         });
-        
-        // differentiate code_table_top for snippets vs embeds
-        document.querySelectorAll('div.snippet').forEach(block => {
-            // block.insertAdjacentHTML('beforebegin', '');
-            const newDiv = new DOMParser().parseFromString('<div class=code_table_top_snippet><span class=code_table_1>&nbsp;&nbsp;&nbsp;EXAMPLE:</span><span class=code_table_2>&nbsp;&nbsp;</span><span class=code_table_3>&nbsp;&nbsp;</span></div>','text/html').body.firstChild;
-            block.parentNode.insertBefore(newDiv, block);});
-        
-        // special handling for define blocks
-        // wrapContiguousDefineBlocks();
     
     }, 100); // Small delay to ensure ToC is already processed
-    })})
+    })
 
-function toggleCodeBlock(id, link) {
-    const codeBlock = document.getElementById(id);
-    const isHidden = codeBlock.style.display === "none";
-    codeBlock.style.display = isHidden ? "block" : "none";
-    link.textContent = isHidden ? "⮝" : "⮟";
-}
-
-  function addImageToHeader(headerId, imgSrc,style="") {
-    if (!imgSrc.endsWith('.svg')) { imgSrc += '.svg'; }
-    // Convert spaces to dashes in header-id
-    const processedHeaderId = headerId.toLowerCase().replace(/\s+/g, '-').replace('?','-');
-    const headers = document.querySelectorAll('h1, h2, h3, h4, h5, h6, h7');
-    // First try exact match (case-insensitive)
-    heading = Array.from(headers).find(h => 
-      h.id && h.id.toLowerCase() === processedHeaderId.toLowerCase()
-    );
-    // If no exact match, try startsWith (case-insensitive)
-    if (!heading) {
-      heading = Array.from(headers).find(h => 
-        h.id && h.id.toLowerCase().startsWith(processedHeaderId.toLowerCase())
-      );
-    }
-    // If startsWith fails, try contains substring (case-insensitive)
-    if (!heading) {
-      heading = Array.from(headers).find(h => 
-        h.id && h.id.toLowerCase().includes(processedHeaderId.toLowerCase())
-      );
-    }
-    // Check if heading was found
-    if (!heading) {
-      console.error(`No header element found matching '${processedHeaderId}'`);
-      return;
-    }
-    // Create and configure the image element
-    const img = Object.assign(document.createElement('img'), 
-        {src: imgSrc}, {style: 'height:1.2em;margin-right:5px; vertical-align: middle;'+style});
-    // Insert the image before the first child of the heading
-    heading.insertBefore(img, heading.firstChild);
-  }
 
 /**
  * Find contiguous blocks of spans with class "inside_define" and wrap them in divs
@@ -327,11 +271,3 @@ function wrapContiguousDefineBlocks() {
       defineBlockDiv.appendChild(node);
     });
   }
-  
-//   // Run the function when the DOM is fully loaded
-//   document.addEventListener('DOMContentLoaded',);
-  
-//   // Or run immediately if the DOM is already loaded
-//   if (document.readyState === 'complete' || document.readyState === 'interactive') {
-//     wrapContiguousDefineBlocks();
-//   }
