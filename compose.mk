@@ -306,17 +306,21 @@ docker.run.base:=docker run --rm -i
 ## | Variable               | Meaning                                                               |
 ## | ---------------------- | ----------------------------------------------------------------------|
 ## | CMK_COMPOSE_FILE       | *Temporary file used for the embedded-TUI*                            |
+## | CMK_LOG_IMPORTS        | Defaults is 0.  Controls module-level logging                         |
+## | CMK_PLUGINS_DIR        | Defaults to ".cmk".  This controls how `mk.include.plugin` macros work|
 ## | CMK_COMPILER_VERBOSE   | 1 if debugging-messages from compilation are allowed                  |
 ## | CMK_DIND               | *Determines whether docker-in-docker is allowed*                      |
 ## | CMK_SRC:               | path to compose.mk source code                                        |
 ## | CMK_SUPERVISOR         | *1 if supervisor/signals is enabled, otherwise 0*                     |
 ## | DOCKER_HOST_WORKSPACE  | *Needs override for correctly working with DIND volumes*              |
-## | TRACE:                 | 1 if increase verbosity desired (more detailed than verbose)          |
-## | verbose:               | 1 if normal debugging output should be shown, otherwise 0             |
-## | __file__:              | val of CMK_SRC if stand-alone mode, invoked file if in library mode   |
+## | TRACE                 | 1 if increase in verbosity desired (more detailed than verbose)          |
+## | trace                 | alias for setting TRACE. very noisy! this appends '-x' to most shell invocations ) |
+## | verbose               | 1 if normal debugging output should be shown, otherwise 0 (affects CMK internal logging )            |
+## | quiet                 | 0 if normal debugging output should be shown, otherwise 1 (affects docker build output) |
+## | force                 | 0 if operation should not be forced, otherwise 1 (affects docker pulls, etc) |
+## | __file__              | val of CMK_SRC if stand-alone mode, invoked file if in library mode   |
 ## | __interpreter__        | `./${CMK_SRC}` unless overridden                                      |
 ## | __interpreting__       | CMK_SRC unless overridden; sometimes useful for extensions            |
-## | trace:                 | alias for setting TRACE                                               |
 ##
 ## CMK_INTERNAL: 
 ## : 1 if runtime is dispatched inside a container, otherwise 0
