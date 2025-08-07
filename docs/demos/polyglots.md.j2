@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 ## Polyglots & Working with Foreign Languages
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -28,9 +28,9 @@ There are a few ways to express simple polyglots where you want to *assume the i
 
 For arbitrary interpreters use `polyglot.dispatch/<interpreter>,<def_block_name>` like this:
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/local-interpreter.mk', 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/cmk/code-objects.cmk',
       link=mkdocs.site_relative_url+'/compiler/#polyglot-examples'),
     github=github)}}
@@ -44,9 +44,9 @@ When there's a stock image available for a container and no customization needed
 
 To illustrate, here are 2 ways to express a target written in elixer-lang.
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/elixir-1.mk', 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/cmk/code-objects.cmk',
       link=mkdocs.site_relative_url+'/compiler/#polyglot-examples'),
     github=github)}}
@@ -70,9 +70,9 @@ Using locally-defined containers is mostly the same as the previous example, exc
 
 For this example, we'll use R to plot a sine-curve.  
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/r.mk', 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/cmk/code-objects.cmk',
       link=mkdocs.site_relative_url+'/compiler/#polyglot-examples'),
     github=github)}}
@@ -94,14 +94,14 @@ The example below demonstrates that unix pipes still work the way you would expe
 
 This might be important for passing data to other languages, and by combining [stage usage]({{mkdocs.site_relative_url}}/stages), and/or [using structured data]({{mkdocs.site_relative_url}}/standard-lib#structured-data), it also means it's very easy to have bidirectional data flow between different languages or back and forth from `compose.mk` itself.
 
-{{macros.embed_demo('demos/exotic-targets.mk', github=github)}}
+{{site.embed_demo('demos/exotic-targets.mk', github=github)}}
 
 ### Containerized Script+Deps with UV
 <hr style="width:100%;border-bottom:3px solid black;">
 
-For variety let's use {{macros.api_link('docker.run.def',mkdocs,arg='def_block_name')}}, which is one of a few [low level helpers](#low-level-helpers).  This example has a different flavor, because by using [uv](https://docs.astral.sh/uv/), we can defer to a python script for deciding both the requirements *and* the runtime version.
+For variety let's use {{site.api_link('docker.run.def',mkdocs,arg='def_block_name')}}, which is one of a few [low level helpers](#low-level-helpers).  This example has a different flavor, because by using [uv](https://docs.astral.sh/uv/), we can defer to a python script for deciding both the requirements *and* the runtime version.
 
-{{macros.embed_demo('demos/uv.mk', github=github)}}
+{{site.embed_demo('demos/uv.mk', github=github)}}
 
 As mentioned in code comments, this bootstraps JIT and caches neither the dependencies nor the python version.  Hard to say exactly where that is useful, but it is an interesting example for being an extreme kind of "late-binding".
 
@@ -123,7 +123,7 @@ You *could* use `compose.mk` to create a pretty transparent compile-on-demand pi
 
 For simple use-cases *without* FFI[^5] you can sometimes get another tool to handle the "compile on demand" thing.  As long as you can find an image with an interpreter or build one in-place, you can wire stuff up pretty easily.  For example, with `tinycc`:
 
-{{macros.embed_demo('demos/tinycc.mk', github=github)}}
+{{site.embed_demo('demos/tinycc.mk', github=github)}}
 
 For java, try `JShell`, and for rust try `rust-script`.
 
@@ -134,7 +134,7 @@ Typically the cleanest and most generic thing you can do here might involve FFI 
 
 For the sake of variety and sticking closer to the idea of compiled languages, here's C via julia's FFI, with the julia embedded in `compose.mk`.  
 
-{{macros.embed_demo('demos/julia.mk', github=github)}}
+{{site.embed_demo('demos/julia.mk', github=github)}}
 
 See also the official docs for julia + C.[^8]
 
@@ -162,8 +162,8 @@ First-class support for foreign code works by using one of the `polyglot.bind.*`
 
 A more typical use-case passes the name of the code block involved, plus the details of an interpreter, which allows us to provide an additional **`<code>.run`** method.
 
-{{macros.embed_demo('demos/code-objects.mk', 
-    bottom_right=macros.link_mirror(
+{{site.embed_demo('demos/code-objects.mk', 
+    bottom_right=site.link_mirror(
       'demos/cmk/code-objects.cmk',
       link=mkdocs.site_relative_url+'/compiler/#polyglot-examples'),
     github=github)}}
@@ -175,7 +175,7 @@ Sometimes you can't use an image/interpreter directly as seen above, because may
 
 We've already seen an example of this earlier [with Julia](#with-ffi), where `polyglot.import` uses arguments like `def=<codeblock_name> bind=<target_name>`.  In this example we'll additionally pass arguments for `namespace`, to control where our new `run` and `preview` targets are created, and plus an argument for `env`, to control what environment variables from the host are passed through to the polyglot.
 
-{{macros.embed_demo('demos/code-objects-2.mk', github=github)}}
+{{site.embed_demo('demos/code-objects-2.mk', github=github)}}
 
 See also the [lean demo]({{mkdocs.site_relative_url}}/demos/lean), which needs a similar shim to modify the interpreter invocation.
 
@@ -184,7 +184,7 @@ See also the [lean demo]({{mkdocs.site_relative_url}}/demos/lean), which needs a
 
 A variation in this pattern is to use `polyglots.bind.*`.  Note that in this version, the word *polyglots* is plural!  This version supports binding multiple chunks of code to the same interpreter.  
 
-{{macros.embed_demo('demos/code-objects-3.mk', github=github)}}
+{{site.embed_demo('demos/code-objects-3.mk', github=github)}}
 
 In the example above, we passed `[.]py`, which pattern-matches against *all available define-block names* and binds each of them to `python.interpreter`.
 
@@ -195,7 +195,7 @@ Use-cases related to templating are arguably more about [embedded data, which is
 
 Here we use [jinjanator](https://pypi.org/project/jinjanator/), a CLI for use with [jinja](https://jinja.palletsprojects.com/en/stable/), but the approach itself can be extended to work with any other templating engine. [^4]
 
-{{macros.embed_demo('demos/j2-templating.mk', github=github)}}
+{{site.embed_demo('demos/j2-templating.mk', github=github)}}
 
 This prints "*hello foo!*" x3 and one "*bye foo!*" as expected, per the template.  In keeping with [other structured IO patterns]({{mkdocs.site_relative_url}}/standard-lib#structured-io) in `compose.mk`, we prefer JSON, generating it with `jb` and configuring `jinjanator` to use it.. but this can be easily changed to work with environment variables or yaml instead.
 
@@ -210,9 +210,9 @@ For practical reasons there are 2 specific languages that have the status of bei
 
 In the case of bash, the simplest way to convert a script into a target is to use the `compose.import.script` macro.
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/script-dispatch-host.mk', 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/cmk/script-dispatch-host.cmk',
       link=mkdocs.site_relative_url+'/compiler/#polyglot-examples'),
     github=github)}}
@@ -222,7 +222,7 @@ This `compose.import.script` macro is convenient but it comes up frequently that
 #### Using `io.awk` and `io.bash`
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-Meet {{macros.api_link('io.awk',mkdocs,'def_name')}} and {{macros.api_link('io.bash',mkdocs,'def_name,optional_args')}}
+Meet {{site.api_link('io.awk',mkdocs,'def_name')}} and {{site.api_link('io.bash',mkdocs,'def_name,optional_args')}}
 
 Use-cases include things like:
 
@@ -232,7 +232,7 @@ Use-cases include things like:
 
 See the test-suite below for usage hints.
 
-{{macros.embed_demo('demos/guests.mk', github=github)}}
+{{site.embed_demo('demos/guests.mk', github=github)}}
 
 As you can see above, both kinds of guests support piped input by default, and `io.bash` optionally supports argument-proxy.  As usual for polyglots, content inside define-blocks isn't messed with, and we don't need to double-escape `$`.
 
@@ -269,9 +269,9 @@ The approach used by `compose.mk` still has some limitations[^3], but it is over
 
 **Low-level polyglot helpers** are not necessarily for direct use, but it does help build intuition about how this stuff works, and power-users might need extra flexibility.  For illustration purposes:
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/elixir-2.mk', 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/cmk/code-objects.cmk',
       link=mkdocs.site_relative_url+'/compiler/#polyglot-examples'),
     github=github)}}

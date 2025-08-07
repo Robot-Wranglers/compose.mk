@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ### Reflection Support
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -7,7 +7,7 @@
 
 Features like [CLI help]({{mkdocs.site_relative_url}}/cli-help) and [automatically generated API docs]({{mkdocs.site_relative_url}}/api) require that `compose.mk` has at least *some* ability to parse its own contents.  
 
-And if we need that kind of ability, why not allow for parsing of other Makefiles?  As another applied example, see the [zero-config TUI documentation]({{mkdocs.site_relative_url}}/zero-config-tuis/), which makes use of {{macros.api_link('mk.include',mkdocs,arg='fpath')}}.  
+And if we need that kind of ability, why not allow for parsing of other Makefiles?  As another applied example, see the [zero-config TUI documentation]({{mkdocs.site_relative_url}}/zero-config-tuis/), which makes use of {{site.api_link('mk.include',mkdocs,arg='fpath')}}.  
 
 Most of the meta-tooling that's available is somewhere in the [`mk.*` target namespace]({{mkdocs.site_relative_url}}/api-mk).
 
@@ -16,7 +16,7 @@ Most of the meta-tooling that's available is somewhere in the [`mk.*` target nam
 
 For metadata parsing, you can use the `mk.parse/<fname>` target, and get back targets, target chains, target docs, etc.  
 
-{{macros.api_link_many(['mk.parse'],mkdocs)}}
+{{site.api_link_many(['mk.parse'],mkdocs)}}
 
 For testing, there is a super lightweight `demos/no-includes.mk` Makefile included in the repository for situations like this. Like the name suggests, it doesn't actually include or use `compose.mk` in any way.
 
@@ -83,7 +83,7 @@ RUN apk add -q --update py3-pygments
 
 This feature is the foundation that all sorts of other stuff is built on, including support for [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [the embedded tui]({{mkdocs.site_relative_url}}/embedded-tui) as well as [inlined Dockerfiles]({{mkdocs.site_relative_url}}/raw-docker), etc.
 
-{{macros.api_link_many(['mk.def'],mkdocs)}}
+{{site.api_link_many(['mk.def'],mkdocs)}}
 
 #### Grabbing Symbols
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -104,9 +104,9 @@ There are various ways to enumerate available targets for the current runtime, e
 
 One nice thing about this is the ability to easily dispatch *all targets matching a given pattern*.  
 
-{{macros.embed_demo('demos/flux.star.mk', github=github)}}
+{{site.embed_demo('demos/flux.star.mk', github=github)}}
 
-See also the API docs for {{macros.api_link('flux.star',mkdocs,arg='pattern')}}.
+See also the API docs for {{site.api_link('flux.star',mkdocs,arg='pattern')}}.
 
 #### Dynamic Includes and Targets
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -152,7 +152,7 @@ include demos/no-include.mk
 
 For a few specific use-cases, `compose.mk` has the ability to fork it's own source code.  Helpers related to this are in the `mk.fork` namespace.  All unary targets require a filename, and nullary ones assume that input is on stdin.
 
-{{macros.api_link_many(['mk.fork'],mkdocs)}}
+{{site.api_link_many(['mk.fork'],mkdocs)}}
 
 In each case, targets return the source code that results from *merging the given file-contents with the current source-context.*  Merges happen in specific sections, and each section has different semantics.
 

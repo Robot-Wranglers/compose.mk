@@ -1,0 +1,145 @@
+{% macro normalize_fname(fname)-%}{{fname.replace('-','_').replace('.','_').replace('/','_')}}{%- endmacro -%}
+
+{% set img_base =  img_base | default('img') %}
+{% macro svg(name, mkdocs={}, style="width:1.3em;") -%}<img src="{{mkdocs.site_relative_url}}/img/{{name}}.svg">{%- endmacro -%}
+{% macro svg_boom(mkdocs={}, style="width:1.3em;") -%}{{svg("bulb", mkdocs=mkdocs, style=style)}}{%- endmacro -%}
+{% macro svg_arrow(mkdocs={}, style="width:1.3em;") -%}{{svg("arrow-right-dashed", mkdocs=mkdocs, style=style)}}{%- endmacro -%}
+
+{#% macro svg_arrow_small(name, mkdocs={}, prefix='number-small', style='') -%}<img src="{{mkdocs.site_relative_url}}/img/{{prefix}}-{{name}}.svg">{%- endmacro -%#}
+
+{% macro collapsed_details(name, level='h4') -%}
+<{{level}}>{{name}}</{{level}}>
+{%- endmacro -%}
+{% macro get_env_var(name) -%}
+{% set val=bash("cat docs/env-vars.md|grep ^"+name+"= | head -1 | cut -s -d'=' -f2 || true").strip()%}{{val}}{%- endmacro -%}
+
+{% macro badge_from_var(var, label) %}{% set val=get_env_var(var) %}{{badge_from_val(val,label)}}{%- endmacro -%}
+
+{%macro badge_from_val(val, label)%}<a href="env-vars.md"><img alt="{{label}}:{{val}}" src="https://img.shields.io/badge/{{url_quote((label and (label + ':')) + val)}}-blue"></a>{%- endmacro -%}
+
+{% macro img_link(fname, mkdocs, width="90%", align="center",link='',class="img_container ") -%}
+{%set default_link=mkdocs.site_relative_url+"/"+img_base+"/"+fname%}
+<p class="{{class}}" {%if align!='none'%}align="{{align}}"{%endif%}><a href="{{link or default_link}}"><img width="{{width}}" src="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"></a>{%if align!='none'%}</p>{%endif%}
+{%- endmacro -%}
+
+
+{# FIGURES #}
+{#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
+
+{% macro figure_framed(item, mkdocs, title="ff1", cols=2,width="95%",diagram_source='' ) -%}
+{{figure_table([dict(figure=item, title=title,)], mkdocs, title="", cols=1, width="95%",diagram_source=diagram_source )}}
+{%- endmacro -%}
+
+{% macro embed_figure(fname, mkdocs, title="", cols=1, width="90%", align="center",link='',class="figure ",diagram_source='') -%}
+{%if title%}{{subheader(title)}}{%endif%}
+{{img_link(fname, mkdocs, width=width, align=align,link=link,class=class)}}
+{%if diagram_source%}<br><center><small>
+<a href="{{diagram_source}}" class="icon icon-github"><small>Diagram Source</small></a></small></center>{%endif%}
+{%- endmacro -%}
+
+{% macro figure_table(lst, mkdocs, title="", cols=2,width="95%",diagram_source='') -%}
+<table class="figure" align=center width="{{width}}"><caption>{{title}}</caption>
+{% for row in lst | batch(cols) %}
+<tr>{% for cfg in row %}
+<td>{%if cfg%}{%set figure=cfg.figure %}{% set src='img/'+figure+'.mmd'%}{% set img='img/'+figure+'.png' %} {%set title=cfg.get('title','') %}
+        {{embed_figure(figure+'.png', mkdocs, title=title, width=cfg.get('width',''), align="center",diagram_source=diagram_source)}}
+    {%else%}empty{%endif%}</td>
+{%endfor%}</tr>
+
+{%endfor%}</table>
+{%- endmacro -%}
+
+{#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
+
+{#% macro img_(fname, mkdocs, width="90%",align="center") -%}
+<a href="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"><img width="{{width}}" src="{{mkdocs.site_relative_url}}/{{img_base}}/{{fname}}"></a>
+{%- endmacro -%#}
+
+{% macro search_link(fname, term, github={}) -%}
+
+{% set search_base = "https://github.com/search?q=repo%3A" + (github.org_name or "default") + "%2F" + (github.repo_name or "default").replace('.git','') + "+path%3A" + fname + "+content%3A"+url_quote(term)+"&type=code"%}
+{{search_base}}
+{%- endmacro -%}
+{% set img_base =  img_base | default('img') %}
+
+{## Admonitions#}
+{#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
+
+{% macro commentary(content="", title='Commentary')-%}{{admonition("commentary", title, content)}}{%- endmacro -%}
+
+{% macro gotcha(content="", title='Gotcha')-%}{{admonition("gotcha", title, content)}}{%- endmacro -%}
+
+{% macro closer_look(content="", title='Closer Look')-%}
+{{admonition("closer_look", title, content)}}
+{%- endmacro -%}
+
+!!! closer_look Closer Look 
+{% macro advanced_topic(content="This is an advanced topic and safe for new users to ignore!", title='Advanced Topic') -%}
+{{admonition("warning", title, content)}}
+{%- endmacro -%}
+
+{% macro admonition(type,title,content) -%}
+!!! {{type}} "{{title}}"
+    {{content}}
+{%- endmacro -%}
+
+{% macro admonition_info(title,content) -%}
+!!! info inline end "{{title}}"
+    {{content}}
+{%- endmacro -%}
+
+{% macro admonition_note(title,content) -%}
+!!! note "{{title}}"
+    {{content}}
+{%- endmacro -%}
+
+{% macro very_optional(content="This is an advanced topic and safe for new users to ignore!", title='Very Optional') -%}
+{{admonition("warning", title, content)}}
+{%- endmacro -%}
+
+
+{% macro commentary(content="", title='Commentary')-%}{{admonition("commentary", title, content)}}{%- endmacro -%}
+
+{% macro gotcha(content="", title='Gotcha')-%}{{admonition("gotcha", title, content)}}{%- endmacro -%}
+
+!!! closer_look Closer Look 
+{% macro advanced_topic(content="This is an advanced topic and safe for new users to ignore!", title='Advanced Topic') -%}
+{{admonition("warning", title, content)}}
+{%- endmacro -%}
+
+## Components
+{#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
+{% macro small_bullseye(size="16")-%}<svg class="small_bullseye" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="{{size}}" height="{{size}}"><path d="M20.172 6.75h-1.861l-4.566 4.564a1.874 1.874 0 1 1-1.06-1.06l4.565-4.565V3.828a.94.94 0 0 1 .275-.664l1.73-1.73a.249.249 0 0 1 .25-.063c.089.026.155.1.173.191l.46 2.301 2.3.46c.09.018.164.084.19.173a.25.25 0 0 1-.062.249l-1.731 1.73a.937.937 0 0 1-.663.275Z"></path><path d="M2.625 12A9.375 9.375 0 0 0 12 21.375 9.375 9.375 0 0 0 21.375 12c0-.898-.126-1.766-.361-2.587A.75.75 0 0 1 22.455 9c.274.954.42 1.96.42 3 0 6.006-4.869 10.875-10.875 10.875S1.125 18.006 1.125 12 5.994 1.125 12 1.125c1.015-.001 2.024.14 3 .419a.75.75 0 1 1-.413 1.442A9.39 9.39 0 0 0 12 2.625 9.375 9.375 0 0 0 2.625 12Z"></path><path d="M7.125 12a4.874 4.874 0 1 0 9.717-.569.748.748 0 0 1 1.047-.798c.251.112.42.351.442.625a6.373 6.373 0 0 1-10.836 5.253 6.376 6.376 0 0 1 5.236-10.844.75.75 0 1 1-.17 1.49A4.876 4.876 0 0 0 7.125 12Z"> &nbsp;{%- endmacro -%}
+
+{% macro code_table(fname, 
+    style="", github={}, link_prefix='', 
+    code_table_1="", code_table_2="", code_table_3="",
+    class="", type='', title='', top='',bottom='')-%}<a id="{{link_prefix}}_top"></a><div role=navigation class="code_table_top {{class}}"><span class=code_table_1>&nbsp;{%if code_table_1%}{{code_table_1}}{%else%}<a style="margin-right:3px;margin-left:5px;font-size:larger;font-weight:900;margin-left:3px;margin-right:5px;" href="#" onclick="toggleCodeBlock('{{link_prefix}}_details', this);return false;">⮝</a>{%endif%}&nbsp;<span style="font-size:larger;font-weight:900;">&nbsp;{%if fname.endswith('.cmk')%}CMK-lang{%else%}{{type|default('notype')}}{%endif%}</span>⠀</span><span class=code_table_2>⠀{%if code_table_2 %}&nbsp;{{code_table_2}}{% else %}{{title}}{%endif%}⠀</span><span class=code_table_3>⠀{%if code_table_3%}{{code_table_3}}{%else%}{{repo_link(fname, name=(title or fname)+'⠀<svg xmlns="http://www.w3.org/2000/svg" class="github_svg" viewBox="0 0 16 16" width="16" height="16"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path></svg>', github=github)}}{%endif%}⠀</span></div>{%- endmacro -%}
+{% macro code_table_bottom(fname, 
+    bottom='', bottom_middle='', bottom_right='', 
+    github={}, style="", link_prefix='', class="", type='', title='', code_table_2='',top='')-%}<div style="{{style}}" role=navigation class="code_table_bottom {{class}}"><span class=code_table_1>⠀<a href=#{{link_prefix}}_top>Back to top</a></span><span class=code_table_2>{%if bottom_middle%}{{bottom_middle}}{%endif%}</span><span class=code_table_3>{%if bottom_right%}{{bottom_right}}{%endif%}⠀</span></div>{%- endmacro -%}
+{#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
+{% macro header_images(lst, mkdocs, style="") -%}
+{%for hdr,icon in lst%}{%set icon=icon+'.svg' if not icon.endswith('.svg') else icon%}
+addImageToHeader('{{hdr.replace(' ','-')}}','/{{mkdocs.config.site_name}}/img/{{icon}}')
+{%endfor%}
+{%- endmacro -%}
+
+{% macro repo_link(fpath, name='', github={}, branch='master') -%}<a href="{{repo_url(fpath,github=github,branch=branch)}}" style="text-decoration-line:none;">{{name or fpath}}</a>{%- endmacro -%}
+{% macro repo_url(fpath, github={}, branch='master') -%}{{github.repo_url|default('#')}}/tree/{{branch}}/{{fpath}}{%- endmacro -%}
+{#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
+
+{% macro subheader(label, mkdocs={},id='') -%}
+<div class=subheader_div></div>
+{{_subheader(label, mkdocs=mkdocs,id=id)}}
+{%- endmacro -%}
+
+{% macro _subheader(label, mkdocs={},id='') -%}
+<a class=subheader id="{{id or label.lower().replace(',','').replace(' ','-')}}"></a><h7 class=subheader id="{{id or label.lower().replace(',','').replace('.','').replace('"','').replace("'",'').replace('?','').replace(' ','-')}}"><span class=subheader>{{label}}</span></h7>
+{%- endmacro -%}
+
+{# APPEND SITE MACROS
+{#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
+
+{#% import 'macros/site.j2' as site -%}
+{% set site=site %#}

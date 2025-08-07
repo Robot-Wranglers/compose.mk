@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## CLI Help
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -31,7 +31,7 @@ To enable help your project Makefile, there are a few options depending on how t
 
 Note that for help to render properly, your targets need to use the following style for comments, similar to python-style docstrings.  *(There is no support for other kinds of `# .. comments ..` that are above or inlined inside of target-bodies.)*
 
-{{macros.embed_demo('demos/cli-help.mk', github=github)}}
+{{site.embed_demo('demos/cli-help.mk', github=github)}}
 
 {#By itself, this enables **full** target listing with `make help`, including both the inherited targets from `compose.mk` as well as the new targets that are project specific.  #}
 
@@ -82,7 +82,7 @@ The last command mentions an interpreter, which is discussed in more detail in t
 
 Going further.. we can actually setup `compose.mk` as the interpreter more directly and mention it in a [shebang](https://en.wikipedia.org/wiki/Shebang_(Unix)).  In the next example, only the first line of the file changes:
 
-{{macros.embed_demo('demos/cli-help-shebang.mk', github=github)}}
+{{site.embed_demo('demos/cli-help-shebang.mk', github=github)}}
 
 Now `./demos/cli-help-shebang.mk help my-target` works as expected.  An approach like this will also work if the file is named `Makefile`, but note that **the shebang is ignored unless you execute the file directly**!
 
@@ -97,11 +97,11 @@ Since help involves targets and target-metadata, it's also a special case of ref
 
 The implementation for help uses the `mk.help.*` family of targets, and if you want to customize help or error messages they might be useful.  
 
-{{macros.api_link_many(['mk.help'],mkdocs)}}
+{{site.api_link_many(['mk.help'],mkdocs)}}
 
 Heavy lifting for parsing Makefile metadata comes from a dockerized version of the [pynchon tool]({{jinja.vars.pynchon_repo_url}}/blob/master/src/pynchon/util/makefile/__init__.py), which can parse help as well as more structural details like target-prerequisites / DAGs.  
 
-To see example output or just precache the pynchon container, you can use {{macros.api_link('mk.parse',mkdocs,arg='some_makefile')}}.  To get an idea about the schema, we can use `compose.mk` to parse it's own content, then show the JSON structure for the `mk.parse` target itself.
+To see example output or just precache the pynchon container, you can use {{site.api_link('mk.parse',mkdocs,arg='some_makefile')}}.  To get an idea about the schema, we can use `compose.mk` to parse it's own content, then show the JSON structure for the `mk.parse` target itself.
 
 
 ```bash {.cli_example}

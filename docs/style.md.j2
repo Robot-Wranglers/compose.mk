@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 ## Style & Idioms
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -41,7 +41,7 @@ With `compose.mk`, much inspiration is taken from python.  A few random examples
 1. Dot-path style namespacing are a honking great idea (e.g. `module.target`).
 1. Snake-case style target names are recommended when they will help with tab-completion (e.g. `module.target_name`).
 1. Kebab-case for targets (e.g. `my-target-name`) is fairly common in Makefiles out in the wild, so it is **explicitly reserved for project code**, never used for targets in `compose.mk`, and is not recommended for library-style extensions of `compose.mk`.
-1. Dot-paths should be used instead of snake-case if targets resemble keywords. i.e. if `_` is just too onerous and `.` is faster.  For example {{macros.api_link('flux.if.then',mkdocs,arg='targets')}}.
+1. Dot-paths should be used instead of snake-case if targets resemble keywords. i.e. if `_` is just too onerous and `.` is faster.  For example {{site.api_link('flux.if.then',mkdocs,arg='targets')}}.
 1. Avoid custom functions in `make`, but if you need them, differentiate functions from vars using `_` as a prefix to indicate args are required.
 1. Differentiate "public" targets (i.e. the CLI's API) from internal helpers by using a `self.` prefix or simply `.`
 

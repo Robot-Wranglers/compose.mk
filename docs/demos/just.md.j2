@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Interoperability with Just
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -22,7 +22,7 @@ Actually the *specific* involvement of `just` and justfiles as used here is not 
 ### Justfile Demo
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.embed_demo('demos/just.mk', github=github)}}
+{{site.embed_demo('demos/just.mk', github=github)}}
 
 ### References
 <hr style="width:100%;border-bottom:3px solid black;">

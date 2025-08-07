@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Matrioshka Automata
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -48,7 +48,7 @@ Here's a few arguments that suggest matrioshka-dolling has some legitimate use-c
 * Sometimes having nested containers or data is just a way of keeping demos/prototypes tight and small, because being self-contained is the most legible or instructive.  
 * Being self-contained is also at least *correlated* with other nice things like *stability and reproducibility*.
 * Matrioshkas are actually a pretty good format for a bug reports / minimum reproducible examples.
-* Matrioshkas are also a good format for test-cases of some distributed systems. [^3]
+* Matrioshkas are also a good format for test-cases of some distributed systems. [^2]
 
 Whether we're talking about bug reports, test-cases, or tutorials.. matrioshka's can help make things "batteries included" in the sense that *they are actually executable*, rather than a series of instructions asking you manually copy/paste a bunch of stuff in different files to get a test-harness going.
 
@@ -79,12 +79,12 @@ Both of these demos are instances of a general pattern that goes like this:
 
 **By the time you get to step 4, the possibilities for composition are surprisingly powerful, expressive, and flexible**, in large part because the [homoiconicity]({{mkdocs.site_relative_url}}/language/#homoiconic) we discussed earlier starts to pay off.  Summarizing [the justfile demo]({{mkdocs.site_relative_url}}/demos/just), embedding a justfile is incidental since we could easily work with an external one, but again the interesting part again is a bridge across layers.  We lift part of the `just` interface, then besides changing/exposing that interface, we actually wrapped it and compose our way to new functionality.  As a result.. we end up with an interactive task selector in just one line.
 
-**Step 5 is where the real magic happens,** and the demos mentioned so far are just hints.  Demonstrating the potential for this seriously under realistic circumstances starts to want more tools and larger use-cases.. which is a challenge for brief examples.  See the [platforming demo for a sketch]({{mkdocs.site_relative_url}}/demos/platform), or the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).  See also a preview of the sister project @ k8s-tools[^3], which uses `compose.mk` to automate cluster-lifecycles using more complex orchestration across a bigger toolbox.
+**Step 5 is where the real magic happens,** and the demos mentioned so far are just hints.  Demonstrating the potential for this seriously under realistic circumstances starts to want more tools and larger use-cases.. which is a challenge for brief examples.  See the [platforming demo for a sketch]({{mkdocs.site_relative_url}}/demos/platform), or the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).  See also a preview of the sister project @ k8s-tools[^2], which uses `compose.mk` to automate cluster-lifecycles using more complex orchestration across a bigger toolbox.
 
 ### Advanced Matrioshka Idioms 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-In the previous sections, we've looked at demos, idioms and patterns at differently levels of complexity.  But some people might wonder.. is this really significantly different than say, heredocs[^1] or random libdocker offerings in other languages? [^2] 
+In the previous sections, we've looked at demos, idioms and patterns at differently levels of complexity.  But some people might wonder.. is this really significantly different than say, heredocs[^1] or random docker sdk's in whatever language?
 
 The answer is *yes!*, because besides better options for structuring code and attempting to treat containers as "first class" objects, `compose.mk` is also fluent about data and control flow *across layers*.
 
@@ -111,8 +111,7 @@ For an advanced example in service of a more conventional use-case, you might wa
 <hr style="width:100%;border-bottom:3px solid black;">
 
 [^1]: [wiki://Here Document](https://en.wikipedia.org/wiki/Here_document)
-[^2]: Like say, [python-on-whales](https://github.com/gabrieldemarmiesse/python-on-whales)
-[^3]: See also the *(under construction!)*  [sibling project @ k8s-tools]({{jinja.vars.k8stools_docs_url}})
+[^2]: See also the *(under construction!)*  [sibling project @ k8s-tools]({{jinja.vars.k8stools_docs_url}})
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

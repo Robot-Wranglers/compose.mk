@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Compiler & Dialects
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -40,14 +40,14 @@ $ cat ./demos/cmk/foo.cmk | ./compose.mk mk.compiler
 
 Let's revisit the JSON emit/consume example that's part of the [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics).  The original code was simple, but rewriting this in CMK is much more pretty:
 
-{{macros.embed_demo(
+{{site.embed_demo(
   'demos/cmk/structured-io.cmk',type='cmk',
   github=github)}}
 
 We'll get to the odd arrow syntax at the end of this section, but start with most basic stuff first. 
 
 **New Interpreter:**
-:  This example introduces {{macros.api_link('mk.interpret!',mkdocs)}} in a shebang.  Not to be confused with {{macros.api_link('mk.interpret',mkdocs)}},  **mk.interpret!** includes additional steps for CMK->Makefile transpilation, allowing us to extend the base syntax and use the more exotic stuff you see in the rest of the file.  As with other demos, this one is **executable directly** as `./demos/cmk/structured-io.cmk`.  Unlike other demos, we can't run it directly with `make -f ..`, and would use instead `./compose.mk mk.interpret! ..`  
+:  This example introduces {{site.api_link('mk.interpret!',mkdocs)}} in a shebang.  Not to be confused with {{site.api_link('mk.interpret',mkdocs)}},  **mk.interpret!** includes additional steps for CMK->Makefile transpilation, allowing us to extend the base syntax and use the more exotic stuff you see in the rest of the file.  As with other demos, this one is **executable directly** as `./demos/cmk/structured-io.cmk`.  Unlike other demos, we can't run it directly with `make -f ..`, and would use instead `./compose.mk mk.interpret! ..`  
 
 **Implied Include + Standard Library:**
 :  When using the interpreter, a line like `include compose.mk` is always implied, and of course this brings with it full access to the [standard library]({{mkdocs.site_relative_url}}/standard-lib).
@@ -117,9 +117,9 @@ Revisiting the code from the [inlined compose-file demo]({{mkdocs.site_relative_
 
 Like the original demo, this embeds a compose file, creates target-scaffolding for the containers involved, and demonstrates task-dispatch for them.  But this time we introduce the **⋘ name ..body.. ⋙** syntax for compose files.  *(Unicode ahead: `⋘` isn't `<<<` !)*
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/cmk/inlined-composefile.cmk', 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/inlined-composefile.mk',
       base=mkdocs.site_relative_url+'/demos/matrioshka'),
     github=github)}}
@@ -141,9 +141,9 @@ The last example inlines a compose file, and then dispatches targets.  How about
 
 Below, examples for `script1.sh` and `script2.sh` are equivalent, but use two different idioms:
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/cmk/bind-script.cmk', 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/bind-script.mk',
       base=mkdocs.site_relative_url+'/container-dispatch/#container-agnostic-dispatch'),
     github=github)}}
@@ -173,9 +173,9 @@ Quick-and-dirty scripting is often convenient, but working with targets makes it
 
 This idiom binds together a given container, a "public" target and a "private" target.  The public-target is the main interface; the "private" target has the same name but uses a "self." prefix and always runs inside the named container.
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/cmk/bind-target.cmk',
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/bind-target.mk',
       base=mkdocs.site_relative_url+'/container-dispatch/#container-agnostic-dispatch'),
     github=github)}}
@@ -223,9 +223,9 @@ The example below uses another form of **with .. as** and introduces different s
 
 Bound code uses the syntax **⟦ name ..body.. ⟧ with .. as ..**, whereas unbound code uses `🞹 name ..body.. 🞹`.  Note that both syntaxes **use unicode specials**, and should not be confused with normal square-brackets or asterisks!
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/cmk/code-objects.cmk', 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/code-objects.mk',
       base=mkdocs.site_relative_url+'/demos/polyglots'),
     github=github)}}
@@ -243,9 +243,9 @@ There are some differences, including the scaffolded `preview` target.  But the 
 
 For larger scripts, you'll want to use external files.  Binding a file, container, and interpreter is a typical use-case.  
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/cmk/bind-file.cmk', 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/bind-file.mk',
       base=mkdocs.site_relative_url+'/container-dispatch/#container-agnostic-dispatch'),
     github=github)}}
@@ -254,9 +254,9 @@ For larger scripts, you'll want to use external files.  Binding a file, containe
 
 As an alternative to binding to an existing target, you can use an import statement, and create a target more dynamically.  This example also demonstrates passing a few more of the supported arguments:
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/cmk/import-file.cmk', 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/import-file.mk',
       base=mkdocs.site_relative_url+'/demos/polyglots/#files-as-targets-with-polyglotimportfile'),
     github=github)}}
@@ -272,9 +272,9 @@ As an alternative to binding to an existing target, you can use an import statem
 
 The [approach for running a shell script on the host]({{mkdocs.site_relative_url}}/demos/polyglots#special-guests) is slightly different, and `compose.import.script` becomes built-in:
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/cmk/script-dispatch-host.cmk', 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/script-dispatch-host.mk',
       base=mkdocs.site_relative_url+'/demos/polyglots'),
     github=github)}}
@@ -286,9 +286,9 @@ Host scripts inherit the parent environment automatically.  This includes any va
 
 Let's revisit the code from the [inlined Dockerfile demo]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile), and port it to CMK.  *(Unicode ahead: `⫻` is not `///`!)*
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/cmk/inlined-dockerfile.cmk', 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/inlined-dockerfile.mk',
       link=mkdocs.site_relative_url+'/raw-docker'),
     github=github)}}
@@ -305,9 +305,9 @@ The last example uses some raw docker commands just to show it's possible, but i
 
 Here's two examples, showing minimal usage first, then demonstrating passing some extra arguments.
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/cmk/script-dispatch-custom.cmk', 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/script-dispatch-custom.mk',
       link=mkdocs.site_relative_url+'/raw-docker#inlined-dockerfiles'),
     github=github)}}
@@ -323,9 +323,9 @@ Here's two examples, showing minimal usage first, then demonstrating passing som
 
 Using stock images instead of inlined ones is similar to the last section, except that it uses `docker_context` in the as-clause.
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/cmk/script-dispatch-stock.cmk', 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/script-dispatch-stock.mk',
       link=mkdocs.site_relative_url+'/raw-docker#dispatch-scripts-in-containers'),
     github=github)}}
@@ -349,10 +349,10 @@ Minified JSON is optional, and everything between the first and second `:::` wil
 
 User-defined dialects require a hint at the top of the file.  Building on the [basic example](#basic-example), here's an example that changes the default jq/jb JSON operators to use different characters.
 
-{{macros.embed_demo(
+{{site.embed_demo(
   'demos/cmk/user-dialect.cmk', 
   github=github,
-  bottom_right=macros.link_mirror(
+  bottom_right=site.link_mirror(
     'demos/structured-io.mk',
     link=mkdocs.site_relative_url + '/standard-lib/#structured-io-basics'))}}
 
@@ -363,10 +363,10 @@ To get the full current default dialect in a minified form that's ready for your
 
 User-defined sugar requires a hint at the top of the file.  Building on the [compose file example](#compose-file-example), here's an example that changes that default syntax to use different characters.
 
-{{macros.embed_demo(
+{{site.embed_demo(
   'demos/cmk/user-sugar.cmk', 
     github=github,
-  bottom_right=macros.link_mirror(
+  bottom_right=site.link_mirror(
     'demos/inlined-composefile.mk',
     base=mkdocs.site_relative_url + '/demos/matrioshka'))}}
 
@@ -381,10 +381,10 @@ One use-case of bind-declarations is to bind variables to values, basically prov
 
 The equivalent idiom is much more readable in CMK-lang:
 
-{{macros.embed_demo(
+{{site.embed_demo(
   'demos/cmk/kwarg-parsing.cmk', 
   github=github,
-  bottom_right=macros.link_mirror(
+  bottom_right=site.link_mirror(
     'demos/structured-io.mk',
     link=mkdocs.site_relative_url + '/standard-lib/#argument-parsing'))}}
 
@@ -393,10 +393,10 @@ The equivalent idiom is much more readable in CMK-lang:
 
 Bind-declarations can be stacked. For example, loading some variables from JSON and some from the environment looks like this:
 
-{{macros.embed_demo(
+{{site.embed_demo(
   'demos/cmk/kwarg-parsing-2.cmk', 
   github=github,
-  bottom_right=macros.link_mirror(
+  bottom_right=site.link_mirror(
     'demos/structured-io.mk',
     link=mkdocs.site_relative_url + '/standard-lib/#argument-parsing'))}}
 
@@ -407,9 +407,11 @@ Compilation and interpreted CMK is even more experimental than the rest of the p
 
 That said, everything that's documented here is stable and unlikely to change.  Mainly *experimental* just means that testing so far is limited, [so please report bugs]({{github.repo_url}}/issues), but not until you've **[confirmed you're using GNU awk!]({{mkdocs.site_relative_url}}/quickstart/#compatibility-notes)**.
 
-Per the rest of the design philosophy, the goal is to [freeze CMK after it's **useful** and **capable of being extended**]({{mkdocs.site_relative_url}}/but-why#forever-development-considered-harmful) and most future changes are probably optimizations rather than extensions.  See also the docs re: [Forks & Versioning]({{mkdocs.site_relative_url}}/quickstart/#forks-versioning) and [Contributing]({{mkdocs.site_relative_url}}/contributing).
+Per the rest of the design philosophy, the goal is to [freeze CMK after it's **useful** and **capable of being extended**]({{mkdocs.site_relative_url}}/but-why#forever-development-considered-harmful) and most future changes are probably optimizations rather than extensions.  See also the docs re: [Forks & Versioning]({{mkdocs.site_relative_url}}/quickstart/#forks-versioning) 
 
 {#
+and [Contributing]({{mkdocs.site_relative_url}}/contributing).
+
 ### Implementation Details
 <hr style="width:100%;border-bottom:3px solid black;">
 

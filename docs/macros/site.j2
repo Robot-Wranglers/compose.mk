@@ -1,0 +1,104 @@
+{% import 'macros/base.j2' as macros -%}
+
+## File Previews
+{#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
+{% macro embed_demo(fname, github={}, 
+    bottom_middle='', bottom_right='',
+    type='Makefile', title='', 
+    extra_label='', class="")-%}{% set link_prefix=macros.normalize_fname(fname) %}
+<a id="{{link_prefix}}"></a>{% set use_type= (type=='cmk' and 'Makefile') or type %}{{macros.code_table(fname, 
+    type=type, github=github, 
+    link_prefix=link_prefix, code_table_2=extra_label, class=class)}}<details id="{{link_prefix}}_details" open><summary style="display:none;">Summary</summary>
+```{{use_type}} {%raw%}{{%endraw%}{{class}} {{'.language-' + use_type}} {{'.language-cmk' if fname.endswith('.cmk') else ''}}{%raw%}}{%endraw%}
+{{open(fname,'r').read().strip()}}
+```
+{{macros.code_table_bottom(fname, bottom_middle=bottom_middle,bottom_right=bottom_right, title=title, link_prefix=link_prefix, type=type, github=github, class=class)}}<a id="{{link_prefix}}_bottom"></a></details>{%- endmacro -%}
+
+
+# API links
+{#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
+
+{% macro api_link(target, mkdocs, arg='',style="") -%}{%set link=target.replace('-','').replace('.','').replace('/','').replace('&lt;','').replace('&gt;','').replace('<','').replace('>','')%}{%if arg%}{%set name=target.replace('/&lt;arg','').replace('&gt;','').replace('/<arg','').replace('>','') + '/&lt;'+arg+'&gt;'%}{%set link=link+'arg' if not link.endswith('arg') else link %}{%else%}{%set name=target%}{%endif%} <a style="{{style}}" href="{{mkdocs.site_relative_url}}/api/#{{link}}" >{{name}}</a>{%- endmacro -%}
+
+{% macro api_link_many(target_fam, mkdocs, arg='', exclude='None') -%}
+<div class="docutils api_table">
+<table class="docutils api_docs"><tr><th align=left><strong> <svg  xmlns="http://www.w3.org/2000/svg"  width="20"  height="20"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-map-2"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 18.5l-3 -1.5l-6 3v-13l6 -3l6 3l6 -3v7.5" /><path d="M9 4v13" /><path d="M15 7v5.5" /><path d="M21.121 20.121a3 3 0 1 0 -4.242 0c.418 .419 1.125 1.045 2.121 1.879c1.051 -.89 1.759 -1.516 2.121 -1.879z" /><path d="M19 18v.01" /></svg> Related API</strong></th></tr>
+{%for target_f in target_fam %}
+{% set targets=bash('./compose.mk mk.namespace.filter/'+target_f+'|sort') %}
+{% set targets=targets.split('\n') %}
+{%for target in targets %} {% set target=target.strip().replace('%','&lt;arg&gt;') %}{%if target and not target.startswith(exclude)%}
+<tr><td>{{api_link(target, mkdocs, arg=arg, style="color=black")}}</td></tr>{%endif%}{%endfor%}{%endfor%}</table></div>
+{%- endmacro -%}
+
+# CMK-Specific
+{#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
+{% macro link_mirror(fname='',link='',base='')-%}{%set default_link=base+"#"+macros.normalize_fname(fname)%}Alternate Syntax: <a href="{{link or default_link}}">{%if fname.endswith('cmk')%}CMK-Lang{%else%}Plain Makefile{%endif%} Equivalent </a><small>✔️</small>{%- endmacro -%}
+
+
+{% macro block_docs(pattern, mkdocs, arg='') -%}
+{% for line in bash('pattern='+pattern+' ./compose.mk mk.parse.block/compose.mk').split('\n')%}
+{%if line.lstrip().startswith('##')%}<h4>{{line.lstrip().replace('##','')}}</h4><hr style="width:95%;border-bottom:1px dashed black;">
+{%endif%}{%endfor%}
+{%- endmacro -%}
+
+{% macro inlined_help(target, mkdocs, arg='') -%}{{api_link(target,mkdocs,arg=arg)}}
+{{bash('./compose.mk .mk.help.target/'+target)}}
+{%- endmacro -%}
+
+{% macro parse_module_help(fname, namespace,github={}) -%}
+{% set lines=bash('pynchon makefile parse --module-docs ' + fname + '| jq \'.'+namespace+'\'', load_json=True) %}{% if not lines %}{%set lines=[]%}{%endif%}
+{#% if lines|length > 2%}{% set lines=lines[1:-1] %}{% endif %#}
+{% for line in lines %}
+{{line}}
+{% endfor %}
+
+{%- endmacro -%}
+
+{% macro parse_target_help(fname, target, tdata={}, github={}, include_private=False) -%}
+{% set include_private='--include-private' if include_private else '' %}
+{% set cmd='pynchon makefile parse ' + include_private + ' ' + fname + "| jq '.[\"" + target + '"] // {} \'' %}
+{% set tdata=tdata or bash(cmd, load_json=True) %}
+{%set arity_info=("[Parametric]" if target.endswith('%') else '[Nullary]')%}
+{%set tname_n=target.replace('%','<arg>').replace('<','').replace('>','')%} {%set line_no=tdata['lineno']|default(-1)|string %}{%set err=false if 'docs' in tdata else true %}{%set docs=tdata.docs|default(["error=pulling docs for "+target,"targets="+str(tdata), "target="+target, "tname_n="+tname_n]) %}
+{% set src_ref=(macros.repo_link(
+    fname+"#L"+line_no,
+    github=github,
+    name=fname+"::"+line_no, 
+    )|default("???")) if line_no!="-1" 
+    else "<font color=red>not found</font>" %}
+##### `{{tname_n}}`
+
+{{macros.code_table('',  
+    style="margin-top:-2em;",
+    code_table_1='<a style="text-decoration:none;padding:5px;" href="#'+tname_n.replace('/','').replace('.','').replace('_','') + '"><font style="margin-top:5px;font-size:120%;">❡</font><code style="background-color:unset; font-size:large">'+tname_n+'</code></a>', 
+    code_table_2=arity_info,
+    code_table_3=src_ref,
+    github=github, class="api_docs", title='')}}
+
+{%if tdata['alias']|default(false)%}{%set primary=(tdata.primary|default('?')).replace('%','<arg>') %} {% set primary_slug=primary.replace('<','').replace('>','').replace('/','').replace('-', '').replace('.','') %}<span style="font-size:larger;margin-left:2em;">Alias for <a href="#{{primary_slug}}"><code>{{primary}}</code></a></span>{% else %}
+```bash {.api_docs .nohighlight}
+{{ "\n".join(docs)}}
+```
+{%endif%}
+{%- endmacro -%}
+
+{% macro parse_help(fname, namespace, github={}, include_private=False) -%}
+{% set include_private = '--include-private' if include_private else '' %}
+{% set help_extra = help_extra|default('')%}
+{% set help_extra = ' '+help_extra if help_extra else ''%}
+*This documentation is pulled automatically from [source](/{{fname}}).{{help_extra}}*
+{% set targets=bash('pynchon makefile parse ' + include_private + ' ' + fname + '| jq \'with_entries(select(.key | startswith("'+namespace+'")))\'', load_json=True) %}
+{% for tname in targets %} {%set tdata=targets[tname]%}{%set tname_n=tname.replace('%','<arg>').replace('<','').replace('>','')%}
+
+{{parse_target_help(fname, tname, tdata=tdata, github=github, include_private=include_private)}}
+
+{% endfor %}
+
+<hr style="width:100%;border-bottom: 3px solid black;background: #efefef;">
+
+{%- endmacro -%}
+
+{% macro link_mirror(fname='',link='',base='')-%}{%set default_link=base+"#"+macros.normalize_fname(fname)%}Alternate Syntax: <a href="{{link or default_link}}">{%if fname.endswith('cmk')%}CMK-Lang{%else%}Plain Makefile{%endif%} Equivalent </a><small>✔️</small>{%- endmacro -%}
+{% macro code_table_bottom(fname, 
+    bottom='', bottom_middle='', bottom_right='', 
+    github={}, style="", link_prefix='', class="", type='', title='', code_table_2='',top='')-%}<div style="{{style}}" role=navigation class="code_table_bottom {{class}}"><span class=code_table_1>⠀<a href=#{{link_prefix}}_top>Back to top</a></span><span class=code_table_2>{%if bottom_middle%}{{bottom_middle}}{%endif%}</span><span class=code_table_3>{%if bottom_right%}{{bottom_right}}{%endif%}⠀</span></div>{%- endmacro -%}

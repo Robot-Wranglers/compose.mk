@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Tool Overview
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -19,7 +19,7 @@ Much of what `compose.mk` does is focused on helping you to [generate automation
 
 {#Additionally, one of the major benefits of using `make` over plain bash scripting is that details for CLI entrypoints are handled automatically.  In fact, *make-targets always do double-duty as CLI entrypoints and as reusable tasks*, or in other words, **the "internal API" is automatically published as a CLI interface.**  
 Because of this basic duality, even the documentation for "programmatic" usage of `compose.mk` as a library tends to introduce or demonstrate concepts by using tool-mode first.  Even if you're not interested in `compose.mk` as a library for scripting.. the [library docs]({{mkdocs.site_relative_url}}/standard-lib) and the [full API ]({{mkdocs.site_relative_url}}/api) both have many examples that are relevant for stand-alone mode.  Just search for `./compose.mk` to find them.
-and the {{macros.api_link('compose.select',mkdocs)}} and {{macros.api_link('mk.select',mkdocs) }} targets
+and the {{site.api_link('compose.select',mkdocs)}} and {{site.api_link('mk.select',mkdocs) }} targets
 1. **Cleaning up gnarly bash.**  In certain cases using `compose.mk` idioms can be easier to read and write.  For example, if your scripts are littered with `docker run ..` invocations, you might look at some of the [raw docker support]({{mkdocs.site_relative_url}}/raw-docker) for alternatives.  Tools available as part of [the standard library]({{mkdocs.site_relative_url}}/standard-lib) for logging, stream previews, and workflows also might be useful.
 #}
 
@@ -103,7 +103,7 @@ Setting aside the big 3 tools that use [proxy-wrappers](#proxy-wrappers), other 
 
 You can see a few examples below, but this isn't an exhuastive list.  See also the documentation for [streams and pipes]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-stream-types-pipes).
 
-{{macros.embed_demo('tests/tool-wrappers.sh', github=github, type='bash', extra_label='')}}
+{{site.embed_demo('tests/tool-wrappers.sh', github=github, type='bash', extra_label='')}}
 
 Many of these targets are also available as macros, and might have more documentation available as part of the [library overview]({{mkdocs.site_relative_url}}/standard-lib).  See also [the API reference]({{mkdocs.site_relative_url}}/api).  
 

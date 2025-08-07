@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Bonus: GUIs
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -41,7 +41,7 @@ Similar to how we've already seen `compose.mk` leveraging *`tmux`* to get a geom
 
 You can see the code for this below, it is complete and runs as-is.  {#Code is also in the repository at *{{macros.repo_link('demos/cmk/xephyr.cmk', github=github)}}*.#}
 
-{{macros.embed_demo('demos/cmk/xephyr.cmk', github=github)}}
+{{site.embed_demo('demos/cmk/xephyr.cmk', github=github)}}
 
 We've already seen what it looks like: Running the demo just opens *`xeyes`*, uses *`feh`* to display an image, and starts *`glxgears`*.  These tools and the window manager itself run inside the i3 container, but the environment is also accessible from other containers, or from your host.
 
@@ -85,7 +85,7 @@ $ ./demos/cmk/xpra_doom.cmk
 
 And here's the code:
 
-{{macros.embed_demo('demos/cmk/xpra-doom.cmk', github=github)}}
+{{site.embed_demo('demos/cmk/xpra-doom.cmk', github=github)}}
 
 This example uses the 'seamless' mode for xpra instead of the desktop mode.
 
@@ -103,11 +103,11 @@ $ ./demos/cmk/xpra.cmk gui
 
 By default this opens a webserver at [http://localhost:9090](http://localhost:9090).  Note that server authentication is disabled by default for all these demos. See the XPra docs for setting user/password details.  Here's the code:
 
-{{macros.embed_demo('demos/cmk/xpra.cmk', github=github)}}
+{{site.embed_demo('demos/cmk/xpra.cmk', github=github)}}
 
 Other differences with this demo are that we do *not* share the X11 socket with the host, so by default you *cannot* launch applications in this environment by simply exporting `DISPLAY`.  Besides sharing the unix socket, it's also possible to use XPra from the host and share the TCP socket.
 
-Besides auth, this example is rough in terms of proper daemonization, clean logging, and clean exits.  Rather than backgrounding the server and hoping you remember to kill it, it runs in the foreground to make debugging changes easier.  When you're done with the server, just press enter on the console to exit and you should see a clean exit.  But note that **Ctrl-C may not stop the server.**  You can use `./demos/cmk/xpra.cmk xpra.stop` to ensure shutdown or use {{macros.api_link('docker.stop.all',mkdocs)}} to kill everything indiscriminately.
+Besides auth, this example is rough in terms of proper daemonization, clean logging, and clean exits.  Rather than backgrounding the server and hoping you remember to kill it, it runs in the foreground to make debugging changes easier.  When you're done with the server, just press enter on the console to exit and you should see a clean exit.  But note that **Ctrl-C may not stop the server.**  You can use `./demos/cmk/xpra.cmk xpra.stop` to ensure shutdown or use {{site.api_link('docker.stop.all',mkdocs)}} to kill everything indiscriminately.
 
 #### Hermetic GUIs
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -123,9 +123,9 @@ $ ./demos/cmk/xpra-net.cmk gui
 ```
 {{macros.img_link("gui4.gif", mkdocs, "95%", align='center', class="cli_output")}}
 
-The corresponding code is below.  Look, no open ports!  We use `xscreensaver`[^9], running in xpra's "desktop" mode.  Note also that rather than embedding `carbonyl` directly in the docker compose file, we use {{macros.api_link('tux.browser',mkdocs)}} and specify the network the container should join.
+The corresponding code is below.  Look, no open ports!  We use `xscreensaver`[^9], running in xpra's "desktop" mode.  Note also that rather than embedding `carbonyl` directly in the docker compose file, we use {{site.api_link('tux.browser',mkdocs)}} and specify the network the container should join.
 
-{{macros.embed_demo('demos/cmk/xpra-net.cmk', github=github)}}
+{{site.embed_demo('demos/cmk/xpra-net.cmk', github=github)}}
 
 ### XQuartz Demo
 <hr style="width:100%;border-bottom:3px solid black;">

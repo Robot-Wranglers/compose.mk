@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Import Services from Compose
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -18,7 +18,7 @@ Let's walk through a minimal example, starting with a sample compose file.
 
 We'll use images for debian and alpine just as examples, but these might be any tool containers that your workflow requires.
 
-{{macros.embed_demo('demos/data/docker-compose.minimal.yml', type='yaml', github=github)}}
+{{site.embed_demo('demos/data/docker-compose.minimal.yml', type='yaml', github=github)}}
 
 Next, the Makefile.  To generate make-targets for every service in the given compose file, we just need to include `compose.mk` as a library, then call one of the `compose.import.*` functions.
 
@@ -198,7 +198,7 @@ $ strict=1 make debian.ps
 #### **[❡](#svc_namedispatch) `<svc_name>`.dispatch**
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-The ***svc_name*.dispatch/** target is unary rather than nullary like our other examples. It accepts as an argument *another target* which will then be run in the given container.  See the [container dispatch docs](#) for more details, but in this example we'll just pass in the trivial target {{macros.api_link('flux.ok',mkdocs)}}.
+The ***svc_name*.dispatch/** target is unary rather than nullary like our other examples. It accepts as an argument *another target* which will then be run in the given container.  See the [container dispatch docs](#) for more details, but in this example we'll just pass in the trivial target {{site.api_link('flux.ok',mkdocs)}}.
 
 ```bash {.cli_example}
 # Run the trivial `flux.ok` target inside the debian container

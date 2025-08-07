@@ -18,7 +18,7 @@ self.dispatch_test:
 
 test.runner:
 	cmk.log.test_case(Low level access to run commands)
-	entrypoint=sh cmd='-c "pwd"' this.my_container.run
+	entrypoint=sh cmd='-c "pwd"' this.my_container
 
 test.raw:
 	cmk.log.test_case(Low-level unmediated access to image)

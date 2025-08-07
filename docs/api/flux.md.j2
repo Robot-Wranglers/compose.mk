@@ -1,10 +1,10 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 #### API: flux
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.parse_module_help('compose.mk', 'flux')}}
+{{site.parse_module_help('compose.mk', 'flux')}}
 
 See especially the [Platform Setup Example]({{mkdocs.site_relative_url}}/demos/platform) for a more complete walk-through of motivation, starting from an example use-case.
 
-{{macros.parse_help('compose.mk','flux', github)}}
+{{site.parse_help('compose.mk','flux', github)}}

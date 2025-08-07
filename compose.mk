@@ -345,7 +345,7 @@ export CMK_DIND?=0
 export verbose:=$(shell [ "$${quiet:-0}" == "1" ] && echo 0 || echo $${verbose:-1})
 export CMK_INTERNAL?=0
 # export CMK_SRC:=$(shell echo ${MAKEFILE_LIST} | sed 's/ /\n/g' | grep compose.mk)
-export CMK_SRC=compose.mk
+export CMK_SRC:=$(filter %compose.mk,${MAKEFILE_LIST})
 export CMK_BIN?=${CMK_SRC}
 export __interpreter__:=$(shell \
 	 ([ -z "$${__interpreter__:-}" ] \
@@ -1518,9 +1518,9 @@ define io.print.banner
 		label=" $${label//-/ } " && default="#" \
 		&& filler=$${filler:-$${default}} && label_length=$${#label} \
 		&& side_length=$$(( ($${width} - $${label_length} - 2) / 2 )) \
-		&& printf "\n${dim}%*s" "$${side_length}" | sed "s/ /$${filler}/g" > /dev/stderr \
+		&& printf "${dim}%*s" "$${side_length}" | sed "s/ /$${filler}/g" > /dev/stderr \
 		&& printf "${no_ansi_dim}${bold}${green}$${label}${no_ansi_dim}" > /dev/stderr \
-		&& printf "%*s${no_ansi}\n\n" "$${side_length}" | sed "s/ /$${filler}/g" > /dev/stderr \
+		&& printf "%*s${no_ansi}\n" "$${side_length}" | sed "s/ /$${filler}/g" > /dev/stderr \
 	; fi
 endef
 io.print.banner/%:; label="${*}"; ${io.print.banner}
@@ -3113,7 +3113,11 @@ flux.map/% flux.for.each/%:
 	| xargs -I% echo "${make} `printf "${*}" | cut -d, -f1`/%" \
 	> $${tmpf} \
 	&& bash ${dash_x_maybe} $${tmpf}
-	
+
+flux.NIY:
+	@# Shorthand for "not implemented yet".  Exits immediately as failure.
+	$(call log.target, ${red}Target Not Implemented Yet); exit 1
+
 flux.or/% flux.any/%:
 	@# Performs an 'or' operation with the named comma-delimited targets.
 	@# This is equivalent to 'make target1 || .. || make targetN'.  See also 'flux.and'.

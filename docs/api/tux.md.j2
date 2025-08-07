@@ -1,12 +1,12 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 {% set help_extra="Docs below typically refer to `compose.mk` as the executable involved, but if you're using integrated rather than stand-alone mode, you should use `make` instead to work with your own project's context!" %}
 
 #### API: tux
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.parse_module_help('compose.mk','tux')}}
+{{site.parse_module_help('compose.mk','tux')}}
 
 {#See the [TUI documentation]({{mkdocs.site_relative_url}}/embedded-tui) for a high-level overview of what this is and how it works.  For more details, [see the main TUI docs]({{mkdocs.site_relative_url}}/embedded-tui), read on into the API, or see the [tux container spec in compose.mk]({{macros.search_link('compose.mk', 'tux', github)}})#}
 
-{{macros.parse_help('compose.mk', 'tux', help_extra)}}
+{{site.parse_help('compose.mk', 'tux', help_extra)}}
 {# {% include api/tux.internal.md.j2 %} #}

@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Custom Automation APIs
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -47,7 +47,7 @@ As an exercise.. let's look at what `compose.mk` can bring to adress some of tha
 
 Typically, you would want to begin by sketching out an ansible container inside a docker-compose file, then use `compose.import` to [autogenerate related targets]({{mkdocs.site_relative_url}}/bridge).  Just to keep things simple though and to demonstrate [raw docker support in compose.mk]({{mkdocs.site_relative_url}}/raw-docker) at the same time, we'll embed the ansible container directly.
 
-{{macros.embed_demo('demos/ansible-adhoc.mk', github=github)}}
+{{site.embed_demo('demos/ansible-adhoc.mk', github=github)}}
 
 The implementation is small, and the result is powerful.  As mentioned above, `make ansible.adhoc/ping` works as expected to call the [ping module](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/ping_module.html), and to call the [docker_image_info](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_image_info_module.html) module with arguments. Output looks like this:
 
@@ -75,7 +75,7 @@ $ ./demos/ansible-adhoc.mk ansible.adhoc/ping
 The argument-passing is somewhat awkward for *people*, but it supports JSON, so this is already fairly usable from other automation. For common use-cases, you just make a more friendly alias, as is done with the `list_images` target above. 
 
 !!! closer_look "Closer Look"
-    The eagle-eyed reader will have noticed that `docker_image_info` actually returns data, i.e. it is using the **host docker socket**, because under the hood, {{macros.api_link("docker.dispatch",mkdocs,arg='target')}} [shares the socket and the working directory automatically]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults).  Effectively the ansible container can orchestrate tasks on the host in many respects, even though the host doesn't have ansible.
+    The eagle-eyed reader will have noticed that `docker_image_info` actually returns data, i.e. it is using the **host docker socket**, because under the hood, {{site.api_link("docker.dispatch",mkdocs,arg='target')}} [shares the socket and the working directory automatically]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults).  Effectively the ansible container can orchestrate tasks on the host in many respects, even though the host doesn't have ansible.
 
 ### Discussion
 <hr style="width:100%;border-bottom:3px solid black;">

@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ### Assertion Support
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -14,14 +14,14 @@ We've already met one method for asserting environment variables are set as part
 
 See also:
 
-* {{macros.api_link('mk.assert.env',mkdocs,arg='v1,v2..')}}, available as a target or a macro.
+* {{site.api_link('mk.assert.env',mkdocs,arg='v1,v2..')}}, available as a target or a macro.
 
 #### Filesystem Assertions
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 See also:
 
-* {{macros.api_link('mk.require.tool',mkdocs,arg='tool-name')}}, basically a wrapper on `which`, and available as a target or a macro.
+* {{site.api_link('mk.require.tool',mkdocs,arg='tool-name')}}, basically a wrapper on `which`, and available as a target or a macro.
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ### Zero Config TUIs
 
@@ -12,7 +12,7 @@ Examples here all involve full-blown TUIs, i.e. multi-pane content with layouts 
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-For a simple demo that's just exercising containerized `tmux`, geometry, and dispatching targets to panes.. try {{macros.api_link('tux.demo',mkdocs)}}:
+For a simple demo that's just exercising containerized `tmux`, geometry, and dispatching targets to panes.. try {{site.api_link('tux.demo',mkdocs)}}:
 
 ```bash {.cli_example}
 $ ./compose.mk tux.demo
@@ -23,7 +23,7 @@ Embedded TUI capapbilities are usually pulled/built just-in-time and on request,
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-For a more involved example of dashboarding, try {{macros.api_link('docker.commander',mkdocs)}}.  This demonstrates using other containers as TUI widgets- in this case we combine [lazydocker](https://github.com/jesseduffield/lazydocker), [moncho/dry](https://github.com/moncho/dry), and [imgrot](https://github.com/Robot-Wranglers/docker-imgrot).
+For a more involved example of dashboarding, try {{site.api_link('docker.commander',mkdocs)}}.  This demonstrates using other containers as TUI widgets- in this case we combine [lazydocker](https://github.com/jesseduffield/lazydocker), [moncho/dry](https://github.com/moncho/dry), and [imgrot](https://github.com/Robot-Wranglers/docker-imgrot).
 
 
 ```bash {.cli_example}
@@ -59,13 +59,13 @@ $ layout=spiral ./compose.mk loadf demos/data/docker-compose.yml \
 #### Working with Makefiles
 <hr style="width:100%;border-bottom:3px solid black;">
 
-**If your project has a Makefile,** the [selector docs]({{mkdocs.site_relative_url}}/selector/#interactive-target-selection) show how you can interactively select/run individual targets.  In a similar vein, **working with multiple targets and simple "dashboarding" across targets is also possible** with no special configuration.  This involves the {{macros.api_link('mk.include', mkdocs)}} target, which effectively simulates a `include compose.mk` in your project Makefile *without actually adding one.*
+**If your project has a Makefile,** the [selector docs]({{mkdocs.site_relative_url}}/selector/#interactive-target-selection) show how you can interactively select/run individual targets.  In a similar vein, **working with multiple targets and simple "dashboarding" across targets is also possible** with no special configuration.  This involves the {{site.api_link('mk.include', mkdocs)}} target, which effectively simulates a `include compose.mk` in your project Makefile *without actually adding one.*
 
 -------------------------------------
 
 Consider the following vanilla Makefile, which does **not** include `compose.mk` itself, and simply defines fake `build`, `clean`, and `test` targets that do nothing.
 
-{{macros.embed_demo('demos/no-include.mk', github=github)}}
+{{site.embed_demo('demos/no-include.mk', github=github)}}
 
 Using `mk.include` by itself works in the way that you'd probably expect, but does nothing very interesting:
 
@@ -80,7 +80,7 @@ building
 testing
 ```
 
-The interesting part is that using {{macros.api_link('tux.open',mkdocs,arg='target_list')}} in the way that [we've already seen]({{mkdocs.site_relative_url}}/embedded-tui/#layout-basics) *also* works how you'd expect here.  Thus you can use the command below to open each target in a separate pane:
+The interesting part is that using {{site.api_link('tux.open',mkdocs,arg='target_list')}} in the way that [we've already seen]({{mkdocs.site_relative_url}}/embedded-tui/#layout-basics) *also* works how you'd expect here.  Thus you can use the command below to open each target in a separate pane:
 
 ```bash {.cli_example}
 $ ./compose.mk \
@@ -130,7 +130,7 @@ $ layout=horizontal \
 #### Next Steps
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Expanding on this.. you could add the {{macros.api_link('io.shell',mkdocs)}} target to the comma-separated list of `tux.open` arguments for an additional pane featuring an interactive shell.  Or you could add the {{macros.api_link('io.env',mkdocs,arg='var_prefix')}} target to dump a list of relevant environment variables for this project.  You get the idea.
+Expanding on this.. you could add the {{site.api_link('io.shell',mkdocs)}} target to the comma-separated list of `tux.open` arguments for an additional pane featuring an interactive shell.  Or you could add the {{site.api_link('io.env',mkdocs,arg='var_prefix')}} target to dump a list of relevant environment variables for this project.  You get the idea.
 
 This is pretty useful, but the command-line is unwieldy, and a swiss-army knife CLI will only take you so far.  The next section looks at how we can achieve the same thing by editing files and avoiding one-liners.
 

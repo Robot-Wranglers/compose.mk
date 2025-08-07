@@ -6,7 +6,7 @@ function toggleCodeBlock(id, link) {
 }
 
 function addImageToHeader(headerId, imgSrc,style="") {
-    if (!imgSrc.endsWith('.svg')) { imgSrc += '.svg'; }
+    if (!imgSrc.endsWith('.svg') && !imgSrc.endsWith('.png')  && !imgSrc.endsWith('.jpg') ) { imgSrc += '.svg'; }
     // Convert spaces to dashes in header-id
     const processedHeaderId = headerId.toLowerCase().replace(/\s+/g, '-').replace('?','-');
     const headers = document.querySelectorAll('h1, h2, h3, h4, h5, h6, h7');

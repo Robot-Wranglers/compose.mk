@@ -1,5 +1,6 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 ## Icons
+<hr style="width:100%;border-bottom:3px solid black;">
 
 * https://tabler.io/icons
 * https://icons.getbootstrap.com/
@@ -8,6 +9,8 @@
 <hr style="width:100%;border-bottom:3px solid black;">
 !!! outline "Outline type"
     * [Admonitions Demos](admonitions/)
+    * [Figures & Images](figures)
+    * [Footnotes](footnotes/)
     * [Inlined Examples](#inlined-examples)
     * [Syntax Highlighting / API](#api)
     * [File Embeddings](#file-embeddings)
@@ -38,13 +41,13 @@ Fixed width, no args:
 ### File Embeddings
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Using `macros.embed_demo`:
+Using `site.embed_demo`:
 
-{{macros.embed_demo('demos/logging.mk', github=github)}}
+{{site.embed_demo('demos/logging.mk', github=github)}}
 
-Using `macros.embed_demo` where type=yaml :
+Using `site.embed_demo` where type=yaml :
 
-{{macros.embed_demo('demos/data/docker-compose.yml', github=github, type='yaml')}}
+{{site.embed_demo('demos/data/docker-compose.yml', github=github, type='yaml')}}
 
 ### Inlined Examples
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -106,27 +109,27 @@ self.test:
 ### API
 <hr style="width:100%;border-bottom:3px solid black;">
 
-#### `macros.api_link`
+#### `site.api_link`
 
 **Render individual api-links with some options for customizing appearance**
 
-These polyglots are supported by {{macros.api_link('io.awk',mkdocs,'def_name')}} and {{macros.api_link('io.shell',mkdocs,'def_name,optional_args')}}
+These polyglots are supported by {{site.api_link('io.awk',mkdocs,'def_name')}} and {{site.api_link('io.shell',mkdocs,'def_name,optional_args')}}
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 
-#### `macros.api_link_many`
+#### `site.api_link_many`
 
 
 **Render groups or namespaces of api-links in a table**
 
-2 targets using `macros.api_link_many(['io.awk','io.shell'], mkdocs,arg='defname')`
+2 targets using `site.api_link_many(['io.awk','io.shell'], mkdocs,arg='defname')`
 
-{{macros.api_link_many(['io.awk','io.shell'], mkdocs,arg='defname')}}
+{{site.api_link_many(['io.awk','io.shell'], mkdocs,arg='defname')}}
 
-2 namespaces using `macros.api_link_many(['flux.stage','io.stack'], mkdocs)`
+2 namespaces using `site.api_link_many(['flux.stage','io.stack'], mkdocs)`
 
-{{macros.api_link_many(['flux.stage','io.stack'], mkdocs)}}
+{{site.api_link_many(['flux.stage','io.stack'], mkdocs)}}
 
 {#%include "meta/api.md.j2" %#}
 

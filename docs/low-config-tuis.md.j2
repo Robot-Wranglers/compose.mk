@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ### Low Config TUIs
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -12,9 +12,9 @@ In the end though, the CLI starts to get pretty clunky, and it's better to have 
 
 Let's revisit [a previous example]({{mkdocs.site_relative_url}}/zero-config-tuis/#working-with-makefiles) in a less adhoc way, basically extending the classic *clean/build/test* project Makefile with a TUI as before, but using code this time.  As before, the goal is to loop the *test* task, and run the *clean/build* tasks sequentially-- in separate panes at the same time.  
 
-{{macros.embed_demo('demos/dashboarding.mk', github=github)}}
+{{site.embed_demo('demos/dashboarding.mk', github=github)}}
 
-Look, **no target bodies!**  The declarative flavor is nice, and this is frequently the case for TUI customization: mostly we just need declare groups of existing targets and/or flow between them. We've seen that this frequently involves `compose.mk::flux` targets, like {{macros.api_link('flux.loopf',mkdocs,arg='target_name')}} and {{macros.api_link('flux.and',mkdocs,arg='targets')}}.  
+Look, **no target bodies!**  The declarative flavor is nice, and this is frequently the case for TUI customization: mostly we just need declare groups of existing targets and/or flow between them. We've seen that this frequently involves `compose.mk::flux` targets, like {{site.api_link('flux.loopf',mkdocs,arg='target_name')}} and {{site.api_link('flux.and',mkdocs,arg='targets')}}.  
 
 Running it looks like this:
 
@@ -31,13 +31,13 @@ One powerful technique is to run a container inside a dedicated pane as a "widge
 
 Adding a new "middle" pane using this container image only changes two lines, and doesn't break the declarative style:
 
-{{macros.embed_demo('demos/tui/dashboarding-widgets.mk', github=github)}}
+{{site.embed_demo('demos/tui/dashboarding-widgets.mk', github=github)}}
 
 You might recognize the new widget, since we just recreated part of the `docker.commander` TUI mentioned in [docs for zero-config TUIs]({{mkdocs.site_relative_url}}/zero-config-tuis).  Our work so far looks like this:
 
 {{macros.img_link("tui-containers-as-widgets.png", mkdocs, "78%")}}
 
-Above, the {{macros.api_link('docker.start.tty', mkdocs, arg='img')}} target does the heavy lifting for us, and depending on your exact use-case you might have to write a target-body, or use other related targets like {{macros.api_link('docker.start',mkdocs,arg='img')}} , {{macros.api_link('docker.dispatch/<arg>',mkdocs)}} , or {{macros.api_link('docker.run.sh', mkdocs)}}.
+Above, the {{site.api_link('docker.start.tty', mkdocs, arg='img')}} target does the heavy lifting for us, and depending on your exact use-case you might have to write a target-body, or use other related targets like {{site.api_link('docker.start',mkdocs,arg='img')}} , {{site.api_link('docker.dispatch/<arg>',mkdocs)}} , or {{site.api_link('docker.run.sh', mkdocs)}}.
 
 Crucially, the `docker.*` targets are designed to launch tool containers, so they [**always share the working directory and the docker socket by default**]({{mkdocs.site_relative_url}}/raw-docker#tool-container-defaults).  You can always launch a dockerized "widget" by writing any target-body that directly calls `docker run ...`, but if you do it this way you probably need to remember add volume-mounts.
 
@@ -56,7 +56,7 @@ The tightest way to describe this is very functional, but not very pretty.  We'l
 
 -----------------------------
 
-{{macros.embed_demo('demos/tui/dashboarding-dispatch.mk', github=github)}}
+{{site.embed_demo('demos/tui/dashboarding-dispatch.mk', github=github)}}
 
 !!! closer_look "Closer Look"
     The magic line above uses `docker.image.dispatch/<image>/<target>`, and in this case the image is `golang:1.24-bookworm`.  (To stick with the declarative style, we have to escape the colon to declare a legal prerequisite target.)
@@ -69,7 +69,7 @@ As with the zero-config TUI examples before, this is getting somewhat unwieldy a
 
 For demonstrating that, we'll include the last example and just change the `bottom` target.  Typically for something like this you just need to introduce 1 or more intermediate targets:
 
-{{macros.embed_demo('demos/tui/dashboarding-dispatch-2.mk', github=github)}}
+{{site.embed_demo('demos/tui/dashboarding-dispatch-2.mk', github=github)}}
 
 #### Next Steps
 <hr style="width:100%;border-bottom:3px solid black;">

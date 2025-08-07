@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ### Logging Facilities
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -20,7 +20,7 @@ Lets look at the **`log.*` functions** that are suitable for use from your proje
 
 The following examples demonstrate basic logging, logging with formatting, and trace-logging.
 
-{{macros.embed_demo('demos/logging.mk', github=github)}}
+{{site.embed_demo('demos/logging.mk', github=github)}}
 
 #### File and Stream Previews
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -29,7 +29,7 @@ Whether you're working on build processes, data-pipelines, or infrastructure dep
 
 The [docs for compose.mk's built-in tool wrappers]({{mkdocs.site_relative_url}}/tool-overview/#other-wrappers) are also related here, so here's a look at some of the tests that are exercising that code:
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'tests/tool-wrappers.sh', 
     github=github, type="bash", 
     class="language-makefile language-bash")}}
@@ -42,7 +42,7 @@ The [docs for compose.mk's built-in tool wrappers]({{mkdocs.site_relative_url}}/
 
 **Visually separating stages with some kind of output divider** is something that is nice to have for otherwise messy output.  Here's an example of several different ways of using `io.print.banner` to get labeled or timestamped dividers that are shown between clean/build/test stages.  
 
-{{macros.embed_demo('demos/section-dividers.mk', github=github)}}
+{{site.embed_demo('demos/section-dividers.mk', github=github)}}
 
 In the `build` task above, you can see one way to call `io.print.banner` explicitly, which uses `${make}` as shorthand for "*the right way to call `make` recursively*".  As an equivalent, you can always use an invocation like `./compose.mk io.print.banner` instead, and this works from anywhere.
 
@@ -51,7 +51,7 @@ In the `build` task above, you can see one way to call `io.print.banner` explici
 ##### Use Gum for Banners 
 ---------------------------------------------
 
-Even though {{macros.api_link('io.print.banner',mkdocs,arg='label')}} detects terminal width, it isn't fancy otherwise.  A related target is {{macros.api_link('io.draw.banner',mkdocs,arg='label')}}, which prints dividers with [charmbracelet/gum](https://github.com/charmbracelet/gum).
+Even though {{site.api_link('io.print.banner',mkdocs,arg='label')}} detects terminal width, it isn't fancy otherwise.  A related target is {{site.api_link('io.draw.banner',mkdocs,arg='label')}}, which prints dividers with [charmbracelet/gum](https://github.com/charmbracelet/gum).
 
 {{macros.img_link("demo-gum.gif", mkdocs, "90%")}}
 
