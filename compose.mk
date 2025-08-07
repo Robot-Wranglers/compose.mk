@@ -142,7 +142,7 @@ _GLYPH_MK=${bold}✱${no_ansi}
 GLYPH_MK=${green}${_GLYPH_MK}${dim_green}
 GLYPH.DOCKER=${green}${_GLYPH.DOCKER}${dim_green}
 _GLYPH_IO=${bold}⇄${no_ansi}
-GLYPH_IO=${green}${_GLYPH_IO} ${dim_green}
+GLYPH_IO=${green}${_GLYPH_IO}${dim_green}
 _GLYPH_TUI=${bold}⏣${no_ansi}
 GLYPH_TUI=${green}${_GLYPH_TUI}${dim_green}
 _GLYPH_FLUX=${bold}Φ${no_ansi}
@@ -230,7 +230,10 @@ log.fmt=( ${log} && (printf "${2}" | fmt -w 55 | ${stream.indent} | ${stream.ind
 log.json=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.docker} ${1} | ${jq.run} . | ${stream.as.log}
 log.json.trace=( [ "${TRACE}" == "0" ] && true || $(call log.json, ${1}) )
 log.json.min=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.docker} ${1} | ${jq.run} -c . | ${stream.as.log}
-log.target=$(call log.io, ${dim_green} $(shell printf "${@}" | cut -d/ -f1) ${sep}${dim_ital} $(strip $(or $(1),$(shell printf "${@}" | cut -d/ -f2-))))
+log.target=$(call log.io, ${dim_green}$(strip $(shell printf "${@}" | cut -d/ -f1)) ${sep}${dim_ital} $(strip $(or $(1),$(shell printf "${@}" | cut -d/ -f2-))))
+log.target.pad_top=printf '\n' >> /dev/stderr; ${log.target}
+log.target.pad_bottom=${log.target}; printf '\n'>>/dev/stderr
+log.target.pad=printf '\n' >> /dev/stderr; ${log.target}; printf '\n'>>/dev/stderr
 log.target.part1=([ -z "$${quiet:-}" ] && (printf "${log.prefix.makelevel}${GLYPH_IO}${dim_green} $(shell printf "${@}" | cut -d/ -f1) ${sep}${dim_ital} `echo "$(strip $(or $(1),))"| ${stream.lstrip}`${no_ansi_dim}..${no_ansi}") || true )>${stderr}
 log.target.part2=([ -z "$${quiet:-}" ] && $(call log.part2, ${1}))
 log.test_case=$(call log.io, ${dim_green} $(shell printf "${@}" | cut -d/ -f1) ${sep} ${dim}..\n  ${cyan_flow_right}${dim_ital_cyan}$(or $(1),$(shell printf "${@}" | cut -d/ -f2-)))
@@ -1933,7 +1936,7 @@ mk.kernel:
 define cmk.default.sugar
 [
 	["⋘", "⋙", "$(call compose.import.string, def=__NAME__ import_to_root=TRUE)"],
-    ["⫻",  "⫻",  "$(call dockerfile.import.string, def=__NAME__)"],
+    ["⫻",  "⫻",  "$(call docker.import.def, def=__NAME__)"],
 	["⟦",  "⟧",  "$(call polyglot.__import__.__AS__,__NAME__,__WITH__)"],
 	["🞹",  "🞹", "$(call compose.import.code, def=__NAME__)"],
 	["⨖", "⨖", "__NAME__:; $(call __AS__,__WITH__)"]
@@ -5072,23 +5075,50 @@ $(call compose.import.generic, $(kwargs_def), $(kwargs_import_to_root), .tmp.${k
 endif
 endef
 
-dockerfile.import.string=$(eval $(call _dockerfile.import.string, ${1}))
-define _dockerfile.import.string
-$(call mk.unpack.kwargs, ${1}, def, ${1})
-$(eval img_name:=$(patsubst Dockerfile.%,%,${kwargs_def}))
-${img_name}.img:=compose.mk:${img_name}
-${img_name}.build: Dockerfile.build/${img_name}
-${img_name}.shell:
-	img=compose.mk:${img_name} hostname=${img_name} \
-	entrypoint=$${entrypoint:-sh} ${make} docker.run.sh 
-${img_name}.build.force:; force=1 ${make} ${img_name}.build 
-${img_name}.dispatch/%:; hostname=${img_name} img=${img_name} ${make} mk.docker.dispatch/$${*}
-${img_name}.run:; img=compose.mk:${img_name} ${make} docker.run.sh 
-endef
+# dockerfile.import.string=$(eval $(call _dockerfile.import.string, ${1}))
+# define _dockerfile.import.string
+# $(call mk.unpack.kwargs, ${1}, def, ${1})
+# $(eval img_name:=$(patsubst Dockerfile.%,%,${kwargs_def}))
+# ${img_name}.img:=compose.mk:${img_name}
+# ${img_name}.build: 
+# 	$$(call log.docker, $${@} ${sep} ${dim}(via ${no_ansi}${img_name}${dim}) ${sep} ${cyan_flow_right})
+# 	${make} Dockerfile.build/${img_name}
+# 	$$(call log.target, ${bold}${green}${GLYPH_CHECK})
+# ${img_name}.shell:
+# 	img=compose.mk:${img_name} hostname=${img_name} \
+# 	entrypoint="$$$${entrypoint:-bash}" ${make} docker.run.sh 
+# ${img_name}.build.force:; force=1 ${make} ${img_name}.build 
+# ${img_name}.dispatch/%:; hostname=${img_name} img=${img_name} ${make} mk.docker.dispatch/$${*}
+# ${img_name}.run:; img=compose.mk:${img_name} ${make} docker.run.sh 
+# endef
 
+mk.docker.rmi/%:; CMK_INTERNAL=1 img="compose.mk:${*}" ${make} docker.rmi
+	@# Removes images with `docker rmi`.  Uses the compose.mk prefix automatically.
+docker.rmi:
+	@# Removes images with `docker rmi`.  Must provide `img` in environment.
+	docker rmi $${img} || true
 # Scaffolds dispatch/shell/run targets for the given docker image
 docker.import=$(eval $(call _docker.import,${1}))
+docker.import.def=$(eval $(call _docker.import.def,${1}))
 docker.image.import=${docker.import}
+define _docker.import.def
+ifeq ($${CMK_INTERNAL},1)
+else
+$(call mk.unpack.kwargs, ${1}, def)
+$(eval img_name:=$(patsubst Dockerfile.%,%,${kwargs_def}))
+$(call mk.unpack.kwargs, ${1}, namespace, $${img_name})
+${kwargs_namespace}.img:=compose.mk:${img_name}
+${kwargs_namespace}.clean: mk.docker.rmi/${img_name}
+${kwargs_namespace}.dispatch/%:; img=${img_name} hostname=${img_name} \
+	${make} mk.docker.dispatch/$${*}
+${kwargs_namespace}.build: 
+	$$(call log.docker, $${@} ${sep} ${dim}(via def=${no_ansi}${kwargs_def}) ${sep} ${cyan_flow_right}) \
+	&& ${make} Dockerfile.build/${img_name} \
+	&& $$(call log.target, ${bold}${green}${GLYPH_CHECK}) 
+${kwargs_namespace}.shell:; entrypoint="$$$${entrypoint:-bash}" ${make} ${kwargs_namespace}
+${kwargs_namespace}:; img="${img_name}" hostname="${img_name}" ${make} mk.docker.run.sh 
+endif
+endef
 define _docker.import
 ifeq ($${CMK_INTERNAL},1)
 else
@@ -5098,10 +5128,17 @@ $(call mk.unpack.kwargs, ${1}, img,compose.mk:$${kwargs_namespace})
 ${kwargs_namespace}.img:=${kwargs_img}
 ${kwargs_namespace}.dispatch/%:; img=${kwargs_img} hostname=${kwargs_img} \
 	${make} docker.dispatch/$${*}
-${kwargs_namespace}.build:; tag=${kwargs_img} ${make} docker.build/$${kwargs_file}
-${kwargs_namespace}.shell:; img=${kwargs_img} hostname=${kwargs_img} \
-	entrypoint=$${entrypoint:-sh} ${make} docker.run.sh 
-${kwargs_namespace}:; img=${kwargs_img} hostname=${kwargs_img} ${make} docker.run.sh 
+${kwargs_namespace}.build:
+	case ${kwargs_file} in \
+		undefined) $$(call log.docker, $${@} ${sep} file is undefined!) ;; \
+		*) ( \
+			$$(call log.docker, $${@} ${sep} ${dim}(via img=${no_ansi}${kwargs_img} ${dim}file=${no_ansi}${kwargs_file}${dim}) ${sep} ${cyan_flow_right}) \
+			&& tag=${kwargs_img} ${make} docker.build/$${kwargs_file} \
+			&& $$(call log.target, ${bold}${green}${GLYPH_CHECK}) \
+		);; \
+	esac
+${kwargs_namespace}.shell:; entrypoint="$${entrypoint:-sh}" ${make} ${kwargs_namespace}
+${kwargs_namespace}:; img="${kwargs_img}" hostname="${kwargs_img}" ${make} docker.run.sh 
 endif
 endef
 
