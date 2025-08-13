@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Language Overview
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -51,8 +51,8 @@ Let's introduce a somewhat surprising fact: `compose.mk` is designed to be [homo
 
 In the [workflow docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support), the `flux.*` module is introduced as a **target algebra**, and compared to more familiar shell process-algebra.  But as a simple example of "targets all the way down" consider this:
 
-* {{macros.api_link('flux.wrap',mkdocs,arg='targets')}} is a n-ary target that accepts nullary targets as arguments.
-* Meanwhile.. {{macros.api_link('flux.ok',mkdocs)}} and {{macros.api_link('flux.fail',mkdocs)}} are examples of nullary targets.
+* {{site.api_link('flux.wrap',mkdocs,arg='targets')}} is a n-ary target that accepts nullary targets as arguments.
+* Meanwhile.. {{site.api_link('flux.ok',mkdocs)}} and {{site.api_link('flux.fail',mkdocs)}} are examples of nullary targets.
 * But invocation, like say `flux.or/flux.ok,flux.fail`, is itself also a (nullary) target.
 
 Of course, no matter how easily you can incorporate foreign tools.. at some point, you might also need to write **task implementations** rather than just glue, *i.e. actual target bodies in shell, or [polyglots in foreign languages]({{mkdocs.site_relative_url}}/demos/polyglots/)*.  Still.. you'll probably be surprised by how infrequently that's actually necessary, and when it is, how small the task-implementations you need actually are.  For a quick example of how much you can accomplish with no target bodies at all, see also the docs for [low config TUIs]({{mkdocs.site_relative_url}}/low-config-tuis/).

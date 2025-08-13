@@ -1,5 +1,5 @@
 {% set img_base =  img_base | default('../img') %}
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 
 # Motivation & Design Philosophy
@@ -46,24 +46,24 @@ At least in part, compose.mk is an experiment and an art project[^5].  But somet
 
 A related question is, should `compose.mk` *really* be implemented in `make`?  Well, the [standard library]({{mkdocs.site_relative_url}}/standard-lib) kind of needs to be or else it's not a standard library.  But this isn't strictly necessary for [matrioshka automata]({{mkdocs.site_relative_url}}/matrioshka), [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots), and [CMK-lang]({{mkdocs.site_relative_url}}/compiler).  One way to look at this stuff is that it's an proof of concept that's also an executable specification, it's lightweight, portable by default, and actually useful.  A rewrite of core features in another language is tempting.. but it does raise the question of whether using a docker API would be more or less stable, more or less lines of code, more readable or writable than just leaning on the CLI interface.
 
-## Convincing the Anxious 
+## Redeeming Qualities
 <hr style="width:100%;border-bottom:3px solid black;">
 
 How about some redeeming qualities to wave away those eyebrow-raising details?
 
-**Line Counts:**
+{{macros.subheader('Line Counts:')}}
 : The `compose.mk` line count is scary.. but **code-to-comment ratios throughout are ~ 1:1** without even counting the main project documentation.  Makefile as a language is often scary too.. but `compose.mk` deliberately avoids advanced features whenever possible.  Working *with* `compose.mk` is very different from working *on* it, and should be pretty friendly for the novice as well as the wizard.
 
-**Less Shell Scripting:**
+{{macros.subheader('Less Shell Scripting:')}}
 : On a related note, the `compose.mk` backend necessarily uses lots of shell-scripting, but it does that in order to build up enough critical mass to **avoid shell-scripting afterwards.**  The general effect of using [workflows with flux]({{mkdocs.site_relative_url}}/standard-lib#workflow-support) is to push whatever bash you still need to write *away from awkward procedural stuff* with conditionals and loops, and towards a more declarative style of just doing things with tools.
 
-**Self Hosting: (docs)**
+{{macros.subheader('Self Hosting Docs:')}}
 : The docs, demos, and test-suites are pretty extensive, and as a project, `compose.mk` is mature enough to be self-hosting, handling generation of its own docs and running its own test-suite.  The suite itself also *confirms that docker-in-docker usage of tools won't make CI/CD lose its mind*.
 
-**Self Hosting: (code)**
+{{macros.subheader('Self Hosting Code:')}}
 : As a tool/library, `compose.mk` is largely *written in `compose.mk`* rather than what you'd really call Makefile or shell.  For example, the [workflows support]({{mkdocs.site_relative_url}}/standard-lib#workflow-support) powering the [TUI generator]({{mkdocs.site_relative_url}}/embedded-tui).  *(It's not possible to get coverage-data from the test suite, but dog-fooding like this should be a confidence builder.)*
 
-**Change Freeze:**
+{{macros.subheader('Change Freeze:')}}
 : The API explicitly aims at *frozen* status, and after `compose.mk` is both internally consistent and general enough *extend*, then the project is finished.  Bugfixes if necessary, but [no "forever" development](#forever-development-considered-harmful), and [tracking upstream is optional]({{mkdocs.site_relative_url}}/quickstart/#forks-versioning).
 
 ## A Problem Statement
@@ -238,26 +238,28 @@ Unlike the "*helm bolted on to terraform/ansible/jenkins*" approach, using `comp
 
 While `compose.mk` is committed to bugfixes, and will continue to change in cases where it feels **incompatible, incomplete, or internally inconsistent**.. the goal is to freeze development as much as possible after it's mature enough to be **extensible**.  It will never change simply to accomodate "one more" domain specific thing, e.g. no increase in surface area for use cases like *documentation builds*, or *cluster lifecycles*, because those things are easy to express as extensions.
 
-As another example, support for something like `podman` won't ever bloat the code-base until/unless it's very clearly more ubiquitous than `docker` is.  In some ways, `compose.mk` is a proof of concept and a reference, so that usage of `docker` or even `make` itself is an implementation detail that could be swapped out in a fork.  Hate to see an  [admittedly gruesome transpiler hackjob]({{mkdocs.site_relative_url}}/compiler) written in `awk`?  Rewrite it by all means.. but if it's more elegant at the expense of becoming larger or less portable, it probably can't be merged.  See also the [fork-and-forget advice]({{mkdocs.site_relative_url}}/quickstart/#forks-versioning) for installation, and remarks re: [contributing]({{mkdocs.site_relative_url}}/contributing).
+As another example, support for something like `podman` won't ever bloat the code-base until/unless it's very clearly more ubiquitous than `docker` is.  In some ways, `compose.mk` is a proof of concept and a reference, so that usage of `docker` or even `make` itself is an implementation detail that could be swapped out in a fork.  Hate to see an  [admittedly gruesome transpiler hackjob]({{mkdocs.site_relative_url}}/compiler) written in `awk`?  Rewrite it by all means.. but if it's more elegant at the expense of becoming larger or less portable, it probably can't be merged.  See also the [fork-and-forget advice]({{mkdocs.site_relative_url}}/quickstart/#forks-versioning) for installation
 
 --------------
 
 Why fork-and-forget advice for `compose.mk` in an age of "pull the latest" and like-and-subscribe?  Well, you know how it is out there.  Lately we can't even trust our [web-browsers to keep copy/paste working](https://connect.mozilla.org/t5/discussions/when-they-going-to-fix-the-copy-and-paste-in-firefox/td-p/52574), and much has been written elsewhere about things like the [front end treadmill](https://polotek.net/posts/the-frontend-treadmill/).
 
-In some software ecosystems maybe over a third of *all development effort* is spent fighting with dependencies and upgrading just for the sake of it.  Maybe devs deserve this for living near the cutting edge..  but users are automatically opted-in to updates almost everywhere, and now we just live with the threat that the one critical workflow that you trusted your SaaS/browser/phone for might break at any time.  Change is fine when it's necessary.  Completely useless churn that creates busy-work for millions of people right up until [a project is killed and a community abandoned](https://killedbygoogle.com/) is bad.
+In some software ecosystems maybe over a third of *all development effort* is spent fighting with dependencies and upgrading just for the sake of it.  Maybe devs deserve this for living near the cutting edge..  but users are automatically opted-in to updates almost everywhere, and now we just live with the threat that the one critical workflow that you trusted your SaaS/browser/phone for might break at any time.  Change is fine when it's necessary.  Useless churn that creates busy-work for millions of people right up until [a project is killed and a community abandoned](https://killedbygoogle.com/) is bad.
 
-Obviously there is another way.  Most operating systems do better, even with changes, thanks to curmudgeons like Linus and hard-line "no regressions" policies.  Many AWS core services are also great examples, and show decades of miraculous uninterrupted backwards compatibility while they continue to improve.  And thanks to good design, unix CLI tools are still relevant with almost no changes after 50 years.  For projects closer to the top of the stack though, one also wonders.. should *any* project that's more than a decade old really have a **core** that's still under active development?  Wouldn't good design mean growing a plugin or extension system that could effectively host ongoing development instead?
+Obviously there is another way.  Most operating systems do better, even with changes, thanks to curmudgeons like Linus and hard-line "no regressions" policies.  Many AWS core services are also great examples, and show decades of miraculous uninterrupted backwards compatibility while they continue to improve.  And thanks to good design, unix CLI tools are still relevant with almost no changes after 50 years.  For projects closer to the top of the stack though, one also wonders.. should *any* project that's more than a decade old really have a **core** that's still under active development?  Wouldn't good design mean growing a [plugin or extension system]({{jinja.vars.cmk_plugins_repo_url}}) that could effectively host ongoing development instead?
 
 ## Polyglots Considered Pretty Reasonable
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Anyone who has ever wanted to leave their ORM behind in favor of writing naked SQL knows this.  And anyone using [FFI style](https://en.wikipedia.org/wiki/Foreign_function_interface) programming in any number of languages, across any number of languages.  (See also the [julia polyglot demo]({{mkdocs.site_relative_url}}/demos/polyglots/#compiled-languages) if you're into that sort of thing.)  
 
-Some will find it controversial, but the biggest and best example of "polyglots considered reasonable" is something you'll find in distributed application design, next door to topics in microservices, heterogenous queue workers, serverless FaaS, etc.  The advantages and disadvantages of this type of thing have been much discussed, and it's definitely true that deciding good service-boundaries is hard, and it's also hard to even make good general statements about simple stuff like min/max values for service line-count.
+Some will find it controversial, but the biggest and best example of "polyglots considered reasonable" is distributed application design with microservices, heterogenous queue workers, serverless FaaS, etc.  The advantages and disadvantages of this type of thing have been much discussed and the devil is in the details.  Deciding good service-boundaries can be hard, and it's difficult to make good general statements about even simple stuff, e.g. best-practice for service line-counts.
 
-Meanwhile though, the polyglot design approach for *non-distributed applications has basically never been tried*, unless we're counting edge-cases like notebooks, shell-scripting, build-processes, etc.  Those edge-cases are notoriously adhoc though and usually lacking useful structure, versioned dependencies, strategies for code re-use, etc.  No wonder, these kinds of undistributed polyglots are basically considered to be a necessary evil even when they are used.  
+Meanwhile, the polyglot design approach for *non-distributed applications has basically never been tried*.  Unless you want to count edge-cases like notebooks, shell-scripting, build-processes.. all of which are *notoriously adhoc* and frequently lacking useful structure, lacking versioned dependencies, lacking coherent strategies for code re-use, etc.  No wonder these kinds of "undistributed" polyglots are considered to be a necessary evil when they are used!  Although *mere philosophy* usually doesn't help to change minds, perhaps better tooling could.
 
-Although *mere philosophy* usually doesn't help to change minds, perhaps better tooling could.  One of the core features for `compose.mk` is providing lots of ways to incorporate foreign tools/languages, organize them, and orchestrate across them.  And compared with microservice guidelines, maybe rules of thumb for application-level polyglot designs are also easier to come by.  Here's a hot take:
+One of the core features for `compose.mk` is providing lots of ways to incorporate foreign tools/languages, organize them, and orchestrate across them without external infrastructure.   Compared with microservice guidelines, maybe rules of thumb for **application-level polyglot designs** are also easier to come by.  Here's a hot take:
+
+-------------------------------
 
 **What's a maximum length for foreign code?**
 : Well, ~20-30 LOC is probably a reasonable goal for any discrete chunk of foreign code, because this is the typical advice for maximum length of methods/functions.
@@ -270,14 +272,16 @@ Although *mere philosophy* usually doesn't help to change minds, perhaps better 
 
 -------------------------------
 
-A big part of the benefit of polyglots is that you can responsibly leverage a [language for gremlins](https://buttondown.com/hillelwayne/archive/raku-a--for-gremlins/) for that one thing that it's perfect at, or perform amazing feats of [matrix golf with APL](https://aplwiki.com/wiki/Conway%27s_Game_of_Life), or [import a little antigravity](https://xkcd.com/353/) into your .net shop.  In some cases, you'll find that judicious and tactical usage of different languages not only makes the impossible *possible*, it [makes the impossible easy](https://frinklang.org/fsp/colorize.fsp?f=sunplot.frink).
+As for the *"why?"* of polyglots, even if we had the "how" part figured out?  There are [some reasons to think]({{mkdocs.site_relative_url}}/demos/rag) that LLMs might favor polyglot-style.  But you can also responsibly leverage a [language for gremlins](https://buttondown.com/hillelwayne/archive/raku-a--for-gremlins/) for that one thing that it's perfect at, or perform amazing feats of [matrix golf with APL](https://aplwiki.com/wiki/Conway%27s_Game_of_Life), or [import a little antigravity](https://xkcd.com/353/) into your .net shop without a ton of commitment.  In some cases, you'll find that *judicious and tactical usage of different languages* not only makes the impossible *possible*, it [makes the impossible easy](https://frinklang.org/fsp/colorize.fsp?f=sunplot.frink).  
 
 ## Compose Considered Pretty Reasonable
 <hr style="width:100%;border-bottom:3px solid black;">
 
 People have long memories about the tech that has burned them in the past, and `docker compose` is a great example of that.
 
-For `docker compose`, the early days had much crashing and confusion stemming from a dependency on python/pip, and from this came much instability.  For a long time there was also churn in configuration schema.  But compose has been a part of docker core for a while now and the schema is stable to the point that even the [`version:` key is obsolete](https://docs.docker.com/reference/compose-file/version-and-name/).  Other sins of the past might include YOLOing a compose file onto EC2 to try and get by without a kubernetes cluster, but managed clusters are easy to get these days.  A compose-file is not a "production ready" way to manage *services*, but the situation is completely different if you're **using it exclusively for managing *tool containers***.  ( This does leave open the question of *whether pipelines should be considered as services or as DAGs of tools though*, and the answer is that *it depends..*)
+For `docker compose`, the early days had much crashing and confusion stemming from a dependency on python/pip, and from this came much instability.  For a long time there was also churn in configuration schema.  But compose has been a part of docker core for a while now and the schema is stable to the point that even the [`version:` key is obsolete](https://docs.docker.com/reference/compose-file/version-and-name/).  Other sins of the past might include YOLOing a compose file onto EC2 to try and get by without a kubernetes cluster, but managed clusters are easy to get these days.  A compose-file is not a "production ready" way to manage *services*, but the situation is completely different if you're **using it exclusively for managing *tool containers***.  
+
+This does leave open the question of *whether pipelines should be considered as services or as DAGs of tools though*, and the answer is that *it depends..*
 
 ## DIND Considered Pretty Reasonable
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -304,12 +308,6 @@ To the extent you really *need* advanced Makefile features like eval-call macros
 
 In rare cases though, eval-call macros are the only option and it's worth it; implementations of make-macros can be powerful, and if you choose interfaces well then they can eventually reach a place where they are maintenance-free.  The first trick to this is, macros are best understood by how they are used, and not by how they are implemented.  *If use-cases and usage are clear*, then implementation won't matter much as long it's stable and portable.  The other trick is that there is no trick: keep it small, separate things into external libraries, test your public interfaces extensively.. just like any other software.
 
-Bonus reference material:
-
-* https://clarkgrubb.com/makefile-style-guide
-* https://gist.github.com/rueycheng/42e355d1480fd7a33ee81c866c7fdf78
-* https://www.gnu.org/software/make/manual/html_node/Quick-Reference.html
-
 #}
 
 ### References
@@ -319,5 +317,5 @@ Bonus reference material:
 [^2]: [Non-recursive Make Considered Harmful](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/03/hadrian.pdf)
 [^3]: [Unreasonable effectiveness of Makefiles](https://matt-rickard.com/the-unreasonable-effectiveness-of-makefiles)
 [^4]: [make vs just](https://github.com/casey/just?tab=readme-ov-file#what-are-the-idiosyncrasies-of-make-that-just-avoids)
-[^5]: Contrary to popular belief, art doesn't need to be beautiful, especially if it's helping the viewer to examine their own sense of what beauty is.  Sometimes art is also about demonstrating mastery of materials.
+[^5]: Contrary to popular belief, art doesn't need to be beautiful, especially if it's helping the viewer to examine their own sense of what beauty is.  Other times, art is about demonstrating mastery of materials.
 [^6]: [The language agnostic all purpose incredible makefile](https://web.archive.org/web/20230322145821/https://blog.mindlessness.life/2019/11/17/the-language-agnostic-all-purpose-incredible-makefile.html)

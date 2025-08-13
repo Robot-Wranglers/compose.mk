@@ -8,7 +8,15 @@
   text-align: center;
   color: #fcfcfc;
 }
-
+.rst-content dl dd {
+  margin: 5px 5px 5px 15px;
+  line-height: 20px;
+}
+h7.subheader { 
+  /* display: block; */
+  
+  /* border-bottom:1 px dashed red; */
+}
 span .code_table_2{
 }
 .code_table_1 {
@@ -18,7 +26,9 @@ span .code_table_2{
   /* color:#0db7ed; */
   color:black;
 }
-.subheader { 
+h7.subheader { 
+  margin-top:15px;
+  margin-left:5px;
   font-size:110%;
   font-weight:bolder;
   text-decoration: underline;
@@ -101,6 +111,11 @@ div.api_docs {
 span.code_table_2 {
   text-align: center;
   flex: 1;
+}
+.rst-content .cli_output.smaller code{
+  color:snow;
+  /* font-size:smaller; */
+  font-size:12px;
 }
 .rst-content .cli_output code{
   color:snow;

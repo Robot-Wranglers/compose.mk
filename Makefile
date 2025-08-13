@@ -15,20 +15,29 @@ export SRC_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 export PROJECT_ROOT := $(shell dirname ${THIS_MAKEFILE})
 
 include compose.mk
+$(call mk.import.plugins, actions.mk docs.mk)
+$(call mk.import.plugin.maybe, local.mk)
 $(call compose.import, file=demos/data/docker-compose.yml)
-include .github/actions.mk
-include docs/docs.mk
 
 __main__: init clean build test docs
 
 init: mk.stat docker.stat
 validate: validate.makefiles validate.markdown
+docs: flux.stage/documentation docs.README.static docs.jinja
+
+# Mirroring templated files to untemplated ones elsewhere in the repository.
+.PHONY: README.md demos/cmk/README.md demos/README.md
+README.md:; ${docs.render.mirror}
+demos/cmk/README.md:; ${docs.render.mirror}
+demos/README.md:; ${docs.render.mirror}
+docs.README.static: README.md demos/README.md demos/cmk/README.md
+
 validate.markdown:
 	${make} docs.jinja_templates \
 	| ${stream.fold} | ${stream.peek} \
 	| ${stream.space.to.nl} \
 	| ${io.xargs.verbose} "${make} validate.markdown/%"
-validate.markdown/%:; pynchon jinja render $
+validate.markdown/%:; pynchon jinja render ${*}
 validate.makefiles:
 	ls demos/*[.]mk | ./compose.mk flux.each/mk.validate
 	ls demos/tui/*[.]mk | ./compose.mk flux.each/mk.validate
@@ -73,3 +82,8 @@ docs.agent:
 	; mv docs.agent docs/artifacts \
 	; mv docs.img docs/img
 
+actions.demos:
+	@# Entrypoint for test-action
+	${io.shell.isolated} script -q -e -c "bash --noprofile --norc -eo pipefail -x -c 'make demos'"
+
+serve: docs.serve

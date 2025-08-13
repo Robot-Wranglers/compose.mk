@@ -32,4 +32,4 @@ tcc.interpreter/%:
 $(call polyglot.import, def=hello_world bind=tcc.interpreter)
 
 # Use our new scaffolded targets for `preview` and `run`
-__main__: Dockerfile.build/tcc hello_world.preview hello_world.run
+__main__: Dockerfile.build/tcc hello_world.preview hello_world

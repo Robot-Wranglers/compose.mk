@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ### Workflow Support
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -33,7 +33,7 @@ $ ls demos/*mk | ./compose.mk flux.each/io.preview.file
 $ ls demos/*mk | ./compose.mk flux.each/mk.validate
 ```
 
-Above, {{macros.api_link('flux.each',mkdocs,arg='fxn')}} takes a newline-separated stream for input, then runs the named (unary) target on each word.
+Above, {{site.api_link('flux.each',mkdocs,arg='fxn')}} takes a newline-separated stream for input, then runs the named (unary) target on each word.
 
 One-liners aren't really the point though, and **the main use-case for `flux` is scripting on top of it in your own projects**.  But why bother?  Well, by lifting flow-control and iteration out of *bash/make primitives* and up into `flux`, it tends to *completely eliminate a major source of errors, readability issues, and downright brutal syntax* to end up with **an elegant alternative that actually encourages good design**.
 
@@ -147,7 +147,7 @@ You can perform similar tests for other flow-control, like `./compose.mk flux.if
 {#
 ##### **Parallelism & Retries:**
 
-Introducing {{macros.api_link('flux.each',mkdocs,arg='target')}} using `flux.echo`:
+Introducing {{site.api_link('flux.each',mkdocs,arg='target')}} using `flux.echo`:
 
 ```bash 
 $ printf 'one\ntwo' | ./compose.mk flux.each/flux.echo
@@ -160,7 +160,7 @@ two
 #### **Iteration, Pipelining, & Looping**
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-Introducing {{macros.api_link('flux.each',mkdocs,arg='target')}} using `flux.echo`:
+Introducing {{site.api_link('flux.each',mkdocs,arg='target')}} using `flux.echo`:
 
 ```bash {.cli_example .language-bash}
 $ printf 'one\ntwo' | ./compose.mk flux.each/flux.echo
@@ -170,7 +170,7 @@ one
 two
 ```
 
-Introducing {{macros.api_link('flux.and',mkdocs,arg='target_list')}} and {{macros.api_link('flux.or',mkdocs,arg='target_list')}}:
+Introducing {{site.api_link('flux.and',mkdocs,arg='target_list')}} and {{site.api_link('flux.or',mkdocs,arg='target_list')}}:
 
 ```bash {.cli_example}
 $./compose.mk flux.and/flux.ok,flux.ok
@@ -189,7 +189,7 @@ make[1]: *** [..: flux.fail] Error 1
 flux.ok // succeeding as requested!
 ```
 
-Introducing {{macros.api_link('flux.loop.until',mkdocs,arg='test_target')}}:
+Introducing {{site.api_link('flux.loop.until',mkdocs,arg='test_target')}}:
 
 ```bash {.cli_example .language-bash}
 # Runs forever 
@@ -204,7 +204,7 @@ flux.loop.until // flux.fail (until success)
 #### Workflow Demos
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-What's covered on this page isn't exhaustive, see also the [full API]({{mkdocs.site_relative_url}}/api#api-flux), and the next section that focuses on functional-style.  For examples of other idioms, see {{macros.api_link('flux.loop/arg',mkdocs)}}, {{macros.api_link('flux.retry/arg',mkdocs)}}, {{macros.api_link('flux.timer/arg',mkdocs)}}, {{macros.api_link('flux.mux/arg',mkdocs)}}, {{macros.api_link('flux.timeout/arg',mkdocs)}}, etc. 
+What's covered on this page isn't exhaustive, see also the [full API]({{mkdocs.site_relative_url}}/api#api-flux), and the next section that focuses on functional-style.  For examples of other idioms, see {{site.api_link('flux.loop/arg',mkdocs)}}, {{site.api_link('flux.retry/arg',mkdocs)}}, {{site.api_link('flux.timer/arg',mkdocs)}}, {{site.api_link('flux.mux/arg',mkdocs)}}, {{site.api_link('flux.timeout/arg',mkdocs)}}, etc. 
 
 !!! tip "Related Links"
     For more fleshed-out examples using workflows, see also:

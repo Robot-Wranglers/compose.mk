@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Makeception 
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -13,7 +13,7 @@ This is a pretty extreme example of the capabilities of `compose.mk` to communic
 
 As usual, it's harder to explain what it does than to actually build it. 😵‍💫
 
-{{macros.embed_demo('demos/matrioshka.mk', github=github)}}
+{{site.embed_demo('demos/matrioshka.mk', github=github)}}
 
 ### The Output
 <hr style="width:100%;border-bottom:3px solid black;">

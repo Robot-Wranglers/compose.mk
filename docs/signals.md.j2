@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 {#{macros.img_link("escher-still-life.png", mkdocs, width="50%", align='center', class=" ")}#}
 
 ## Signals and Supervisors
@@ -50,9 +50,9 @@ This pattern is an advanced topic, and although it is both stable and portable, 
 
 Let's start with something simple.  To demonstrate short-circuiting the default command line processing of `make`, we'll try to create a clone of the `ls` command.  
 
-In the code, the differences start right away.  See the shebang at the top of the following file which uses {{macros.api_link('mk.interpret',mkdocs)}} ?
+In the code, the differences start right away.  See the shebang at the top of the following file which uses {{site.api_link('mk.interpret',mkdocs)}} ?
 
-{{macros.embed_demo('demos/interpreter.mk', github=github)}}
+{{site.embed_demo('demos/interpreter.mk', github=github)}}
 
 Using `compose.mk` to "interpret" your makefile isn't as magical as it sounds.  You can think of it as effectively *inserting **your** makefile at the bottom of the compose.mk source code,* then running the resulting temporary file as usual with `make`.  As a result of this, there are two important side-effects for project automation:
 
@@ -78,7 +78,7 @@ The end of the last section hints at a basic problem with convenient but naive o
 
 The solution for this is to use the *end of options* hint, aka '<main_cmd> -- <other_stuff>'[^1], which `compose.mk` has some built-in support for using the `MAKE_CLI_EXTRA` variable.[^2]
 
-{{macros.embed_demo('demos/interpreter-2.mk', github=github)}}
+{{site.embed_demo('demos/interpreter-2.mk', github=github)}}
 
 As seen above, this does require that we sacrifice the convenience of a really direct invocation.  But now `./demos/interpreter.mk ls -- --help` actually returns help for `ls` instead of help for `make`.  
 
@@ -91,7 +91,7 @@ Of course, no one really cares about making an `ls` clone!  But besides the simp
 
 The example below demonstrates an embedded python-script that we'll run inside a container, and uses real option parsing.  
 
-{{macros.embed_demo('demos/interpreter-3.mk', github=github)}}
+{{site.embed_demo('demos/interpreter-3.mk', github=github)}}
 
 Above we use `$(call mk.yield)` with no arguments, which is equivalent to `$(call mk.yield, true)`, i.e. just stopping CLI parsing and exiting immediately. This is often sufficient and has the correct exit status, because if the line before it should fail, execution will stop anyway.
 
@@ -132,7 +132,7 @@ Options:
 
 If you're using the interpreter as seen in the previous examples, you'll also **automatically be able to use pre and post hooks for every target that runs via the command line.**  Here's a simple example to illustrate:
 
-{{macros.embed_demo('demos/interpreter-4.mk', github=github)}}
+{{site.embed_demo('demos/interpreter-4.mk', github=github)}}
 
 Running the code above works the way you'd expect, and we can get pre and post effects with no explicit plumbing.  This is named-based with post-fixes as seen above, and **extensions can also add hooks for compose.mk builtins**.
 
@@ -181,7 +181,7 @@ The [pre/post hooks](#pre-post-hooks) have exactly the same limitation, but a di
 
 All targets related to signals/supervisors can be found under the `mk.interrupt` and `mk.super` namespaces, respectively.  These targets are for low-level internal use, and even hacking directly on `compose.mk` source probably won't require editing them, considering the [other techniques available](#inheritance-interpreters).  Still, quick links to the relevant parts of the API are provided below for reference:
 
-{{macros.api_link_many(['mk.super', 'mk.interrupt'], mkdocs)}}
+{{site.api_link_many(['mk.super', 'mk.interrupt'], mkdocs)}}
 
 ### References
 <hr style="width:100%;border-bottom:3px solid black;">

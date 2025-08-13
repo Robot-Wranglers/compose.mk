@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 {#
 <table><tr><td>{{macros.img_link("notebooking-pipeline.gif", mkdocs, "95%",align='left')}}</td>
@@ -17,16 +17,12 @@ As a quick overview of what we'll accomplish: the basic plan is to throw togethe
 
 {{macros.img_link("notebooking-ui.gif", mkdocs, "95%",align='left')}}
 
-{#
-It's an advanced example using "idiomatic" `compose.mk`, and it's ambitious so we won't explain every little thing.  Suggested prereqs to read are: [the matrioshka bridge idiom]
-#}
-
 ---------------------------------
 
 Other background info about this demo before we dive in:
 
 * This example illustrates the [matrioshka bridge pattern]({{mkdocs.site_relative_url}}/matrioshka#matrioshka-bridge-pattern).  There are [other]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/) [examples]({{mkdocs.site_relative_url}}/demos/just) of this pattern, but this is one by far the most involved.
-* Unlike other demos, we need several external files for this demo, including notebooks, and can't lean on [tricks with embedded resources]({{mkdocs.site_relative_url}}/demos/matrioshka).  Rather than inlining we'll use files inside the {{macros.repo_link('demos/data/jupyter/notebooks', github=github)}} folder, but in the end we'll **still [generate a frozen release](#project-as-tool) that's self-contained**.  You can also browse the related containers/notebooks [at the bottom of this page](#appendix-main-jupyter-container)
+* Unlike other demos, we need several external files for this demo, including notebooks, and can't lean on [tricks with embedded resources]({{mkdocs.site_relative_url}}/demos/matrioshka).  Rather than inlining we'll use files inside the {{macros.repo_link('demos/data/jupyter/notebooks', name='jupyter/notebooks', github=github)}} folder, but in the end we'll **still [generate a frozen release](#project-as-tool) that's self-contained**.  You can also browse the related containers/notebooks [at the bottom of this page](#appendix-main-jupyter-container)
 * Unlike other demos, this example also **involves a server** as well as automation and pipelines i.e. the jupyter lab front-end.  Side-effects like port-forwarding would usually mean the loss of statelessness that makes complex automation practical, but despite the involvement of a server / interactive frontend here we'll see several unique ways that `compose.mk` still manages to keep things *fully-specified and completely reproducible*, and remains remarkably amenable to automation and pipelines.
 
 Without further delay, let's get into it.
@@ -36,7 +32,7 @@ Without further delay, let's get into it.
 
 !!! goals "Basic Goals"
     **Configuration:** 
-    :  We want Jupyter lab minimally preconfigured, mostly to demonstrate the capability.  See {{macros.repo_link('demos/data/jupyter/lab/settings/overrides.json',github=github)}}.  Including kernels and support tooling, the configuration surface for server-side jupyter is so large that beyond a simple `pip install`, it actually has the characteristics of a **distribution**.  The challenges of how to manage, encapsulate, and then automate that in a "local first" way are actually a pretty good fit for `compose.mk`.
+    :  We want Jupyter lab minimally preconfigured, mostly to demonstrate the capability.  See {{macros.repo_link('demos/data/jupyter/lab/settings/overrides.json',name='overrides.json',github=github)}}.  Including kernels and support tooling, the configuration surface for server-side jupyter is so large that beyond a simple `pip install`, it actually has the characteristics of a **distribution**.  The challenges of how to manage, encapsulate, and then automate that in a "local first" way are actually a pretty good fit for `compose.mk`.
 
     **Lifecycle Management:**
     :  We need to daemonize the front-end, but we need to be smart about it.  One use-case is letting users interact with notebooks and detached-daemonization is an option, but as potential kernel developers we might want it foregrounded for logs.  Notebooks and kernels can run without the webserver being live via stuff like `jupyter console`, but we also might want automation *over* the webserver, for example with `nbclient` [^1].
@@ -85,7 +81,7 @@ The code below satisfies all the requirements in ~150 LoC, excluding code commen
 
 What you see here is basically the necessary glue that connects everything else together. It's well-commented, but there are definitely some prerequisites!  To *really* grok it, it's helpful to have understood the rest of the `compose.mk` tutorials, and already have some knowledge of `jupyter` and/or `make`.  But.. don't worry much if you can't understand parts of the implementation.  Again, unlike other tutorials, here we're less focused on exposition and more focused on delivering [the goals](#goals). Feel free to even skip over the code here and [jump directly to results / usage info](#results-usage).
 
-{{macros.embed_demo('demos/notebooking.mk', github=github)}}
+{{site.embed_demo('demos/notebooking.mk', github=github)}}
 
 ### Results & Usage
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -174,7 +170,7 @@ The web UI for jupyter is mostly stock, except for add-ons created by install ju
 
 **For packaging,** a "frozen release" type of format was promised at the top and hasn't yet been delivered.  If you're interested in the details of how this works [see the main docs for it here]({{mkdocs.site_relative_url}}/demos/packaging).  
 
-Skipping over the details, all we really need to do is use {{macros.api_link('mk.pkg',mkdocs,arg='target')}}, provide an entrypoint, and ensure that the `demos/` folder is archived.
+Skipping over the details, all we really need to do is use {{site.api_link('mk.pkg',mkdocs,arg='target')}}, provide an entrypoint, and ensure that the `demos/` folder is archived.
 
 ```bash {.cli_example}
 $ archive=demos ./demos/notebooking.mk mk.pkg/lab.pipeline
@@ -222,7 +218,7 @@ Now that we've effectively created a recipe for mapping **containers** -> **targ
 #### Appendix: Main Jupyter Container
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/data/jupyter/docker-compose.jupyter.yml',
     class='.language-yaml', type='yaml', github=github)}}
 
@@ -232,20 +228,20 @@ Now that we've effectively created a recipe for mapping **containers** -> **targ
 Below you can see the definitions for all the containers involved the formal-methods toolkit.  Due to size constraints, TLA+ integration is left as an exercise to the reader [but here's a hint](https://github.com/kevinsullivan/TLAPlusDocker/blob/main/.devcontainer/Dockerfile)^[3] =)
 
 
-{{macros.embed_demo('demos/data/jupyter/docker-compose.fmtk.yml', class='.language-yaml', type='yaml {data-lang="yaml"}', github=github)}}
+{{site.embed_demo('demos/data/jupyter/docker-compose.fmtk.yml', class='.language-yaml', type='yaml {data-lang="yaml"}', github=github)}}
 
 #### Appendix: Jupyter Kernel Shims
 <hr style="width:100%;border-bottom:3px solid black;">
 
 We need a base kernel to extend, so this is a version of the official jupyter example that defers to the environment for most of it's configuration.  With this in place, we only need to override a few key values to use a `compose.mk` task (or anything else really).  See the usage of `.kernel.json.template` in the main code for more details.
 
-{{macros.embed_demo('demos/data/jupyter/kernel.base/basek.py', type='python',github=github)}}
+{{site.embed_demo('demos/data/jupyter/kernel.base/basek.py', type='python',github=github)}}
 
 ----------------------------
 
 And the template JSON used with overrides for each of the individual kernels:
 
-{{macros.embed_demo('demos/data/jupyter/kernel.base/kernel.json.template', type='json',github=github)}}
+{{site.embed_demo('demos/data/jupyter/kernel.base/kernel.json.template', type='json',github=github)}}
 
 {#
 ```json {.language-json}

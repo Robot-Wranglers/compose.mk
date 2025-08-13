@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Platform Lifecycle Demo
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -6,10 +6,10 @@
 This demo describes one way to express platform lifecycle automation using `compose.mk`, focusing on **data and control flows** without doing any real work.  If you want something that's more than a toy, see the WIP sibling project that's focused on kubernetes over at [k8s-tools]({{jinja.vars.k8stools_docs_url}}/demos/cluster-lifecycle).
 
 !!! related_links "Related Links"
-    Idioms used in this demo include:
+    Some of the idioms used in this demo include:
     
-    * [Container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) 
-    * [Structured io]({{mkdocs.site_relative_url}}/standard-lib/#structured-io)
+    * [Container dispatch]({{mkdocs.site_relative_url}}/container-dispatch), including [namespace-style dispatch]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch) 
+    * [Structured IO]({{mkdocs.site_relative_url}}/standard-lib/#structured-io) with `jb`
     * [Workflow helpers]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support)
 
 ### Basic Platforming 
@@ -17,9 +17,9 @@ This demo describes one way to express platform lifecycle automation using `comp
 
 Consider the following Makefile:
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/platform.mk', github=github,
-    bottom_right=macros.link_mirror('demos/cmk/platform-lme.cmk'), )}}
+    bottom_right=site.link_mirror('demos/cmk/platform-lme.cmk'), )}}
 
 Above we use [namespace-style syntax]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch) for the [container dispatch idiom]({{mkdocs.site_relative_url}}/container-dispatch) to call tasks in containers, and we use `jb` to emit JSON, pretending we are running `terraform output -json` or similar.  
 
@@ -39,7 +39,7 @@ For this kind of thing it's most natural to think in terms of process algebra, a
 
 In the next example we'll use everything from the last exercise.  For the sake of variety, we'll introduce a few other new idioms like [logging]({{mkdocs.site_relative_url}}/standard-lib#logging-facilities) and some [workflow primitives]({{mkdocs.site_relative_url}}/demos/workflows)
 
-{{macros.embed_demo('demos/platform-lme.mk', bottom_right=macros.link_mirror('demos/cmk/platform-lme.cmk'), github=github)}}
+{{site.embed_demo('demos/platform-lme.mk', bottom_right=site.link_mirror('demos/cmk/platform-lme.cmk'), github=github)}}
 
 As in the previous example, this continues to use the [`${jq}` expansion]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) for safe access to JSON parsing, and introduces the `${stream.stdin}` macro as pretty way to write `cat /dev/stdin`
 
@@ -60,13 +60,13 @@ So that illustrates [container dispatch]({{mkdocs.site_relative_url}}/container-
 
 This is actually a lot of control and data-flow that's been expressed.  Ignoring ordering, graphing it would look something like this:
 
-{{macros.img_link("example-platform-1.png", mkdocs, "90%",class=" ")}}
+{{macros.img_link("mmd-platform-example-1.png", mkdocs, "90%",class=" ")}}
 
 -----------------------------
 
 Not to belabor the point but we know what happens next is probably *more* platforms, more tools/containers, and more data flows.  Let's watch how it blows up with just one more platform:
 
-{{macros.img_link("example-platform-2.png", mkdocs, "90%",class=" ")}}
+{{macros.img_link("mmd-platform-example-2.png", mkdocs, "90%",class=" ")}}
 
 -----------------------------
 
@@ -74,9 +74,9 @@ This tight expression of complex flow will already be familiar to lots of people
 
 If it doesn't yet feel like a "real" programming language compared with vanilla `make`, here's a quick look at an equivalent version ported to [CMK-lang]({{mkdocs.site_relative_url}}/compiler):
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/cmk/platform-lme.cmk', 
-    bottom_right=macros.link_mirror('demos/platform-lme.mk'), 
+    bottom_right=site.link_mirror('demos/platform-lme.mk'), 
     github=github)}}
 
 Feels like it's zeroing in a minimum-viable description length for the sort of problem it's tackling.  👍 

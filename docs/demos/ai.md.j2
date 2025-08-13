@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Obligatory AI Things
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -16,15 +16,14 @@ While much of `compose.mk` is focused on glue-code and orchestration, several to
 ### Overview & Background
 <hr style="width:100%;border-bottom:3px solid black;">
 
-This page includes two demos:
+This page includes two demos, both written in [CMK-lang]({{mkdocs.site_relative_url}}/compiler) rather than starting from pure Makefile.  This page focuses more on the demos themselves than exposition of CMK.
 
-The [first demo](#dueling-philosophers) is very minimal, focuses on being self-contained, and shows how to use an embedded ollama server and separate prompts/code.  This is somewhat in the spirit of shell-gpt[^1], and passes data on pipes.  It's a reasonably good template for small tools that should run anywhere, specify their own dependencies, and download/install everything (including the backend model) just in time.
+The [first demo](#dueling-philosophers) is very minimal, focuses on being self-contained, and uses an embedded ollama server and two prompts.  This is somewhat in the spirit of shell-gpt[^1] and passes data on pipes.  It's a reasonably good template for small tools that should run anywhere, specify their own dependencies, and download/install everything (including the backend model) just in time.
 
-The [second demo](#langchain-two-ways) is more elaborate. It uses external files for most of the implementation. It allows you to chat with the `compose.mk` documentation (or any other files) using a small RAG pipeline with ollama[^1] and langchain.[^2]
+The [second demo](#langchain-two-ways) is more elaborate. It uses external files for most of the implementation. It allows you to chat with the `compose.mk` documentation (or any other files) using a small RAG pipeline with ollama and langchain.[^2]
 
-Both demos are written in [CMK-lang]({{mkdocs.site_relative_url}}/compiler) rather than starting from pure Makefile.  This page focuses more on the demos themselves than exposition of CMK itself.
 
-Both demos are also **local first**, **CLI-friendly**, and as long as you have `make` and `docker` **they will bootstrap themselves**.  Users can therefore enjoy: no daemons required, no open ports, no manual installation of python/node stacks or dependencies, no API tokens, etc.  And the pirates of course.  Pirates describing [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots).
+Both demos are also **local first**, **CLI-friendly**, and as long as you have `make` and `docker` **they will bootstrap themselves**.  Users can therefore enjoy: no daemons required, no open ports, no manual installation of python/node stacks or dependencies, no API tokens, not setup of any kind.  And the pirates of course.  Pirates describing [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots).
 
 ```bash {.cli_example}
 $ query='describe compose.mk polyglot capabilities as if you are a pirate' \
@@ -60,9 +59,9 @@ Something simple first, in the form of dueling philosophers.  Let's watch Hobbes
 
 Since the python code required is minimal, this is a good candidate for polyglot-style, and including prompts and container-specs we're only looking at ~100 lines:
 
-{{macros.embed_demo('demos/cmk/ollama.cmk', type='cmk', github=github)}}
+{{site.embed_demo('demos/cmk/ollama.cmk', type='cmk', github=github)}}
 
-Our philosophers very frequently ignore their system-prompt, bad robot!  We'll also have to ignore the question of whether the LLM is accurately reflecting the nuance of the dead philosopher's point of view, but.. here's a cherry-picked result that shows how {{macros.api_link('flux.pipeline',mkdocs=mkdocs,arg='targets')}} conveniently includes intermediate result previews so we can see the whole conversation.
+Our philosophers very frequently ignore their system-prompt, bad robot!  We'll also have to ignore the question of whether the LLM is accurately reflecting the nuance of our dead philosophers points of view, but.. here's a cherry-picked result that shows how {{site.api_link('flux.pipeline',mkdocs=mkdocs,arg='targets')}} conveniently includes intermediate result previews so we can see the whole conversation.
 
 ```bash {.cli_example}
 $ ./demos/cmk/ollama.cmk debate
@@ -106,7 +105,7 @@ For the second demo we'll sketch a small RAG pipeline, plus an example of extern
 
 **Retrival augmented generation** works with python-backed langchain.  Specify a corpus with a glob for file-patterns, and then provide a verb like `summarize`, `ask` or `chat` to select how you want to interact with the corpus.  RAG citations provided for `ask` interactions are pretty reasonable, but citations are not implemented for `chat`.  As for the actual answers there are, of course, frequently very strange hallucinations and quality varies wildly.  Consider reading the actual project documentation =)
 
-**Tool-calling** is a smaller demo, using node-backed langchain.  All this does is answer time-related questions using builtins.  Tempting to do something more exciting here, like using [frink](https://frinklang.org/) container to handle calculations and dimensional analysis, but this is left as an exercise for the reader.
+**Tool-calling** is a smaller demo, using node-backed langchain.  All this does is answer time-related questions using builtins. The original and much more exciting plan was to fuzzy-compute stuff like "internets per banana" by using the Bekenstein bound[^5] and frink[^6] to handle calculations and dimensional analysis.. but that is left as an exercise for the reader. *(Spoiler: Claude-2025 estimates 1 banana bitwise is roughly 79 billion trillion internets.[^7])*
 
 Backend models by default are `mistral` for the LLM and `all-MiniLM-L6-v2` for the RAG embeddings, although you can override this stuff pretty easily.
 
@@ -254,7 +253,7 @@ The orchestration script is very basic.  This is mostly just using `compose.mk` 
 
 The main idiom used below is [`compose.bind.target`]({{mkdocs.site_relative_url}}/compiler/#compose-context-bind-target).  It basically attaches an existing target to an existing tool container and sets up pass-through for the given environment variables.  Since "private" targets like `self.*` run inside containers, they can safely use python/node without assuming it's available on the host.
 
-{{macros.embed_demo('demos/cmk/rag.cmk', type='cmk', github=github)}}
+{{site.embed_demo('demos/cmk/rag.cmk', type='cmk', github=github)}}
 
 Again, describing dispatch and import idioms in detail is out of scope for this page since that's mostly explained elsewhere.  *(For general background, see the general documentation on [scaffolding]({{mkdocs.site_relative_url}}/bridge), [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch), and [CMK/Makefile transpilation]({{mkdocs.site_relative_url}}/compiler).)*
 
@@ -293,6 +292,7 @@ within a TUI environment using compose.mk capabilities.
 ```
 
 This example should now be able to run almost anywhere, including places where ollama is not available, where ports cannot be opened, where models are not yet available, and where python is not even installed.
+
 {#
 , but there are a few caveats.  It does require `make` and `docker`, and on OSX [you'll probably need gnu awk]({{mkdocs.site_relative_url}}/compiler/#status-info-limitations-other-advice).  It downloads ~4gb of LLM models if you don't have them already (which is the only reason this test case doesn't run in github actions, like the other demos).  But it won't pester you about running any other installation or setting up API keys.  
 #}
@@ -308,17 +308,17 @@ You can download the agent [here]({{mkdocs.site_relative_url}}/artifacts/docs.ag
 <hr style="width:100%;border-bottom:3px solid black;">
 
 
-{{macros.embed_demo('demos/data/llm_rag.py', type='python', github=github)}}
+{{site.embed_demo('demos/data/llm_rag.py', type='python', github=github)}}
 
 #### Appendix: Javascript LangChain Code
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.embed_demo('demos/data/llm_rag.py', type='python', github=github)}}
+{{site.embed_demo('demos/data/llm_rag.py', type='python', github=github)}}
 
 #### Appendix: Ollama Container
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.embed_demo('demos/data/docker-compose.rag.yml', type='yaml', github=github)}}
+{{site.embed_demo('demos/data/docker-compose.rag.yml', type='yaml', github=github)}}
 
 ### References
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -327,6 +327,9 @@ You can download the agent [here]({{mkdocs.site_relative_url}}/artifacts/docs.ag
 [^2]: [https://python.langchain.com/docs/introduction](https://python.langchain.com/docs/introduction/)
 [^3]: See the compose file for hints about enabling GPUs
 [^4]: See [https://github.com/Mozilla-Ocho/llamafile](https://github.com/Mozilla-Ocho/llamafile), and the [RAG demo](https://github.com/Mozilla-Ocho/llamafile-rag-example)
+[^5]: https://en.wikipedia.org/wiki/Bekenstein_bound
+[^6]: https://frinklang.org/
+[^7]: Was gonna check the work but I'm a concept guy, please invest in our new advanced data storage/snack company.  Extensive research suggests that we do need spherical bananas, but we feel we are close to a breakthrough.
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

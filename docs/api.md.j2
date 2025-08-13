@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## API / CLI Documentation
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -24,42 +24,42 @@ Some important notes about how these targets work:
 #### [API: compose](#api-compose)
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.parse_module_help('compose.mk', 'compose')}}
+{{site.parse_module_help('compose.mk', 'compose')}}
 
-{{macros.parse_help('compose.mk', 'compose', github)}}
+{{site.parse_help('compose.mk', 'compose', github)}}
 
 #### [API: docker](#api-docker)
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.parse_module_help('compose.mk', 'docker')}}
+{{site.parse_module_help('compose.mk', 'docker')}}
 
-{{macros.parse_help('compose.mk', 'docker', github)}}
+{{site.parse_help('compose.mk', 'docker', github)}}
 
 #### [API: Dockerfile](#api-dockerfile)
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.parse_module_help('compose.mk', 'Dockerfile')}}
+{{site.parse_module_help('compose.mk', 'Dockerfile')}}
 
-{{macros.parse_help('compose.mk', 'Dockerfile', github)}}
+{{site.parse_help('compose.mk', 'Dockerfile', github)}}
 
 {% include "api/flux.md.j2" %}
 
 #### [API: mk](#api-mk)
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.parse_module_help('compose.mk', 'mk')}}
+{{site.parse_module_help('compose.mk', 'mk')}}
 
 
-{{macros.parse_help('compose.mk','mk', github)}}
+{{site.parse_help('compose.mk','mk', github)}}
 
 #### [API: stream](#api-stream)
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.parse_module_help('compose.mk', 'stream')}}
+{{site.parse_module_help('compose.mk', 'stream')}}
 
-{{macros.parse_help('compose.mk', 'stream', github)}}
+{{site.parse_help('compose.mk', 'stream', github)}}
 
-{{macros.parse_module_help('compose.mk', 'stream')}}
+{{site.parse_module_help('compose.mk', 'stream')}}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

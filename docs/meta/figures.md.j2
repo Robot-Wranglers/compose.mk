@@ -1,0 +1,41 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+### Figures 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+{{macros.figure_table([{"figure":"mmd-platform-example-1", "title":"platform example the first"}],mkdocs=mkdocs,title='table title')}}
+
+---------------
+
+**no cols and 2 items:**
+
+{{macros.figure_table([
+    {"figure":"mmd-platform-example-1", "title":"platform example the first"},
+    {"figure":"mmd-platform-example-2", "title":"platform example the 2nd"},
+    ], mkdocs=mkdocs, title='table title')}}
+
+---------------
+
+**3 cols and 2 items:**
+
+{{macros.figure_table([
+    {"figure":"mmd-platform-example-1", "title":"platform example the first"},
+    {"figure":"mmd-platform-example-2", "title":"platform example the 2nd"},
+    ], mkdocs=mkdocs, cols=3, title='table title')}}
+
+---------------
+**3 cols and 5 items:**
+
+{{macros.figure_table([
+    {"figure":"mmd-platform-example-1" },
+    {"figure":"mmd-platform-example-2" },
+    {"figure":"mmd-platform-example-1" },
+    {"figure":"mmd-platform-example-2" },
+    {"figure":"mmd-platform-example-1" },
+    ], mkdocs=mkdocs, diagram_source='#', cols=3, title='table title')}}
+
+---------------
+**figure_framed:**
+
+{{macros.figure_framed("mmd-platform-example-1", mkdocs=mkdocs, cols=3, title='table title',diagram_source='#', )}}
+

@@ -73,5 +73,5 @@ endef
 # Declare the above code-block as a first class object, and bind it to an interpreter.
 $(call polyglot.import, def=hello_world bind=julia.interpreter)
 
-# Use our new scaffolded targets for `preview` and `run`
-__main__: hello_world.preview hello_world.run
+# Use our new scaffolded targets for script-execution and `preview`
+__main__: hello_world hello_world.preview 

@@ -4,9 +4,9 @@
 
 # Main entrypoint, showing how to preview and run embedded code.
 __main__: \
-	hello_world1.preview hello_world1.run \
-	hello_world2.run \
-	hello_world3.run \
+	hello_world1.preview hello_world1 \
+	hello_world2 \
+	hello_world3 \
 	hello_world4.preview
 
 # Code bound to a containerized interpreter using literals.

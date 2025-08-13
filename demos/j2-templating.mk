@@ -28,13 +28,13 @@ render/%:
 		${make} mk.docker/jinjanator,jinjanate
 
 # Import the template-block, binding the 
-# interpreter & creating `*.j2.run` targets
+# interpreter & creating `*.j2` targets
 $(call polyglots.import, pattern=[.]j2 bind=render)
 
 # Generates JSON with `jb`, then pushes it into the template renderer.
 # This shows how to call targets using generated symbols, 
 # and then (equivalently) using explicit targets.
 __main__: Dockerfile.build/jinjanator
-	${jb} name=foo | ${hello_template.j2.run}
-	${jb} name=foo | ${bye_template.j2.run}
-	${jb} name=foo | ${make} bye_template.j2.run
+	${jb} name=foo | ${hello_template.j2}
+	${jb} name=foo | ${bye_template.j2}
+	${jb} name=foo | ${make} bye_template.j2

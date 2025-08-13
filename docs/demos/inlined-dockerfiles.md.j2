@@ -1,9 +1,9 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ### Inlined Dockerfile
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.embed_demo('demos/inlined-dockerfile.mk', 
-    bottom_right=macros.link_mirror('demos/cmk/inlined-dockerfile.cmk',
+{{site.embed_demo('demos/inlined-dockerfile.mk', 
+    bottom_right=site.link_mirror('demos/cmk/inlined-dockerfile.cmk',
         base=mkdocs.site_relative_url+'/compiler'),
     github=github)}}

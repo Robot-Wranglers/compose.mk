@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Raw Docker Support
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -29,7 +29,7 @@ Target-dispatch for [imported tool containers from compose files]({{mkdocs.site_
 
 For **unmodified stock images**, the situation is similar, as long as that image actually ships with `make`.  One of the smallest images preconfigured with `make` is `debian/buildd`, so we'll use that here.  As mentioned in [the installation docs]({{mkdocs.site_relative_url}}/quickstart/#docker-compose-integration), lots of your daily-driver images probably already have `make` by default, including images for stuff like gcc, golang, maven, etc.
 
-The simplest way to use dispatch with existing targets is using {{macros.api_link('docker.dispatch',mkdocs,arg='target')}} directly:
+The simplest way to use dispatch with existing targets is using {{site.api_link('docker.dispatch',mkdocs,arg='target')}} directly:
 
 ```bash  {.cli_example}
 # Run the trivial `flux.ok` target inside the given image
@@ -45,7 +45,7 @@ $ img=debian/buildd:bookworm ./compose.mk docker.dispatch/flux.ok
 
 If you're doing something like the above frequently, then you can also use `docker.image.import` to generate scaffolded targets that do the same thing:
 
-{{macros.embed_demo('demos/import-image.mk', github=github)}}
+{{site.embed_demo('demos/import-image.mk', github=github)}}
 
 Besides the `namespace.dispatch/..` helper and the main `namespace` target that are created and demonstrated above, this also creates a `namespace.shell` target that can be used to drop you into an interactive debugging shell for the container, and creates `${namespace.img}` that holds data for the image name.  Argument reference follows.
 
@@ -57,10 +57,10 @@ Besides the `namespace.dispatch/..` helper and the main `namespace` target that 
 Working with inlined container definitions is mostly the same as working with stock images, but there are few things to keep in mind.
 
 1. Inlined Dockerfiles should be inside `define .. endef` blocks with a name like `Dockerfile.my_container` 
-1. Containers must be built before you can use them, typically with something like {{macros.api_link('Dockerfile.build',mkdocs,arg='my_container')}}.
+1. Containers must be built before you can use them, typically with something like {{site.api_link('Dockerfile.build',mkdocs,arg='my_container')}}.
 1. After build, containers are tagged as something like `compose.mk:my_container`
 
-Usually the `compose.mk:..` prefix for image tags can be omitted, for example by using {{macros.api_link('docker.dispatch',mkdocs,arg='target')}} instead of {{macros.api_link('mk.docker.dispatch',mkdocs,arg='target')}}.
+Usually the `compose.mk:..` prefix for image tags can be omitted, for example by using {{site.api_link('docker.dispatch',mkdocs,arg='target')}} instead of {{site.api_link('mk.docker.dispatch',mkdocs,arg='target')}}.
 
 See the [polyglot demos]({{mkdocs.site_relative_url}}/demos/polyglots) and [matrioshka demos]({{mkdocs.site_relative_url}}/demos/matrioshka) for many examples of working with embedded images.  See also the equivalent idioms in [CMK-lang]({{mkdocs.site_relative_url}}/compiler/#dockerfile-example).  The rest of this section covers low-level support.
 
@@ -69,8 +69,8 @@ See the [polyglot demos]({{mkdocs.site_relative_url}}/demos/polyglots) and [matr
 
 Sometimes you might be interested in fine-grained control or more flexibility.  Below you can see test-cases that are exercising low-level support for raw docker.
 
-{{macros.embed_demo('demos/inlined-dockerfile.mk', github=github,
-    bottom_right=macros.link_mirror(
+{{site.embed_demo('demos/inlined-dockerfile.mk', github=github,
+    bottom_right=site.link_mirror(
       'demos/cmk/code-objects.cmk',
       link=mkdocs.site_relative_url+'/compiler/#dockerfile-example'))}}
 
@@ -79,14 +79,14 @@ Sometimes you might be interested in fine-grained control or more flexibility.  
 
 [Dispatching tasks](#dispatch-tasks-in-containers) is usually more composable, but working with scripts can be more convenient for one-offs.  Script dispatch with stock-images looks like this:
 
-{{macros.embed_demo('demos/script-dispatch-stock.mk', github=github,
-        bottom_right=macros.link_mirror('demos/cmk/script-dispatch-stock.cmk',link=mkdocs.site_relative_url+'/compiler/#dockerfile-example')
+{{site.embed_demo('demos/script-dispatch-stock.mk', github=github,
+        bottom_right=site.link_mirror('demos/cmk/script-dispatch-stock.cmk',link=mkdocs.site_relative_url+'/compiler/#dockerfile-example')
 )}}
 
 For inlined-containers, the approach is similar:
 
-{{macros.embed_demo('demos/script-dispatch-custom.mk', github=github,
-    bottom_right=macros.link_mirror('demos/cmk/script-dispazzzztch.cmk',link=mkdocs.site_relative_url+'/compiler/#dockerfile-example')
+{{site.embed_demo('demos/script-dispatch-custom.mk', github=github,
+    bottom_right=site.link_mirror('demos/cmk/script-dispazzzztch.cmk',link=mkdocs.site_relative_url+'/compiler/#dockerfile-example')
 )}}
 
 
@@ -103,7 +103,7 @@ For an approach with better style and more native syntax, see also [this example
 
 Most of the use-cases for raw docker support are related to scripting with `compose.mk`.  Sometimes though the raw docker support has more of a [stand-alone / tool mode]({{mkdocs.site_relative_url}}/tool-overview) vibe. For usage hints along those lines, see the test cases below.
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'tests/docker-utils.sh', type='bash',
     class='language-bash language-shell test_suite', github=github)}}
 
@@ -113,11 +113,11 @@ Most of the use-cases for raw docker support are related to scripting with `comp
 Below, you can find quick links for the [docker]({{mkdocs.site_relative_url}}/api/#api-docker) / [Dockerfile]({{mkdocs.site_relative_url}}/api/#api-dockerfile) / [mk.docker]({{mkdocs.site_relative_url}}/api/#api-mkdocker) sections of the main API.
 
 
-{{macros.api_link_many(['docker'], mkdocs, exclude='docker-compose')}}
+{{site.api_link_many(['docker'], mkdocs, exclude='docker-compose')}}
 
 --------------
 
-{{macros.api_link_many(['Dockerfile','mk.docker'], mkdocs)}}
+{{site.api_link_many(['Dockerfile','mk.docker'], mkdocs)}}
 
 <hr style="width:100%;border-bottom:3px solid black;">
 

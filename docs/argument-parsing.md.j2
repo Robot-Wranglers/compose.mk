@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ### Argument Parsing
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -18,8 +18,8 @@ Keyword-args for use with targets are easy to get with a combination of stdin, s
 
 Pairing that with `bind.args.from_json`, you can unpack the input automatically, making it available to the rest of the target-body.
 
-{{macros.embed_demo('demos/kwarg-parsing.mk', 
-    bottom_right=macros.link_mirror(
+{{site.embed_demo('demos/kwarg-parsing.mk', 
+    bottom_right=site.link_mirror(
         "demos/cmk/kwarg-parsing.cmk",
         link=mkdocs.site_relative_url+"/compiler/#bind-declarations"),
     github=github)}}
@@ -41,8 +41,8 @@ shape=triangle color=red name=default
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 Using `bind.args.from_env`, you can set/load defaults without anticipating an input pipe at all.  
-{{macros.embed_demo('demos/kwarg-parsing-2.mk', 
-    bottom_right=macros.link_mirror(
+{{site.embed_demo('demos/kwarg-parsing-2.mk', 
+    bottom_right=site.link_mirror(
         "demos/cmk/kwarg-parsing-2.cmk",
         link=mkdocs.site_relative_url+"/compiler/#bind-declarations"),
     github=github)}}
@@ -89,8 +89,8 @@ AKA `bind.posargs`, this can only be used with parametric make-targets.  By defa
 </table>
 
 
-{{macros.embed_demo('demos/parsing-parameters.mk', 
-    bottom_right=macros.link_mirror(
+{{site.embed_demo('demos/parsing-parameters.mk', 
+    bottom_right=site.link_mirror(
         "demos/cmk/kwarg-parsing.cmk",
         link=mkdocs.site_relative_url+"/compiler/#bind-declarations"),
     github=github)}}
@@ -114,8 +114,8 @@ head=one tail=two/three
 
 You might have noticed that internal functions for stuff like [import statements]({{mkdocs.site_relative_url}}/bridge) also support named arguments.  Building your own functions that support kwargs looks like this:
 
-{{macros.embed_demo('demos/kwarg-parsing-3.mk', 
-    bottom_right=macros.link_mirror(
+{{site.embed_demo('demos/kwarg-parsing-3.mk', 
+    bottom_right=site.link_mirror(
         "demos/cmk/kwarg-parsing.cmk",
         link=mkdocs.site_relative_url+"/compiler/#bind-declarations"),
     github=github)}}

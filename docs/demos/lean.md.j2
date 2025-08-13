@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Theorem Proving in a Makefile??
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -20,8 +20,8 @@ It's fun, self-contained, and marginally practical!  Partly because more academi
 
 The lean demo comes in 2 flavors. The [first one](#lean-demo) is using `compose.mk` as a library, i.e. pure Makefile. 
 
-{{macros.embed_demo('demos/lean.mk', 
-    bottom_right=macros.link_mirror(
+{{site.embed_demo('demos/lean.mk', 
+    bottom_right=site.link_mirror(
         "demos/cmk/lean.cmk",link="#lean-demo-cmk"),
     github=github)}}
 
@@ -30,8 +30,8 @@ The lean demo comes in 2 flavors. The [first one](#lean-demo) is using `compose.
 
 The 2nd version of the demo is mostly the same, but uses `compose.mk` as an interpreter, and is expressed in [CMK-lang]({{mkdocs.site_relative_url}}/compiler), which compiles to Makefile.  This helps to clean up the syntax a bit and clarify intent.
 
-{{macros.embed_demo('demos/cmk/lean.cmk',
-    bottom_right=macros.link_mirror(
+{{site.embed_demo('demos/cmk/lean.cmk',
+    bottom_right=site.link_mirror(
         "demos/lean.mk",link="#lean-demo"),
     github=github)}}
 

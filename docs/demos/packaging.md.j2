@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Self Extracting Executables
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -38,7 +38,7 @@ Another point of view is that what we're really talking about is **the ability t
 
 Shortcuts for packaging up targets-as-entrypoints use [`mk.pkg`]({{mkdocs.site_relative_url}}/api#mkpkg).
 
-For the first example, we'll spin-off an individual utility from `compose.mk` as a stand-alone executable.  Let's look at the {{macros.api_link('stream.img', mkdocs)}} target, which uses a dockerized version of the `chafa` tool for displaying images on console, comparable to `imgcat` or similar.  It takes no arguments, and works with streams.
+For the first example, we'll spin-off an individual utility from `compose.mk` as a stand-alone executable.  Let's look at the {{site.api_link('stream.img', mkdocs)}} target, which uses a dockerized version of the `chafa` tool for displaying images on console, comparable to `imgcat` or similar.  It takes no arguments, and works with streams.
 
 ```bash {.cli_example}
 $ bin=./stream.img ./compose.mk mk.pkg/stream.img
@@ -52,7 +52,7 @@ It works, and we use `chafa` without *having* chafa, because containers don't bu
 
 While `stream.img` is just a small utility, the approach demonstrated above also works with "applications" implemented using `compose.mk`, i.e. [full blown TUIs]({{mkdocs.site_relative_url}}/embedded-tui).  
 
-As an example, how about exporting the {{macros.api_link('tux.demo',mkdocs)}}?
+As an example, how about exporting the {{site.api_link('tux.demo',mkdocs)}}?
 
 ```bash {.cli_example}
 $ bin=./tux.demo ./compose.mk mk.pkg/tux.demo
@@ -92,7 +92,7 @@ $ echo msg=HelloWorld | module=debug ./ansible.adhoc
 ### Makeself Reference 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Direct access to `makeself` is via {{macros.api_link('mk.self',mkdocs)}}.  For those unfamiliar with `makeself`, this section is a quick tutorial, but you can use this to package up anything.  
+Direct access to `makeself` is via {{site.api_link('mk.self',mkdocs)}}.  For those unfamiliar with `makeself`, this section is a quick tutorial, but you can use this to package up anything.  
 
 Let's look at an example of freezing the contents of a directory and an arbitrary script that *uses* that directory.  
 

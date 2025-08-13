@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Stacks & Stages 
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -98,15 +98,15 @@ $ ./compose.mk flux.stage.exit/BUILD
 
 If you're scripting with stages, the main difference is that `flux.stage.enter` and `flux.stage.exit` can be used like function decorators:
 
-{{macros.embed_demo('demos/stages-idiom.mk', github=github)}}
+{{site.embed_demo('demos/stages-idiom.mk', github=github)}}
 
 In this case when `validate` succeeds the stage file is cleaned like we'd expect, and if there's a crash then partial results can be inspected.  There are various ways to write this, like replacing calls to `./compose.mk` with `${make}` expansions, or using macros instead of targets, but the idea is the same.  
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-**Using an implicit context manager** with {{macros.api_link('flux.stage.wrap',mkdocs,arg='target')}} is an alternative style.  The example below shows that, plus overriding the banner-printing mechanism to use the (dockerized) `figlet` tool instead of using `gum`. 
+**Using an implicit context manager** with {{site.api_link('flux.stage.wrap',mkdocs,arg='target')}} is an alternative style.  The example below shows that, plus overriding the banner-printing mechanism to use the (dockerized) `figlet` tool instead of using `gum`. 
 
-{{macros.embed_demo('demos/stage-wrapper.mk', github=github)}}
+{{site.embed_demo('demos/stage-wrapper.mk', github=github)}}
 
 {#<hr style="width:95%;border-bottom:1px dashed black;">#}
 
@@ -116,7 +116,7 @@ Another source of usage hints about stages is the test-suite, so it's included b
 
 If you are scripting, note that using `${@}` as shorthand for "current target name" is a good thing to organize around, since it reduces typing and typos.  Another idea is to parse out a *prefix* from the current target name, thus ensuring that related targets all use the same stack.
 
-{{macros.embed_demo('demos/stages.mk', github=github)}}
+{{site.embed_demo('demos/stages.mk', github=github)}}
 
 See the the implementation details below for quick links to the full API.
 
@@ -134,7 +134,7 @@ If you think you *do* have a use-case for something like this you might want to 
 
 Stages are implemented using the `flux.stage.*` family of targets, and the lower level `io.stack` helpers.
 
-{{macros.api_link_many(['flux.stage','io.stack'], mkdocs)}}
+{{site.api_link_many(['flux.stage','io.stack'], mkdocs)}}
 
 ### Why Stacks, though?
 <hr style="width:100%;border-bottom:3px solid black;">

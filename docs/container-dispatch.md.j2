@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Container Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -18,7 +18,7 @@ Later in this page, we'll get into more details about [how/when container dispat
 
 To illustrate the idea, consider the following project Makefile:
 
-{{macros.embed_demo('demos/container-dispatch.mk', github=github)}}
+{{site.embed_demo('demos/container-dispatch.mk', github=github)}}
 
 Calling the top-level `demo` target looks something like this:
 
@@ -46,9 +46,9 @@ The previous example uses the simplest dispatch style, but we want to stay organ
 
 In such cases name-collisions might be inevitable, and you'll want fine-grained controls over namespacing to get something closer to an "absolute path" for the dispatch mechanics.  The next example is equivalent to the first, and begins to shed light on how the [`compose.import` macro arguments]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) can be used to create user-defined [syntactic sugar](https://en.wikipedia.org/wiki/Syntactic_sugar).
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/container-dispatch-2.mk', 
-    bottom_right=macros.link_mirror('demos/cmk/container-dispatch-2.cmk'),
+    bottom_right=site.link_mirror('demos/cmk/container-dispatch-2.cmk'),
     github=github)}}
 
 Similar to "private" targets with a `self.*` naming convention, using a blocky unicode symbol like `▰` isn't *actually* required, and of course you can call your namespace anything you want.  There's a few reasons this weird looking style is a good idea though, and docs and demos will stick to it as a convenient naming convention. 
@@ -65,7 +65,7 @@ If your targets *that actually run inside containers* are frequently used from t
 
 Putting it together, suppose your project involves so many tool containers that it is useful to separate them into different "tool boxes" by using different compose files.  By using `compose.import.as`, we can import to a namespace *without* cluttering the root.
 
-{{macros.embed_demo('demos/container-dispatch-3.mk', github=github)}}
+{{site.embed_demo('demos/container-dispatch-3.mk', github=github)}}
 
 This way of arranging things makes it clear that there are a few distinct toolboxes at play, and that while you can always call things like `self.docs.gen` directly for testing, the syntax helps make it clear that your host isn't actually guaranteed to have all the tools involved.
 
@@ -74,7 +74,7 @@ This way of arranging things makes it clear that there are a few distinct toolbo
 
 Let's add another target to our project Makefile, demonstrating dispatching one target to multiple containers:
 
-{{macros.embed_demo('demos/double-dispatch.mk', github=github)}}
+{{site.embed_demo('demos/double-dispatch.mk', github=github)}}
 
 Again, the *`self`* prefix and the `▰/` namespace is just a convention, you can see discussion in the previous section.  The above looks pretty tidy though, and hopefully this helps to illustrate how the target / container / callback association works.  Running `demo.double.dispatch` looks like this:
 
@@ -98,9 +98,9 @@ $ docker compose -f docker-compose.yml \
 
 Sometimes you want a target or a script that **always** runs in a container, but can be safely called from the container *or* the host.  See the tests below for usage information about the `compose.bind.target` macro:
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/bind-target.mk', 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
       'demos/bind-target.mk',
       base=mkdocs.site_relative_url+'/compiler/#compose-file-example'),
     github=github)}}
@@ -111,8 +111,8 @@ To avoid name-collisions use "." as prefix for the the "private" target, as seen
 
 Sometimes you want a **script** that *always* runs in a container, but can be safely called from the container or the host.  See the tests below for usage information about the `compose.bind.script` macro:
 
-{{macros.embed_demo('demos/bind-script.mk', 
-    bottom_right=macros.link_mirror(
+{{site.embed_demo('demos/bind-script.mk', 
+    bottom_right=site.link_mirror(
       'demos/bind-script.mk',
       base=mkdocs.site_relative_url+'/compiler/#compose-file-example'),
     github=github)}}
@@ -152,7 +152,7 @@ In practice the containers you use might be already compatible with the dispatch
 
 Below you can see a typical example of a compose file that supports dispatch, leaning more towards pedantic than minimal.  See the [integration docs]({{mkdocs.site_relative_url}}/quickstart/#docker-compose-integration) for more detailed discussion, 
 
-{{macros.embed_demo('demos/data/docker-compose.yml', type='yaml', github=github)}}
+{{site.embed_demo('demos/data/docker-compose.yml', type='yaml', github=github)}}
 
 
 ### But Why? 🤔

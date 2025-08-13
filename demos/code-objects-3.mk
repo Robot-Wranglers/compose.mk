@@ -31,5 +31,5 @@ endef
 $(call polyglots.import, pattern=[.]py bind=my_interpreter)
 
 # Test the scaffolded targets 
-__main__: one.py.run two.py.run 
+__main__: one.py two.py 
 

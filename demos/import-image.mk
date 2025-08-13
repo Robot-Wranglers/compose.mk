@@ -5,11 +5,23 @@
 
 include compose.mk
 
+# Import a stack image 
 $(call docker.import, namespace=debian img=debian/buildd:bookworm)
 
-__main__: test.dispatch test.low_level_runner
+# Import an image described by a local Dockerfile
+$(call docker.import, namespace=mycontainer file=demos/data/Dockerfile)
 
-test.dispatch: debian.dispatch/flux.ok
+__main__: test.stock_image test.local_image 
 
-test.low_level_runner:
+# Test dispatch and low-level targets for locally defined image
+# Note that we have to build it before we can use it
+test.local_image: mycontainer.build 
+	${make} mycontainer.dispatch/flux.ok 
+	entrypoint=sh cmd='-c "echo hello-world"' ${make} mycontainer
+
+# Test dispatch and low-level targets inside for stock image
+test.stock_image: 
+	${make} debian.dispatch/flux.ok 
 	entrypoint=sh cmd='-c "echo hello-world"' ${make} debian
+
+	

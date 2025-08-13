@@ -1,9 +1,9 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ### User Input / Interactivity
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The stand-alone tool docs discuss usage of {{macros.api_link('mk.select',mkdocs,arg='path_to_makefile')}} and {{macros.api_link('compose.select',mkdocs,arg='path_to_compose_file')}} for [interactively choosing targets or containers to run]({{mkdocs.site_relative_url}}/selector).  
+The stand-alone tool docs discuss usage of {{site.api_link('mk.select',mkdocs,arg='path_to_makefile')}} and {{site.api_link('compose.select',mkdocs,arg='path_to_compose_file')}} for [interactively choosing targets or containers to run]({{mkdocs.site_relative_url}}/selector).  
 
 This section covers lower-level usage of the API and some idioms for capturing user data.  See also the [Advanced TUI docs]({{mkdocs.site_relative_url}}/advanced-tui), where we build an interface that's composing these primitives.
 
@@ -16,12 +16,12 @@ Despite all the challenges, related functionality in `compose.mk` works pretty w
 
 One of the simplest ways you can get started scripting with user-input is to use a target from the `flux.select.*` group.  Consider the example below:
 
-{{macros.embed_demo('demos/tui/user-input.mk', github=github)}}
+{{site.embed_demo('demos/tui/user-input.mk', github=github)}}
 
 What does this do? 
 
 1. First we setup the file-selector, telling it we want a file in a directory that matches a pattern.  
-1. The selector collects user input, then passes it to to the downstream target, in this case {{macros.api_link('mk.select', mkdocs,arg='Makefile')}}.  
+1. The selector collects user input, then passes it to to the downstream target, in this case {{site.api_link('mk.select', mkdocs,arg='Makefile')}}.  
 
 Since `mk.select` accepts Makefile-paths as input and then **opens a target chooser**, the example above shows *layered* user-input being used as a runner, i.e. generating and running a call like `make -f <chosen_Makefile> <chosen_target>`.  In other words `make demo` becomes a demo chooser/runner in one line.
 
@@ -33,16 +33,16 @@ Running it looks like this:
 
 Quick links to the related API are found below.
 
-{{macros.api_link_many(['io.select','flux.select'],mkdocs)}}
+{{site.api_link_many(['io.select','flux.select'],mkdocs)}}
 
 #### User Input Idioms 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-If you want to select something besides a file, a make target, etc, it is usually best to use {{macros.api_link('io.selector', mkdocs,arg='choice_generator>,<choice_handler')}}, then define your own simple targets for the generator and handler.
+If you want to select something besides a file, a make target, etc, it is usually best to use {{site.api_link('io.selector', mkdocs,arg='choice_generator>,<choice_handler')}}, then define your own simple targets for the generator and handler.
 
 Using a dispatch'y approach like the ones mentioned above is tidy and usually good enough, but lower-level access is also possible.  Another useful idiom is the **choices..choice..chosen** pattern with the `io.get.choice` macro.  Consider the following example:
 
-{{macros.embed_demo('demos/tui/user-input-2.mk', github=github)}}
+{{site.embed_demo('demos/tui/user-input-2.mk', github=github)}}
 
 Above, `${io.get.choice}` expects `choices` and optionally `header` as set, and emits `chosen` for later use.  In the middle is `gum choose`, running with or without the local tool available.
 

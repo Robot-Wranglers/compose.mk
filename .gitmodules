@@ -1,0 +1,3 @@
+[submodule ".cmk"]
+	path = .cmk
+	url = git@github.com:robot-wranglers/.cmk.git

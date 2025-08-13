@@ -1,8 +1,8 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 #### API: io
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.parse_module_help('compose.mk', 'io')}}
+{{site.parse_module_help('compose.mk', 'io')}}
 
-{{macros.parse_help('compose.mk', 'io', github)}}
+{{site.parse_help('compose.mk', 'io', github)}}

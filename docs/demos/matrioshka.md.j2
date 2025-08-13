@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Embedded Containers & Data
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -17,9 +17,9 @@ Sometimes it's useful to declare **inlined containers and data** alongside the s
 ### Inlined Compose Files
 <hr style="width:100%;border-bottom:3px solid black;">
 
-{{macros.embed_demo('demos/inlined-composefile.mk', 
+{{site.embed_demo('demos/inlined-composefile.mk', 
     github=github, 
-    bottom_right=macros.link_mirror(
+    bottom_right=site.link_mirror(
         'demos/cmk/inlined-composefile.cmk',
         base=mkdocs.site_relative_url+"/compiler#"))}}
 
@@ -30,7 +30,7 @@ Sometimes it's useful to declare **inlined containers and data** alongside the s
 
 Inlined containers can actually be extended with other inlines, but notice again the `compose.mk:` prefix which is used as a repository.
 
-{{macros.embed_demo('demos/extend-inlined-dockerfile.mk', github=github)}}
+{{site.embed_demo('demos/extend-inlined-dockerfile.mk', github=github)}}
 
 ### Passing Inlined Data-Structures
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -39,7 +39,7 @@ Inlined containers can actually be extended with other inlines, but notice again
 
 Building on the [Custom Automation APIs demo]({{mkdocs.site_relative_url}}/demos/custom-automation-api), let's embed an ansible playbook, then pass it into an embeddded container.
 
-{{macros.embed_demo(
+{{site.embed_demo(
     'demos/ansible-playbook.mk', github=github, 
     extra_label='<a href='+mkdocs.site_relative_url+'/demos/custom-automation-apis/>Related Demo</a>')}}
 

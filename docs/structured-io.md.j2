@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ### [Structured IO](#structured-io)
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -52,8 +52,8 @@ Inside a project Makefile, we can always use direct calls to `compose.mk` as see
 
 Luckily there are equivalent forms that are more idiomatic, still use local tools if available and fall back to docker if they are missing, and spawn fewer processes:
 
-{{macros.embed_demo('demos/structured-io.mk', 
-    bottom_right=macros.link_mirror(
+{{site.embed_demo('demos/structured-io.mk', 
+    bottom_right=site.link_mirror(
         "demos/cmk/user-dialect.cmk",
         link=mkdocs.site_relative_url+"/compiler/#user-defined-dialects"),
     github=github)}}
@@ -77,7 +77,7 @@ Such targets work fine in [stand-alone mode]({{mkdocs.site_relative_url}}/tool-o
 
 As a really simple example, targets that have to deal with streams will begin with `cat /dev/stdin` to capture input and start a pipeline, but this can be rewritten as simply `${stream.stdin}` for readability.  
 
-{{macros.embed_demo('demos/stdlib-stream-io.mk', github=github)}}
+{{site.embed_demo('demos/stdlib-stream-io.mk', github=github)}}
 
 The above isn't exhaustive; see the [full stream API]({{mkdocs.site_relative_url}}/api/#api-stream) for other helpers.
 

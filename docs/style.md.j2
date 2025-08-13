@@ -1,4 +1,4 @@
-{% import 'macros.j2' as macros -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 ## Style & Idioms
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -41,7 +41,7 @@ With `compose.mk`, much inspiration is taken from python.  A few random examples
 1. Dot-path style namespacing are a honking great idea (e.g. `module.target`).
 1. Snake-case style target names are recommended when they will help with tab-completion (e.g. `module.target_name`).
 1. Kebab-case for targets (e.g. `my-target-name`) is fairly common in Makefiles out in the wild, so it is **explicitly reserved for project code**, never used for targets in `compose.mk`, and is not recommended for library-style extensions of `compose.mk`.
-1. Dot-paths should be used instead of snake-case if targets resemble keywords. i.e. if `_` is just too onerous and `.` is faster.  For example {{macros.api_link('flux.if.then',mkdocs,arg='targets')}}.
+1. Dot-paths should be used instead of snake-case if targets resemble keywords. i.e. if `_` is just too onerous and `.` is faster.  For example {{site.api_link('flux.if.then',mkdocs,arg='targets')}}.
 1. Avoid custom functions in `make`, but if you need them, differentiate functions from vars using `_` as a prefix to indicate args are required.
 1. Differentiate "public" targets (i.e. the CLI's API) from internal helpers by using a `self.` prefix or simply `.`
 
@@ -86,7 +86,8 @@ Whereas bind-declarations attach things, import-statements create (or "scaffold"
 
 !!! goals "<strong>Targets from Foreign Code:</strong>"
 	* [polyglot.import]({{mkdocs.site_relative_url}}/demos/polyglots#foreign-code-as-first-class)
-	* [polyglots.import]({{mkdocs.site_relative_url}}/demos/polyglots/#binding-multiple-blocks-in-one-shot)
+	* [polyglot.import]({{mkdocs.site_relative_url}}/demos/polyglots#foreign-code-as-first-class)
+	* [polyglot.import.file]({{mkdocs.site_relative_url}}/demos/polyglots#files-as-targets-with-polyglotimportfile)
 
 ### Targets As Functions
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -262,7 +263,7 @@ Implicit-style is not only more *pretty* than explicit-style now, it's also sign
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-To really emphasize the notational improvements, let's set aside our separate targets for `implicit-style` and `explicit-style`, add prerequisites, and put it all together:  Now prerequisites, explicit style, and implicit style have a uniform style.
+To really emphasize the notational improvements, let's set aside our separate targets for `implicit-style` and `explicit-style`, add prerequisites, and put it all together.  Now prerequisites, explicit style, and implicit style have a uniform style:
 
 ```Makefile {.snippet .language-makefile}
 
@@ -279,7 +280,7 @@ A pretty good compromise overall.. balancing readability, code reuse, consistent
 ### From Style to Dialect
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Somewhere at the limit of style, syntax, and sugar you run into ideas like dialects[^3], extensible programming[^4], language-oriented programming[^5] and DSLs.  To support this type of thing, CMK-lang allows for [direct control]({{mkdocs.site_relative_url}}compiler/#user-defined-extensions) of some aspects of the language syntax.  See also the [main docs for Compiler & Dialects]({{mkdocs.site_relative_url}}/compiler).
+Somewhere at the limit of style, syntax, and sugar you run into ideas like dialects[^3], extensible programming[^4], language-oriented programming[^5] and DSLs.  To support this type of thing, CMK-lang allows for direct control of [some aspects]({{mkdocs.site_relative_url}}compiler/#user-defined-extensions) of the language syntax.  See also the [main docs for Compiler & Dialects]({{mkdocs.site_relative_url}}/compiler).
 
 ### References
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -291,6 +292,8 @@ Somewhere at the limit of style, syntax, and sugar you run into ideas like diale
 [^5]: [https://en.wikipedia.org/wiki/Extensible_programming](https://en.wikipedia.org/wiki/Extensible_programming)
 [^6]: [https://en.wikipedia.org/wiki/Language-oriented_programming](https://en.wikipedia.org/wiki/Language-oriented_programming)
 [^7]: [https://www.oreilly.com/library/view/managing-projects-with/0596006101/ch10.html](https://www.oreilly.com/library/view/managing-projects-with/0596006101/ch10.html)
+[^8]: Bonus Makefile references: [makefile-style-guide](https://clarkgrubb.com/makefile-style-guide)
+[useful cheat sheet/reference](https://gist.github.com/rueycheng/42e355d1480fd7a33ee81c866c7fdf78), [official quick ref](https://www.gnu.org/software/make/manual/html_node/Quick-Reference.html)
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
