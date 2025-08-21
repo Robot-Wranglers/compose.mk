@@ -299,7 +299,7 @@ define _compose_quiet
 		'.*Container.*(Running|Recreate|Created|Starting|Started)' >&2 \
 	  | grep -vE '.*Network.*(Creating|Created)' >&2 )
 endef
-docker.run.base:=docker run --rm -i 
+docker.run.base:=docker run --rm -i -v $${DOCKER_HOST_WORKSPACE:-$${PWD}}:/workspace -w/workspace
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## BEGIN: Environment Variables
@@ -412,16 +412,16 @@ endif
 PYNCHON_VERSION?=a817d58
 pynchon=$(trace_maybe) && ${pynchon.run}
 # pynchon.run=python -m pynchon.util.makefile
-pynchon.docker=${docker.run.base} -v `pwd`:/workspace -w/workspace --entrypoint python robotwranglers/pynchon:${PYNCHON_VERSION} 
+pynchon.docker=${docker.run.base} --entrypoint python robotwranglers/pynchon:${PYNCHON_VERSION} 
 pynchon.run:=$(shell which pynchon >/dev/null 2>/dev/null && echo python || echo "${pynchon.docker}") -m pynchon.util.makefile
 
 # Macros for use with jq/yq/jb, using local tools if available and falling back to dockerized versions
-jq.docker=${docker.run.base} -e key=$${key:-} -v $${DOCKER_HOST_WORKSPACE:-$${PWD}}:/workspace -w/workspace ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}
-yq.docker=${docker.run.base} -e key=$${key:-} -v `pwd`:/workspace -w/workspace mikefarah/yq:$${YQ_VERSION:-4.43.1}
+jq.docker=${docker.run.base} -e key=$${key:-} ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}
+yq.docker=${docker.run.base} -e key=$${key:-} mikefarah/yq:$${YQ_VERSION:-4.43.1}
 yq.run:=$(shell which yq 2>/dev/null || echo "${yq.docker}")
 jq.run:=$(shell which jq 2>/dev/null || echo "${jq.docker}")
-jq.run.pipe:=$(shell which jq 2>/dev/null || echo "${docker.run.base} -i -e key=$${key:-} -v `pwd`:/workspace -w/workspace ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}")
-yq.run.pipe:=$(shell which yq 2>/dev/null || echo "${docker.run.base} -i -e key=$${key:-} -v `pwd`:/workspace -w/workspace mikefarah/yq:$${YQ_VERSION:-4.43.1}")
+jq.run.pipe:=$(shell which jq 2>/dev/null || echo "${docker.run.base} -i -e key=$${key:-} ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}")
+yq.run.pipe:=$(shell which yq 2>/dev/null || echo "${docker.run.base} -i -e key=$${key:-} mikefarah/yq:$${YQ_VERSION:-4.43.1}")
 jb.docker:=docker container run $${docker_extra:-} --rm  ghcr.io/h4l/json.bash/jb:$${JB_CLI_VERSION:-0.2.2}
 jb=${jb.docker}
 json.from=${jb}
