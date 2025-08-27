@@ -78,16 +78,19 @@ Easy access to containers, multiple programming languages, and [workflows]({{mkd
 🔎 **If you are withholding judgement on just how insane this project is until you see concrete larger-scale use-cases..** skip [directly]({{mkdocs.site_relative_url}}/demos/notebooking) to [some of]({{mkdocs.site_relative_url}}/demos/rag) the [larger demos]({{mkdocs.site_relative_url}}/demos/custom-automation-apis). You can also check out a preview of the sibling project at `k8s-tools` [^1], which is still a work in progress, but more domain specific, and covers automation specifically for kubernetes cluster lifecycles.
 
 <hr style="width:100%;border-bottom:3px solid black;">
+
+{# 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Wait for MkDocs to fully render the page including ToC
     setTimeout(function() {
         document.querySelectorAll('li').forEach(item => {
-            {# item.style.marginBottom = '10px'; #}
+            //item.style.marginBottom = '10px'; 
         });
     }, 100); // Small delay to ensure ToC is already processed
 });
 </script>
+#}
 
 [^1]: If you *are* interested in distributed systems, you might like to check out the [WIP sibling project @ k8s-tools]({{jinja.vars.k8stools_docs_url}})
 

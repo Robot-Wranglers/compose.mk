@@ -1,8 +1,8 @@
-function toggleCodeBlock(id, link) {
-    const codeBlock = document.getElementById(id);
-    const isHidden = codeBlock.style.display === "none";
-    codeBlock.style.display = isHidden ? "block" : "none";
-    link.textContent = isHidden ? "⮝" : "⮟";
+function toggle_id(id, link,close="⮝", open="⮟") {
+  const codeBlock = document.getElementById(id);
+  const isHidden = codeBlock.style.display === "none";
+  codeBlock.style.display = isHidden ? "block" : "none";
+  link.textContent = isHidden ? open: close; 
 }
 
 function addImageToHeader(headerId, imgSrc,style="") {
@@ -46,6 +46,12 @@ function addImageToHeader(headerId, imgSrc,style="") {
             item.insertAdjacentHTML('beforeend', '<li class="wy-breadcrumbs-aside"><a href="{{config.site_source_url}}" class="icon icon-github">&nbsp;&nbsp;Project Source</a></li>');
         });
         
+        // renders markdown content in collapsed-includes
+        document.querySelectorAll('div.markdown').forEach(block => { 
+          const markdownText = block.textContent || block.innerText;
+          block.innerHTML = marked.parse(markdownText);
+        });
+      
         document.querySelectorAll('div.cli_example').forEach(block => { 
             block.className+=" language-bash language-shell-session";
             Prism.highlightElement(block); });
