@@ -29,8 +29,11 @@ Here's a few typical examples of why you might want **individual targets to esse
 ```bash {.cli_example}
 # Several example invocations where arguments are NOT targets.
 $ ./compose.mk help docker.image.run
+
 $ ./compose.mk loadf demos/data/docker-compose.yml
+
 $ echo '{"foo":"bar"}' | ./compose.mk jq .foo
+
 $ ./compose.mk jb foo=bar
 ```
 
@@ -39,7 +42,7 @@ $ ./compose.mk jb foo=bar
 ### Inheritance & Interpreters
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Projects that are extending `compose.mk` might be interested in *inheriting* the capabilities for signals and supervisors.  The simplest reason you might want to do this is just for the sake of bringing [compose.mk-style CLI help]({{mkdocs.site_relative_url}}/cli-help) to your own project, *i.e. targets that actually support positional arguments,* but [the advanced examples](#advanced-examples) on this page hint at other possibilities.  
+Projects that are extending `compose.mk` might be interested in *inheriting* the capabilities for signals and supervisors.  The simplest reason you might want to do this is just for the sake of bringing [CLI help]({{mkdocs.site_relative_url}}/cli-help) to your own project, *i.e. targets that actually support positional arguments,* but [the advanced examples](#advanced-examples) on this page hint at other possibilities.  
 
 For [technical reasons](#implementation-details), there's unfortunately no way to inherit signal capabilities by simply using `include compose.mk` from your project Makefiles.  But, there's a work-around for this if you're willing to setup `compose.mk` itself as the interpreter.  *(For information about getting an interpreter *and* a transpiler/preprocessor, see instead [the compiler docs]({{mkdocs.site_relative_url}}/compiler))*
 
@@ -50,7 +53,7 @@ This pattern is an advanced topic, and although it is both stable and portable, 
 
 Let's start with something simple.  To demonstrate short-circuiting the default command line processing of `make`, we'll try to create a clone of the `ls` command.  
 
-In the code, the differences start right away.  See the shebang at the top of the following file which uses {{site.api_link('mk.interpret',mkdocs)}} ?
+In the code, the differences start right away.  See the shebang at the top of the following file which uses {{site.api_link('mk.interpret', mkdocs)}} ?
 
 {{site.embed_demo('demos/interpreter.mk', github=github)}}
 

@@ -13,12 +13,7 @@
 
 This is the complete list of public targets available from `compose.mk`, along with their documentation.  Things are organized into a few namespaces, so hopefully if you're using this stuff programmatically that helps to avoid collisions with your project targets.  See [the module layout overview]({{mkdocs.site_relative_url}}/standard-lib/#module-layout) for more details.  Most documentation is pulled automatically from [the latest source]({{github.repo_url}}).  
 
-Some important notes about how these targets work:
-
-* **Target names are reserved names after declaration.**
-* **Targets are usable interactively from your shell** as `make <target>` or `./compose.mk <target>`
-* **Targets are usable as an API,** either as prereq-targets or as part of the body in your project automation.
-* **Most targets are pure shell, and have no exotic dependencies.** That means that they generally run fine on host or as dispatched targets inside containers.
+Some general notes about how these targets work. **Target names are reserved names** after declaration, so don't override them.  **Targets are usable interactively,** either as `make <target>` or `./compose.mk <target>`.  **Targets are usable as an API,** either as prereq-targets, or from the body of your project automation.  **Targets are pure shell without exotic dependencies,** so that they run on host or as dispatched targets inside containers.
 
 {% include "api/io.md.j2" %}
 #### [API: compose](#api-compose)
@@ -63,13 +58,17 @@ Some important notes about how these targets work:
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
-	addImageToHeader('api-stream','/{{mkdocs.config.site_name}}/img/api.svg')
-	addImageToHeader('api-io','/{{mkdocs.config.site_name}}/img/api.svg')
-	addImageToHeader('api-mk','/{{mkdocs.config.site_name}}/img/api.svg')
-	addImageToHeader('api-stream','/{{mkdocs.config.site_name}}/img/api.svg')
-	addImageToHeader('api-dockerfile','/{{mkdocs.config.site_name}}/img/api.svg')
-	addImageToHeader('api-flux','/{{mkdocs.config.site_name}}/img/api.svg')
-	addImageToHeader('api-docker','/{{mkdocs.config.site_name}}/img/api.svg')
-	addImageToHeader('api-compose','/{{mkdocs.config.site_name}}/img/api.svg')
+	{{macros.header_images([
+			['api-stream','api'],
+			['references','list-details'],
+			['api-io','api'],
+			['api-mk','api'],
+			['api-stream','api'],
+			['api-dockerfile','api'],
+			['api-flux','api'],
+			['api-docker','api'],
+			['api-compose','api'],
+		], mkdocs)}}
 }, 100);});
 </script>
+

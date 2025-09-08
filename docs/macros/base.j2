@@ -134,10 +134,13 @@ addImageToHeader('{{hdr.replace(' ','-')}}','/{{mkdocs.config.site_name}}/img/{{
 {# EXPERIMENTAL
 {#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
 
-{% macro collapsed_include(fname, title='', mkdocs={}, class="")-%}{% set link_prefix=normalize_fname(fname) %}{% set title_id=title.lower().replace(',','').replace('.','').replace('"','').replace("'",'').replace('?','').replace(' ','-') %}
+{% macro collapsed_include(fname, title='', mkdocs={}, collapsed=True, class="markdown")-%}{% set def1='expand' if collapsed else 'collapse'%}{%set def2='collapse' if collapsed else 'expand'%}{%set def3='display:none' if collapsed else ''%}{% set link_prefix=normalize_fname(fname) %}{% set title_id=title.lower().replace(',','').replace('.','').replace('"','').replace("'",'').replace('?','').replace(' ','-') %}
 <h7 class=subheader id="{{title_id}}"><span class=subheader>{{title}}</span></h7><a class=subheader id="{{title.lower().replace(',','').replace(' ','-')}}"></a><a id="{{link_prefix}}"></a>
-( <a style="text-decoration:unset;font-weight:bolder;font-size:smaller;font-variant:small-caps;" href="#{{title_id}}" onclick="toggle_id('{{link_prefix}}_details', this, open='expand', close='collapse');return false;">expand</a> )
-<div class=markdown style="display:none;margin-left:15px;" id="{{link_prefix}}_details">
+( <a 
+    style="text-decoration:unset;font-weight:bolder;font-size:smaller;font-variant:small-caps;" 
+    href="#{{title_id}}" 
+    onclick="toggle_id('{{link_prefix}}_details', this, open='{{def1}}', close='{{def2}}');return false;">{{def1}}</a> )
+<div class={{class}} style="{{def3}};margin-left:15px;" id="{{link_prefix}}_details">
 {%include fname %}
 </div>
 {%- endmacro -%}

@@ -84,6 +84,11 @@ Here's an overview for how the `compose.mk` standard library is organized into m
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
-	addImageToHeader('library-overview','/{{mkdocs.config.site_name}}/img/overview.svg')
+{{macros.header_images([
+		['library-overview', 'overview'],
+		['module-layout', 'template'],
+		['forks-guests', 'arrow-fork'],
+		['references','list-details'],
+	], mkdocs)}}
 }, 100);});
 </script>
