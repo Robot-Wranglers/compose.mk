@@ -96,7 +96,7 @@
 
 * [parsing-parameters.mk](./parsing-parameters.mk) (20 lines)
 
-* [partials.mk](./partials.mk) (22 lines)
+* [partials.mk](./partials.mk) (20 lines)
 
 * [payload.mk](./payload.mk) (44 lines)
 
@@ -112,7 +112,7 @@
 
 * [script-dispatch-stock.mk](./script-dispatch-stock.mk) (24 lines)
 
-* [section-dividers.mk](./section-dividers.mk) (29 lines)
+* [section-dividers.mk](./section-dividers.mk) (27 lines)
 
 * [stage-wrapper.mk](./stage-wrapper.mk) (21 lines)
 

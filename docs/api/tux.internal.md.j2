@@ -7,4 +7,4 @@ The [public API for `tux.*` targets]({{mkdocs.site_relative_url}}/api#api-tux) d
 
 There's also a "private" API, which targets are under the namespace `.tux.*`, and which is characterized by actually issuing commands to tmux directly.  The private API is intended to be used from *inside* the `tux` container or containers that extend it.  This ensures that your host doesn't actually require a tmux stack, and also ensures that usage of the TUI is always relatively stateless.  (It's not extensively tested yet, but in theory it should be generally safe to run multiple copies of the TUI, and embed TUIs in TUIs, etc.)
 
-{{site.parse_help('compose.mk', '.tux', include_private=True)}}
+{{site.parse_help('compose.mk', '.tux', github=github, include_private=True)}}
