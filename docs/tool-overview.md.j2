@@ -116,7 +116,13 @@ For stuff related to `tmux`, see the separate [documentation for the embedded TU
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
-	addImageToHeader('tool-overview','/{{mkdocs.config.site_name}}/img/tool.svg')
+	{{macros.header_images([
+        ['tool-overview','tool'],
+        ['references','list-details'],
+        ['other-wrappers','code-dots'],
+        ['proxy-wrappers','code-dots'],
+        ['tool-wrappers','code-dots'],
+    ], mkdocs)}}
 }, 100);});
 </script>
 {#

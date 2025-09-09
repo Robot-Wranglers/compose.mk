@@ -71,8 +71,12 @@ For more details about available targets, see the [bridge documentation]({{mkdoc
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
-	addImageToHeader('basic-usage','/{{mkdocs.config.site_name}}/img/basics.svg')
-	addImageToHeader('related-links','/{{mkdocs.config.site_name}}/img/links.svg')
-	addImageToHeader('loading-compose-files','/{{mkdocs.config.site_name}}/img/compose.png',style="margin-top:-10px;height:2.2em;")
+	{{macros.header_images([
+        ['basic-usage','basics'],
+        ['references','list-details'],
+        ['related-links','list-details'],
+        ['arbitrary-downstream','code-dots'],
+    ], mkdocs)}}
+       addImageToHeader('loading-compose-files','/{{mkdocs.config.site_name}}/img/compose.png',style="margin-top:-10px;height:2.2em;")
 }, 100);});
 </script>

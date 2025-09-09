@@ -67,7 +67,7 @@
     )|default("???")) if line_no!="-1" 
     else "<font color=red>not found</font>" %}
 ##### `{{tname_n}}`
-
+<br/>
 {{macros.code_table('',  
     style="margin-top:-2em;",
     code_table_1='<a style="text-decoration:none;padding:5px;" href="#'+tname_n.replace('/','').replace('.','').replace('_','') + '"><font style="margin-top:5px;font-size:120%;">❡</font><code style="background-color:unset; font-size:large">'+tname_n+'</code></a>', 
@@ -75,7 +75,7 @@
     code_table_3=src_ref,
     github=github, class="api_docs", title='')}}
 
-{%if tdata['alias']|default(false)%}{%set primary=(tdata.primary|default('?')).replace('%','<arg>') %} {% set primary_slug=primary.replace('<','').replace('>','').replace('/','').replace('-', '').replace('.','') %}<span style="font-size:larger;margin-left:2em;">Alias for <a href="#{{primary_slug}}"><code>{{primary}}</code></a></span>{% else %}
+{%if tdata['alias']|default(false)%}{%set primary=(tdata.primary|default('?')).replace('%','<arg>') %} {% set primary_slug=primary.replace('<','').replace('>','').replace('/','').replace('-', '').replace('.','') %}<div style="font-size:larger;margin-top:1em;margin-left:1.5em;">Alias for <a href="#{{primary_slug}}"><code>{{primary}}</code></a></div>{% else %}
 ```bash {.api_docs .nohighlight}
 {{ "\n".join(docs)}}
 ```
@@ -86,7 +86,7 @@
 {% set include_private = '--include-private' if include_private else '' %}
 {% set help_extra = help_extra|default('')%}
 {% set help_extra = ' '+help_extra if help_extra else ''%}
-*This documentation is pulled automatically from [source](/{{fname}}).{{help_extra}}*
+*This documentation is pulled automatically from [source]({{github.repo_url}}/tree/main/{{fname}}).{{help_extra}}*
 {% set targets=bash('pynchon makefile parse ' + include_private + ' ' + fname + '| jq \'with_entries(select(.key | startswith("'+namespace+'")))\'', load_json=True) %}
 {% for tname in targets %} {%set tdata=targets[tname]%}{%set tname_n=tname.replace('%','<arg>').replace('<','').replace('>','')%}
 

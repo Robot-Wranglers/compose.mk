@@ -48,17 +48,21 @@ We'll get to the odd arrow syntax at the end of this section, but start with mos
 
 **New Interpreter:**
 :  This example introduces {{site.api_link('mk.interpret!',mkdocs)}} in a shebang.  Not to be confused with {{site.api_link('mk.interpret',mkdocs)}},  **mk.interpret!** includes additional steps for CMK->Makefile transpilation, allowing us to extend the base syntax and use the more exotic stuff you see in the rest of the file.  As with other demos, this one is **executable directly** as `./demos/cmk/structured-io.cmk`.  Unlike other demos, we can't run it directly with `make -f ..`, and would use instead `./compose.mk mk.interpret! ..`  
+: &nbsp;
 
 **Implied Include + Standard Library:**
 :  When using the interpreter, a line like `include compose.mk` is always implied, and of course this brings with it full access to the [standard library]({{mkdocs.site_relative_url}}/standard-lib).
+: &nbsp;
 
 **Function Calls Rewritten:**
 :  Awkward stuff like `$(call log.target, ...)` can be written as `cmk.log.target(..)` instead.  Additionally, although we don't use it here,  [compose.import statements]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) previously written as `$(call ..)` can be rewritten as simply `compose.import(..)`
+: &nbsp;
 
 **Recursive Calls Rewritten:**
 :  Awkward stuff like `${make} foo` can be written as `this.foo` instead.  Recursive invocation of the current context is common, and absolutely critical for code-reuse.[^3] The choice of `this` for a new keyword is actually configurable too.. we'll get to that in the next section.
+: &nbsp;
 
-Finally, *about that arrow syntax?**  These operators just help to make JSON IO feel more native, and are sugar to safely use `jq` and `jb` for parsing and pushing JSON, respectively, regardless of whether those tools are available on the host.  If you glanced at the [original code]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) that's "ported" to CMK-lang here, then you might notice that the only code-transformation rules we really need to get from **CMK -> Makefile** in this case are just *very simple string substititions*.
+Finally, **about that arrow syntax?**  These operators just help to make JSON IO feel more native, and are sugar to safely use `jq` and `jb` for parsing and pushing JSON, respectively, regardless of whether those tools are available on the host.  If you glanced at the [original code]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) that's "ported" to CMK-lang here, then you might notice that the only code-transformation rules we really need to get from **CMK -> Makefile** in this case are just *very simple string substititions*.
 
 The next section explains the specific substitions that enable the code above at the same time as explaining "dialects" in general.
 
@@ -470,15 +474,16 @@ $ ./compose.mk mk.def.read/cmk.default.sugar
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
 {{macros.header_images([
-        ['appendix','implementation'],
-        ['about dialects','implementation'],
-        ['about sugar','implementation'],
-        ['user defined extensions','user'],
-        ['bind declarations','bind'],
-        ['basic example','basics'],
-        ['compose file example','basics'],
-        ['polyglot example','basics'],
-        ['dockerfile example','basics'],
+      ['appendix','implementation'],
+      ['about dialects','implementation'],
+      ['about sugar','implementation'],
+      ['user defined extensions','user'],
+      ['bind declarations','bind'],
+      ['basic example','basics'],
+      ['compose file example','basics'],
+      ['polyglot example','basics'],
+      ['dockerfile example','basics'],
+      ['references','list-details'],
     ], mkdocs)}}
 }, 100);});
 </script>

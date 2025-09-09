@@ -1,55 +1,26 @@
 #!/usr/bin/env -S bash
 #░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-# compose.mk: A minimal automation framework for working with containers.
+# compose.mk: 
+#
+# A tool / library / framework for Makefile-based automation, scripting, 
+# and lightweight orchestration. Support for docker, docker-compose, workflow
+# primitives, TUI elements, and more, all provided by a single file with no 
+# dependencies beyond what's already in your development environment.
 #
 # DOCS: https://github.com/robot-wranglers/compose.mk
-#
 # LATEST: https://github.com/robot-wranglers/compose.mk/tree/master/compose.mk
 #
-# FEATURES:
-#   1) Library-mode extends `make`, adding native support for working with (external) container definitions
-#   2) Stand-alone mode also available, i.e. a tool that requires no Makefile and no compose file.
-#   3) A minimal, elegant, and dependency-free approach to describing workflow pipelines. (See flux.* API)
-#   4) A small-but-powerful built-in TUI framework with no host dependencies. (See the tux.* API)
-#
-# USAGE: ( For Integration )
-#   # Add this to your project Makefile
-#   include compose.mk
-#   $(eval $(call compose.import.generic, ▰, ., docker-compose.yml))
-#   # Example for target dispatch:
-#   # A target that runs inside the `debian` container
-#   demo: ▰/debian/.demo
-#   .demo:
-#       uname -n -v
-#
-# USAGE: ( Stand-alone tool mode )
-#   ./compose.mk help
-#   ./compose.mk help <namespace>
-#   ./compose.mk help <prefix>
-#   ./compose.mk help <target>
-#
-# USAGE: ( Via CLI Interface, after Integration )
-#   # drop into debugging shell for the container
-#   make <stem_of_compose_file>/<name_of_compose_service>.shell
-#
-#   # stream data into container
-#   echo echo hello-world | make <stem_of_compose_file>/<name_of_compose_service>.shell.pipe
-#
-#   # show full interface (see also: https://github.com/robot-wranglers/compose.mk/bridge)
-#   make help
 #░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-
-# Let's get into the horror and the delight right away with shebang hacks. 
-# The block below these comments looks like a comment, but it is not. That line,
-# and a matching one at EOF, makes this file a polyglot so that it is executable
-# simultaneously as both a bash script and a Makefile.  This allows for some improvement 
-# around the poor signal-handling that Make supports by default, and each CLI invocation 
-# that uses this file directly is wrapped to bootstrap handlers. If relevant signals are 
-# caught, they are passed back to make for handling.  (Only SIGINT is currently supported.)
 #
-# Signals are used sometimes to short-circuit `make` from attempting to parse the full CLI. 
-# This supports special cases like `./compose.mk loadf ...` and other tool-wrappers.
-# See docs & usage of `mk.interrupt` and `mk.yield` for details.
+# Let's get into the horror and the delight right away with shebang hacks. 
+# The block below these comments *looks* like a comment, but it is not. That 
+# line and a matching one at EOF makes this file a polyglot, so that it is 
+# executable as both a bash script and a Makefile.  This allows for improvement
+# around the poor signal-handling that Make supports by default, and several 
+# other advanced features like such as short-circuiting `make` from attempting
+# to parse the full CLI, and "pre" / "post" targets.  See documentation & usage 
+# info here https://github.com/robot-wranglers/compose.mk/signals/, especially 
+# re: `mk.interrupt` and `mk.yield`.
 #
 #/* \
 _make_="make -sS --warn-undefined-variables -f ${0}"; trace="${TRACE:-${trace:-0}}"; \
@@ -299,7 +270,7 @@ define _compose_quiet
 		'.*Container.*(Running|Recreate|Created|Starting|Started)' >&2 \
 	  | grep -vE '.*Network.*(Creating|Created)' >&2 )
 endef
-docker.run.base:=docker run --rm -i 
+docker.run.base:=docker run --rm -i -v $${DOCKER_HOST_WORKSPACE:-$${PWD}}:/workspace -w/workspace
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## BEGIN: Environment Variables
@@ -412,16 +383,16 @@ endif
 PYNCHON_VERSION?=a817d58
 pynchon=$(trace_maybe) && ${pynchon.run}
 # pynchon.run=python -m pynchon.util.makefile
-pynchon.docker=${docker.run.base} -v `pwd`:/workspace -w/workspace --entrypoint python robotwranglers/pynchon:${PYNCHON_VERSION} 
+pynchon.docker=${docker.run.base} --entrypoint python robotwranglers/pynchon:${PYNCHON_VERSION} 
 pynchon.run:=$(shell which pynchon >/dev/null 2>/dev/null && echo python || echo "${pynchon.docker}") -m pynchon.util.makefile
 
 # Macros for use with jq/yq/jb, using local tools if available and falling back to dockerized versions
-jq.docker=${docker.run.base} -e key=$${key:-} -v $${DOCKER_HOST_WORKSPACE:-$${PWD}}:/workspace -w/workspace ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}
-yq.docker=${docker.run.base} -e key=$${key:-} -v `pwd`:/workspace -w/workspace mikefarah/yq:$${YQ_VERSION:-4.43.1}
+jq.docker=${docker.run.base} -e key=$${key:-} ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}
+yq.docker=${docker.run.base} -e key=$${key:-} mikefarah/yq:$${YQ_VERSION:-4.43.1}
 yq.run:=$(shell which yq 2>/dev/null || echo "${yq.docker}")
 jq.run:=$(shell which jq 2>/dev/null || echo "${jq.docker}")
-jq.run.pipe:=$(shell which jq 2>/dev/null || echo "${docker.run.base} -i -e key=$${key:-} -v `pwd`:/workspace -w/workspace ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}")
-yq.run.pipe:=$(shell which yq 2>/dev/null || echo "${docker.run.base} -i -e key=$${key:-} -v `pwd`:/workspace -w/workspace mikefarah/yq:$${YQ_VERSION:-4.43.1}")
+jq.run.pipe:=$(shell which jq 2>/dev/null || echo "${docker.run.base} -i -e key=$${key:-} ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}")
+yq.run.pipe:=$(shell which yq 2>/dev/null || echo "${docker.run.base} -i -e key=$${key:-} mikefarah/yq:$${YQ_VERSION:-4.43.1}")
 jb.docker:=docker container run $${docker_extra:-} --rm  ghcr.io/h4l/json.bash/jb:$${JB_CLI_VERSION:-0.2.2}
 jb=${jb.docker}
 json.from=${jb}
@@ -2405,7 +2376,7 @@ mk.require.tool/%:; $(call _mk.require.tool, ${*})
 # Helper for asserting that tools are available with support for error messages.
 # Alias for CMK-lang: 
 #  USAGE: cmk.require.tool(tool_name, Error if missing)
-_mk.require.tool=$(call log.part1,${GLYPH_MK} mk.require.tool ${sep} checking path for ${ital}${dim_cyan}$(strip ${1})); which ${1} >/dev/null && $(call log.part2,${green}${GLYPH_CHECK} ${no_ansi_dim}`which ${1}`) || ($(call log.part2,${red} missing!);$(call log.io,${no_ansi}${bold}Error:${no_ansi} $(if $(filter undefined,$(origin 2)),Install tool and retry workflow.,$(2))); exit 1)
+_mk.require.tool=$(call log.part1,${GLYPH_MK} mk.require.tool ${sep} looking for ${ital}${dim_cyan}$(strip ${1})); which ${1} >/dev/null && $(call log.part2,${green}${GLYPH_CHECK} ${no_ansi_dim}`which ${1}`) || ($(call log.part2,${red} missing!);$(call log.io,${no_ansi}${bold}Error:${no_ansi} $(if $(filter undefined,$(origin 2)),Install tool and retry workflow.,$(2))); exit 1)
 require.tool=${_mk.require.tool}
 
 mk.run/%:; ${io.shell.isolated} make -f ${*} 

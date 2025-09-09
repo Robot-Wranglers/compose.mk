@@ -39,7 +39,8 @@ Stack-operations are logged by default to stderr, so it's easy for users or devs
 
 ```bash {.cli_example}
 $ ./compose.mk flux.stage.enter/BUILD
-
+```
+```bash {.cli_output}
 ╔═══════════════════════════════════════════════════════════╗
 ║                           BUILD                           ║
 ╚═══════════════════════════════════════════════════════════╝
@@ -56,7 +57,8 @@ $ ./compose.mk flux.stage.enter/BUILD
 
 ```bash {.cli_example}
 $ echo '{"data":789}' | ./compose.mk flux.stage.push/BUILD
-
+```
+```bash {.cli_output}
 Φ flux.stage.push // BUILD 
 ⇄ io.stack.push // stack@.flux.stage.BUILD ⋘
   {"data":789}
@@ -76,20 +78,30 @@ $ ./compose.mk jb foo=bar | ./compose.mk flux.stage.push/BUILD
 
 ```bash {.cli_example}
 $ ./compose.mk flux.stage.pop/BUILD
+```
+```bash {.cli_output}
 Φ flux.stage.pop // BUILD
 ⇄ io.stack.pop // stack@.flux.stage.BUILD ⋙
 {
   "data": 789
 }
+```
 
+```bash {.cli_example}
 $ ./compose.mk flux.stage.pop/BUILD
+```
+```bash {.cli_output}
 Φ flux.stage.pop // BUILD
 ⇄ io.stack.pop // stack@.flux.stage.BUILD ⋙
 {
   "stage.entered": "Mon 24 Feb 2025 08:53:39 PM PST"
 }
+```
 
+```bash {.cli_example}
 $ ./compose.mk flux.stage.exit/BUILD
+```
+```bash {.cli_output}
 Φ flux.stage.clean // BUILD //  removing stack file @  .flux.stage.BUILD
 ```
 
@@ -107,8 +119,6 @@ In this case when `validate` succeeds the stage file is cleaned like we'd expect
 **Using an implicit context manager** with {{site.api_link('flux.stage.wrap',mkdocs,arg='target')}} is an alternative style.  The example below shows that, plus overriding the banner-printing mechanism to use the (dockerized) `figlet` tool instead of using `gum`. 
 
 {{site.embed_demo('demos/stage-wrapper.mk', github=github)}}
-
-{#<hr style="width:95%;border-bottom:1px dashed black;">#}
 
 ----------------------------------------------
 
@@ -145,9 +155,9 @@ Nothing prevents further downstream slicing with `jq`, so stacks as presented th
 Eventually, the basic stack-operators might expand to include lightweight pattern matching and/or a simple tuple-space flavored interface. In the meantime though, you already got some new superpowers that might not be obvious:
 #}
 
-*Practically speaking, tools ike `terraform`, `helm`, `kubectl` and `ansible` all spit JSON,* then frequently needs the output for one as the input of another.  Without stages, `compose.mk` still makes that relatively easy, but pure pipelining means it's hard to reuse values, or you need to track a temp file, etc. 
+Practically speaking, tools ike `terraform`, `helm`, `kubectl` and `ansible` all spit JSON, and you'll frequently need the output for one tool as the input for another.  Without stages, `compose.mk` makes that easy, but pure pipelining means it's hard to reuse values, or you need to track a temp file, etc.
 
-More philosophically, native support for stacks gives `compose.mk` a new capability, in terms of stuff like [programming](https://en.wikipedia.org/wiki/Tacit_programming) [paradigms](https://en.wikipedia.org/wiki/Stack-oriented_programming).  The stack is also a convenient way to communicate [between polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [across matrioshka layers]({{mkdocs.site_relative_url}}/matrioshka/#advanced-matrioshka-idioms).  And, for what it's worth, now you can pretty directly architect your automation in terms of [pushdown automata](https://en.wikipedia.org/wiki/Pushdown_automaton) or [queue machines](https://en.wikipedia.org/wiki/Queue_automaton) :)
+More philosophically.. native support for stacks gives `compose.mk` a new capability, in terms of stuff like [programming](https://en.wikipedia.org/wiki/Tacit_programming) [paradigms](https://en.wikipedia.org/wiki/Stack-oriented_programming).  The stack is also a convenient way to communicate [between polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [across matrioshka layers]({{mkdocs.site_relative_url}}/matrioshka/#advanced-matrioshka-idioms).  And, for what it's worth, now you can pretty directly architect your automation in terms of [pushdown automata](https://en.wikipedia.org/wiki/Pushdown_automaton) or [queue machines](https://en.wikipedia.org/wiki/Queue_automaton) :)
 
 
 ### References
@@ -157,11 +167,12 @@ More philosophically, native support for stacks gives `compose.mk` a new capabil
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
-addImageToHeader('stacks-stages','/{{mkdocs.config.site_name}}/img/stack-push.svg')
-addImageToHeader('stage-idioms','/{{mkdocs.config.site_name}}/img/idiom.svg')
-addImageToHeader('support-for-non-json-artifacts','/{{mkdocs.config.site_name}}/img/question.svg')
-addImageToHeader('stage-api','/{{mkdocs.config.site_name}}/img/api.svg')
-addImageToHeader('stage-basics','/{{mkdocs.config.site_name}}/img/basics.svg')
-addImageToHeader('why-stacks-though','/{{mkdocs.config.site_name}}/img/question.svg');
+addImageToHeader('references','/{{mkdocs.config.site_name}}/img/list-details')
+addImageToHeader('stacks-stages','/{{mkdocs.config.site_name}}/img/stack-push')
+addImageToHeader('stage-idioms','/{{mkdocs.config.site_name}}/img/idiom')
+addImageToHeader('support-for-non-json-artifacts','/{{mkdocs.config.site_name}}/img/question')
+addImageToHeader('stage-api','/{{mkdocs.config.site_name}}/img/api')
+addImageToHeader('stage-basics','/{{mkdocs.config.site_name}}/img/basics')
+addImageToHeader('why-stacks-though','/{{mkdocs.config.site_name}}/img/question');
 }, 100);});
 </script>

@@ -3,7 +3,9 @@
 ## Language Overview
 <hr style="width:100%;border-bottom:3px solid black;">
 
-You might already be aware that `compose.mk` offers a [standard library for working with `make`]({{mkdocs.site_relative_url}}/standard-lib), a sort of stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview), and [a TUI framework]({{mkdocs.site_relative_url}}/embedded-tui), but now you've reached the page that will finally reveal the shocking secret truth: **compose.mk is actually a programming language!** 😮  More specifically, `compose.mk` is a [matrioshka language]({{mkdocs.site_relative_url}}/matrioshka), and maybe the *first one that's actually intended to be useful*.  
+You might already be aware that `compose.mk` offers a [standard library for working with `make`]({{mkdocs.site_relative_url}}/standard-lib), a sort of stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview), and [a TUI framework]({{mkdocs.site_relative_url}}/embedded-tui), but now you've reached the page that will finally reveal the shocking secret truth: **compose.mk is actually a programming language!** 😮  
+
+More specifically, `compose.mk` is a [matrioshka language]({{mkdocs.site_relative_url}}/matrioshka), and maybe the first one that's *actually intended to be useful*.
 
 The rest of this page focuses on other language-related features and serves as an alternate to the [main landing page]({{mkdocs.site_relative_url}}/overview). If you prefer overviews to focus less on applications and more on **theory, architecture, and patterns**, you've come to the right place.
 
@@ -39,23 +41,23 @@ Also related but harder to categorize, the [packaging support]({{mkdocs.site_rel
 ### Homoiconic?
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Let's introduce a somewhat surprising fact: `compose.mk` is designed to be [homoiconic](https://en.wikipedia.org/wiki/Homoiconicity) on `make` targets, at the same time as it generalizes what targets can *be*.  Thus among other things, a `compose.mk` target can:
+Let's introduce a somewhat surprising fact: `compose.mk` is designed to be [homoiconic](https://en.wikipedia.org/wiki/Homoiconicity) on `make` targets, at the same time as it generalizes what targets can *be*.  
 
-1. Execute directly (default behaviour for `make`)
-1. Group other tasks into DAGs (default behaviour for `make`)
+By default, `make` targets can execute directly, or group other tasks into DAGs.  A `compose.mk` target can additionally:
+
 1. Serve as a *handle* for a container's default entrypoint (via [`compose.import`]({{mkdocs.site_relative_url}}/bridge))
 1. Execute inside of containers (via [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch))
 1. Execute later, conditionally, or repeatedly etc (via [flux]({{mkdocs.site_relative_url}}/standard-lib#workflow-support))
 1. Describe data-flow and/or control-flow across other tasks (again via [flux]({{mkdocs.site_relative_url}}/standard-lib#workflow-support))
 1. Execute arbitrary tasks in foreign languages (via [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots))
 
-In the [workflow docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support), the `flux.*` module is introduced as a **target algebra**, and compared to more familiar shell process-algebra.  But as a simple example of "targets all the way down" consider this:
+In the [workflow docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support), the `flux.*` module is introduced as a **target algebra** and compared to more familiar process-algebra from shell.  But as a simple example of "targets all the way down" consider this:
 
 * {{site.api_link('flux.wrap',mkdocs,arg='targets')}} is a n-ary target that accepts nullary targets as arguments.
 * Meanwhile.. {{site.api_link('flux.ok',mkdocs)}} and {{site.api_link('flux.fail',mkdocs)}} are examples of nullary targets.
-* But invocation, like say `flux.or/flux.ok,flux.fail`, is itself also a (nullary) target.
+* But invocation, like say `flux.or/flux.ok,flux.fail` is itself also a (nullary) target.
 
-Of course, no matter how easily you can incorporate foreign tools.. at some point, you might also need to write **task implementations** rather than just glue, *i.e. actual target bodies in shell, or [polyglots in foreign languages]({{mkdocs.site_relative_url}}/demos/polyglots/)*.  Still.. you'll probably be surprised by how infrequently that's actually necessary, and when it is, how small the task-implementations you need actually are.  For a quick example of how much you can accomplish with no target bodies at all, see also the docs for [low config TUIs]({{mkdocs.site_relative_url}}/low-config-tuis/).
+Of course, no matter how easily you can incorporate foreign tools.. at some point, you might also need to write **task implementations** rather than just glue, *i.e. actual target bodies in shell, or [polyglots in foreign languages]({{mkdocs.site_relative_url}}/demos/polyglots/)*.  Still.. you'll be surprised by how infrequently that's actually necessary, and when it is, how small the task-implementations you need actually are.  For a quick example of how much you can accomplish with no target bodies at all, see the docs for [low config TUIs]({{mkdocs.site_relative_url}}/low-config-tuis/).
 
 ### Interpreters & Transpilation
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -78,22 +80,26 @@ This example is simplistic, but there are other ways that `compose.mk` can [act 
 ### References
 <hr style="width:100%;border-bottom:3px solid black;">
 
-[^1]: [https://en.wikipedia.org/wiki/Incremental_computing](https://en.wikipedia.org/wiki/Incremental_computing)
-[^2]:  [https://en.wikipedia.org/wiki/Directed_acyclic_graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph)
-[^3]:  [https://en.wikipedia.org/wiki/Tacit_programming](https://en.wikipedia.org/wiki/Tacit_programming)
-[^4]:  [https://en.wikipedia.org/wiki/Reflective_programming](https://en.wikipedia.org/wiki/Reflective_programming)
-[^5]:  [https://en.wikipedia.org/wiki/Extensible_programming](https://en.wikipedia.org/wiki/Extensible_programming)
-[^6]:  [https://en.wikipedia.org/wiki/Functional_programming](https://en.wikipedia.org/wiki/Functional_programming)
-[^7]:  [https://en.wikipedia.org/wiki/Dataflow_programming](https://en.wikipedia.org/wiki/Dataflow_programming)
-[^8]:  [https://en.wikipedia.org/wiki/Concatenative_programming_language](https://en.wikipedia.org/wiki/Concatenative_programming_language)
-[^9]:  [https://en.wikipedia.org/wiki/Stack-oriented_programming](https://en.wikipedia.org/wiki/Stack-oriented_programming)
-[^10]: [https://en.wikipedia.org/wiki/Aspect-oriented_programming](https://en.wikipedia.org/wiki/Aspect-oriented_programming)
-[^11]: [https://en.wikipedia.org/wiki/Smalltalk#Image-based_persistence](https://en.wikipedia.org/wiki/Smalltalk#Image-based_persistence)
+[^1]: [wiki://Incremental_computing](https://en.wikipedia.org/wiki/Incremental_computing)
+[^2]:  [wiki://Directed_acyclic_graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph)
+[^3]:  [wiki://Tacit_programming](https://en.wikipedia.org/wiki/Tacit_programming)
+[^4]:  [wiki://Reflective_programming](https://en.wikipedia.org/wiki/Reflective_programming)
+[^5]:  [wiki://Extensible_programming](https://en.wikipedia.org/wiki/Extensible_programming)
+[^6]:  [wiki://Functional_programming](https://en.wikipedia.org/wiki/Functional_programming)
+[^7]:  [wiki://Dataflow_programming](https://en.wikipedia.org/wiki/Dataflow_programming)
+[^8]:  [wiki://Concatenative_programming_language](https://en.wikipedia.org/wiki/Concatenative_programming_language)
+[^9]:  [wiki://Stack-oriented_programming](https://en.wikipedia.org/wiki/Stack-oriented_programming)
+[^10]: [wiki://Aspect-oriented_programming](https://en.wikipedia.org/wiki/Aspect-oriented_programming)
+[^11]: [wiki://Smalltalk/Image-based_persistence](https://en.wikipedia.org/wiki/Smalltalk#Image-based_persistence)
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
 {{macros.header_images([
-	['language overview','overview'],
+	['language overview', 'overview'],
+	['Interpreters', 'code-asterisk'],
+	['Homoiconic', 'code-asterisk'],
+	['language properties', 'code-asterisk'],
+	['references','list-details'],
 ], mkdocs)}}
 }, 100);});
 </script>

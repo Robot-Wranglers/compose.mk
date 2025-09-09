@@ -50,10 +50,13 @@ $ ./compose.mk \
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
-	addImageToHeader('selectors','/{{mkdocs.config.site_name}}/img/user.svg')
-	addImageToHeader('interactive-target-selection','/{{mkdocs.config.site_name}}/img/makefile.png', style="height:2.2em;")
+	{{macros.header_images([
+        ['selectors','user'],
+    ], mkdocs)}}
+    addImageToHeader('interactive-target-selection','/{{mkdocs.config.site_name}}/img/makefile.png', style="height:2.2em;")
 	addImageToHeader('interactive-container-selection','/{{mkdocs.config.site_name}}/img/compose.png', style="margin-top:-10px;height:2.2em;")
 }, 100);});
 </script>

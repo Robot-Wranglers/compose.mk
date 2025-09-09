@@ -94,8 +94,9 @@ This is neat so far.. but it's not that useful to run *clean/build/test* in para
 
 How about something more practical, like starting a TUI that runs the *clean/build* targets back-to-back, plus a separate pane that's running *test* in a loop?  This is actually doable.  For it to happen, we can leverage the workflow helpers in the [`flux.*`]({{mkdocs.site_relative_url}}/api#api-flux) target namespace.  The command line for this starts to get complicated, so let's build it up one piece at a time. 
 
+Running `clean` and `build` in one step:
+
 ```bash {.cli_example}
-# Running `clean` and `build` in one step:
 $ ./compose.mk \
         mk.include/demos/no-include.mk \
         flux.wrap/clean:build
@@ -105,8 +106,9 @@ cleaning
 building
 ```
 
+Looping the test-target forever:
+
 ```bash {.cli_example}
-# Looping the test-target forever
 $ ./compose.mk \
         mk.include/demos/no-include.mk \
         flux.loopf/test
@@ -118,8 +120,9 @@ testing
 ^C
 ```
 
+Putting it all together:
+
 ```bash {.cli_example}
-# Putting it all together
 $ layout=horizontal \
     ./compose.mk \
         mk.include/demos/no-include.mk \

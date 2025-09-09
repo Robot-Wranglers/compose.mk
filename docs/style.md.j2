@@ -28,7 +28,10 @@ Makefile is already a peculiar language because it handles 2 syntaxes simultaneo
 With `compose.mk`, much inspiration is taken from python.  A few random examples: 
 
 * Default target is `__main__` unless `.DEFAULT_GOAL` is explicitly set
-* Double-under "specials" are set by default: `__file__`, `__interpreter__` &  `__interpreting__`
+* Double-under "specials" are set by default: 
+    * `__file__`
+    * `__interpreter__`
+    * `__interpreting__`
 * Usage of `self` conventionally indicates a non-public interface, e.g. with [compose.bind.target]({{mkdocs.site_relative_url}}/container-dispatch) 
 * Usage of make-prereqs as [pseudo-functions](#arguments-parameters-pipes) resembles decorators
 * Python-style docstrings for targets [are supported]({{mkdocs.site_relative_url}}/cli-help/#docstring-style)
@@ -297,15 +300,20 @@ Somewhere at the limit of style, syntax, and sugar you run into ideas like diale
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
-	addImageToHeader('style-for-extensions','/{{mkdocs.config.site_name}}/img/code-dots.svg')
-	addImageToHeader('internal-style','/{{mkdocs.config.site_name}}/img/code-dots.svg')
-	addImageToHeader('from-style-to-dialect','/{{mkdocs.config.site_name}}/img/code-dots.svg')
-	addImageToHeader('performance-and-currying','/{{mkdocs.config.site_name}}/img/implementation.svg')
-	addImageToHeader('arguments-parameters-pipes','/{{mkdocs.config.site_name}}/img/template.svg')
-	addImageToHeader('targets-as-functions','/{{mkdocs.config.site_name}}/img/lambda.svg')
-	addImageToHeader('style-idioms','/{{mkdocs.config.site_name}}/img/road_map.svg')
-	addImageToHeader('python-inspiration','/{{mkdocs.config.site_name}}/img/python.svg')
-	addImageToHeader('import-statements','/{{mkdocs.config.site_name}}/img/import.svg')
-	addImageToHeader('bind-declarations','/{{mkdocs.config.site_name}}/img/paperclip.svg')
+	{{macros.header_images([
+			['style-for-extensions','code-dots'],
+			['references','list-details'],
+			['internal-style','code-dots'],
+			['from-style-to-dialect','code-dots'],
+			['general naming','code-dots'],
+			['performance-and-currying','implementation'],
+			['arguments-parameters-pipes','template'],
+			['targets-as-functions','lambda'],
+			['style-idioms','road_map'],
+			['python-inspiration','python'],
+			['import-statements','import'],
+			['bind-declarations','paperclip'],
+		], mkdocs)}}
 }, 100);});
 </script>
+

@@ -5,14 +5,6 @@
 {% macro svg_boom(mkdocs={}, style="width:1.3em;") -%}{{svg("bulb", mkdocs=mkdocs, style=style)}}{%- endmacro -%}
 {% macro svg_arrow(mkdocs={}, style="width:1.3em;") -%}{{svg("arrow-right-dashed", mkdocs=mkdocs, style=style)}}{%- endmacro -%}
 
-{#% macro svg_arrow_small(name, mkdocs={}, prefix='number-small', style='') -%}<img src="{{mkdocs.site_relative_url}}/img/{{prefix}}-{{name}}.svg">{%- endmacro -%#}
-
-{% macro collapsed_details(name, level='h4') -%}
-<{{level}}>{{name}}</{{level}}>
-{%- endmacro -%}
-{% macro get_env_var(name) -%}
-{% set val=bash("cat docs/env-vars.md|grep ^"+name+"= | head -1 | cut -s -d'=' -f2 || true").strip()%}{{val}}{%- endmacro -%}
-
 {% macro badge_from_var(var, label) %}{% set val=get_env_var(var) %}{{badge_from_val(val,label)}}{%- endmacro -%}
 
 {%macro badge_from_val(val, label)%}<a href="env-vars.md"><img alt="{{label}}:{{val}}" src="https://img.shields.io/badge/{{url_quote((label and (label + ':')) + val)}}-blue"></a>{%- endmacro -%}
@@ -114,10 +106,11 @@
 {% macro code_table(fname, 
     style="", github={}, link_prefix='', 
     code_table_1="", code_table_2="", code_table_3="",
-    class="", type='', title='', top='',bottom='')-%}<a id="{{link_prefix}}_top"></a><div role=navigation class="code_table_top {{class}}"><span class=code_table_1>&nbsp;{%if code_table_1%}{{code_table_1}}{%else%}<a style="margin-right:3px;margin-left:5px;font-size:larger;font-weight:900;margin-left:3px;margin-right:5px;" href="#" onclick="toggleCodeBlock('{{link_prefix}}_details', this);return false;">⮝</a>{%endif%}&nbsp;<span style="font-size:larger;font-weight:900;">&nbsp;{%if fname.endswith('.cmk')%}CMK-lang{%else%}{{type|default('notype')}}{%endif%}</span>⠀</span><span class=code_table_2>⠀{%if code_table_2 %}&nbsp;{{code_table_2}}{% else %}{{title}}{%endif%}⠀</span><span class=code_table_3>⠀{%if code_table_3%}{{code_table_3}}{%else%}{{repo_link(fname, name=(title or fname)+'⠀<svg xmlns="http://www.w3.org/2000/svg" class="github_svg" viewBox="0 0 16 16" width="16" height="16"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path></svg>', github=github)}}{%endif%}⠀</span></div>{%- endmacro -%}
+    class="", type='', title='', top='',bottom='')-%}<a id="{{link_prefix}}_top"></a><div role=navigation class="code_table_top {{class}}"><span class=code_table_1>&nbsp;{%if code_table_1%}{{code_table_1}}{%else%}<a style="margin-right:3px;margin-left:5px;font-size:larger;font-weight:900;margin-left:3px;margin-right:5px;" href="#" onclick="toggle_id('{{link_prefix}}_details', this);return false;">⮝</a>{%endif%}&nbsp;<span style="font-size:larger;font-weight:900;">&nbsp;{%if fname.endswith('.cmk')%}CMK-lang{%else%}{{type|default('notype')}}{%endif%}</span>⠀</span><span class=code_table_2>⠀{%if code_table_2 %}&nbsp;{{code_table_2}}{% else %}{{title}}{%endif%}⠀</span><span class=code_table_3>⠀{%if code_table_3%}{{code_table_3}}{%else%}{{repo_link(fname, name=(title or fname)+'⠀<svg xmlns="http://www.w3.org/2000/svg" class="github_svg" viewBox="0 0 16 16" width="16" height="16"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path></svg>', github=github)}}{%endif%}⠀</span></div>{%- endmacro -%}
 {% macro code_table_bottom(fname, 
     bottom='', bottom_middle='', bottom_right='', 
-    github={}, style="", link_prefix='', class="", type='', title='', code_table_2='',top='')-%}<div style="{{style}}" role=navigation class="code_table_bottom {{class}}"><span class=code_table_1>⠀<a href=#{{link_prefix}}_top>Back to top</a></span><span class=code_table_2>{%if bottom_middle%}{{bottom_middle}}{%endif%}</span><span class=code_table_3>{%if bottom_right%}{{bottom_right}}{%endif%}⠀</span></div>{%- endmacro -%}
+    github={}, style="", link_prefix='', class="", 
+    type='', title='', code_table_2='',top='')-%}<div style="{{style}}" role=navigation class="code_table_bottom {{class}}"><span class=code_table_1>⠀<a href=#{{link_prefix}}_top>Back to top</a></span><span class=code_table_2>{%if bottom_middle%}{{bottom_middle}}{%endif%}</span><span class=code_table_3>{%if bottom_right%}{{bottom_right}}{%endif%}⠀</span></div>{%- endmacro -%}
 {#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
 {% macro header_images(lst, mkdocs, style="") -%}
 {%for hdr,icon in lst%}{%set icon=icon+'.svg' if not icon.endswith('.svg') else icon%}
@@ -129,17 +122,25 @@ addImageToHeader('{{hdr.replace(' ','-')}}','/{{mkdocs.config.site_name}}/img/{{
 {% macro repo_url(fpath, github={}, branch='master') -%}{{github.repo_url|default('#')}}/tree/{{branch}}/{{fpath}}{%- endmacro -%}
 {#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
 
-{% macro subheader(label, mkdocs={},id='') -%}
+{% macro subheader(label, mkdocs={},id='',onclick="") -%}
 <div class=subheader_div></div>
-{{_subheader(label, mkdocs=mkdocs,id=id)}}
+<a onclick="{{onclick}}">{{_subheader(label, mkdocs=mkdocs,id=id)}}</a>
 {%- endmacro -%}
 
-{% macro _subheader(label, mkdocs={},id='') -%}
-<a class=subheader id="{{id or label.lower().replace(',','').replace(' ','-')}}"></a><h7 class=subheader id="{{id or label.lower().replace(',','').replace('.','').replace('"','').replace("'",'').replace('?','').replace(' ','-')}}"><span class=subheader>{{label}}</span></h7>
+{% macro _subheader(label, mkdocs={},id='') -%}{%set norm=label.lower().replace(',','').replace('.','').replace('"','').replace("'",'').replace('?','').replace(' ','-').replace('&','').replace('--','-')%}
+<a class=subheader id="{{id or norm}}"></a><h7 class=subheader id="{{id or norm}}"><span class=subheader>{{label}}</span></h7>
 {%- endmacro -%}
 
-{# APPEND SITE MACROS
+{# EXPERIMENTAL
 {#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
 
-{#% import 'macros/site.j2' as site -%}
-{% set site=site %#}
+{% macro collapsed_include(fname, title='', mkdocs={}, collapsed=True, class="markdown")-%}{% set def1='expand' if collapsed else 'collapse'%}{%set def2='collapse' if collapsed else 'expand'%}{%set def3='display:none' if collapsed else ''%}{% set link_prefix=normalize_fname(fname) %}{% set title_id=title.lower().replace(',','').replace('.','').replace('"','').replace("'",'').replace('?','').replace(' ','-') %}
+<h7 class=subheader id="{{title_id}}"><span class=subheader>{{title}}</span></h7><a class=subheader id="{{title.lower().replace(',','').replace(' ','-')}}"></a><a id="{{link_prefix}}"></a>
+( <a 
+    style="text-decoration:unset;font-weight:bolder;font-size:smaller;font-variant:small-caps;" 
+    href="#{{title_id}}" 
+    onclick="toggle_id('{{link_prefix}}_details', this, open='{{def1}}', close='{{def2}}');return false;">{{def1}}</a> )
+<div class={{class}} style="{{def3}};margin-left:15px;" id="{{link_prefix}}_details">
+{%include fname %}
+</div>
+{%- endmacro -%}

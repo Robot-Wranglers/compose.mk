@@ -1,6 +1,5 @@
 #!/usr/bin/env -S make -f
-# demos/tui/user-input.mk: 
-#   Demonstrates user-input with a file selector
+# Demonstrates user-input with a file selector
 # USAGE: ./demos/tui/user-input.mk
 
 include compose.mk 

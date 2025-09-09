@@ -123,19 +123,12 @@ Sometimes you want a **script** that *always* runs in a container, but can be sa
 
 So far we've just looked at using dispatch with [imported tool containers]({{mkdocs.site_relative_url}}/bridge) that come from docker compose files.  Script and target dispatch comes in other flavors too though, from scripts or [from the CLI]({{mkdocs.site_relative_url}}/raw-docker/#other-docker-utilities), and works with:
 
-1. [External compose files](#dispatch-basics) (as seen above) 🍦
-1. [Inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) 🍰
-1. [Stock-images]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-tasks-in-containers) 🍭
-1. [Inlined containers]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile) 🍓
-1. [The docker host itself]({{mkdocs.site_relative_url}}/demos/polyglots#special-guests) 🍒
+1. 🍦 [External compose files](#dispatch-basics) (as seen above) 
+1. 🍭 [Inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) 
+1. 🍰 [Stock-images]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-tasks-in-containers) 
+1. 🍓 [Inlined containers]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile) 
+1. 🍒 [The docker host itself]({{mkdocs.site_relative_url}}/demos/polyglots#special-guests) 
 
-{#
-* 🍦 External compose files as we saw above
-* 🍰 [Inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) 
-* 🍭 [Stock-images]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-tasks-in-containers)
-* 🍓 [Inlined containers]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile) 
-* 🍒 [The docker host itself]({{mkdocs.site_relative_url}}/demos/polyglots#special-guests)
-#}
 Whether you're using `compose.mk` as a library, a stand-alone tool, or a framework, **this simple pattern for dispatching targets in containers is one of the main features, and it's surprisingly powerful.**  
 
 From here, if you just want to get started, you might want to look at more detailed docs for [`compose.import` arguments]({{mkdocs.site_relative_url}}/bridge/#import-macro-arguments), or [the docker-compose.yml boilerplate that supports dispatch](#compose-file-boilerplate).  

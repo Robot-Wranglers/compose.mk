@@ -60,7 +60,7 @@ Working with inlined container definitions is mostly the same as working with st
 1. Containers must be built before you can use them, typically with something like {{site.api_link('Dockerfile.build',mkdocs,arg='my_container')}}.
 1. After build, containers are tagged as something like `compose.mk:my_container`
 
-Usually the `compose.mk:..` prefix for image tags can be omitted, for example by using {{site.api_link('docker.dispatch',mkdocs,arg='target')}} instead of {{site.api_link('mk.docker.dispatch',mkdocs,arg='target')}}.
+The `compose.mk:` prefix for image tags can be omitted by using {{site.api_link('mk.docker.dispatch',mkdocs,arg='target')}} instead of {{site.api_link('docker.dispatch',mkdocs,arg='target')}}.
 
 See the [polyglot demos]({{mkdocs.site_relative_url}}/demos/polyglots) and [matrioshka demos]({{mkdocs.site_relative_url}}/demos/matrioshka) for many examples of working with embedded images.  See also the equivalent idioms in [CMK-lang]({{mkdocs.site_relative_url}}/compiler/#dockerfile-example).  The rest of this section covers low-level support.
 
@@ -77,7 +77,7 @@ Sometimes you might be interested in fine-grained control or more flexibility.  
 ### Dispatch Scripts in Containers
 <hr style="width:100%;border-bottom:3px solid black;">
 
-[Dispatching tasks](#dispatch-tasks-in-containers) is usually more composable, but working with scripts can be more convenient for one-offs.  Script dispatch with stock-images looks like this:
+[Dispatching tasks](#dispatch-tasks-in-containers) is more composable, but working with scripts can be more convenient for one-offs.  Script dispatch with stock-images looks like this:
 
 {{site.embed_demo('demos/script-dispatch-stock.mk', github=github,
         bottom_right=site.link_mirror('demos/cmk/script-dispatch-stock.cmk',link=mkdocs.site_relative_url+'/compiler/#dockerfile-example')

@@ -38,6 +38,20 @@ Fixed width, no args:
 
 {{macros.img_link("tui-extension-1.png", mkdocs, "350px")}}
 
+### Embedding Collapsed-Includes 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Using `macros.collapsed_include(includes/lorem-ipsum.md)`:
+
+{{macros.collapsed_include('includes/lorem-ipsum.md', title="Lorem Ipsum")}}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+  addImageToHeader('lorem-ipsum','../img/reflection.svg')
+}, 100);});
+</script>
+
+
 ### File Embeddings
 <hr style="width:100%;border-bottom:3px solid black;">
 

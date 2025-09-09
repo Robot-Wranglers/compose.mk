@@ -77,14 +77,13 @@ This example above is typical, but not necessarily minimal, so let's discuss a f
 
 **Regarding base images,** there's a good chance your tool-container already includes `make`, and you don't need to add packages at all.  But if you're looking for reasonable base-containers that include `make` and will help you avoid initial package updates with `apt` or `apk`.. you might consider things like [golang containers](https://hub.docker.com/_/golang/tags), [gcc containers](https://hub.docker.com/_/gcc/), or [`debian/buildd:bookworm`](https://packages.debian.org/bookworm/buildd).
 
-::: tip "Tips for configuring docker-compose":
-
-1. **Use defaults-with-overrides in `FROM` lines** to stay versioned but still keep some flexibility. 
-1. **Use `dockerfile_inline` to quickly extend a base-container**, without adding an extra Dockerfile to your repository.  Tool-containers rarely change once established, and having a separate file and separate git/docker repos for everything can get tedious.  
-1. **Use yaml inheritance with anchors,** i.e. `&base` and `<<: *base`.  This is a good trick to keep compose files DRY and as simple as possible.  
-1. **Provide a few optional keys just for clarity.** Things like `hostname` clean up logging, and even if `entrypoint` isn't used by software it can help humans who are trying to debug.
-1. **Correct config keys for `working_dir` and `volumes` are crucial for project file IO,** which might include reading your project `Makefile` if you're using container dispatch.
-1. It's optional, but **there are cases where you'll want `docker` to be available inside tool-containers** and you also might want to share the hosts docker-socket.[^1]  The boilerplate above goes half way, defaulting to using a volume mount but stopping short of actually installing docker.  
+!!! tip "Tips for configuring docker-compose"
+    1. **Use defaults-with-overrides in `FROM` lines** to stay versioned but still keep some flexibility. 
+    1. **Use `dockerfile_inline` to quickly extend a base-container**, without adding an extra Dockerfile to your repository.  Tool-containers rarely change once established, and having a separate file and separate git/docker repos for everything can get tedious.  
+    1. **Use yaml inheritance with anchors,** i.e. `&base` and `<<: *base`.  This is a good trick to keep compose files DRY and as simple as possible.  
+    1. **Provide a few optional keys just for clarity.** Things like `hostname` clean up logging, and even if `entrypoint` isn't used by software it can help humans who are trying to debug.
+    1. **Correct config keys for `working_dir` and `volumes` are crucial for project file IO,** which might include reading your project `Makefile` if you're using container dispatch.
+    1. It's optional, but **there are cases where you'll want `docker` to be available inside tool-containers** and you also might want to share the hosts docker-socket.[^1]  The boilerplate above goes half way, defaulting to using a volume mount but stopping short of actually installing docker.  
 
 {#
 ### Running with Docker
@@ -141,43 +140,53 @@ $ make demos
 # Run only CMK-lang demos
 $ make demos/cmk
 ```
-<a name=forks-version></a>
+
 ### Plugins, Forks, & Versioning
 <hr style="width:100%;border-bottom:3px solid black;">
+<a name=forks-version></a>
 
 Given the advice above to simply embed `compose.mk` directly into your project repositories, some people might be reading this and thinking **what if compose.mk changes upstream?** 
 
-The main things you can do are:
+Eventually `compose.mk` might get a pypi installer option[^2], but for now the main things you can do are:
 
-* **Fork-and-Forget:** The [standard library]({{mkdocs.site_relative_url/standard-lib}}) for `compose.mk` is approaching *frozen*, so if you're not using [CMK-lang]({{mkdocs.site_relative_url}}/compiler), this is a pretty reasonable option.
+**Fork-and-Forget:**
+:   The [standard library]({{mkdocs.site_relative_url}}/standard-lib) for `compose.mk` is approaching *frozen*, so especially if you're not using [CMK-lang]({{mkdocs.site_relative_url}}/compiler), this is a pretty reasonable option.
+: &nbsp;
 
+**Git Submodule:**:
+:   If you really need to track upstream, or if you want to track *plugins*, you can setup the [.cmk/ repository]({{jinja.vars.cmk_plugins_repo_url}}) (or your fork of it) as a git submodule inside your project folder.[^3]
 
-* **Git Submodule:** If you really need to track upstream, or if you want to track *plugins*, you can setup the [.cmk/ repository]({{jinja.vars.cmk_plugins_repo_url}}) (or your fork of it) as a git submodule inside your project folder.
+To check the version you're currently using:
 
-
-
-{#
-See also the section on [Contributing]({{mkdocs.site_relative_url}}/contributing)
-
-Fork-and-forget is a reasonable strategy here, and *removing dependency problems* rather than causing new ones is the goal.  For more discussion, .
-#}
+```bash {.cli_example}
+$ ./compose.mk mk.stat
+```
+```json {.cli_output}
+{
+  "make_version": "4.3",
+  "compose.mk": "d998bdc7598a4deeacf613bee2e9fddd"
+}
+```
 
 ### References
 <hr style="width:100%;border-bottom:3px solid black;">
 
 [^1]: For example, remote controlling the TUI relies on docker-sockets.  Also [tool wrappers]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) fall back to docker, so using them with [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) means docker-in-docker.
-[^2]: Eventually `compose.mk` will probably get a pypi installer option[^3].  But that won't help much if you're not already in the Python ecosystem, and it does undermine the goal of minimalism.
-[^3] See for example [this guide](https://medium.com/%40azinke.learn/packaging-shell-scripts-9309e200c818) 
+[^2]: If you're interested, vote for [this issue]({{git.repo_url}}/issues/17).
+[^3]: See also the docs at the [.cmk plugins repo](https://github.com/Robot-Wranglers/.cmk#git-submodules)
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
-	addImageToHeader('basic-installation','/{{mkdocs.config.site_name}}/img/basics.svg')
-	addImageToHeader('project-integration','/{{mkdocs.config.site_name}}/img/stack-middle.svg')
-	addImageToHeader('compatibility-notes','/{{mkdocs.config.site_name}}/img/progress-check.svg')
-	addImageToHeader('forks-versioning','/{{mkdocs.config.site_name}}/img/code-dots.svg')
-	addImageToHeader('for-developers','/{{mkdocs.config.site_name}}/img/code-dots.svg')
+{{macros.header_images([
+		['basic-installation', 'basics'],
+		['references','list-details'],
+		['project-integration','stack-middle'],
+		['compatibility-notes','progress-check'],
+		['forks-versioning','code-dots'],
+		['for-developers','code-dots'],
+		['other kinds of dispatch','link']
+	], mkdocs)}}
 	addImageToHeader('docker-compose-integration','/{{mkdocs.config.site_name}}/img/compose.png',style="margin-top:-10px;height:2.2em;")
 	addImageToHeader('makefile-integration','/{{mkdocs.config.site_name}}/img/makefile.png',style="margin-top:-10px;height:2.2em;")
-	addImageToHeader('other-kinds-of-dispatch','/{{mkdocs.config.site_name}}/img/link.svg')
 }, 100);});
 </script>
