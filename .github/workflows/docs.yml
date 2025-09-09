@@ -33,7 +33,7 @@ jobs:
         uses: actions/configure-pages@v5
       - name: Build with mkdocs
         run: |
-          make clean init actions.docs
+          make clean init docs
       
       # https://github.com/actions/upload-pages-artifact
       - name: Upload artifact
