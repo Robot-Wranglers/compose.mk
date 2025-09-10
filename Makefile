@@ -23,7 +23,11 @@ __main__: init clean build test docs
 
 init: mk.stat docker.stat
 validate: validate.makefiles validate.markdown
-docs: flux.stage/documentation docs.README.static docs.jinja
+docs: flux.stage/documentation docs.README.static docs.jinja docs.pynchon.dispatch/.docs.build
+.docs.build:
+	$(call log.target, building)
+	set -x && (mkdocs build --clean --verbose && tree site) \
+	; find site docs | xargs chmod o+rw; ls site/index.html
 
 # Mirroring templated files to untemplated ones elsewhere in the repository.
 .PHONY: README.md demos/cmk/README.md demos/README.md
