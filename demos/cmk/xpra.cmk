@@ -81,7 +81,7 @@ services:
         target: /root/.config/i3/config
 ⋙
 
-serve: xpra.stop xpra.build xpra.up.detach xpra.exec/i3.start_apps flux.timeout/5/xpra.logs
+serve: xpra.stop xpra.build xpra.up.detach xpra.exec.bg/i3.start_apps flux.timeout/5/xpra.logs
 	@# Starts an XOrg server, rebuilding the xpra container if necessary.
 	@# Then start/detach i3 WM, and start a few apps inside.  
 	@# Tail the logs for a while, wait for user-input, exit cleanly.
