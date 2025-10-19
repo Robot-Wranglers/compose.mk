@@ -2758,7 +2758,7 @@ endef
 ## DAGs.
 ##
 ## What `flux.*` targets add is *flow-control constructs* and *higher-level 
-## join/loop/map* instructions over other make targets, taking inspiration from 
+## join/loop/map* instructions over other make-targets, taking inspiration from 
 ## functional programming and threading libraries. Alternatively, one may think of
 ## flux as a programming language where all primitives are the objects that make 
 ## understands, like targets, defines, and variables. Since every target in `make`

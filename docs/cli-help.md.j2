@@ -99,9 +99,9 @@ The implementation for help uses the `mk.help.*` family of targets, and if you w
 
 {{site.api_link_many(['mk.help'],mkdocs)}}
 
-Heavy lifting for parsing Makefile metadata comes from a dockerized version of the [pynchon tool]({{jinja.vars.pynchon_repo_url}}/blob/master/src/pynchon/util/makefile/__init__.py), which can parse help as well as more structural details like target-prerequisites / DAGs.  
+Heavy lifting for parsing Makefile metadata comes from a dockerized version of the [mk.parse]({{jinja.vars.mkparse_repo_url}}/), which can parse help as well as more structural details like target-prerequisites / DAGs.  
 
-To see example output or just precache the pynchon container, you can use {{site.api_link('mk.parse',mkdocs,arg='some_makefile')}}.  To get an idea about the schema, we can use `compose.mk` to parse it's own content, then show the JSON structure for the `mk.parse` target itself.
+To see example output or just precache the `mk.parse` container, you can use {{site.api_link('mk.parse',mkdocs,arg='some_makefile')}}.  To get an idea about the schema, we can use `compose.mk` to parse it's own content, then show the JSON structure for the `mk.parse` target itself.
 
 
 ```bash {.cli_example}
@@ -116,10 +116,10 @@ $ ./compose.mk mk.parse/compose.mk
     "chain": [],
     "type": "implicit",
     "docs": [
-      " Parses the given Makefile, returning JSON output that describes the targets, docs, etc. This parsing is \"deep\", i.e. it returns docs & metadata for *included* targets as well. This uses a dockerized version of the pynchon[1] tool.",
+      " Parses the given Makefile, returning JSON output that describes the targets, docs, etc. This parsing is \"deep\", i.e. it returns docs & metadata for *included* targets as well. This uses a dockerized version of the mkparse[1] tool.",
       "",
       " REFS:",
-      "* `[1]`: https://github.com/robot-wranglers/pynchon/",
+      "* `[1]`: https://github.com/mattvonrocketstein/mk.parse/",
       ""
     ],
     "prereqs": [],
