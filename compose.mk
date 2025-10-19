@@ -1934,23 +1934,6 @@ mk.help.search/%:; prefix=${*} ${make} mkparse
 # 			); ;; \
 # 	esac
 
-mk.kernel:
-	@# Executes the input data on stdin as a kind of "script" that 
-	@# runs inside the current make-context.  This basically allows
-	@# you to treat targets as an instruction-set without any kind 
-	@# of 'make ... ' preamble.
-	@#
-	@# USAGE: ( concrete )
-	@#  echo flux.ok | ./compose.mk kernel
-	@#  echo flux.and/flux.ok,flux.ok | ./compose.mk kernel
-	@#
-	instructions="`${stream.stdin} | ${stream.nl.to.space}`" \
-	&& count=`printf "$${instructions}" | ${stream.count.words}` \
-	&& $(call log.target.part1, parsing input stream as instructions ) \
-	&& $(call log.target.part2, ${yellow}$${count}${no_ansi_dim} total) \
-	&& ${trace_maybe} && ${make} $${instructions}
-
-
 define cmk.default.sugar
 [
 	["⋘", "⋙", "$(call compose.import.string, def=__NAME__ import_to_root=TRUE)"],
@@ -1969,8 +1952,10 @@ define cmk.default.dialect
 	["this.", "${make} "]
 ]
 endef 
-# mk.aliases:
-# 	printf "alias mk.compile='${CMK_BIN} mk.compile'\n"
+
+
+mk.clean:; rm -f .tmp.*
+	@# Cleans `.tmp.*` files
 
 mk.compile/% mk.compiler/%:; ls ${*} && export __interpreting__=${*} && cat ${*} | (${mk.compile})
 	@# Like `mk.compile`, but accepts file as argument instead of using stdin.
@@ -2005,6 +1990,22 @@ esac \
 	${make} $${runner}/mk.preprocess,io.awk/.awk.main.preprocess,io.awk/.awk.dispatch
 endef
 	
+mk.kernel:
+	@# Executes the input data on stdin as a kind of "script" that 
+	@# runs inside the current make-context.  This basically allows
+	@# you to treat targets as an instruction-set without any kind 
+	@# of 'make ... ' preamble.
+	@#
+	@# USAGE: ( concrete )
+	@#  echo flux.ok | ./compose.mk kernel
+	@#  echo flux.and/flux.ok,flux.ok | ./compose.mk kernel
+	@#
+	instructions="`${stream.stdin} | ${stream.nl.to.space}`" \
+	&& count=`printf "$${instructions}" | ${stream.count.words}` \
+	&& $(call log.target.part1, parsing input stream as instructions ) \
+	&& $(call log.target.part2, ${yellow}$${count}${no_ansi_dim} total) \
+	&& ${trace_maybe} && ${make} $${instructions}
+
 mk.src: 
 	@# Returns source-code for this make-context (excluding compose.mk).
 	@# This effectively flattens includes, basically concatenating 
@@ -2751,8 +2752,6 @@ endef
 ## container dispatch is similar in spirit to things like declarative pipelines 
 ## in Jenkins, but simpler, more portable, and significantly easier to use.  
 ##
-## ----------------------------------------------------------------------------
-##
 ## What's a workflow in this context? Shell by itself is fine for what you might
 ## call "process algebra", and using operators like `&&`, `||`, `|` in the grand 
 ## unix tradition goes a long way. And adding `make` to the mix already provides 
@@ -2773,8 +2772,6 @@ endef
 ##
 ## For parts that are more specific to shell code, see `flux.*.sh`, and for 
 ## working with scripts see `flux.*.script`.
-##
-## ----------------------------------------------------------------------------
 ##
 ## DOCS:
 ## * `[1]:` [Main API](https://robot-wranglers.github.io/compose.mk/api#api-flux)
