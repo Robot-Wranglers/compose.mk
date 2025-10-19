@@ -19,7 +19,7 @@ include compose.mk
 # Load all services from 2 compose files into 1 namespace.
 $(call compose.import, file=demos/data/docker-compose.yml namespace=▰)
 
-__main__: flux.star/test.*
+__main__: flux.star/test
 	
 test.mk.assert_env_var:
 	$(call log.test, Testing assert.env_var macros)
@@ -214,3 +214,4 @@ define script.demo.docker.run.def
 import sys
 print(['input',sys.stdin.read().strip()])
 endef
+zonk:=bop

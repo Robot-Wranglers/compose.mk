@@ -380,11 +380,8 @@ $(shell printf "trace=$${TRACE} quiet=$${quiet} verbose=$${verbose:-} ${yellow}C
 endif 
 
 # External tool used for parsing Makefile metadata
-PYNCHON_VERSION?=a817d58
-pynchon=$(trace_maybe) && ${pynchon.run}
-# pynchon.run=python -m pynchon.util.makefile
-pynchon.docker=${docker.run.base} --entrypoint python robotwranglers/pynchon:${PYNCHON_VERSION} 
-pynchon.run:=$(shell which pynchon >/dev/null 2>/dev/null && echo python || echo "${pynchon.docker}") -m pynchon.util.makefile
+MKPARSE_IMG?=ghcr.io/mattvonrocketstein/mk.parse:main
+mkparse=$(trace_maybe) && ${docker.run.base} ${MKPARSE_IMG} $${subcommand:-targets}
 
 # Macros for use with jq/yq/jb, using local tools if available and falling back to dockerized versions
 jq.docker=${docker.run.base} -e key=$${key:-} ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}
@@ -623,7 +620,7 @@ docker.compose:=$(shell docker compose >/dev/null 2>/dev/null && echo docker com
 
 docker.containers.all:=docker ps --format json
 
-docker.clean:
+mk.docker.clean:
 	@# This refers to "local" images.  Cleans all images from 'compose.mk' repository,
 	@# i.e. affiliated containers that are related to the embedded TUI, and certain things
 	@# created by the 'docker.*' targets. No arguments.
@@ -1001,9 +998,13 @@ docker.prune.old: flux.timer/.docker.prune.old
 docker.ps:; docker ps --format json | ${jq} .
 	@# Like 'docker ps', but always returns JSON.
 
-docker.rmi/%:
+docker.rmi:
+	@# Removes images with `docker rmi`.  Must provide `img` in environment.
+	force=`case $${force:-} in 1) echo '--force';; *) echo ;; esac` \
+	&& set -x && docker rmi $${force} $${img} 2>/dev/null|| true
+
+docker.rmi/%:; img=${*} ${make} docker.rmi
 	@# USAGE: Shortcut for `docker rmi ..` 
-	set -x && docker rmi $(pynchon.img) >/dev/null || true
 	
 docker.run.def:
 	@# Treats the named define-block as a script, then runs it inside the given container.
@@ -1807,17 +1808,17 @@ mk.get/%:; $(info ${${*}})
 mk.help: mk.namespace.filter/mk.
 	@# Lists only the targets available under the 'mk' namespace.
 
-mk.help.module/%:
+mk.help.module/%:;
 	@# Shows help for the named module.
 	@# USAGE: ./compose.mk mk.help.module/<mod_name>
-	$(call io.mktemp) && export key="${*}" \
-	&& (CMK_INTERNAL=1 ${make} mk.parse.module.docs/${MAKEFILE} \
-		| ${jq} ".$${key}"  2>/dev/null | ${jq} -r '.[1:-1][]' 2>/dev/null  \
-	> $${tmpf}) \
-	; [ -z "`cat $${tmpf}`" ] && exit 0 \
-	|| ( \
-		$(call log.mk, mk.help.module ${sep} ${bold}$${key}) \
-		&& cat $${tmpf} | ${stream.glow} >/dev/stderr ) 
+# $(call io.mktemp) && export key="${*}" \
+# && (CMK_INTERNAL=1 ${make} mk.parse.module.docs/${MAKEFILE} \
+# 	| ${jq} ".$${key}"  2>/dev/null | ${jq} -r '.[1:-1][]' 2>/dev/null  \
+# > $${tmpf}) \
+# ; [ -z "`cat $${tmpf}`" ] && exit 0 \
+# || ( \
+# 	$(call log.mk, mk.help.module ${sep} ${bold}$${key}) \
+# 	&& cat $${tmpf} | ${stream.glow} >/dev/stderr ) 
 
 mk.help.block/%:
 	@# Shows the help-block matching the given pattern.
@@ -1882,46 +1883,56 @@ stream.preview.maybe=(case $${preview:-1} in \
 # 	1) ${stream.glow};; \
 # 	*) printf '\n**`${*}`**\n\n'; cat;; \
 # 	esac)
+mkparse:
+	@#
+	prefix=`case $${prefix:-} in "") echo;; *) echo "--prefix $${prefix}";; esac` \
+	&& local=`case $${local:-} in "") echo;; *) echo "--local";; esac` \
+	&& preview=`case $${preview:-} in "") echo;; *) echo "--preview";; esac` \
+	&& echo "$${prefix} $${local} $${preview} --public "; exit 44 \
+	&& ${trace_maybe} && ${mkparse} $${path:-${MAKEFILE}} $${prefix} $${local} $${preview} --public 
 
 help.local:
 	@# Renders help for all local targets, i.e. just the ones that do NOT come from includes.
 	@# Usually used from an included makefile, not with compose.mk itself. 
 	@#
 	$(call log.target, ${dim}Rendering help for${no_ansi} ${bold}${underline}${MAKEFILE}${no_ansi} ${dim_ital}(no includes)\n)
-	targets="`${mk.targets.local.public} | grep -v '%' | grep "$${filter:-.}"`" \
-	&& width=`echo | awk "{print int(.6*${io.term.width})}"` \
-	&& tdisp=`printf "$${targets}" | ${stream.fold}` && label=bonk && $(call log.dump_var,tdisp) \
-	&& (printf "## Local Targets (No includes)\n" ; printf "$${targets}" | xargs -I% printf '[%](#%) ' && printf '\n' \
-	&& printf "$${targets}" \
-	| CMK_INTERNAL=1 quiet=1 preview=0 ${flux.each}/mk.help.target) | ${stream.preview.maybe}
+	local=1 ${make} mkparse
 
-help.local.filter/%:; filter="${*}" ${make} help.local
+# targets="`${mk.targets.local.public} | grep -v '%' | grep "$${filter:-.}"`" \
+# && width=`echo | awk "{print int(.6*${io.term.width})}"` \
+# && tdisp=`printf "$${targets}" | ${stream.fold}` && label=bonk && $(call log.dump_var,tdisp) \
+# && (printf "## Local Targets (No includes)\n" ; printf "$${targets}" | xargs -I% printf '[%](#%) ' && printf '\n' \
+# && printf "$${targets}" \
+# | CMK_INTERNAL=1 quiet=1 preview=0 ${flux.each}/mk.help.target) | ${stream.preview.maybe}
+
+help.local.filter/%:; prefix="${*}" local=1 ${make} mkparse
 	@# Like `help.local`, but filters local targets first using the given pattern.
 	@# Usually used from an included makefile, not with compose.mk itself. 
 	@#
 	@# USAGE: 
 	@#   make help.local.filter/<pattern>
 
-mk.help.search/%:
-	@# Shows all targets matching the given prefix.
-	@#
-	@# USAGE:
-	@#   ./compose.mk mk.help.search/<pattern>
-	@#
-	$(call io.mktemp) \
-	&& ${make} mk.parse.targets/${MAKEFILE} | grep "^${*}" \
-		| sed 's/\/%/\/<arg>/g' > $${tmpf} \
-	&& max=5 && count="`cat $${tmpf}|${stream.count.lines}`" \
-	&& case $${count} in \
-		1) exit 0; ;; \
-		*) ( \
-			$(call log.mk, ${no_ansi_dim}mk.help.search ${sep} ${dim}pattern=${no_ansi}${bold}${*}) \
-			; cat $${tmpf} | head -$${max} \
-			| xargs -I% printf "  ${dim_green}${GLYPH.tree_item} ${dim}${ital}%${no_ansi}\n" \
-			| ${stream.indent} >/dev/stderr \
-			&& $(call log.mk, ${no_ansi_dim}mk.help.search ${sep}${dim} top ${no_ansi}$${max}${no_ansi_dim}${comma} of ${no_ansi}$${count}${no_ansi_dim} total )\
-			); ;; \
-	esac
+mk.help.search/%:; prefix=${*} ${make} mkparse
+# mk.help.search/%:
+# 	@# Shows all targets matching the given prefix.
+# 	@#
+# 	@# USAGE:
+# 	@#   ./compose.mk mk.help.search/<pattern>
+# 	@#
+# 	$(call io.mktemp) \
+# 	&& ${make} mk.parse.targets/${MAKEFILE} | grep "^${*}" \
+# 		| sed 's/\/%/\/<arg>/g' > $${tmpf} \
+# 	&& max=5 && count="`cat $${tmpf}|${stream.count.lines}`" \
+# 	&& case $${count} in \
+# 		1) exit 0; ;; \
+# 		*) ( \
+# 			$(call log.mk, ${no_ansi_dim}mk.help.search ${sep} ${dim}pattern=${no_ansi}${bold}${*}) \
+# 			; cat $${tmpf} | head -$${max} \
+# 			| xargs -I% printf "  ${dim_green}${GLYPH.tree_item} ${dim}${ital}%${no_ansi}\n" \
+# 			| ${stream.indent} >/dev/stderr \
+# 			&& $(call log.mk, ${no_ansi_dim}mk.help.search ${sep}${dim} top ${no_ansi}$${max}${no_ansi_dim}${comma} of ${no_ansi}$${count}${no_ansi_dim} total )\
+# 			); ;; \
+# 	esac
 
 mk.kernel:
 	@# Executes the input data on stdin as a kind of "script" that 
@@ -2350,19 +2361,20 @@ mk.namespace.list help.namespaces:
 	&& printf "$${tmp}\n" \
 	&& $(call log, ${no_ansi}${GLYPH_MK} help.namespaces ${sep} ${dim}count=${no_ansi}$${count} )
 
-_mk.parse=${pynchon} parse --markdown ${1} 2>/dev/null
+_mk.parse=${mkparse} ${1} 2>/dev/null
 mk.parse/%:; $(call _mk.parse,${*})
 	@# Parses the given Makefile, returning JSON output that describes the targets, docs, etc.
 	@# This parsing is "deep", i.e. it returns docs & metadata for *included* targets as well.
-	@# This uses a dockerized version of the pynchon[1] tool.
+	@# This uses a dockerized version of the mkparse[1] tool.
 	@#
 	@# REFS:
-	@#   * `[1]`: https://github.com/elo-enterprises/pynchon/
-	@#
+	@#   * `[1]`: https://github.com/mattvonrocketstein/mk.parse/
+
 mk.parse:
 	@# Parse / merge for each Makefile in MAKEFILE_LIST
 	echo "${MAKEFILE_LIST}" | ${stream.space.to.nl} \
 	| ${flux.each}/mk.parse | ${jq} -s '.[0] * .[1]'
+
 mk.pkg:
 	@# Like `mk.self`, but includes `compose.mk` source also.
 	set -x && archive="$${archive} ${CMK_SRC}" ${make} mk.self
@@ -2405,8 +2417,10 @@ mk.namespace.filter/%:
 	@# USAGE: ./compose.mk mk.namespace.filter/<prefix>
 	@#
 	${trace_maybe} \
-	&& pattern="${*}" && pattern="$${pattern//./[.]}" \
-	&& ${make} mk.parse.targets/${MAKEFILE} | grep -v ^all$$ | grep ^$${pattern}
+	&& pattern="${*}" \
+	&& ${mkparse} --prefix $${pattern} $${path:-${MAKEFILE}} | ${jq} -r '.|keys[]'
+
+# && ${make} mkparse ${MAKEFILE} | grep -v ^all$$ | grep ^$${pattern}
 
 mk.require.tool/%:; $(call _mk.require.tool, ${*})
 	@# Asserts that the given tool is available in the environment.
@@ -2433,17 +2447,13 @@ mk.select/%:
 	&& header="Choose a target:" && ${io.get.choice} \
 	&& ${io.shell.isolated} bash ${dash_x_maybe} -c "make -f ${*} $${chosen}"
 
-mk.targets/% mk.parse.shallow/%:
+mk.targets/% mk.parse.shallow/%:; ${mkparse} --shallow ${*} | ${jq} -r '.[]'
 	@# Returns only local targets from the given file, ignoring includes.
 	@# Returns a newline-delimited list of targets inside the given Makefile.
 	@# Unlike `mk.parse`, this is "flat" and too naive to parse targets that come 
 	@# via includes.  Targets starting with "." are considered private, and 
 	@# ommitted from the return value.
-	@#
-	cat ${*} | awk '/^define/ { in_define = 1 } /^endef/  { in_define = 0; next } !in_define { print }' \
-	| grep '^[^#[:space:]].*:' | grep -v ':=' | cut -d\\ -f1|cut -d\; -f1 \
-	| grep -v '.*[=].*[:]' | grep -v '^[.]' |grep -v '\$$' | cut -d\: -f1 | ${stream.space.to.nl}
-
+	
 mk.targets.filter/%:
 	@# Lists all targets in the given namespace, filtering them by the given pattern.
 	@# Simple, pipe-friendly output.  
@@ -2452,7 +2462,7 @@ mk.targets.filter/%:
 	@# USAGE: ./compose.mk mk.targets.filter/<namespace>
 	@#
 	${trace_maybe} && pattern="${*}" && pattern="$${pattern//./[.]}" \
-	&& ${make} mk.targets | grep -v ^all$$ | grep ^$${pattern}
+	&& ${make} mk.targets | grep ^$${pattern}
 
 mk.parse.block/%:
 	@# Pulls out documentation blocks that match the given pattern.
@@ -2461,17 +2471,18 @@ mk.parse.block/%:
 	@#  pattern=.. ./compose.mk mk.parse.block/<makefile>
 	@#
 	@# EXAMPLE:
-	@#   pattern='*Keybindings*' make mk.parse.block/compose.mk
+	@#   pattern='TUI' make mk.parse.block/compose.mk
 	@#
-	CMK_INTERNAL=1 ${make} mk.parse.module.docs/${*} \
-	| ${jq.run} "to_entries | map(select(.key | test(\".*$${pattern}.*\"))) | first | .value" \
-	| ${jq.run} -r '.[1:-1][]'
+	set -x && subcommand=cblocks; ${mkparse} --pattern "$${pattern:-}" ${*}
+# 	CMK_INTERNAL=1 ${make} mk.parse.module.docs/${*} \
+# 	| ${jq.run} "to_entries | map(select(.key | test(\".*$${pattern}.*\"))) | first | .value" \
+# 	| ${jq.run} -r '.[1:-1][]'
 
-mk.targets mk.parse.targets mk.targets.local mk.parse.local: mk.parse.shallow/${MAKEFILE}
+mk.targets mk.parse.targets mk.targets.local mk.parse.local:; ${make} mk.parse.shallow/$${path:-${MAKEFILE}}
 	@# Returns only local targets for the current Makefile, ignoring includes
 	@# Output of `mk.parse.shallow/` for the current val of MAKEFILE.
 
-mk.parse.targets/%:
+mk.parse.targets/%:; path=${*} ${make} mkparse | ${jq} -r '. | keys'
 	@# Parses the given Makefile, returning target-names only. Simple, pipe-friendly output. 
 	@# Also available as a macro.  
 	@# WARNING: Callers must anticipate parametric targets with percent-signs, i.e. "foo.bar/%"
@@ -2479,18 +2490,18 @@ mk.parse.targets/%:
 	@# USAGE: 
 	@#   ./compose.mk mk.parse.targets/<file>
 	@#
-	$(call _mk.parse, ${*}) | ${jq.run} -r '. | keys[]'
+# $(call _mk.parse, ${*}) 
 mk.parse.targets=${make} mk.parse.targets
 mk.targets.local=${mk.parse.targets} | sort | uniq
 mk.targets.local.public=${mk.targets.local} | grep -v '^self.' | grep -v '^[.]' | sort -V
 
-mk.parse.module.docs/%:
-	@# Parses the given Makefile, returning module-level documentation.
-	@#
-	@# USAGE:
-	@#  pattern=.. ./compose.mk mk.parse.module.docs/<makefile>
-	@#
-	${trace_maybe} && (${pynchon} parse --module-docs ${*} 2>/dev/null || echo '{}') | ${jq} . || true
+# mk.parse.module.docs/%:
+# 	@# Parses the given Makefile, returning module-level documentation.
+# 	@#
+# 	@# USAGE:
+# 	@#  pattern=.. ./compose.mk mk.parse.module.docs/<makefile>
+# 	@#
+# 	${trace_maybe} && (${pynchon} parse --module-docs ${*} 2>/dev/null || echo '{}') | ${jq} . || true
 
 define Dockerfile.makeself
 FROM debian:bookworm
@@ -5169,9 +5180,7 @@ endef
 
 mk.docker.rmi/%:; CMK_INTERNAL=1 img="compose.mk:${*}" ${make} docker.rmi
 	@# Removes images with `docker rmi`.  Uses the compose.mk prefix automatically.
-docker.rmi:
-	@# Removes images with `docker rmi`.  Must provide `img` in environment.
-	docker rmi $${img} || true
+
 # Scaffolds dispatch/shell/run targets for the given docker image
 docker.import=$(eval $(call _docker.import,${1}))
 docker.import.def=$(eval $(call _docker.import.def,${1}))
@@ -5205,11 +5214,12 @@ ${kwargs_namespace}.img:=${kwargs_img}
 ${kwargs_namespace}.dispatch/%:; img=${kwargs_img} hostname=${kwargs_img} \
 	${make} docker.dispatch/$${*}
 ${kwargs_namespace}.build:
-	case ${kwargs_file} in \
-		undefined) $$(call log.docker, $${@} ${sep} file is undefined!) ;; \
+	${trace_maybe} \
+	&& case ${kwargs_file} in \
+		undefined) $$(call log.docker, $${@} ${sep} docker.importfile is undefined!) ;; \
 		*) ( \
 			$$(call log.docker, $${@} ${sep} ${dim}(via img=${no_ansi}${kwargs_img} ${dim}file=${no_ansi}${kwargs_file}${dim}) ${sep} ${cyan_flow_right}) \
-			&& tag=${kwargs_img} ${make} docker.build/$${kwargs_file} \
+			&& tag=${kwargs_img} ${make} docker.build/${kwargs_file} \
 			&& $$(call log.target, ${bold}${green}${GLYPH_CHECK}) \
 		);; \
 	esac
@@ -6046,6 +6056,7 @@ $0 == begin_marker {
 $0 == end_marker {print $0; in_target_section = 0; next }
 !in_target_section { print $0 }
 endef
+
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 # 𒄡 BEGIN GUEST
 # 𒄡 END GUEST

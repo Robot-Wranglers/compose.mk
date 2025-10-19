@@ -55,7 +55,7 @@ clean: flux.stage.clean
 build: tux.require
 	@# Containers are normally pulled on demand, 
 	@# but pre-caching cleans up the build logs.
-	${jb} foo=bar | ${jq} .
+	${jb} foo=bar | ${jq} . > /dev/null
 
 normalize: # NOP
 pygments.nord: pygments.css/nord-darker
