@@ -22,8 +22,13 @@ $(call compose.import, file=demos/data/docker-compose.yml)
 __main__: init clean build test docs
 
 init: mk.stat docker.stat
+	@# 
+
 validate: validate.makefiles validate.markdown
+	@# 
+
 docs: flux.stage/documentation docs.README.static docs.jinja docs.pynchon.dispatch/.docs.build
+	@# 
 .docs.build:
 	$(call log.target, building)
 	set -x && (mkdocs build --clean --verbose && tree site) \
@@ -37,12 +42,14 @@ demos/README.md:; ${docs.render.mirror}
 docs.README.static: README.md demos/README.md demos/cmk/README.md
 
 validate.markdown:
+	@#
 	${make} docs.jinja_templates \
 	| ${stream.fold} | ${stream.peek} \
 	| ${stream.space.to.nl} \
 	| ${io.xargs.verbose} "${make} validate.markdown/%"
 validate.markdown/%:; pynchon jinja render ${*}
 validate.makefiles:
+	@# 
 	ls demos/*[.]mk | ./compose.mk flux.each/mk.validate
 	ls demos/tui/*[.]mk | ./compose.mk flux.each/mk.validate
 
@@ -62,6 +69,8 @@ pygments.nord: pygments.css/nord-darker
 pygments.css/%:; pygmentize -S ${*} -f html 
 
 test: validate integration-test demos smoke-test 
+	@#
+
 itest integration-test:; ./demos/itest.mk
 	@# Runs the integration-test suite.
 
@@ -70,10 +79,12 @@ stest smoke-test:
 	ls tests/*.sh | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 
 demos demos.test demo-test:
+	@# 
 	set -x && ls demos/*.mk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 	# set -x && ls demos/*.mk |grep -v lean| xargs -I% bash -x -c "./% || exit 255"
 
 demos/cmk:
+	@# 
 	set -x && ls demos/cmk/*.cmk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 
 demo:
@@ -81,6 +92,7 @@ demo:
 	pattern='*.mk' dir=demos/ ${make} flux.select.file/mk.select
 
 docs.agent:
+	@# 
 	mv docs/img docs.img \
 	; archive='docs demos' bin=docs.agent ./demos/cmk/rag.cmk mk.pkg.root \
 	; mv docs.agent docs/artifacts \
@@ -91,3 +103,4 @@ actions.demos:
 	${io.shell.isolated} script -q -e -c "bash --noprofile --norc -eo pipefail -x -c 'make demos'"
 
 serve: docs.serve
+	@# Runs the mkdocs server

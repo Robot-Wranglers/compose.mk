@@ -22,10 +22,9 @@ See the next section for more detailed information about background and caveats.
 
 **Demos here are so far mainly targeting Linux, and sometimes x11 and/or system packages might be required.**
 
-Despite amazing work with projects like x11docker[^1], Xephyr[^2], xquartz[^3], and xpra[^4] .. working with GUIs tends to be fragile, fiddly, and less portable than terminal apps.  Any or all of those projects can in principle be combined with `compose.mk`, but the right approach to "batteries included" is much harder to land on.
+Despite amazing work with projects like x11docker[^1], Xephyr[^2], xquartz[^3], and xpra[^4] .. working with GUIs tends to be fragile, fiddly, and less portable than terminal apps.  Any or all of those projects can in principle be combined with `compose.mk`, but finding the right approach to "batteries included" is harder.
 
-All the projects mentioned are about **solving the issue of getting a stand-alone XOrg server,** but after you have one, you still need to decide how exactly to use it.  Options here include stuff like forwarding graphics via a browser, VNC, ssh, sockets, etc.  Searching for any combination of these tools + docker gives lots of results for this sort of thing, but much of the related work is old, archived, or unmaintained.  Many tutorials along these lines will have lots of different files, and invite you to do lots of copy/paste.  As usual with `compose.mk` we'll aim for something self-contained and try to minimize dependencies!  
-
+All the projects mentioned above are about **solving the issue of getting a stand-alone XOrg server.** But after you have one, you still need to decide how exactly to use it.  Options here include stuff like forwarding graphics via a browser, VNC, ssh, sockets, etc.  Searching for any combination of these tools + docker gives lots of results for this sort of thing, but much of the related work is old, archived, or unmaintained.  Many tutorials along these lines will have lots of different files, and invite you to do lots of copy/paste.  As usual with `compose.mk` we'll aim for something self-contained and try to minimize dependencies!
 
 Just for fun, we'll also use [CMK-lang]({{mkdocs.site_relative_url}}/compiler#compose-file-example) for the examples here, which is a [separate language]({{mkdocs.site_relative_url}}/language) that tends to clean up syntax, and is compiled to Makefile on demand.  
 
@@ -46,7 +45,7 @@ You can see the code for this below, it is complete and runs as-is.  {#Code is a
 We've already seen what it looks like: Running the demo just opens *`xeyes`*, uses *`feh`* to display an image, and starts *`glxgears`*.  These tools and the window manager itself run inside the i3 container, but the environment is also accessible from other containers, or from your host.
 
 ```bash {.cli_example .language-bash}
-$ ./demos/cmk/xephyr.cmk 
+$ ./demos/cmk/xephyr.cmk gui
 ```
 {{macros.img_link("gui1.gif", mkdocs, "95%", align='center',class="cli_output")}}
 
@@ -79,8 +78,11 @@ Rather than the "native app" look and feel in the [Xephyr demo](#xephyr-and-i3),
 The traditional thing here is to run doom, which is definitely kind of pixelated at the best of times!, but is pretty useful for basic latency testing, mouse/keyboard events, etc.  Although there are many ways to run doom in a browser.. this is something different: **a dockerized x11 app that's now been *webified*.**
 
 ```bash {.cli_example .language-bash}
-$ ./demos/cmk/xpra_doom.cmk 
+$ ./demos/cmk/xpra-doom.cmk serve
 ```
+
+After bootstrap, on `http://localhost:9091`:
+
 {{macros.img_link("gui3.gif", mkdocs, "60%", align='center', class="cli_output")}}
 
 And here's the code:
@@ -97,11 +99,13 @@ With the doom example out of the way.. the structure of our [earlier xephyr demo
 This example returns to `i3` and adds a few variations: we'll drop the status-bar config from the previous example, and add usage of `i3-layout` [^6] (very similar to the `dwindle` tool[^7] that handles spiral layouts with the embedded TUI).
 
 ```bash {.cli_example .language-bash}
-$ ./demos/cmk/xpra.cmk gui 
+$ ./demos/cmk/xpra.cmk serve 
 ```
 {{macros.img_link("gui2.gif", mkdocs, "95%", align='center',class="cli_output")}}
 
-By default this opens a webserver at [http://localhost:9090](http://localhost:9090).  Note that server authentication is disabled by default for all these demos. See the XPra docs for setting user/password details.  Here's the code:
+By default this opens a webserver at [http://localhost:9090](http://localhost:9090).  (Server authentication is disabled by default for all these demos; see the XPra docs for setting user/password details.)  
+
+Here's the code:
 
 {{site.embed_demo('demos/cmk/xpra.cmk', github=github)}}
 
