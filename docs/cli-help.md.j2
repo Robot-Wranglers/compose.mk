@@ -26,6 +26,19 @@ Because a dockerized `glow` is involved if no local tool is available, and becau
 
 To enable help your project Makefile, there are a few options depending on how tightly you want to integrate, but usually it's enough to just `include compose.mk` somewhere near the top. 
 
+```bash {.cli_example}
+
+# List only local targets 
+$ make help.local
+
+# Help for a single target 
+$ ./compose.mk help docker.run
+
+# Help for a module namespace with many targets
+$ ./compose.mk help docker
+```
+
+
 #### Docstring Style 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
