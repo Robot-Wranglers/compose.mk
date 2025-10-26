@@ -92,7 +92,7 @@ label=mytext ./compose.mk tux.widget.ticker
 ### Implementation Details
 <hr style="width:100%;border-bottom:3px solid black;">
 
-To keep `compose.mk` itself self-contained, the base container for the TUI is actually inlined, and it is unpacked and built only on demand. For the exact specification, see [the source]({{jinja.vars.pynchon_repo_url}}/tree/master/compose.mk) and look for `${TUI_COMPOSE_FILE}`.
+To keep `compose.mk` itself self-contained, the base container for the TUI is actually inlined, and it is unpacked and built only on demand. For the exact specification, see [the source]({{jinja.vars.mkparse_repo_url}}/tree/master/compose.mk) and look for `${TUI_COMPOSE_FILE}`.
 
 Note that the base container is required for a few use-cases that are not, strictly speaking, the TUI.  (For example {{site.api_link('io.figlet',mkdocs)}}.)
 

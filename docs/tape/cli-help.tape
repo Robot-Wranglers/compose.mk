@@ -2,7 +2,7 @@
 # This file describes terminal videos with the `vhs` tool (https://github.com/charmbracelet/vhs)
 Require "make"
 Require "docker"
-Set Shell "bash --norc --noprofile"
+#Set Shell "bash --norc --noprofile"
 Set FontSize 16
 Set Width 1200
 Set Height 800

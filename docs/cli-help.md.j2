@@ -3,38 +3,53 @@
 ## CLI Help
 <hr style="width:100%;border-bottom:3px solid black;">
 
-When using `compose.mk` directly, help not only *works,* it goes beyond simply listing available targets, and actually parses and displays documentation per target, and per target-namespace. *(Under the hood, a dockerized version of [charmbracelete/glow](https://github.com/charmbracelet/glow) renders markdown.)*.
-
-There are several ways to invoke the help for `compose.mk`.
+When using `compose.mk` directly, help not only *works,* it goes beyond simply listing available targets, and actually parses and displays documentation per target, and per target-namespace. Python-style docstrings are supported for targets, and markdown in those docstrings is supported and rendered.  Here are some ways to ask for help:
 
 ```bash {.cli_example}
 # List all targets 
 $ ./compose.mk help
 
-# Help for a single target 
-$ ./compose.mk help docker.run
+# Pretty-print help for a single target 
+$ ./compose.mk help/docker.run
 
-# Help for a module namespace with many targets
-$ ./compose.mk help docker
+# Works for multiple targets, using prefix search
+$ ./compose.mk help/docker
+
+# Adding arguments directly with no slash also works if using `compose.mk` directly,
+# but project Makefiles cannot inherit this by including compose.mk as a library
+./compose.mk help docker
 ```
+
 {{macros.img_link("cli-help.gif", mkdocs, "90%",class='cli_output')}}
 
-Because a dockerized `glow` is involved if no local tool is available, and because the Makefile-metadata parser is also a container, be warned that **rendering help can be *very slow*,** especially the first time it runs.  If this bothers you, you can skip some docker-bootstrap time by actually installing stuff.  See the [implementation details section](#implementation-details) for more about this, and other hints for granular access to the moving pieces involved here.
+Under the hood, help uses a dockerized version of [mk.parse](https://github.com/mattvonrocketstein/mk.parse) and [charmbracelete/glow](https://github.com/charmbracelet/glow).  Because this uses containers, be advised that rendering help can be slow, especially the first time it runs.  See the [implementation details section](#implementation-details) for more about this, and other hints for granular access to the moving pieces involved here.
 
 ### Help For Project Makefiles
 <hr style="width:100%;border-bottom:3px solid black;">
 
-To enable help your project Makefile, there are a few options depending on how tightly you want to integrate, but usually it's enough to just `include compose.mk` somewhere near the top. 
+To enable help your project Makefile, there are a few options depending on how tightly you want to integrate, but usually it's enough to just `include compose.mk` somewhere near the top of your file.
+
+```bash {.cli_example}
+
+# List only targets that are static and local, i.e.
+# targets which are not scaffolded, and are not included from other Makefiles
+$ make help.local
+
+# Pretty-print help for a single target or prefix
+$ make help.local/build
+
+# Print all help for all local targets
+$ make help.local.all
+```
 
 #### Docstring Style 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-Note that for help to render properly, your targets need to use the following style for comments, similar to python-style docstrings.  *(There is no support for other kinds of `# .. comments ..` that are above or inlined inside of target-bodies.)*
+Note that for help to render properly, your targets need to use the following style for comments, similar to python-style docstrings.  *(There is no support for other kinds of comments that are above or inside of target-bodies.)*
 
 {{site.embed_demo('demos/cli-help.mk', github=github)}}
 
-{#By itself, this enables **full** target listing with `make help`, including both the inherited targets from `compose.mk` as well as the new targets that are project specific.  #}
-
+{#
 #### Basic Integration
 <hr style="width:95%;border-bottom:1px dashed black;">
 
@@ -52,7 +67,7 @@ $ make help
 $ make mk.targets
 
 # Rendered help for all local targets (potentially very slow)
-$ make help.local
+$ make help.local.all
 
 # Rendered help for 1 target 
 $ make mk.help.target/my-target
@@ -85,9 +100,6 @@ Going further.. we can actually setup `compose.mk` as the interpreter more direc
 {{site.embed_demo('demos/cli-help-shebang.mk', github=github)}}
 
 Now `./demos/cli-help-shebang.mk help my-target` works as expected.  An approach like this will also work if the file is named `Makefile`, but note that **the shebang is ignored unless you execute the file directly**!
-
-{#
-If the "search=" trick above won't work for you, see the next section for hints about lower-level access to target-help, target listing, and module/namespace help.
 #}
 
 ### Implementation Details
@@ -95,13 +107,14 @@ If the "search=" trick above won't work for you, see the next section for hints 
 
 Since help involves targets and target-metadata, it's also a special case of reflection, which you can read more about [in the standard-library docs]({{mkdocs.site_relative_url}}/standard-lib/#reflection-support).
 
+{#
 The implementation for help uses the `mk.help.*` family of targets, and if you want to customize help or error messages they might be useful.  
 
 {{site.api_link_many(['mk.help'],mkdocs)}}
+#}
+Heavy lifting for parsing metadata comes from a dockerized version of the mk.parse tool[^1] which extracts and displays docstrings, as well as other details like target-prerequisites.  
 
-Heavy lifting for parsing Makefile metadata comes from a dockerized version of the [pynchon tool]({{jinja.vars.pynchon_repo_url}}/blob/master/src/pynchon/util/makefile/__init__.py), which can parse help as well as more structural details like target-prerequisites / DAGs.  
-
-To see example output or just precache the pynchon container, you can use {{site.api_link('mk.parse',mkdocs,arg='some_makefile')}}.  To get an idea about the schema, we can use `compose.mk` to parse it's own content, then show the JSON structure for the `mk.parse` target itself.
+To see example output or just precache the `mk.parse` container, you can use {{site.api_link('mk.parse',mkdocs,arg='some_makefile')}}.  To get an idea about the schema, we can use `compose.mk` to parse it's own content, then show the JSON structure for the `mk.parse` target itself.
 
 
 ```bash {.cli_example}
@@ -112,31 +125,29 @@ $ ./compose.mk mk.parse/compose.mk
   ..
   "mk.parse/%": {
     "file": "compose.mk",
-    "lineno": 2056,
-    "chain": [],
-    "type": "implicit",
+    "lineno": 2323,
+    "parametric": true,
     "docs": [
-      " Parses the given Makefile, returning JSON output that describes the targets, docs, etc. This parsing is \"deep\", i.e. it returns docs & metadata for *included* targets as well. This uses a dockerized version of the pynchon[1] tool.",
+      " Parses the given Makefile, returning JSON output that describes the targets, docs, etc.",
+      " This parsing is \"deep\", i.e. it returns docs & metadata for *included* targets as well.",
+      " This uses a dockerized version of the mkparse[1] tool.",
       "",
       " REFS:",
-      "* `[1]`: https://github.com/robot-wranglers/pynchon/",
-      ""
+      "   * `[1]`: https://github.com/mattvonrocketstein/mk.parse/"
     ],
     "prereqs": [],
+    "local": true,
+    "private": false,
     "regex": "mk.parse/.*",
     "implementors": []
   },
   ..
 ```
 
-{#
-And again, the special case of running `... help <target>` without actually **executing** the target is related to [supervisors and signals]({{mkdocs.site_relative_url}}/signals).
-#}
-
 ### References
 <hr style="width:100%;border-bottom:3px solid black;">
 
-[^1]: See the docs for [Supervisors & Signals]({{mkdocs.site_relative_url}}/signals)
+[^1]: [mk.parse tool]({{jinja.vars.mkparse_repo_url}}/)
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

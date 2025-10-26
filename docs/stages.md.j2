@@ -157,13 +157,17 @@ Eventually, the basic stack-operators might expand to include lightweight patter
 
 Practically speaking, tools ike `terraform`, `helm`, `kubectl` and `ansible` all spit JSON, and you'll frequently need the output for one tool as the input for another.  Without stages, `compose.mk` makes that easy, but pure pipelining means it's hard to reuse values, or you need to track a temp file, etc.
 
-More philosophically.. native support for stacks gives `compose.mk` a new capability, in terms of stuff like [programming](https://en.wikipedia.org/wiki/Tacit_programming) [paradigms](https://en.wikipedia.org/wiki/Stack-oriented_programming).  The stack is also a convenient way to communicate [between polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [across matrioshka layers]({{mkdocs.site_relative_url}}/matrioshka/#advanced-matrioshka-idioms).  And, for what it's worth, now you can pretty directly architect your automation in terms of [pushdown automata](https://en.wikipedia.org/wiki/Pushdown_automaton) or [queue machines](https://en.wikipedia.org/wiki/Queue_automaton) :)
+More philosophically.. native support for stacks gives `compose.mk` a new capability, in terms of stuff like programming[^2] paradigms[^3].  The stack is also a convenient way to communicate [between polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [across matrioshka layers]({{mkdocs.site_relative_url}}/matrioshka/#advanced-matrioshka-idioms).  And, for what it's worth, now you can pretty directly architect your automation in terms of pushdown automata[^4] or queue machines[^5] :)
 
 
 ### References
 <hr style="width:100%;border-bottom:3px solid black;">
 
 [^1]: Nope, this isn't perfectly thread safe.. but *(famous last words)* YAGNI
+[^2]: [wiki://tacit-programming](https://en.wikipedia.org/wiki/Tacit_programming) 
+[^3]: [wiki://stack-oriented-programming](https://en.wikipedia.org/wiki/Stack-oriented_programming)
+[^4]: [wiki://pushdown-automaton](https://en.wikipedia.org/wiki/Pushdown_automaton)
+[^5]: [wiki://queue-automaton](https://en.wikipedia.org/wiki/Queue_automaton)
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

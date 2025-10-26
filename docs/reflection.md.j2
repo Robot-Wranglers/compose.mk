@@ -52,7 +52,7 @@ $ ./compose.mk mk.parse/demos/no-include.mk
 }
 ```
 
-*Under the hood, the heavy lifting for Makefile-parsing uses a dockerized version of the  [`pynchon` tool]({{jinja.vars.pynchon_repo_url}}).*
+*Under the hood, the heavy lifting for Makefile-parsing uses a dockerized version of the  [`mk.parse` tool]({{jinja.vars.mkparse_repo_url}}).*
 
 
 #### Validation and Planning
@@ -158,30 +158,31 @@ In each case, targets return the source code that results from *merging the give
 
 **Guests** 
 : are expected to be Makefile source code.  It's appended after the main body of source, similar to [dynamic includes](#dynamic-includes-and-targets).
+: &nbsp;
 
 **Payloads** 
 : are expected to be raw data, and this input is always wrapped with `define PAYLOAD .. endef`.  This could be JSON, [polyglot source code]({{mkdocs.site_relative_url}}/demos/polyglots), or anything else.
+: &nbsp;
 
 **Services** 
 : are expected to be docker-compose.  This input is always wrapped with `define SERVICES .. endef`, and afterwards [`_compose.import.string`]({{mkdocs.site_relative_url}}/bridge/#inlined-embedded-from-string) is used, bringing all that [service scaffolding]({{mkdocs.site_relative_url}}/bridge) into the root namespace.
 
 You can use overrides in these sections together to **bundle projects as tools**, or to **bundle extensions + core libraries + related containers into a single script**.
 
-The *average use-case* looks like this:
+The typical use-case looks like this:
 
 ```bash {.cli_example}
-# Output new executable script to "./tool.mk"
-$ bin=./tool.mk ./compose.mk mk.fork/Makefile,docker-compose.yml
+# Create a quick example Makefile
+$ echo 'hello-world:; echo hello world' > tmp.mk
 
-# Result is executable.
-# Also has access to project automation library, 
+# Construct a new script, combining a Makefile and a compose file
+$ bin=./tool.mk ./compose.mk mk.fork/tmp.mk,demos/data/docker-compose.yml
+
+# Result is executable, has access to project automation library, 
 # and all the tool containers have target scaffolding
-$ ./tool.mk debian.ps
+$ ./tool.mk hello-world
 $ ./tool.mk debian.shell
-$ ./tool.mk debian.dispatch/...
-```
-```bash {.cli_output}
-..
+$ ./tool.mk debian.dispatch/flux.ok
 ```
 
 Above, `mk.fork` is just helper that uses the `mk.fork.*` primitives, but you can also use them piecewise:
@@ -189,23 +190,20 @@ Above, `mk.fork` is just helper that uses the `mk.fork.*` primitives, but you ca
 ```bash {.cli_example}
 # Starting with `compose.mk` as a base, create 
 # a "forked" script that wraps the project makefile
-$ cat Makefile | ./compose.mk mk.fork.guest > fork1.mk
+$ cat tmp.mk | ./compose.mk mk.fork.guest > fork1.mk
 $ chmod +x fork1.mk
 
 # Use the fork to generate the next fork,
 # this time setting default services from the docker-compose file
-$ cat docker-compose.yml | ./fork1.mk mk.fork.services > fork2.mk
+$ cat demos/data/docker-compose.yml | ./fork1.mk mk.fork.services > fork2.mk
 
 # Cleanup, rename result
 $ rm fork1.mk
 $ chmod +x fork2.mk
 $ mv fork2.mk tool.mk
 ```
-```bash {.cli_output}
-..
-```
 
-See the related {{macros.repo_link("demos/payload.mk", github=github)}} tests for more details.
+Afterwards, the `tool.mk` result is the same as before.  See the related {{macros.repo_link("demos/payload.mk", github=github)}} tests for more details.
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

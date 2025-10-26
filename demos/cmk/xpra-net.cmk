@@ -55,3 +55,5 @@ __main__:
 	@# because we don't want this running from main test-suite
 	cmk.log(${red}USAGE: ${__file__} gui)
 
+test: flux.timeout/2/.test
+.test:; echo zonk; sleep 10; echo bonk

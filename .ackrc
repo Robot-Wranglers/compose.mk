@@ -1,5 +1,6 @@
 --ignore-dir=.tmp
 --ignore-dir=docs/theme
 --ignore-dir=site/
+--ignore-dir=scratch/
 --ignore-dir=.tox
 --ignore-file=match:/[.]ipynb$/

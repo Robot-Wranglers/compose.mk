@@ -1,9 +1,20 @@
 {% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
+Using `site.parse_module_help`:
+
+{{site.parse_module_help('compose.mk', 'flux')}}
+
+---------------------
+
 Using `site.api_link_many`:
 
-{{site.api_link_many(['mk.def'],mkdocs)}}
+{{site.api_link_many(['io.awk','io.shell'], mkdocs)}}
 
+---------------------
+
+Using `site.api_link_many` with args:
+
+{{site.api_link_many(['io.awk'], mkdocs)}}
 
 {# 
 <hr style="width:95%;border-bottom:1px dashed black;">
