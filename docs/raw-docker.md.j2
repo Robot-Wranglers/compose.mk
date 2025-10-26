@@ -17,8 +17,8 @@ However.. `compose.mk` sometimes needs more direct and low-level access to docke
 
 Most of the low-level docker support in `compose.mk` makes the assumption that you're <u>working with tool containers</u>, and there's two important defaults that come along with this assumption:
 
-1. **The working directory, which is usually the project root, is volume-mounted by default.**
-1. **The docker-socket is mounted and shared by default also.** 
+1. **Working directory, which is usually the project root, is volume-mounted by default.**
+1. **Docker-socket is mounted and shared by default also.** 
 
 In the first case, without sharing the working directory, tools could not do any file IO, and only stream-based communication would be possible.  And in the second case, the ability to access *other* dockerized tools from inside docker containers enables many other `compose.mk` features, from [structured io]({{mkdocs.site_relative_url}}/standard-lib#structured-io) and [stage stacks]({{mkdocs.site_relative_url}}/stages) to the [embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui).
 
