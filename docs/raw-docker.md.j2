@@ -3,19 +3,12 @@
 ## Raw Docker Support
 <hr style="width:100%;border-bottom:3px solid black;">
 
-!!! Info "Info"
-    **Note that functionality here is *use-case driven*** and so the [`docker.*` target api]({{mkdocs.site_relative_url}}/api/#api-docker) interface is not intended to be 1:1 with the docker CLI.  Using the docker CLI directly is fine, so we're not looking to replace it.  Instead, the offerings here are building on top of it, or making common interactions somewhat smoother, or exposing a pure-docker interface that's similar to the [compose bridge]({{mkdocs.site_relative_url}}/bridge).
-
-Usually it's a good idea to separate task-definitions from the containers runtime, and [using the docker compose support]({{mkdocs.site_relative_url}}/bridge) is really the recommended way to arrange things.
-
-However.. `compose.mk` sometimes needs more direct and low-level access to docker primitives for internal use, and this functionality is exposed for external use as well.  
-
-{#**For use-cases related to cleaning and refactoring bash-script or Makefiles that are already using the docker CLI,** there are various utility functions that are available as part of the [`docker.*` namespace of the API]({{mkdocs.site_relative_url}}/api/#api-docker).#}
+It's a good idea to separate task-definitions from the containers runtime, and [using the docker compose support]({{mkdocs.site_relative_url}}/bridge) is really the recommended way to arrange things.  However.. `compose.mk` sometimes needs more direct and low-level access to docker primitives for internal use, and this functionality is exposed for external use as well.  Scaffolded targets like *`container.build`* and *`container.dispatch/<target>`* also turn out to be so useful, it's really convenient to extend this beyond just compose services and provide the same thing for stock images or inlined images.
 
 ### Tool-Container Defaults
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Most of the low-level docker support in `compose.mk` makes the assumption that you're <u>working with tool containers</u>, and there's two important defaults that come along with this assumption:
+Low-level docker support in `compose.mk` makes the assumption that you're probably working with tool containers, and there's two important defaults that come along with this assumption:
 
 1. **Working directory, which is usually the project root, is volume-mounted by default.**
 1. **Docker-socket is mounted and shared by default also.** 
@@ -43,13 +36,15 @@ $ img=debian/buildd:bookworm ./compose.mk docker.dispatch/flux.ok
 #### Using docker.import
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-If you're doing something like the above frequently, then you can also use `docker.image.import` to generate scaffolded targets that do the same thing:
+If you're doing something like the above frequently, then you can also use `docker.import` to generate scaffolded targets that do the same thing:
 
 {{site.embed_demo('demos/import-image.mk', github=github)}}
 
-Besides the `namespace.dispatch/..` helper and the main `namespace` target that are created and demonstrated above, this also creates a `namespace.shell` target that can be used to drop you into an interactive debugging shell for the container, and creates `${namespace.img}` that holds data for the image name.  Argument reference follows.
+Besides the `namespace.dispatch/..` helper and the main `namespace` target that are created and demonstrated above, this also creates a `namespace.shell` target that can be used to drop you into an interactive debugging shell for the container, and creates `${namespace.img}` that holds data for the image name.  
 
-{% include "includes/args/docker.import.md" %}
+{#
+Argument reference follows.
+% include "includes/args/docker.import.md" %#}
 
 ### Inlined Dockerfiles
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -57,7 +52,7 @@ Besides the `namespace.dispatch/..` helper and the main `namespace` target that 
 Working with inlined container definitions is mostly the same as working with stock images, but there are few things to keep in mind.
 
 1. Inlined Dockerfiles should be inside `define .. endef` blocks with a name like `Dockerfile.my_container` 
-1. Containers must be built before you can use them, typically with something like {{site.api_link('Dockerfile.build',mkdocs,arg='my_container')}}.
+1. Containers must be built before you can use them, typically with {{site.api_link('Dockerfile.build',mkdocs,arg='my_container')}}.
 1. After build, containers are tagged as something like `compose.mk:my_container`
 
 The `compose.mk:` prefix for image tags can be omitted by using {{site.api_link('mk.docker.dispatch',mkdocs,arg='target')}} instead of {{site.api_link('docker.dispatch',mkdocs,arg='target')}}.
@@ -109,6 +104,9 @@ Most of the use-cases for raw docker support are related to scripting with `comp
 
 ### Full Docker API 
 <hr style="width:100%;border-bottom:3px solid black;">
+
+!!! Info "Info"
+    **Note that functionality here is *use-case driven*** and so the [`docker.*` target api]({{mkdocs.site_relative_url}}/api/#api-docker) interface is not intended to be 1:1 with the docker CLI.  Using the docker CLI directly is fine, so we're not looking to replace it.  Instead, the offerings here are building on top of it, or making common interactions smoother.
 
 Below, you can find quick links for the [docker]({{mkdocs.site_relative_url}}/api/#api-docker) / [Dockerfile]({{mkdocs.site_relative_url}}/api/#api-dockerfile) / [mk.docker]({{mkdocs.site_relative_url}}/api/#api-mkdocker) sections of the main API.
 

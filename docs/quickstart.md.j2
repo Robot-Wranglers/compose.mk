@@ -28,20 +28,21 @@ If you have `make` and `docker`, that's all the setup you'll need for stand-alon
 
 Note that since [various containers]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) are only pulled on demand, initial usage might be slow.  *(For example, you might need a `jq` container before `compose.mk` can work with JSON)*.  Subsequent runs however will take advantage of cache.
 
-If you want to keep yet-another-file out of your project root, you could use a `.cmk/` folder, and while it's not really necessary or recommended.. you could track upstream with a git submodule. *(See the [Plugins, Forks, and Versioning section](#forks-versioning) for more details.)*
-
+If you want to keep `compose.mk` out of your project root, you could use a `.cmk/` folder, and while it's not really necessary or recommended.. you could also track upstream with a git submodule. *(See the [Plugins, Forks, and Versioning section](#forks-versioning) for more details.)*
 
 Read on for details about tighter integration with projects, and see the [compatibility notes](#compatibility-notes) for details about docker versions / possible gotchas in OSX.
 
 ### Project Integration
 <hr style="width:100%;border-bottom:3px solid black;">
 
-If you're looking to integrate with existing automation or you brought your own tool containers, you'll probably be interested in setting up the [Make/Compose Bridge]({{mkdocs.site_relative_url}}/bridge) or preparing for [Container Dispatch]({{mkdocs.site_relative_url}}/container-dispatch).  See that full documentation for more discussion, or if you already know what you're doing, read on for the copy/paste stuff.
+If you're looking to integrate with existing automation or you brought your own tool containers, you'll probably be interested in setting up the [Make/Compose Bridge]({{mkdocs.site_relative_url}}/bridge), preparing for [Container Dispatch]({{mkdocs.site_relative_url}}/container-dispatch), or using [docker more directly]({{mkdocs.site_relative_url}}/raw-docker).  
+
+See that full documentation for more discussion, or if you already know what you're doing, read on for the copy/paste stuff.
 
 #### Makefile Integration
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-A quick example of what your project Makefile should look like:
+A quick example of what your project Makefile could look like:
 
 ```Makefile {.snippet .language-Makefile}
 # Include compose.mk for access to target API and macros.
@@ -50,8 +51,6 @@ include compose.mk
 # If you brought tool containers, you'll want to import them.
 # Call the bridge-building macro to get targets for each service.
 $(call compose.import, file=docker-compose.yml)
-$(call docker.import, file=Dockerfile \
-	namespace=docker.mycontainer  img=mycontainer)
 
 # At this point, scaffolded targets are defined for 
 # the tool containers mentioned in the compose file.
@@ -84,11 +83,6 @@ This example above is typical, but not necessarily minimal, so let's discuss a f
     1. **Provide a few optional keys just for clarity.** Things like `hostname` clean up logging, and even if `entrypoint` isn't used by software it can help humans who are trying to debug.
     1. **Correct config keys for `working_dir` and `volumes` are crucial for project file IO,** which might include reading your project `Makefile` if you're using container dispatch.
     1. It's optional, but **there are cases where you'll want `docker` to be available inside tool-containers** and you also might want to share the hosts docker-socket.[^1]  The boilerplate above goes half way, defaulting to using a volume mount but stopping short of actually installing docker.  
-
-{#
-### Running with Docker
-<hr style="width:100%;border-bottom:3px solid black;">
-#}
 
 ### Compatibility Notes
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -143,7 +137,7 @@ $ make demos/cmk
 
 ### Plugins, Forks, & Versioning
 <hr style="width:100%;border-bottom:3px solid black;">
-<a name=forks-version></a>
+<a name=forks-version></a><a name=forks-versioning></a>
 
 Given the advice above to simply embed `compose.mk` directly into your project repositories, some people might be reading this and thinking **what if compose.mk changes upstream?** 
 
