@@ -1257,6 +1257,34 @@ io.bash/%:
 		"pipe") cat /dev/stdin ;; \
 		*) echo ;; \
 	esac) | bash -euo pipefail ${dash_x_maybe} $${tmpf} $${args}
+#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+flux.watchdog/%:
+	@# Runs the given target once, and again in a loop whenever the given path changes.
+	@# Requires inotify.
+	@#
+	@# USAGE: path='..' make flux.watchdog/<target>
+	@#
+	cmd="${make} ${*}" ${make} io.inotify/$${path}
+	
+io.inotify: mk.require.tool/inotifywait
+	@# Runs given command once, and again in a loop whenever the given path changes
+	@#
+	@# USAGE: path='..' cmd='..' make io.inotify
+	@#
+	$(call log.target, ${dim}path=${no_ansi}$${path}) \
+	&& export events="$${events:-modify,create,delete}" \
+	&& $(call log.target, ${dim}events=${no_ansi}$${events}) \
+	&& $(call log.target, ${cyan_flow_right} ${dim} $${cmd}) \
+	&& bash -x -c 'set -e; $${cmd} & pid=$$!; trap "exit 0" SIGTERM SIGINT; \
+	while inotifywait -q -r -e $${events} $${path}; do \
+	    kill -KILL $${pid} 2>/dev/null || true; \
+	    $${cmd} & \
+	done'
+
+io.inotify/%:; path="${*}" ${make} io.inotify
+	@# Like `io.inotify`, but accepts path as argument 
+	@#
+	@# USAGE: cmd='..' ${make} io.inotify/<path>
 
 io.shell:
 	@# Starts an interactive shell with all the environment variables set
@@ -5089,21 +5117,19 @@ ${kwargs_namespace}.build:
 			&& $$(call log.target, ${bold}${green}${GLYPH_CHECK}) \
 		);; \
 	esac
-${kwargs_namespace}.shell:; entrypoint="$${entrypoint:-sh}" ${make} ${kwargs_namespace}
+${kwargs_namespace}.shell:; entrypoint="$$$${entrypoint:-sh}" ${make} ${kwargs_namespace}
 ${kwargs_namespace}:; img="${kwargs_img}" hostname="${kwargs_img}" ${make} docker.run.sh 
 endif
 endef
 
-# MAKE_PID := $(shell echo $$PPID)
-
 # Helper macro, defaults to root-import with an optional dispatch-namespace.
+# If not provided, the default dispatch namespace is `services`.
 #
 # USAGE: 
 #   $(call compose.import, file=docker-compose.yml)
 #   $(call compose.import, file=docker-compose.yml namespace=▰)
 #   $(call compose.import, file=docker-compose.yml namespace=▰ import_to_root=TRUE)
-#
-# If not provided, the default dispatch namespace is `services`.
+
 compose.import=$(eval $(call _compose.import, ${1}))
 compose.import.*=${compose.import}
 define _compose.import
