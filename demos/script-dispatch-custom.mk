@@ -9,7 +9,7 @@
 # USAGE: ./demos/script-dispatch-custom.mk
 
 include compose.mk
-__main__: my_script 
+__main__: my_script script_wrapper
 
 # Look, it's a container definition 
 define Dockerfile.my_container

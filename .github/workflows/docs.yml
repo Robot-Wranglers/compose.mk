@@ -6,7 +6,7 @@ on:
   workflow_call: {}
   push:
     branches: ["main"]
-
+    paths-ignore: ['.cmk']
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read

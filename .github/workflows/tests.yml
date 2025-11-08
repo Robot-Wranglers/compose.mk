@@ -6,10 +6,10 @@ on:
   workflow_call: {}
   push:
     branches: [ "main" ]
-    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg', '.cmk']
   pull_request:
     branches: [ "main" ]
-    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg', '.cmk']
 permissions:
   contents: read
 jobs:
@@ -29,9 +29,3 @@ jobs:
         # based on https://github.com/actions/runner/issues/241#issuecomment-842566950.
         # This is required for some of the integration tests that are using gum
         # shell: 'script -q -e -c "bash --noprofile --norc -eo pipefail {0}"'
-      # - name: TUI Tests
-      #   # GitHub Actions runs without a TTY device. This is a workaround to get one,
-      #   # based on https://github.com/actions/runner/issues/241#issuecomment-842566950.
-      #   # This is required for some of the integration tests that are using gum
-      #   shell: 'script -q -e -c "bash --noprofile --norc -eo pipefail {0}"'
-      #   run: make tui-test

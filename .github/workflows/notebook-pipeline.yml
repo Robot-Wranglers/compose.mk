@@ -5,10 +5,10 @@ on:
   workflow_call: {}
   push:
     branches: [ "main" ]
-    paths-ignore:  ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg', '.cmk']
   pull_request:
     branches: [ "main" ]
-    paths-ignore:  ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg', '.cmk']
 permissions:
   contents: read
 jobs:
