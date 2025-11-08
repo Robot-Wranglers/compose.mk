@@ -2389,6 +2389,9 @@ mk.parse.targets=${make} mk.parse.targets
 mk.targets.local=${mk.parse.targets} | sort | uniq
 mk.targets.local.public=${mk.targets.local} | grep -v '^self.' | grep -v '^[.]' | sort -V
 
+mk.reconn/%:; make --reconn -f ${*}
+	@# Runs makefile in dry-run / reconn mode 
+
 define Dockerfile.makeself
 FROM debian:bookworm
 RUN apt-get update
@@ -2561,8 +2564,6 @@ mk.targets.filter.parametric/%:
 	&& count=`printf "$${targets}"|${stream.count.lines}` \
 	&& ([ "$${quiet:-0}" == 1 ] && $(call log.part2, ${yellow}$${count}${no_ansi_dim} total) || true ) \
 	&& printf "$${targets}"
-mk.reconn/%:; make --reconn -f ${*}
-	@# Runs makefile in dry-run / reconn mode 
 
 mk.validate: mk.validate//dev/stdin
 	@# Validates whether the input stream is legal Makefile

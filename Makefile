@@ -21,14 +21,14 @@ $(call compose.import, file=demos/data/docker-compose.yml)
 
 __main__: init clean build test docs
 
-init: mk.stat docker.stat
-	@# 
+init: mk.stat docker.stat 
+	@# Show status and initialize some containers
 
 validate: validate.makefiles validate.markdown
-	@# 
+	@# Validate all demos and docs
 
-docs: flux.stage/documentation docs.README.static docs.jinja docs.pynchon.dispatch/.docs.build
-	@# 
+docs: flux.stage/documentation docs.pynchon.build docs.README.static docs.jinja docs.pynchon.dispatch/.docs.build
+	@# Build all documentation
 .docs.build:
 	$(call log.target, building)
 	set -x && (mkdocs build --clean --verbose && tree site) \

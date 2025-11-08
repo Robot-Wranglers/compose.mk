@@ -8,6 +8,8 @@
 
 * [ansible-playbook.mk](./ansible-playbook.mk) (45 lines)
 
+* [basic-integration.mk](./basic-integration.mk) (14 lines)
+
 * [bind-def-to-env.mk](./bind-def-to-env.mk) (21 lines)
 
 * [bind-file.mk](./bind-file.mk) (15 lines)
