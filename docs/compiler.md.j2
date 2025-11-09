@@ -22,18 +22,27 @@ Whether you love `make` or passionately hate it, you'll probably agree that defa
 ### About CMK Demos
 <hr style="width:100%;border-bottom:3px solid black;">
 
-All examples written in CMK rather than pure Makefile can be found in the {{macros.repo_link('demos/cmk', github=github)}} folder.  Most CMK demos are direct ports from existing pure-Makefile demos, i.e. given `demos/cmk/foo.cmk` there's a corresponding vanilla Makefile demo at `demos/foo.mk`.  
+All examples written in CMK rather than pure Makefile can be found in the {{macros.repo_link('demos/cmk', github=github)}} folder.  Most CMK demos are direct ports from existing pure-Makefile demos, i.e. given `demos/cmk/example.cmk` there's a corresponding vanilla Makefile demo at `demos/example.mk`.  
 
 ```bash {.cli_example}
 # Run some "foo" demo directly, using CMK interpreter via shebang
-$ ./demos/cmk/foo.cmk
+$ ./demos/cmk/example.cmk
 
 # Run demo explicitly using interpreter
-$ ./compose.mk mk.interpret! ./demos/cmk/foo.cmk
+$ ./compose.mk mk.interpret! ./demos/cmk/example.cmk
 
 # Test the compiler without running the result
-$ cat ./demos/cmk/foo.cmk | ./compose.mk mk.compiler
+$ cat ./demos/cmk/example.cmk | ./compose.mk mk.compiler
 ```
+
+In the last example, the "compiled" CMK source actually still requires an external `compose.mk` to access library functions.  But a stand-alone version can be obtained like this:
+
+```bash {.cli_example}
+$ cat ./demos/cmk/example.cmk | ./compose.mk mk.compile! > example
+$ chmod +x ./example
+```
+
+For related background, see the documentation for [guests & forks]({{mkdocs.site_relative_url}}/standard-lib/#forks-guests-and-payloads) and [self-extracting executables]({{mkdocs.site_relative_url}}/demos/packaging/#makeself-reference)
 
 ### Basic Example
 <hr style="width:100%;border-bottom:3px solid black;">

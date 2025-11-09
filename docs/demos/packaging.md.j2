@@ -27,7 +27,7 @@ There are two main reasons why native support for this is interesting:
 * Second, *project automation and pipelines* are also a big part of what `compose.mk` is used for, and compressing *that* down into a snapshotted "release" could be useful for stuff like *checkpointing/rollbacks*, or for topics in notebookes / reproducible research.  See also the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking) for a sketch of something like that.
 
 !!! question "Hmm.."
-    More philosophically: the ability to reference, run, and script over potentially *lots* of possibly customized containers in an organized way using `docker-compose.yml` and `compose.mk` without *explicitly shipping either* feels like [a different way to build and release tools](#discussion).  
+    More philosophically: the ability to reference, run, and script over potentially *lots* of possibly customized containers in an organized way using `docker-compose.yml` and `compose.mk` without *explicitly shipping either* feels like a different way to build and release tools.
     
 Put simply, [easy access to containers]({{mkdocs.site_relative_url}}/container-dispatch) [and multiple programming languages]({{mkdocs.site_relative_url}}/demos/polyglots) and [workflows]({{mkdocs.site_relative_url}}/demos/workflows) is usually stuff that we associate with microservices and distributed systems like Kubernetes, Jenkins or Airflow.  What happens if it is easy to design *undistributed* applications, tools, and pipelines with similar architectures?  
 

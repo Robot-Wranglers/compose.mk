@@ -9,7 +9,7 @@ emit:
 
 consume: \
   ᝏargs.from_json(shape=default1) \
-  ᝏargs.from_env(color=default name=Bob)
+  ᝏargs.from_env(color=default2 name=Bob)
 	@# Comments in the middle are ok.
 	printf "shape=$${shape} color=$${color} name=$${name}\n"
 

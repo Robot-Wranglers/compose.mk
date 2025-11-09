@@ -15,18 +15,18 @@ More to the point though.. compose.mk is a matrioshka language, and maybe the fi
 
 For `compose.mk`, the "objects" are containers or container specs that might be inlined or external, and/or [foreign code]({{mkdocs.site_relative_url}}/demos/polyglots#foreign-code-as-first-class).  The "rules" are tasks or task-groups.  First-class support for these as primitives turns out to be especially useful for things like [wrappers]({{mkdocs.site_relative_url}}/tool-overview#tool-wrappers), [tool-factories]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/#map-ansible-modules-to-targets), and even [app-factories]({{mkdocs.site_relative_url}}/advanced-tuis) as seen in the rest of the site documentation.
 
-This page is about identifying a through-line for the more concrete work elsewhere, for those who prefer overviews that focus less on applications and more on **theory, architecture, and patterns**. If you want to take in a few simple and concrete matrioshka demos before you continue reading, [see instead this index of demos]({{mkdocs.site_relative_url}}/demos/matrioshka).
+This page is about identifying a through-line for the more concrete work elsewhere, for those who prefer overviews that focus less on applications and more on **theory, architecture, and patterns**. If you want to take in a few simple and concrete matrioshka demos before you continue reading, see instead [this index of demos]({{mkdocs.site_relative_url}}/demos/matrioshka).
 
 ### Matrioshka Idiom Basics
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Typically matrioshkas in `compose.mk` use a variation on the working definition from earlier, and they have the following structure:
 
-1. **First phase:** declares a set of runtimes *(image tags, container definitions inlined or external, etc)*
-1. **Second phase:** implement some tasks *(make targets)*
+1. **First phase:** declares a set of runtimes
+1. **Second phase:** implement some tasks 
 1. **Third phase:** maps tasks and/or task-groups onto runtimes
 
-Sometimes the second phase is optional and we skip straight to phase 3. *(For an example of that, see the declarative style for [low-config TUIs]({{mkdocs.site_relative_url}}/low-config-tuis) with no need for target bodies.)*
+A runtime might be an image tag, or a container definition that's inlined or external, etc.  A task might be a make-target, a group of targets, or a polyglot.  Sometimes the second phase is optional and we skip straight to phase 3. *(For an example of that, see the declarative style for [low-config TUIs]({{mkdocs.site_relative_url}}/low-config-tuis) with no need for target bodies.)*
 
 Using basic [container dispatch idioms]({{mkdocs.site_relative_url}}/container-dispatch) with external files is *matrioshka-like*, and almost all of [the polyglot demos]({{mkdocs.site_relative_url}}/demos/polyglots) are very simple matrioshkas that define (or just mention) a runtime & execute foreign code there. 
 

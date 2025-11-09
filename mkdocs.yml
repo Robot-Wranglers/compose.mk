@@ -99,6 +99,7 @@ plugins:
   - redirects:
       redirect_maps:
         'index.md': 'overview.md'
+        tui.md: 'embedded-tui.md'
 
 # https://squidfunk.github.io/mkdocs-material/reference/lists/#using-definition-lists
 markdown_extensions:

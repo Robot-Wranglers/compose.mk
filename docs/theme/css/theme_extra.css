@@ -127,11 +127,11 @@ span.code_table_2 {
   text-align: right;
 }
 .wy-nav-content {
-  /* background-color: rgba(236, 236, 236, 0.69); */
-  /* background-color: #a694943d; */
+  background-color: rgba(236, 236, 236, 0.69);
+  background-color: #7272721a;
   /* background-color: #deddff42; */
+
   /* rgba(235, 143, 143, 0.685) */
-  /* background-color:#faf0e640; */
   /* border-left: 5px dotted #6495ed82; */
   margin-left:-1em;
   }
@@ -280,7 +280,8 @@ html.writer-html5 .rst-content table.docutils th {
   align-self: center; */
 }
 div .code_table_bottom {
-  background-color: rgb(240, 241, 231);
+  /* background-color: rgb(240, 241, 231); */
+  background-color: #b8b8b84f;
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
   align-items: center;     /* vertical alignment */
@@ -443,11 +444,11 @@ summary {
   /* font-family: "Lucida Console", "Courier New", monospace;
   background: unset;
   font-size:smaller; */
-  background-color: #f6f8fa;
+  /* background-color: #f6f8fa; */
   font-style: oblique 12deg;
   /* color: #e36209; */
-  /* padding: 0.2em ;
-  border-radius: 3px;
+  padding: 0.2em ;
+  /* border-radius: 3px;
   font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
   font-size: 0.85em;
   font-weight:400; */
