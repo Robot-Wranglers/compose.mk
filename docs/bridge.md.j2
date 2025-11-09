@@ -41,8 +41,8 @@ but The 2nd argument *TRUE* is a bool for whether `compose.import` was allowed t
 
 That's it for the boilerplate, but we already have lots of interoperability for the containers involved.  This includes stuff like:
 
-* The ability to quickly shell into these containers 
-* The usual `docker compose` verbs like *stop/start/up/exec/logs*
+* The ability to [quickly shell into these containers](#svc_nameshell)
+* The usual `docker compose` verbs like *[stop](#svc_namestop), [up](#svc_nameup), [exec](#svc_nameexec) [logs](#svc_namelogs)*
 * And crucially, *capabilities for command-pipes and dispatch*.
 
 ### Target Scaffolding
@@ -225,7 +225,7 @@ The ***svc_name*.shell.pipe** target allows streaming data:
 # Stream commands into debian container
 $ echo uname -n -v | make debian.shell.pipe
 
-# Equivalent to above, because entrypoint for debian is bash
+# Equivalent, since entrypoint for debian happens to be bash
 $ echo uname -n -v | make debian.pipe
 
 # Streams command input / output between containers

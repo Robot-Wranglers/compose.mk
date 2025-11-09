@@ -37,7 +37,7 @@ $ docker compose -f docker-compose.yml \
     run --entrypoint bash debian -c "make self.demo"
 ```
 
-Maybe it's not obvious yet, so it's worth noticing that this is already **much** cleaner and more composable than the alternative in pure bash, where you get lots of disconnected automation scripts that are littered with lots of `docker run ...` statements.  In fact, this is pretty similar to [`agent { docker { .. } }` in Jenkins Pipelines](https://www.jenkins.io/doc/book/pipeline/docker/), but it's significantly more portable, and arguably more readable.
+Maybe it's not obvious yet, so it's worth noticing that this is already **much** cleaner and more composable than the alternative in pure bash, where you get lots of disconnected automation scripts that are littered with lots of `docker run ...` statements.  In fact, this is pretty similar to [`agent { docker { .. } }` in Jenkins Pipelines](https://www.jenkins.io/doc/book/pipeline/docker/), but it's significantly more portable and readable.
 
 ### Namespace-Style Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -51,14 +51,12 @@ In such cases name-collisions might be inevitable, and you'll want fine-grained 
     bottom_right=site.link_mirror('demos/cmk/container-dispatch-2.cmk'),
     github=github)}}
 
-Similar to "private" targets with a `self.*` naming convention, using a blocky unicode symbol like `▰` isn't *actually* required, and of course you can call your namespace anything you want.  There's a few reasons this weird looking style is a good idea though, and docs and demos will stick to it as a convenient naming convention. 
+Similar to "private" targets with a `self.*` naming convention, using a blocky unicode symbol like `▰` isn't *actually* required, and of course you can call your namespace anything you want.  There's a few reasons for this weird looking style though, and docs and demos sometimes use it.  Think of it at as a naming convention that's approaching notation.  The idea is that:
 
-1. *Sugar for* [`<svc_name>.dispatch/<dispatch_target>`]({{mkdocs.site_relative_url}}/bridge/#svc_namedispatch) *should be shortened* (not longer than the syntax it's replacing)
-1. *Sugar should be visually very easy to parse*, and blocky unicode symbols qualify while also making it very clear this is a specific new kind of idiom.
+1. Sugar should be shortened, not longer than the syntax it's replacing
+1. Sugar should be visually very easy to parse, and blocky unicode symbols qualify while also making it very clear this is a specific new kind of idiom.
 
-This convention also has a more subtle property that it's *hard to use from the command line*, but *easy to use from file that already has several such instances*, and **sometimes this is a feature**.  
-
-If your targets *that actually run inside containers* are frequently used from the top-level.. that's a good indication that it's actually **a project-level verb that's important enough to deserve an aliased entrypoint**.
+If you decide to use it, this notation also has a property that it's *hard to use from the command line*, but it is *easy to use from file that already has several such instances*.  That's a feature!  Targets intended *to run inside containers* probably shouldn't run from the top-level.  And if you find yourself always watching to dispatch a private target using an invocation like `make ▰/debian/self.demo`, that's a good indication that it's actually **a project-level verb**, and thus it's important enough to deserve an aliased entrypoint.
 
 ### Toolboxes & Multiple Compose Files
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -67,7 +65,7 @@ Putting it together, suppose your project involves so many tool containers that 
 
 {{site.embed_demo('demos/container-dispatch-3.mk', github=github)}}
 
-This way of arranging things makes it clear that there are a few distinct toolboxes at play, and that while you can always call things like `self.docs.gen` directly for testing, the syntax helps make it clear that your host isn't actually guaranteed to have all the tools involved.
+This way of arranging things makes it clear that there are a few distinct toolboxes at play.  Of course, you can always call things like `self.docs.gen` directly for testing if you *know* you have LateX tools available.  At the same time, the naming convention helps to serve as an important reminder that it *your* LaTeX toolchain might be different than what your coworker or CI/CD process is using.
 
 ### One-to-Many Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -80,7 +78,7 @@ Again, the *`self`* prefix and the `▰/` namespace is just a convention, you ca
 
 {{macros.img_link("demo.double.dispatch.gif", mkdocs)}}
 
-Meanwhile, the equivalent-but-expanded pure bash version below is getting cluttered.  Eagle-eyed readers will note that even the verbose version is *actually abbreviated*, because this doesn't mention [the volume-mount necessary for tool containers to get at project files]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults).
+Meanwhile, the almost-equivalent-but-expanded pure bash version below is getting cluttered.
 
 ```bash {.cli_example}
 # Clean, simple invocation with compose.mk
@@ -93,6 +91,8 @@ $ docker compose -f docker-compose.yml \
     run --entrypoint bash alpine -c "make self.demo"
 ```
 
+Eagle-eyed readers will note that even the verbose version above is *actually abbreviated*, because this doesn't mention [the volume-mount necessary for tool containers to get at project files]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults)!
+
 ### Container-Agnostic Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -101,11 +101,12 @@ Sometimes you want a target or a script that **always** runs in a container, but
 {{site.embed_demo(
     'demos/bind-target.mk', 
     bottom_right=site.link_mirror(
-      'demos/bind-target.mk',
-      base=mkdocs.site_relative_url+'/compiler/#compose-file-example'),
+      'demos/cmk/bind-target.cmk',
+      base=mkdocs.site_relative_url+'/compiler/#bind-target'),
     github=github)}}
 
-To avoid name-collisions use "." as prefix for the the "private" target, as seen in the example above.
+{#
+Previously, we've seen things like `debian.dispatch/<target>` used as a *prerequisite*, but above it actually appears in a target body.  In case you find yourselfThis is a good time to introduce the `install_macros` flag.#}
 
 --------------------------
 
@@ -113,8 +114,8 @@ Sometimes you want a **script** that *always* runs in a container, but can be sa
 
 {{site.embed_demo('demos/bind-script.mk', 
     bottom_right=site.link_mirror(
-      'demos/bind-script.mk',
-      base=mkdocs.site_relative_url+'/compiler/#compose-file-example'),
+      'demos/cmk/bind-script.cmk',
+      base=mkdocs.site_relative_url+'/compiler/#bind-script'),
     github=github)}}
 
 

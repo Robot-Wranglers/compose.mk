@@ -8,21 +8,17 @@
     
     Support for the TUI requires no dependencies except for `make` and `docker`.  It aims for low-config and sane defaults, so for high level usage it [requires no configuration at all]({{mkdocs.site_relative_url}}/zero-config-tuis).  Under the hood, the TUI uses a dockerized version of [tmux](https://github.com/tmux/tmux) for core drawing and geometry.
 
+At a high level, the TUI only has one job, which is all about **mapping `make` targets onto `tmux` panes**.  Simple right?  But the interesting part is, [everything is a target]({{mkdocs.site_relative_url}}/language/#homoiconic), so it's very quick and easy to treat containers or existing automation as UI elements, and stick them together as an application.  A *looping group* of targets?  That's a target.  A containerized sub-UI?  That's a target.  A console-friendly selector widget?   Maybe even a whole x11 application or xsession??  Target, target, target.
 
-There's a few ways to describe what the TUI actually *does*.
 
-* Map `make` targets onto `tmux` panes.
-* Map containers (inlined, or from external compose files) onto `make` targets
-* Map *containers* on to panes.
-
-And if you're already using `compose.mk` to [build custom]({{mkdocs.site_relative_url}}/demos/just/) [automation APIs]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/), you can map those onto tmux panes too.
 
 ### TUI Gallery
 <hr style="width:100%;border-bottom:3px solid black;">
 
-For the impatient, here's a small gallery that show-cases the type of stuff you can do with the TUI capabilities that `compose.mk` offers.  
+For the impatient, here's a small gallery that show-cases the type of stuff you can do.
+{# with the TUI capabilities that `compose.mk` offers.  #}
 
-*( You can click any of the demos to make it bigger. )*
+*( Click any image to make it bigger. )*
 
 <table align=center width=95%>
     <tr>
@@ -37,10 +33,17 @@ For the impatient, here's a small gallery that show-cases the type of stuff you 
     </tr>
 </table>
 
-* For a quick test to get a look at the TUI yourself, try running `./compose.mk tux.demo`.
-* For a from-scratch walk through, see [the TUI Demo]({{mkdocs.site_relative_url}}).  
+For a quickstart, you might like to:
+
+1. Run a simple test to get a look at the TUI yourself. Try running `./compose.mk tux.demo`
+1. Skim at least the [layout basics on this page](#layout-basics)
+1. Jump to the [first TUI tutorial]({{mkdocs.site_relative_url}}/zero-config-tuis), then follow the sequence.
+
+Other resources:
+
 * For low-level API reference, see the [`tux.*` targets]({{mkdocs.site_relative_url}}/api/#api-tux).  
 * For TUI-related stand-alone tools, see [the loadf docs]({{mkdocs.site_relative_url}}/loadf) and the [tool wrappers docs]({{mkdocs.site_relative_url}}/tool-overview/#other-wrappers).
+* See also the [user input / interactivity]({{mkdocs.site_relative_url}}/standard-lib/#user-input-interactivity) section of the standard library.
 
 ### Batteries Included
 
@@ -59,12 +62,32 @@ These elements, plus access to other tools like [gum](https://github.com/charmbr
 
 #### Default Keybindings
 <hr style="width:100%;border-bottom:3px solid black;">
-!!! danger "Limitations"
-    Keybindings are easy to change, but there's no way guarantee that such defaults won't collide with whatever existing applications you're trying to stitch together.  See the previous section for more details.
 
 The TUI ships with some default keybindings that are aimed at keeping things pretty user-friendly even for those who are not already familiar with tmux.  
 
-{{bash("pattern='*Default TUI Shortcuts*' make mk.parse.block/compose.mk") }}
+{#{bash("pattern='*Default TUI Shortcuts*' make mk.parse.block/compose.mk") }#}
+
+| Shortcut         | Purpose                                                |
+| ---------------- | ------------------------------------------------------ |
+| `Escape`           | *Exit TUI*                                           |
+| `Ctrl b |`         | *Split pane vertically*                              |
+| `Ctrl b -`         | *Split pane horizontally*                            |
+| `Alt t`            | *Shuffle pane layout*                                |
+| `Alt ^`            | *Grow pane up*                                       |
+| `Alt v`            | *Grow pane down*                                     |
+| `Alt <`            | *Grow pane left*                                     |
+| `Alt >`            | *Grow pane right*                                    |
+| `Alt <left>`       | *Grow pane left*                                     |
+| `Alt <right>`      | *Grow pane right*                                    |
+| `Alt <up>`         | *Grow pane up*                                       |
+| `Alt <down>`       | *Grow pane down*                                     |
+| `Alt-1`            | *Select pane 1*                                      |
+| `Alt-2`            | *Select pane 2*                                      |
+| ...                | *...*                                                |
+| `Alt-N`            | *Select pane N*                                      |
+
+{#!!! warning "Limitations"#}
+Note that the usual limitations for shortcuts apply! There's no way to guarantee these defaults won't collide with whatever existing applications you're trying to stitch together, with your terminal or with your window-manager.
 
 ### Layout Basics
 <hr style="width:100%;border-bottom:3px solid black;">

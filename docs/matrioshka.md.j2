@@ -3,11 +3,13 @@
 ## Matrioshka Automata
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The [language overview page]({{mkdocs.site_relative_url}}/language) discusses how `compose.mk` is secretly a programming language, even though it's perfectly fine to think of it terms of [a library]({{mkdocs.site_relative_url}}/standard-lib) or [a tool]({{mkdocs.site_relative_url}}/tool-overview).  More to the point though.. compose.mk is a matrioshka language, and maybe the first one that's *actually intended to be useful*.
+The [language overview page]({{mkdocs.site_relative_url}}/language) discusses how `compose.mk` is secretly a programming language, even though it's perfectly fine to think of it terms of [a library]({{mkdocs.site_relative_url}}/standard-lib) or [a tool]({{mkdocs.site_relative_url}}/tool-overview).  
+
+More to the point though.. compose.mk is a matrioshka language, and maybe the first one that's *actually intended to be useful*.
 
 --------------
 !!! commentary "Matrioshka Language"
-    Matrioshka languages can be identified by their program forms, which will have multiple, distinct 'phases' with different syntactic and semantic rules. There are often two phases; the first gives a set of rules, and the second provides objects on which those rules are to be applied. *[--esolangs wiki](https://esolangs.org/wiki/Matrioshka_language)*
+    Matrioshka languages can be identified by their program forms, which will have multiple, distinct 'phases' with different syntactic and semantic rules. There are often two phases; the first gives a set of rules, and the second provides objects on which those rules are to be applied.[^1]
 
 --------------
 
@@ -48,7 +50,7 @@ Here's a few arguments that suggest matrioshka-dolling has some legitimate use-c
 * Sometimes having nested containers or data is just a way of keeping demos/prototypes tight and small, because being self-contained is the most legible or instructive.  
 * Being self-contained is also at least *correlated* with other nice things like *stability and reproducibility*.
 * Matrioshkas are actually a pretty good format for a bug reports / minimum reproducible examples.
-* Matrioshkas are also a good format for test-cases of some distributed systems. [^2]
+* Matrioshkas are also a good format for test-cases of some distributed systems. [^3]
 
 Whether we're talking about bug reports, test-cases, or tutorials.. matrioshka's can help make things "batteries included" in the sense that *they are actually executable*, rather than a series of instructions asking you manually copy/paste a bunch of stuff in different files to get a test-harness going.
 
@@ -73,13 +75,13 @@ Both of these demos are instances of a general pattern that goes like this:
 1. **Drill a tiny hole through the matrioshka layers**, exposing or "lifting" something useful by abstracting away the fact that the task actually happens in a container.
 1. **Better yet, lift something useful *that is parametric*** and then you have a *bridge*.
 1. **Combine bridges at the level of `compose.mk`** to easily express ideas across systems.
-1. **Compose bridges or groups of bridges**, using `flux` for workflows, `tux` for TUIs, etc.
+1. **Compose bridges or groups of bridges**, using [`flux`]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support) for workflows, [`tux`]({{mkdocs.site_relative_url}}/embedded-tui) for TUIs, etc.
 
 **If you don't need to combine systems, you can actually stop after step 3,** and you have something like a "tool factory", where you can wrap the interface of something else and potentially change it. Summarizing the [ansible demo]({{mkdocs.site_relative_url}}/demos/custom-automation-apis), we lifted ansible's whole [adhoc feature](https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html) up out of the container, making it available to the host that doesn't have Ansible.  We also exposed and actually changed the default interface, insisting on JSON, providing aliased entrypoints for common use-cases, etc.  By using [compose.mk's support for packaging/compilation]({{mkdocs.site_relative_url}}/demos/packaging) it's even more obvious that you can spin off this whole effort as a stand-alone tool, or several tools.  *This is an example of using the matrioshka-bridge pattern to create a tool factory*.
 
 **By the time you get to step 4, the possibilities for composition are surprisingly powerful, expressive, and flexible**, in large part because the [homoiconicity]({{mkdocs.site_relative_url}}/language/#homoiconic) we discussed earlier starts to pay off.  Summarizing [the justfile demo]({{mkdocs.site_relative_url}}/demos/just), embedding a justfile is incidental since we could easily work with an external one, but again the interesting part again is a bridge across layers.  We lift part of the `just` interface, then besides changing/exposing that interface, we actually wrapped it and compose our way to new functionality.  As a result.. we end up with an interactive task selector in just one line.
 
-**Step 5 is where the real magic happens,** and the demos mentioned so far are just hints.  Demonstrating the potential for this seriously under realistic circumstances starts to want more tools and larger use-cases.. which is a challenge for brief examples.  See the [platforming demo for a sketch]({{mkdocs.site_relative_url}}/demos/platform), or the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).  See also a preview of the sister project @ k8s-tools[^2], which uses `compose.mk` to automate cluster-lifecycles using more complex orchestration across a bigger toolbox.
+**Step 5 is where the real magic happens,** and the demos mentioned so far are just hints.  Demonstrating the potential for this seriously under realistic circumstances starts to want more tools and larger use-cases.. which is a challenge for brief examples.  See the [platforming demo for a sketch]({{mkdocs.site_relative_url}}/demos/platform), or the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).  See also a preview of the sister project @ k8s-tools[^3], which uses `compose.mk` to automate cluster-lifecycles for complex orchestration across a bigger toolbox.
 
 ### Advanced Matrioshka Idioms 
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -110,8 +112,9 @@ For an advanced example in service of a more conventional use-case, you might wa
 ### References
 <hr style="width:100%;border-bottom:3px solid black;">
 
-[^1]: [wiki://Here Document](https://en.wikipedia.org/wiki/Here_document)
-[^2]: See also the *(under construction!)* sibling project @ [k8s-tools]({{jinja.vars.k8stools_docs_url}})
+[^1] via the [esolangs wiki](https://esolangs.org/wiki/Matrioshka_language)
+[^2]: [wiki://Here Document](https://en.wikipedia.org/wiki/Here_document)
+[^3]: sibling project @ [k8s-tools]({{jinja.vars.k8stools_docs_url}})
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

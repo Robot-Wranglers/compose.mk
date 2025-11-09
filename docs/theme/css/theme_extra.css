@@ -234,6 +234,7 @@ div .cli_output img {
   z-index: 1;
   border-left: 8px solid #358ccb;
   background-color: #2d3233;
+  border-bottom: 1px solid #bdaeae;
   /* background-image: linear-gradient(transparent 50%, rgba(69, 142, 209, .04) 50%); */
   background-attachment: local;
   background-origin: content-box;
@@ -244,7 +245,7 @@ div .cli_output img {
   position: relative;
   z-index: 1;
   border-left: 8px solid #358ccb;
-  border-bottom: 2px solid #bdaeae;
+  border-bottom: 1px solid #bdaeae;
   /* background-color: #0db7ed; */
   background-image: linear-gradient(transparent 50%, rgba(69, 142, 209, .04) 50%);
   background-attachment: local;
@@ -443,6 +444,7 @@ summary {
   background: unset;
   font-size:smaller; */
   background-color: #f6f8fa;
+  font-style: oblique 12deg;
   /* color: #e36209; */
   /* padding: 0.2em ;
   border-radius: 3px;
@@ -491,8 +493,8 @@ a:hover code {
     color: #3091d1;
 }
 a:not(.wy-menu a):not(sup a):not(.cli_output a):not(.rst-footer-buttons a) {
-  color: unset;
-  border-bottom: .055em dashed #4463bf;
+  /* color: unset;
+  border-bottom: .001em dashed #4463bf; */
   
   /* #bdbdbd; color:rgba(162, 94, 94, 0.358); */
 }
