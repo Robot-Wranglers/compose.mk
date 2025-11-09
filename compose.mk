@@ -1860,7 +1860,6 @@ define cmk.default.dialect
 ]
 endef 
 
-
 mk.clean:; rm -f .tmp.*
 	@# Cleans `.tmp.*` files
 
@@ -1889,14 +1888,20 @@ esac \
 && ${io.mktemp} && export inputf=`echo $${tmpf}` \
 && ${stream.stdin} > $${inputf} \
 && export CMK_INTERNAL=1 \
-&& printf "#!/usr/bin/env -S __interpreting__=$${__interpreting__:-stdin} ${__interpreter__} mk.interpret\nMAKEFILE_LIST+=compose.mk\n" \
+&& printf "#!/usr/bin/env -S __interpreting__=$${__interpreting__:-stdin} ${__interpreter__} mk.interpret\nMAKEFILE_LIST+=${CMK_SRC}\n" \
 && __interpreting__=$${__interpreting__:-stdin} \
 	${make} mk.src \
 && cat $${inputf} | \
 	style=monokai lexer=makefile \
 	${make} $${runner}/mk.preprocess,io.awk/.awk.main.preprocess,io.awk/.awk.dispatch
 endef
-	
+
+mk.compile! mk.compiler!:
+	@# Like `mk.compile`, but also embeds the result thus removing the include 
+	@# for `compose.mk` to produce a completely stand-alone file.  See also: `mk.fork.guest`
+	${flux.pipeline}/mk.compile,mk.preprocess.minify | sed "/^MAKEFILE_LIST+=${CMK_SRC}/d" | ${make} mk.fork.guest
+
+
 mk.kernel:
 	@# Executes the input data on stdin as a kind of "script" that 
 	@# runs inside the current make-context.  This basically allows
@@ -2758,7 +2763,7 @@ flux.apply.later.sh/%:
 	)&
 
 flux.column/%:; delim=':' ${make} flux.pipeline/${*}
-	@# Exactly flux.pipeline, but splits targets on colons.
+	@# Exactly `flux.pipeline`, but assumes `:` delimiter instead of comma
 
 flux.do.when/%:
 	@# Runs the 1st given target iff the 2nd target is successful.
@@ -3052,6 +3057,7 @@ flux.parallel/%:
 
 flux.pipeline/: flux.noop
 	@# No-op.  This just bottoms out the recursion on `flux.pipeline`.
+flux.pipeline=${make} flux.pipeline
 flux.pipeline/%:
 	@# Runs the given comma-delimited targets in a bash-style command pipeline.
 	@# Besides working with targets and allowing for DAG composition, this has 
@@ -5493,6 +5499,7 @@ compose.bind.target=$(call containerized.target,${1},prefix=self. $(if $(filter 
 define compose.bind.script
 $(call _mk.unpack.kwargs,${1},svc,${1}) \
 && $(call _mk.unpack.kwargs,${1},entrypoint,bash) \
+&& $(call _mk.unpack.kwargs,${1},entrypoint_args,-x) \
 && $(call _mk.unpack.kwargs,${1},env,$${env:-}) \
 && $(call _mk.unpack.kwargs,${1},quiet,$${quiet:-0}) \
 && $(call _mk.unpack.kwargs,${1},output,cat) \
@@ -5503,12 +5510,12 @@ $(call _mk.unpack.kwargs,${1},svc,${1}) \
 	&& env="`printf "$${env}" | ${stream.space.to.comma}`" \
 	&& ${io.mktemp} && ${mk.def.read}/${@} > $${tmpf} \
 	&& case ${CMK_INTERNAL} in \
-		1)  cat $${tmpf} | bash ${dash_x_maybe};; \
+		1)  $${entrypoint} $${entrypoint_args} $${tmpf};; \
 		*) ( true \
 			&& case $${quiet:-1} in \
 				0) cat $${tmpf} | ${stream.as.log};; \
 			esac && ${trace_maybe} \
-			&& entrypoint=$${entrypoint} cmd=$${tmpf} ${make} $${svc}) \
+			&& entrypoint=$${entrypoint} cmd="$${entrypoint_args} $${tmpf}" ${make} $${svc}) \
 			| (case "$${output}" in \
 				"stderr") ${stream.as.log};; \
 				*) cat;; \
@@ -5941,7 +5948,7 @@ mk.fork.payload/%:
 	&& case $${fname} in \
 		-) fname=/dev/stdin;; \
 	esac \
-	&& fdata=`cat $${fname}` \
+	&& fdata="`cat $${fname}`" \
 	&& $(call log.mk, mk.fork.section ${sep} ${dim}section=${dim_cyan}$${section} ${sep} ${dim}loading ${bold}$${fname}) \
 	&& [ -z "$${shebang:-}" ] \
 		&& true || printf "$${shebang}\n" \
