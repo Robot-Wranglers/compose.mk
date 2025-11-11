@@ -4883,6 +4883,12 @@ ${compose_file_stem}.restart.fg: ${compose_file_stem}.down ${compose_file_stem}.
 ${compose_file_stem}.restart/$(compose_service_name): \
 	${compose_file_stem}/$(compose_service_name).stop ${compose_file_stem}.up/$(compose_service_name)
 
+${compose_file_stem}.with_profile/%:
+	@# USAGE: make docker-compose.with_profile/all/up,sto
+	prof=`printf $${*} | cut -d/ -f1` \
+	&& targets="`printf $${*} | cut -d/ -f2- | ${stream.comma.to.nl} | xargs -I% echo ${compose_file_stem}.%|${stream.nl.to.space}|${stream.space.to.comma}`" \
+	&& ${trace_maybe} && ${make} compose.with_profile/$$$${prof}/$$$${targets}
+
 ${compose_file_stem}/$(compose_service_name).ps:
 	@# Returns docker process-JSON for affiliated service.
 	@# If strict=1, this fails when no process is found
@@ -4902,6 +4908,11 @@ ${compose_file_stem}/$(compose_service_name).stop:
 	@#
 	$$(call log.docker, ${dim_green}${target_namespace} ${sep} ${no_ansi}${green}$(compose_service_name) ${sep} ${no_ansi_dim}stopping..)
 	${docker.compose} -f ${compose_file} stop -t 1 ${compose_service_name} $${stream.stderr.iff.failed}
+
+${compose_file_stem}.exec.shell/$(compose_service_name):
+	@# Open interactive shell for the container.  Requires that `up` already happened, and is still running
+	set -x && docker exec -it `${make} ${compose_file_stem}/$(compose_service_name).ps \
+		| ${jq} -e -r .ID` `${make} ${compose_file_stem}/$(compose_service_name).get_shell`
 
 $(eval ifeq ($$(import_to_root), TRUE)
 $(compose_service_name).ps: ${compose_file_stem}/$(compose_service_name).ps
@@ -4933,10 +4944,9 @@ $(compose_service_name).exec/%:
 	@# Shorthand for ${compose_file_stem}.exec/$(compose_service_name)/<target_name>
 	${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}
 
-$(compose_service_name).exec.shell:
-	@# Shorthand for ${compose_file_stem}.exec/$(compose_service_name)/<target_name>
-	set -x && docker exec -it `${make} $(compose_service_name).ps |${jq} -e -r .ID` `${make} $(compose_service_name).get_shell`
-
+$(compose_service_name).exec.shell: ${compose_file_stem}.exec.shell/$(compose_service_name)
+	@# Open interactive shell for the container.  Requires that `up` already happened, and is still running
+	
 $(compose_service_name).get_shell: ${compose_file_stem}/$(compose_service_name).get_shell
 	@# Shorthand for ${compose_file_stem}/$(compose_service_name).get_shell
 $(compose_service_name).get_config: ${compose_file_stem}/$(compose_service_name).get_config
@@ -4971,6 +4981,8 @@ endif)
 ${namespaced_service}.pipe:; pipe=yes ${make} ${namespaced_service}
 ${target_namespace}.$(compose_service_name).exec/%:; ${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}
 ${target_namespace}.$(compose_service_name).exec:; ${make} ${compose_file_stem}.exec/$(compose_service_name)
+${target_namespace}.$(compose_service_name).exec.shell: ${compose_file_stem}.exec.shell/$(compose_service_name)
+
 ${target_namespace}.$(compose_service_name).dispatch/%:
 	@# Dispatch named target in $(compose_service_name) container
 	${make} ${compose_file_stem}.dispatch/$(compose_service_name)/$${*}
