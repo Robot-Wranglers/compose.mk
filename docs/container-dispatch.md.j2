@@ -7,9 +7,9 @@ Container dispatch is one of the core features of `compose.mk`, and involves bin
 
 {{macros.img_link("escher-reptiles.jpg", mkdocs, width="70%", align='center', class=" ")}}
 
-Targets might be custom (i.e. project-local), or might be part of the [compose.mk API](#), or might be orchestration that combines all of the above.  Containers might be existing images, embedded images managed directly by `compose.mk`, or might come from internal or external docker-compose specs.
+Targets might be custom (i.e. project-local), or might be part of the [compose.mk API]({{mkdocs.site_relative_url}}/api), or might be orchestration that combines all of the above.  Containers might be existing images, or embedded images managed directly by `compose.mk`, or might come from embedded or external docker-compose specs.
 
-Later in this page, we'll get into more details about [how/when container dispatch is useful](#but-why), and a [typical setup](#compose-file-boilerplate)  with `docker-compose.yml` that supports it.  For now, let's start with what the idiom looks like and how it's used.
+Later in this page, we'll get into more details about [how/when container dispatch is useful](#but-why), and a [typical setup](#compose-file-boilerplate)  with `docker-compose.yml` that supports it.  For now though, let's start with what the idiom looks like and how it's used.
 
 ### Dispatch Basics
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -105,9 +105,6 @@ Sometimes you want a target or a script that **always** runs in a container, but
       base=mkdocs.site_relative_url+'/compiler/#bind-target'),
     github=github)}}
 
-{#
-Previously, we've seen things like `debian.dispatch/<target>` used as a *prerequisite*, but above it actually appears in a target body.  In case you find yourselfThis is a good time to introduce the `install_macros` flag.#}
-
 --------------------------
 
 Sometimes you want a **script** that *always* runs in a container, but can be safely called from the container or the host.  See the tests below for usage information about the `compose.bind.script` macro:
@@ -124,13 +121,13 @@ Sometimes you want a **script** that *always* runs in a container, but can be sa
 
 So far we've just looked at using dispatch with [imported tool containers]({{mkdocs.site_relative_url}}/bridge) that come from docker compose files.  Script and target dispatch comes in other flavors too though, from scripts or [from the CLI]({{mkdocs.site_relative_url}}/raw-docker/#other-docker-utilities), and works with:
 
-1. 🍦 [External compose files](#dispatch-basics) (as seen above) 
-1. 🍭 [Inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) 
-1. 🍰 [Stock-images]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-tasks-in-containers) 
-1. 🍓 [Inlined containers]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile) 
-1. 🍒 [The docker host itself]({{mkdocs.site_relative_url}}/demos/polyglots#special-guests) 
+1. [External compose files](#dispatch-basics) (as seen above) 
+1. [Inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) 
+1. [Stock-images]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-tasks-in-containers) 
+1. [Inlined containers]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile) 
+1. [The docker host itself]({{mkdocs.site_relative_url}}/demos/polyglots#special-guests) 
 
-Whether you're using `compose.mk` as a library, a stand-alone tool, or a framework, **this simple pattern for dispatching targets in containers is one of the main features, and it's surprisingly powerful.**  
+**This simple pattern for dispatching targets in containers is one of the main features, and it's surprisingly powerful**  regardless of whether you're using `compose.mk` as a library, a stand-alone tool, or a framework.  
 
 From here, if you just want to get started, you might want to look at more detailed docs for [`compose.import` arguments]({{mkdocs.site_relative_url}}/bridge/#import-macro-arguments), or [the docker-compose.yml boilerplate that supports dispatch](#compose-file-boilerplate).  
 
@@ -142,7 +139,7 @@ If you're using dispatch idioms a lot and interested in more advanced topics, yo
 ### Compose File Boilerplate
 <hr style="width:100%;border-bottom:3px solid black;">
 
-In practice the containers you use might be already compatible with the dispatch idiom, but if they are slim or you are starting from scratch, perhaps not.  
+In practice the containers you use might be already compatible with the dispatch idiom, but if they are slim or if you are starting from scratch, perhaps not.  
 
 Below you can see a typical example of a compose file that supports dispatch, leaning more towards pedantic than minimal.  See the [integration docs]({{mkdocs.site_relative_url}}/quickstart/#docker-compose-integration) for more detailed discussion, 
 
@@ -156,7 +153,7 @@ Having introduced what the dispatch idiom looks like and what it does, let's tal
 
 This is probably a jailbreak moment for your automation!  Think about it: **Most of the ways that we use to *decouple* tasks from their execution environment actually cause our tasks to be *tightly coupled* to some platform instead**.  That's a frustrating trade-off and a huge barrier to entry if you're just trying to write/run code.  And it's not just CI/CD platforms like Jenkins and Github-- it also happens with platforms like Airflow, ArgoWF, and notebooks.  These platforms are all great at what they do, but we shouldn't need them every time we just want to decouple tasks from runtimes or express DAGs.  And if you want to use a platform later down the line, then your platform will be as happy to run `make` as your laptop is.  
 
-Another thing that we can *optionally* decouple from is **excessive use of external repos and registries for small customizations**.  It's always a pain to get pulled into a loop like *visit a separate tool-container-repository, make a change and ship an update, back to the other repository, pull the tool down, see it still needs changes,..*
+Another thing that we can optionally decouple from is **excessive use of external repos and registries for small customizations**.  It's always a pain to get pulled into a loop like *visit a separate tool-container-repository, make a change and ship an update, back to the other repository, pull the tool down, see it still needs changes,..*
 
 **Besides decoupling, arranging tasks this way tends to promote reusability and composition.**  As a rule, the more your automation is isolated into weird silos like notebooks and Jenkinsfiles, the more unruly that automation becomes.  *Is your automation growing wild copy-pasta, and turning into an ugly monolithic heap that only runs to top-to-bottom and has lots of side-effects?*  Much nicer to have discrete tasks that you can still run individually, yet quickly compose into DAGs of tasks, or DAGs of DAGs.  When you're more free from platforms and actually iterating on code in a read/write/run cycle more often, changes are easier and testing happens more continuously.
 
@@ -171,67 +168,6 @@ document.addEventListener('DOMContentLoaded', function() {setTimeout(function() 
 		['toolboxes-multiple-compose-files','packages'],
 		['other-kinds-of-dispatch','link'],
 	], mkdocs)}}
-	//addImageToHeader('container-dispatch','/{{mkdocs.config.site_name}}/img/dispatch.svg')
-	//addImageToHeader('dispatch-basics','/{{mkdocs.config.site_name}}/img/basics.svg')
-	//addImageToHeader('namespace-style-dispatch','/{{mkdocs.config.site_name}}/img/dispatch.svg')
-	//addImageToHeader('one-to-many-dispatch','/{{mkdocs.config.site_name}}/img/one2many.svg')
-	//addImageToHeader('container-agnostic-dispatch','/{{mkdocs.config.site_name}}/img/dispatch.svg')
 	addImageToHeader('compose-file-boilerplate','/{{mkdocs.config.site_name}}/img/compose.png',style="margin-top:-10px;height:2.2em;")
-	//addImageToHeader('toolboxes-multiple-compose-files','/{{mkdocs.config.site_name}}/img/packages.svg')
-	//addImageToHeader('other-kinds-of-dispatch','/{{mkdocs.config.site_name}}/img/link.svg')
 }, 100);});
 </script>
-
-{#
-Even without the more exotic features of `compose.mk`, it's worth mentioning that vanilla `make` has many under-appreciated capabilities over bash.  For example, did you know it supports ansible-style dry-runs [via --reconn](https://www.gnu.org/software/make/manual/html_node/Instead-of-Execution.html) and also parallel execution [with `make --jobs`](https://www.gnu.org/software/make/manual/make.html#Parallel-Execution)? 
-
-* [Multiple compose files are supported](), and a virtually unlimited number of tool containers.
-But where `compose.mk` really starts to shines isin is combining `compose.mk` with some docker-compose file the real magic happens when you combine `make`, `compose.mk`, `docker`,[workflow support]
-
-### Dispatch Syntax/Semantics
-<hr style="width:100%;border-bottom:3px solid black;">
-
-Let's look at the container-dispatch example in more detail.  This isn't a programming language you've never seen before, it's just a (legal) Makefile that uses unicode symbols in some of the targets.  
-
-```Makefile
-# project Makefile (make sure you have real tabs, not spaces)
-
-include compose.mk
-$(eval $(call compose.import.generic, ▰, TRUE, docker-compose.yml))
-
-# A target that runs stuff inside the `debian` container, runs from host using `make demo`
-demo: ▰/debian/self.demo
-
-# Dispatching 1 target to 2 containers looks like this
-demo.both: ▰/debian/self.demo ▰/alpine/self.demo
-
-# Displays platform info to show where target is running.
-self.demo:
-	source /etc/os-release && printf "$${PRETTY_NAME}\n"
-	uname -n -v
-```
-
-The suggested defaults here will annoy some people, but the syntax is configurable, and this hopefully won't collide with existing file paths or targets.  Using the *`self`* prefix is just a convention that you can change, but having some way to guard the target from accidental execution on the host is a good idea.  
-
-This decorator-inspired syntax is also creating a convention similar to the idea of private methods: *`self`* hopefully implies internal/private, and it's not easy to type the weird characters at the command line.  So users likely won't think to call anything except `make demo`.  For people reading the code, the visual hints make it easy to understand what's at the top-level.  Tightening it up can help to make it clear that this is sort of a logical block:
-
-```Makefile
-
-# project Makefile (make sure you have real tabs, not spaces)
-include compose.mk
-$(eval $(call compose.import.generic, ▰, TRUE, docker-compose.yml))
-
-# Two top-level "public" targets, dispatching 1 "private" target into groups of 1 or more containers
-demo: ▰/debian/self.demo
-demo.both: ▰/debian/self.demo ▰/alpine/self.demo
-self.demo:
-	source /etc/os-release && printf "$${PRETTY_NAME}\n"
-	uname -n -v
-```
-
-But what about the semantics?  In this example, the user-facing `demo` target depends on `▰/debian/demo`, which isn't really a target as much as a declaration.  The declaration means the *private* target `self.demo`, will be executed inside the `debian` container that the compose file defines.  *Crucially, the `self.demo` target can use tools the host doesn't have, stuff that's only available in the tool container.*  
-
-Look, no `docker run ..` clutter littered everywhere!  It's still kind of a weird CI/CD DSL, but the conventions are simple, it's agnostic about your CI backend, it is relatively frictionless, and there is a clean separation between automation / container specifications.
-
-Under the hood, dispatch is implemented by building on the [default targets that are provided by the bridge](({{mkdocs.site_relative_url}}/bridge).
-#}

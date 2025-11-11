@@ -55,59 +55,65 @@ Targets created as part of the automation scaffolding are can be [top-level name
 
 Top level container handles are targets that are created in the root namespace, basically mirroring the familiar verbs for docker compose ( *up/down/build/stop/ps/logs* ), plus adding conveniences for things like piping , dispatch, and shells.
 
-* [**`<svc_name>`**](#svc_name): Runs the container with default entrypoint
-* [**`<svc_name>`.shell**](#svc_nameshell): Drops into an interactive shell for this container
-* [**`<svc_name>`.shell.pipe**](#svc_nameshellpipe): Pipe data into the container shell
-* [**`<svc_name>`.get_shell**](#svc_namespecial): Try to detect a usable shell for the container
-* [**`<svc_name>`.get_config**](#svc_namespecial): Return service configuration details
-* [**`<svc_name>`.dispatch/<target>**](#svc_namedispatch): Runs the given target inside the given container
-* [**`<svc_name>`.exec/<target>**](#svc_nameexec): -> Runs the given target inside the *already running* container
-* [**`<svc_name>`.build**](#svc_namebuild): -> Roughly `docker compose -f .. build` 
-* [**`<svc_name>`.up**](#svc_nameup): -> Roughly `docker compose -f .. up` 
-* [**`<svc_name>`.up.detach**](#svc_nameup): -> Roughly `docker compose -f .. up -d` 
-* [**`<svc_name>`.build**](#svc_namebuild): -> Roughly `docker compose -f .. build` 
-* [**`<svc_name>`.logs**](#svc_namelogs): -> Roughly `docker compose -f .. logs` 
-* [**`<svc_name>`.exec.shell**](#svc_nameexec): -> Roughly `docker compose -f .. exec ..` 
-* [**`<svc_name>`.ps**](#svc_nameps): -> Roughly `docker compose -f .. ps` 
-* [**`<svc_name>`.stop**](#svc_namestop): -> Roughly `docker compose -f .. stop` 
-* **...**
+| Target | Description |
+|--------|-------------|
+| [**`<svc_name>`**](#svc_name) |  Runs the container with default entrypoint |
+| [**`<svc_name>`.shell**](#svc_nameshell) | Drops into an interactive shell for this container |
+| [**`<svc_name>`.shell.pipe**](#svc_nameshellpipe) |  Pipe data into the container shell |
+| [**`<svc_name>`.pipe**](#svc_nameshellpipe) |  Pipe data to default entrypoint (may not be a shell!) |
+| [**`<svc_name>`.get_shell**](#svc_namespecial) |  Try to detect a usable shell for the container |
+| [**`<svc_name>`.get_config**](#svc_namespecial) |  Return service configuration details |
+| [**`<svc_name>`.dispatch/`<target>`**](#svc_namedispatch) |  Runs the given target inside the given container |
+| [**`<svc_name>`.exec/`<target>`**](#svc_nameexec) | Runs the given target inside the *already running|  container |
+| [**`<svc_name>`.build**](#svc_namebuild) |  Roughly `docker compose -f .. build` |
+| [**`<svc_name>`.up**](#svc_nameup) | Roughly `docker compose -f .. up` |
+| [**`<svc_name>`.up.detach**](#svc_nameup) | Roughly `docker compose -f .. up -d` | 
+| [**`<svc_name>`.build**](#svc_namebuild) |  Roughly `docker compose -f .. build` |
+| [**`<svc_name>`.logs**](#svc_namelogs)  | Roughly `docker compose -f .. logs` |
+| [**`<svc_name>`.exec.shell**](#svc_nameexec) | Roughly `docker compose -f .. exec ..` |
+| [**`<svc_name>`.ps**](#svc_nameps) | Roughly `docker compose -f .. ps` |
+| [**`<svc_name>`.stop**](#svc_namestop) | Roughly `docker compose -f .. stop` |
 
 So for our simple example so far, `svc_name` would be either `debian` or `alpine`.
 
-Note that using `compose.import` creates top-level handles automatically, but there are other [namespace management options](#other-import-statements) to avoid collisions.  
+Note that using `compose.import` creates top-level handles automatically, but there are other [ways to handle namespacing](#other-import-statements) if you need to avoid name collisions.  
 
-Also note that while the list above is *mostly* complete, variants are available for things like quiet dispatch, quiet build, etc.  See the source for more details.
+Also note that while the list above is *mostly* complete, variants are available for things like quiet dispatch, quiet build, etc.  Use [the online help]({{mkdocs.site_relative_url}}/cli-help) or see the source for complete details.
 
 #### Canonical Names
 ------------------------
  
- Canonical scaffolding is sort of like an "absolute path" to the ones mentioned above, plus additional "group" targets that work with several (or all) of the tool container services at the same time.
-
-* [**`<compose_stem>`.services**](#compose_stemspecial): -> Roughly `docker compose -f .. config --services`
-* [**`<compose_stem>`.build**](#compose_stemspecial): -> Build everything
-* [**`<compose_stem>`.clean**](#compose_stemspecial): -> Clean everything, i.e. `docker compose -f .. down --rm-orphans --rmi`)
-* [**`<compose_stem>`.build/`<svc_name>`**](#compose_stemspecial): -> Build just one service
-* [**`<compose_stem>`.clean/`<svc_name>`**](#compose_stemspecial): -> Clean just one service
-* etc
-
-For our example so far, `compose_stem` from `docker-compose.yml`would be `docker-compose`.  
+Canonical scaffolding is sort of like an "absolute path" to the ones mentioned above, plus additional "group" targets that work with several (or all) of the tool container services at the same time.  
 
 Canonical names are always created unconditionally with `compose.import` or [any other kind of import statement](#other-import-statements).
 
-There are several other scaffolded entrypoints! But they all follow a pattern like **`<compose_stem>`/`<svc_name>`.`<verb>`**, i.e., basically the same as the corresponding toplevel container handles we saw in the last section.
+| Target | Description |
+|--------|-------------|
+| [**`<compose_stem>`.services**](#compose_stemspecial) |  Roughly `docker compose -f .. config --services` |
+| [**`<compose_stem>`.build**](#compose_stemspecial) |  Build everything |
+| [**`<compose_stem>`.clean**](#compose_stemspecial) |  Clean everything, i.e. `docker compose -f .. down --rm-orphans --rmi`) |
+| [**`<compose_stem>`.build/`<svc_name>`**](#compose_stemspecial) |  Build just one service |
+| [**`<compose_stem>`.clean/`<svc_name>`**](#compose_stemspecial) |  Clean just one service |
+| [**`<compose_stem>`.restart/`<svc_name>`**](#compose_stemspecial) |  Stop, then up-detach for one service |
+| [**`<compose_stem>`.with_profile/`<args>`**]({{mkdocs.site_relative_url}}/api/#composewith_profilearg) |  Helper for`COMPOSE_PROFILES`; See [compose.with_profile docs]({{mkdocs.site_relative_url}}/api/#composewith_profilearg) |
 
-#### Dispatch Namespace 
+So for our example thus far, `compose_stem` for `docker-compose.yml`would be `docker-compose`.
+
+There are several other scaffolded entrypoints! But they all follow patterns like **`<compose_stem>`/`<svc_name>`.`<verb>`**, i.e., basically the same as the corresponding top-level container handles we saw in the last section.  Use [the online help]({{mkdocs.site_relative_url}}/cli-help) or see the source for complete details.
+
+#### Dispatch Namespaces
 --------------------------
+<a name=dispatch-namespace></a>
 
-User-provided dispatch-namespaces are optional, but often a good idea.  In addition to most of the "group" targets available as **canonical names**, you get [syntactic sugar for target dispatch]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch).
+User-provided dispatch-namespaces are optional, but often a good idea.  In addition to the "group" targets available as canonical names, you'll get [syntactic sugar for target dispatch]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch).
 
-* `<namespace>/<svc>/<target>`: -> roughly `<svc_name>.dispatch/<target>`
 
-{#
-Be aware that import-statements that do not explicitly *provide* user-namespaces still have one, but use the default value of `services`.  (Really we expect tool-containers.. but this is in deference to the config-key name used by the docker-compose spec.)
-#}
+| Target | Description |
+|--------|-------------|
+| `<namespace>/<svc>/<target>` | Sugar for `<svc_name>.dispatch/<target>` |
 
-See the [full docs for compose.import](#other-import-statements) and the [main container dispatch docs]({{mkdocs.site_relative_url}}/container-dispatch#toolboxes-multiple-compose-files) for more information. 
+
+See the [full docs for compose.import](#other-import-statements) and the [main container dispatch docs]({{mkdocs.site_relative_url}}/container-dispatch#toolboxes-multiple-compose-files) for detailed information.
 
 ### Bridge API
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -213,8 +219,10 @@ The ***svc_name*.exec/** target is almost exactly the same as dispatch, except t
 ```bash {.cli_example}
 # Run the trivial `flux.ok` target inside a daemonized container.
 # Won't work for containers that exit immediately!
-$ make some_daemon.up.detach some_daemon.exec/flux.ok
+$ make some_daemonized_container.up.detach some_daemonized_container.exec/flux.ok
 ```
+
+The ***svc_name*.exec.shell** target takes no arguments, also similarly requires that `up` already happened, and is still running.  This opens an interactive shell.
 
 #### **[❡](#svc_nameshellpipe) `<svc_name>`.shell.pipe**
 <hr style="width:95%;border-bottom:1px dashed black;">

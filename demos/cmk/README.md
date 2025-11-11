@@ -16,6 +16,8 @@
 
 * [elixir.cmk](./elixir.cmk) (25 lines)
 
+* [example.cmk](./example.cmk) (12 lines)
+
 * [import-file.cmk](./import-file.cmk) (21 lines)
 
 * [inlined-composefile.cmk](./inlined-composefile.cmk) (53 lines)

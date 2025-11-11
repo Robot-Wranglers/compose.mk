@@ -5,7 +5,7 @@
 
 LLMs and `compose.mk` might seem like strange companions at first, but there are some edge cases where the combination is pretty interesting.  A few observations about this:
 
-1. Code-generation for things like shell / Makefile / awk is often incredibly reliable compared to most other things, and the available training data is huge.
+1. Code-generation for things like shell, `Makefile`, `awk` is often *incredibly reliable* compared to other things, and the available training data is huge.
 1. New capabilities for code-generation actually favor [polyglot design]({{mkdocs.site_relative_url}}/demos/polyglots), and allow for choosing the *best* tool for every job rather than always picking the most familiar tool.
 1. Even small AI-backed tools require significant dependencies and/or infrastructure.  Shipping them *without* a list of instructions for bootstrapping local ollama or similar tends to lower barrier to entry.
 1. Related to the last point, tool-use and agents can both benefit from a "containers first" type of approach.  This helps not only with dependency-management but also with sandboxing
