@@ -130,9 +130,7 @@ $  ./archive.run
 
 ### Argument Passing 
 <hr style="width:100%;border-bottom:3px solid black;">
-Argument passing hasn't been demonstrated so far, and this can get tricky.
-
-Here's an example where the generated executable we want to build will *take arguments in the form of a shell script*, which script will run inside the archive directory.  And in this case since we're passing in a script, we need to quote all the input too.
+Argument passing with makeself hasn't been demonstrated so far, and this can get tricky.  Here's an example where the generated executable we want to build will *take arguments in the form of a shell script*, which script will run inside the archive directory.  In this case since we're passing in a script, we need to quote all the input like this:
   
 ```bash {.cli_example}
 $ archive=demos/ bin=archive.run script='bash -x -c' ./compose.mk mk.self 

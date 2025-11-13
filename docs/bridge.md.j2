@@ -60,8 +60,9 @@ Top level container handles are targets that are created in the root namespace, 
 | [**`<svc_name>`**](#svc_name) |  Runs the container with default entrypoint |
 | [**`<svc_name>`.shell**](#svc_nameshell) | Drops into an interactive shell for this container |
 | [**`<svc_name>`.shell.pipe**](#svc_nameshellpipe) |  Pipe data into the container shell |
-| [**`<svc_name>`.pipe**](#svc_nameshellpipe) |  Pipe data to default entrypoint (may not be a shell!) |
+| [**`<svc_name>`.exec.shell**](#svc_nameexec) | Roughly `docker compose -f .. exec ..` |
 | [**`<svc_name>`.get_shell**](#svc_namespecial) |  Try to detect a usable shell for the container |
+| [**`<svc_name>`.pipe**](#svc_nameshellpipe) |  Pipe data to default entrypoint (may not be a shell!) |
 | [**`<svc_name>`.get_config**](#svc_namespecial) |  Return service configuration details |
 | [**`<svc_name>`.dispatch/`<target>`**](#svc_namedispatch) |  Runs the given target inside the given container |
 | [**`<svc_name>`.exec/`<target>`**](#svc_nameexec) | Runs the given target inside the *already running|  container |
@@ -70,7 +71,6 @@ Top level container handles are targets that are created in the root namespace, 
 | [**`<svc_name>`.up.detach**](#svc_nameup) | Roughly `docker compose -f .. up -d` | 
 | [**`<svc_name>`.build**](#svc_namebuild) |  Roughly `docker compose -f .. build` |
 | [**`<svc_name>`.logs**](#svc_namelogs)  | Roughly `docker compose -f .. logs` |
-| [**`<svc_name>`.exec.shell**](#svc_nameexec) | Roughly `docker compose -f .. exec ..` |
 | [**`<svc_name>`.ps**](#svc_nameps) | Roughly `docker compose -f .. ps` |
 | [**`<svc_name>`.stop**](#svc_namestop) | Roughly `docker compose -f .. stop` |
 
@@ -97,9 +97,9 @@ Canonical names are always created unconditionally with `compose.import` or [any
 | [**`<compose_stem>`.restart/`<svc_name>`**](#compose_stemspecial) |  Stop, then up-detach for one service |
 | [**`<compose_stem>`.with_profile/`<args>`**]({{mkdocs.site_relative_url}}/api/#composewith_profilearg) |  Helper for`COMPOSE_PROFILES`; See [compose.with_profile docs]({{mkdocs.site_relative_url}}/api/#composewith_profilearg) |
 
-So for our example thus far, `compose_stem` for `docker-compose.yml`would be `docker-compose`.
+So for our example thus far, `compose_stem` for `docker-compose.yml`would be `docker-compose` and `svc_name` is still either `debian` or `alpine`.
 
-There are several other scaffolded entrypoints! But they all follow patterns like **`<compose_stem>`/`<svc_name>`.`<verb>`**, i.e., basically the same as the corresponding top-level container handles we saw in the last section.  Use [the online help]({{mkdocs.site_relative_url}}/cli-help) or see the source for complete details.
+There are several other scaffolded entrypoints! Most will follow patterns like **`<compose_stem>`/`<svc_name>`.`<verb>`**, i.e. basically the same as the corresponding top-level container handles we saw in the last section.  For complete details, see [more examples here]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files), or use [the online help]({{mkdocs.site_relative_url}}/cli-help), or see the source.
 
 #### Dispatch Namespaces
 --------------------------

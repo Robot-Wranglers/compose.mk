@@ -20,7 +20,24 @@ To illustrate the idea, consider the following project Makefile:
 
 {{site.embed_demo('demos/container-dispatch.mk', github=github)}}
 
-Calling the top-level `demo` target looks something like this:
+Stylistically there's a bunch of ways to write this, but you can probably tell this approach is python-inspired.  For one thing, the `__main__` target is a default entrypoint, and our "functions" support python style docstrings.  Plus, the blend of declarative and functional styles is similar to decorators when you clean it up:
+
+{{site.embed_demo('demos/container-dispatch-min.mk', github=github)}}
+
+This approach to dispatch uses target scaffolding in a way that's basically functional, but we'll get to something more declarative in the [next section](#namespace-style-dispatch).  And of course, this is still just a Makefile, so you could always write out target-bodies instead of using prerequisites:
+
+```Makefile {.snippet .language-makefile}
+include compose.mk
+$(call compose.import, file=demos/data/docker-compose.yml)
+__main__:
+	echo hello host `uname -n -v`
+	${make} debian.dispatch/self.demo
+	echo cleaning
+self.demo:
+	echo hello container `uname -n -v`
+```
+
+Running it looks like this:
 
 {{macros.img_link("demo-dispatch.gif", mkdocs)}}
 
@@ -37,12 +54,12 @@ $ docker compose -f docker-compose.yml \
     run --entrypoint bash debian -c "make self.demo"
 ```
 
-Maybe it's not obvious yet, so it's worth noticing that this is already **much** cleaner and more composable than the alternative in pure bash, where you get lots of disconnected automation scripts that are littered with lots of `docker run ...` statements.  In fact, this is pretty similar to [`agent { docker { .. } }` in Jenkins Pipelines](https://www.jenkins.io/doc/book/pipeline/docker/), but it's significantly more portable and readable.
+Nice, this is already **much** cleaner and more composable than the bash alternative, where you get lots of disconnected automation scripts that are littered with lots of `docker run ...` statements.  In fact, this is pretty similar to [`agent { docker { .. } }` in Jenkins Pipelines](https://www.jenkins.io/doc/book/pipeline/docker/), or equivalent for github-actions, but it's much more portable and readable.
 
 ### Namespace-Style Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The previous example uses the simplest dispatch style, but we want to stay organized even if we're building *lots* of targets with *lots* of containers across [maybe several compose-files]({{mkdocs.site_relative_url}}/bridge/#other-import-statements). 
+The last section introduces container-dispatch in a functional paradigm, but for something that feels more declarative, you can use **namespace dispatch*.  This is especially helpful if you want to stay organized while building *lots* of targets with *lots* of containers across [maybe several compose-files]({{mkdocs.site_relative_url}}/bridge/#other-import-statements). 
 
 In such cases name-collisions might be inevitable, and you'll want fine-grained controls over namespacing to get something closer to an "absolute path" for the dispatch mechanics.  The next example is equivalent to the first, and begins to shed light on how the [`compose.import` macro arguments]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) can be used to create user-defined [syntactic sugar](https://en.wikipedia.org/wiki/Syntactic_sugar).
 
@@ -51,12 +68,12 @@ In such cases name-collisions might be inevitable, and you'll want fine-grained 
     bottom_right=site.link_mirror('demos/cmk/container-dispatch-2.cmk'),
     github=github)}}
 
-Similar to "private" targets with a `self.*` naming convention, using a blocky unicode symbol like `▰` isn't *actually* required, and of course you can call your namespace anything you want.  There's a few reasons for this weird looking style though, and docs and demos sometimes use it.  Think of it at as a naming convention that's approaching notation.  The idea is that:
+Similar to "private" targets with a `self.*` naming convention, using a blocky unicode symbol like `▰` isn't *actually* required, and of course you can call your namespace anything you want.  There's a few reasons for this weird looking style though and you might see various docs and demos using it.  Think of it at as a *naming convention that's approaching notation*.  The idea is that:
 
 1. Sugar should be shortened, not longer than the syntax it's replacing
 1. Sugar should be visually very easy to parse, and blocky unicode symbols qualify while also making it very clear this is a specific new kind of idiom.
 
-If you decide to use it, this notation also has a property that it's *hard to use from the command line*, but it is *easy to use from file that already has several such instances*.  That's a feature!  Targets intended *to run inside containers* probably shouldn't run from the top-level.  And if you find yourself always watching to dispatch a private target using an invocation like `make ▰/debian/self.demo`, that's a good indication that it's actually **a project-level verb**, and thus it's important enough to deserve an aliased entrypoint.
+If you decide to use it, this notation also has a property that it's *hard to use from the command line*, but it is *easy to use from file that already has several such instances*.  That's a feature!  To avoid confusion, targets intended *to run inside containers* probably should **not** run from the top-level.  And if you find yourself always watching to dispatch a private target using an invocation like `make ▰/debian/self.demo`, that's a good indication that it's actually **a project-level verb** and not just a component-action. Project-verbs are worthy of an explicit alias, because it's a separate category of automation and a separate API to curate.
 
 ### Toolboxes & Multiple Compose Files
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -65,7 +82,7 @@ Putting it together, suppose your project involves so many tool containers that 
 
 {{site.embed_demo('demos/container-dispatch-3.mk', github=github)}}
 
-This way of arranging things makes it clear that there are a few distinct toolboxes at play.  Of course, you can always call things like `self.docs.gen` directly for testing if you *know* you have LateX tools available.  At the same time, the naming convention helps to serve as an important reminder that it *your* LaTeX toolchain might be different than what your coworker or CI/CD process is using.
+This way of arranging things makes it clear that there are a few distinct toolboxes at play.  Of course, you can always call things like `self.docs.gen` directly for testing if you *know* you have LateX tools available.  At the same time, the naming convention helps to serve as an important reminder that **your** LaTeX toolchain might be different than whatever coworkers or CI/CD is using.
 
 ### One-to-Many Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -96,7 +113,7 @@ Eagle-eyed readers will note that even the verbose version above is *actually ab
 ### Container-Agnostic Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Sometimes you want a target or a script that **always** runs in a container, but can be safely called from the container *or* the host.  See the tests below for usage information about the `compose.bind.target` macro:
+Sometimes you want a target or a script that **always** runs in a container, but can be safely called from the container *or* the host.  For details about the `compose.bind.target` macro, see the tests below:
 
 {{site.embed_demo(
     'demos/bind-target.mk', 
@@ -107,7 +124,7 @@ Sometimes you want a target or a script that **always** runs in a container, but
 
 --------------------------
 
-Sometimes you want a **script** that *always* runs in a container, but can be safely called from the container or the host.  See the tests below for usage information about the `compose.bind.script` macro:
+Sometimes you want a **script** that *always* runs in a container, but can be safely called from the container or the host.  For details about the `compose.bind.script` macro, see the tests below :
 
 {{site.embed_demo('demos/bind-script.mk', 
     bottom_right=site.link_mirror(

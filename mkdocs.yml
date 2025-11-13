@@ -98,8 +98,10 @@ plugins:
   - autolinks
   - redirects:
       redirect_maps:
-        'index.md': 'overview.md'
+        index.md: 'overview.md'
         tui.md: 'embedded-tui.md'
+        cmk.md: 'compiler.md'
+        cmk-lang.md: 'compiler.md'
 
 # https://squidfunk.github.io/mkdocs-material/reference/lists/#using-definition-lists
 markdown_extensions:

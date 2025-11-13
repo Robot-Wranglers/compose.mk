@@ -11,7 +11,7 @@ include compose.mk
 # including the "debian" container, into the root namespace
 $(call compose.import, file=demos/data/docker-compose.yml)
 
-# Basic dispatch style: Run `self.demo` target in the debian container
+# Basic dispatch style: Run `self.demo` target in the "debian" container
 __main__: debian.dispatch/self.demo
 
 # Target that's actually used with dispatch.  This runs inside the container.

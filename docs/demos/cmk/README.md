@@ -14,6 +14,8 @@
 
 * [container-dispatch-2.cmk](./container-dispatch-2.cmk) (21 lines)
 
+* [container-dispatch.cmk](./container-dispatch.cmk) (17 lines)
+
 * [elixir.cmk](./elixir.cmk) (25 lines)
 
 * [example.cmk](./example.cmk) (12 lines)

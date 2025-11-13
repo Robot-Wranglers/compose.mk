@@ -364,6 +364,7 @@ export DEBIAN_CONTAINER_VERSION?=debian:bookworm
 export ALPINE_VERSION?=3.21.2
 
 IMG_CARBONYL?=fathyb/carbonyl
+IMG_NUSHELL?=ghcr.io/nushell/nushell:latest-alpine
 IMG_IMGROT?=robotwranglers/imgrot:07abe6a
 IMG_MONCHO_DRY=moncho/dry@sha256:6fb450454318e9cdc227e2709ee3458c252d5bd3072af226a6a7f707579b2ddd
 
@@ -1023,7 +1024,7 @@ docker.run.def:
 	${stderr_stdout_indent}
 
 docker.run.sh:
-	@# Runs the given command inside the named container.
+	@# Runs the given command inside the named container.  Also available as a macro.
 	@#
 	@# This automatically detects whether it is used as a pipe & proxies stdin as appropriate.
 	@# This always shares the working directory as a volume & uses that as a workspace.
@@ -3604,7 +3605,45 @@ stream.jb:; ${stream.jb}
 	@#
 	@# REFS:
 	@#   `[1]:` https://github.com/h4l/json.bash
+
+
+# Pass stream to nushell with given command.  (Internal use)
+ _stream.parse.nushell=img=${IMG_NUSHELL} entrypoint=nu cmd="-c '${stream.stdin} | ${1}'" CMK_INTERNAL=1 quiet=1 ${make} docker.run.sh
+stream.nushell:;  $(call  _stream.parse.nushell, $${cmd})
+	@# Runs the input stream through the given nushell pipeline.
+	@# See also: nushell [official docs](https://www.nushell.sh/cookbook/parsing.html)
+	@#
+	@# EXAMPLE: 
+	@#   echo '{}' | cmd='from json | to yaml' ${make} stream.nushell
+
+stream.nushell/%:
+	@# Runs the input stream through the given nushell pipeline.
+	@# Pipeline is given as argument, converting underscores to space and commas to pipes.  
+	@# See also: nushell [official docs](https://www.nushell.sh/cookbook/parsing.html)
+	@#
+	@# USAGE:
+	@#    echo '{"foo":"bar"}'|./compose.mk stream.nushell/from_json,to_yaml
+	@#
+	cmd="`echo ${*} | sed 's/,/|/g' | sed 's/_/ /g'`" && $(call  _stream.parse.nushell, $${cmd})
+
+stream.nushell.parse stream.parse stream.parse.patterns:
+	@# Use nushell to parse arbitrary input to JSON given a pattern.
+	@# See also: nushell [official docs](https://www.nushell.sh/cookbook/parsing.html)
+	@#
+	@# EXAMPLE: 
+	@#   cargo search shells --limit 10 
+	@#     | pattern='{crate_name} = {version} #{description}' ./compose.mk stream.parse
+	$(call  _stream.parse.nushell, parse \"$${pattern}\" | to json)
+
+stream.nushell.parse_cols stream.parse.cols stream.parse.columns:
+	@# Use nushell to try to parse column-oriented input to JSON
+	@# See also: nushell [official docs](https://www.nushell.sh/cookbook/parsing.html)
+	@#
+	@# USAGE: 
+	@#   df -h | ./compose.mk stream.parse.json
+	$(call  _stream.parse.nushell, detect columns | to json)
 	
+
 stream.glow:=${glow.run}
 stream.markdown:=${glow.run} 
 stream.glow stream.markdown:; ${stream.glow} 
@@ -5694,6 +5733,7 @@ jq:
 	&& cmd=$${cmd:-$${after:-.}} && dcmd="${jq.run.pipe} $${cmd}" \
 	&& ([ -p ${stdin} ] && dcmd="${stream.stdin} | $${dcmd}" || true) \
 	&& $(call mk.yield, $${dcmd})
+
 
 jb jb.pipe:
 	@# An interface to `jb`[1] tool for building JSON from the command-line.
