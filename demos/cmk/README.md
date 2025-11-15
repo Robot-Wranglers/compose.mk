@@ -14,11 +14,15 @@
 
 * [container-dispatch-2.cmk](./container-dispatch-2.cmk) (21 lines)
 
+* [container-dispatch.cmk](./container-dispatch.cmk) (17 lines)
+
 * [elixir.cmk](./elixir.cmk) (25 lines)
+
+* [example.cmk](./example.cmk) (12 lines)
 
 * [import-file.cmk](./import-file.cmk) (21 lines)
 
-* [inlined-composefile.cmk](./inlined-composefile.cmk) (57 lines)
+* [inlined-composefile.cmk](./inlined-composefile.cmk) (53 lines)
 
 * [inlined-dockerfile.cmk](./inlined-dockerfile.cmk) (27 lines)
 

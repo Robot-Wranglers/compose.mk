@@ -7,9 +7,9 @@ Container dispatch is one of the core features of `compose.mk`, and involves bin
 
 {{macros.img_link("escher-reptiles.jpg", mkdocs, width="70%", align='center', class=" ")}}
 
-Targets might be custom (i.e. project-local), or might be part of the [compose.mk API](#), or might be orchestration that combines all of the above.  Containers might be existing images, embedded images managed directly by `compose.mk`, or might come from internal or external docker-compose specs.
+Targets might be custom (i.e. project-local), or might be part of the [compose.mk API]({{mkdocs.site_relative_url}}/api), or might be orchestration that combines all of the above.  Containers might be existing images, or embedded images managed directly by `compose.mk`, or might come from embedded or external docker-compose specs.
 
-Later in this page, we'll get into more details about [how/when container dispatch is useful](#but-why), and a [typical setup](#compose-file-boilerplate)  with `docker-compose.yml` that supports it.  For now, let's start with what the idiom looks like and how it's used.
+Later in this page, we'll get into more details about [how/when container dispatch is useful](#but-why), and a [typical setup](#compose-file-boilerplate)  with `docker-compose.yml` that supports it.  For now though, let's start with what the idiom looks like and how it's used.
 
 ### Dispatch Basics
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -20,7 +20,24 @@ To illustrate the idea, consider the following project Makefile:
 
 {{site.embed_demo('demos/container-dispatch.mk', github=github)}}
 
-Calling the top-level `demo` target looks something like this:
+Stylistically there's a bunch of ways to write this, but you can probably tell this approach is python-inspired.  For one thing, the `__main__` target is a default entrypoint, and our "functions" support python style docstrings.  Plus, the blend of declarative and functional styles is similar to decorators when you clean it up:
+
+{{site.embed_demo('demos/container-dispatch-min.mk', github=github)}}
+
+This approach to dispatch uses target scaffolding in a way that's basically functional, but we'll get to something more declarative in the [next section](#namespace-style-dispatch).  And of course, this is still just a Makefile, so you could always write out target-bodies instead of using prerequisites:
+
+```Makefile {.snippet .language-makefile}
+include compose.mk
+$(call compose.import, file=demos/data/docker-compose.yml)
+__main__:
+	echo hello host `uname -n -v`
+	${make} debian.dispatch/self.demo
+	echo cleaning
+self.demo:
+	echo hello container `uname -n -v`
+```
+
+Running it looks like this:
 
 {{macros.img_link("demo-dispatch.gif", mkdocs)}}
 
@@ -37,12 +54,12 @@ $ docker compose -f docker-compose.yml \
     run --entrypoint bash debian -c "make self.demo"
 ```
 
-Maybe it's not obvious yet, so it's worth noticing that this is already **much** cleaner and more composable than the alternative in pure bash, where you get lots of disconnected automation scripts that are littered with lots of `docker run ...` statements.  In fact, this is pretty similar to [`agent { docker { .. } }` in Jenkins Pipelines](https://www.jenkins.io/doc/book/pipeline/docker/), but it's significantly more portable, and arguably more readable.
+Nice, this is already **much** cleaner and more composable than the bash alternative, where you get lots of disconnected automation scripts that are littered with lots of `docker run ...` statements.  In fact, this is pretty similar to [`agent { docker { .. } }` in Jenkins Pipelines](https://www.jenkins.io/doc/book/pipeline/docker/), or equivalent for github-actions, but it's much more portable and readable.
 
 ### Namespace-Style Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The previous example uses the simplest dispatch style, but we want to stay organized even if we're building *lots* of targets with *lots* of containers across [maybe several compose-files]({{mkdocs.site_relative_url}}/bridge/#other-import-statements). 
+The last section introduces container-dispatch in a functional paradigm, but for something that feels more declarative, you can use **namespace dispatch*.  This is especially helpful if you want to stay organized while building *lots* of targets with *lots* of containers across [maybe several compose-files]({{mkdocs.site_relative_url}}/bridge/#other-import-statements). 
 
 In such cases name-collisions might be inevitable, and you'll want fine-grained controls over namespacing to get something closer to an "absolute path" for the dispatch mechanics.  The next example is equivalent to the first, and begins to shed light on how the [`compose.import` macro arguments]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) can be used to create user-defined [syntactic sugar](https://en.wikipedia.org/wiki/Syntactic_sugar).
 
@@ -51,14 +68,12 @@ In such cases name-collisions might be inevitable, and you'll want fine-grained 
     bottom_right=site.link_mirror('demos/cmk/container-dispatch-2.cmk'),
     github=github)}}
 
-Similar to "private" targets with a `self.*` naming convention, using a blocky unicode symbol like `▰` isn't *actually* required, and of course you can call your namespace anything you want.  There's a few reasons this weird looking style is a good idea though, and docs and demos will stick to it as a convenient naming convention. 
+Similar to "private" targets with a `self.*` naming convention, using a blocky unicode symbol like `▰` isn't *actually* required, and of course you can call your namespace anything you want.  There's a few reasons for this weird looking style though and you might see various docs and demos using it.  Think of it at as a *naming convention that's approaching notation*.  The idea is that:
 
-1. *Sugar for* [`<svc_name>.dispatch/<dispatch_target>`]({{mkdocs.site_relative_url}}/bridge/#svc_namedispatch) *should be shortened* (not longer than the syntax it's replacing)
-1. *Sugar should be visually very easy to parse*, and blocky unicode symbols qualify while also making it very clear this is a specific new kind of idiom.
+1. Sugar should be shortened, not longer than the syntax it's replacing
+1. Sugar should be visually very easy to parse, and blocky unicode symbols qualify while also making it very clear this is a specific new kind of idiom.
 
-This convention also has a more subtle property that it's *hard to use from the command line*, but *easy to use from file that already has several such instances*, and **sometimes this is a feature**.  
-
-If your targets *that actually run inside containers* are frequently used from the top-level.. that's a good indication that it's actually **a project-level verb that's important enough to deserve an aliased entrypoint**.
+If you decide to use it, this notation also has a property that it's *hard to use from the command line*, but it is *easy to use from file that already has several such instances*.  That's a feature!  To avoid confusion, targets intended *to run inside containers* probably should **not** run from the top-level.  And if you find yourself always watching to dispatch a private target using an invocation like `make ▰/debian/self.demo`, that's a good indication that it's actually **a project-level verb** and not just a component-action. Project-verbs are worthy of an explicit alias, because it's a separate category of automation and a separate API to curate.
 
 ### Toolboxes & Multiple Compose Files
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -67,7 +82,7 @@ Putting it together, suppose your project involves so many tool containers that 
 
 {{site.embed_demo('demos/container-dispatch-3.mk', github=github)}}
 
-This way of arranging things makes it clear that there are a few distinct toolboxes at play, and that while you can always call things like `self.docs.gen` directly for testing, the syntax helps make it clear that your host isn't actually guaranteed to have all the tools involved.
+This way of arranging things makes it clear that there are a few distinct toolboxes at play.  Of course, you can always call things like `self.docs.gen` directly for testing if you *know* you have LateX tools available.  At the same time, the naming convention helps to serve as an important reminder that **your** LaTeX toolchain might be different than whatever coworkers or CI/CD is using.
 
 ### One-to-Many Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -80,7 +95,7 @@ Again, the *`self`* prefix and the `▰/` namespace is just a convention, you ca
 
 {{macros.img_link("demo.double.dispatch.gif", mkdocs)}}
 
-Meanwhile, the equivalent-but-expanded pure bash version below is getting cluttered.  Eagle-eyed readers will note that even the verbose version is *actually abbreviated*, because this doesn't mention [the volume-mount necessary for tool containers to get at project files]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults).
+Meanwhile, the almost-equivalent-but-expanded pure bash version below is getting cluttered.
 
 ```bash {.cli_example}
 # Clean, simple invocation with compose.mk
@@ -93,28 +108,28 @@ $ docker compose -f docker-compose.yml \
     run --entrypoint bash alpine -c "make self.demo"
 ```
 
+Eagle-eyed readers will note that even the verbose version above is *actually abbreviated*, because this doesn't mention [the volume-mount necessary for tool containers to get at project files]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults)!
+
 ### Container-Agnostic Dispatch
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Sometimes you want a target or a script that **always** runs in a container, but can be safely called from the container *or* the host.  See the tests below for usage information about the `compose.bind.target` macro:
+Sometimes you want a target or a script that **always** runs in a container, but can be safely called from the container *or* the host.  For details about the `compose.bind.target` macro, see the tests below:
 
 {{site.embed_demo(
     'demos/bind-target.mk', 
     bottom_right=site.link_mirror(
-      'demos/bind-target.mk',
-      base=mkdocs.site_relative_url+'/compiler/#compose-file-example'),
+      'demos/cmk/bind-target.cmk',
+      base=mkdocs.site_relative_url+'/compiler/#bind-target'),
     github=github)}}
-
-To avoid name-collisions use "." as prefix for the the "private" target, as seen in the example above.
 
 --------------------------
 
-Sometimes you want a **script** that *always* runs in a container, but can be safely called from the container or the host.  See the tests below for usage information about the `compose.bind.script` macro:
+Sometimes you want a **script** that *always* runs in a container, but can be safely called from the container or the host.  For details about the `compose.bind.script` macro, see the tests below :
 
 {{site.embed_demo('demos/bind-script.mk', 
     bottom_right=site.link_mirror(
-      'demos/bind-script.mk',
-      base=mkdocs.site_relative_url+'/compiler/#compose-file-example'),
+      'demos/cmk/bind-script.cmk',
+      base=mkdocs.site_relative_url+'/compiler/#bind-script'),
     github=github)}}
 
 
@@ -123,13 +138,13 @@ Sometimes you want a **script** that *always* runs in a container, but can be sa
 
 So far we've just looked at using dispatch with [imported tool containers]({{mkdocs.site_relative_url}}/bridge) that come from docker compose files.  Script and target dispatch comes in other flavors too though, from scripts or [from the CLI]({{mkdocs.site_relative_url}}/raw-docker/#other-docker-utilities), and works with:
 
-1. 🍦 [External compose files](#dispatch-basics) (as seen above) 
-1. 🍭 [Inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) 
-1. 🍰 [Stock-images]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-tasks-in-containers) 
-1. 🍓 [Inlined containers]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile) 
-1. 🍒 [The docker host itself]({{mkdocs.site_relative_url}}/demos/polyglots#special-guests) 
+1. [External compose files](#dispatch-basics) (as seen above) 
+1. [Inlined compose files]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) 
+1. [Stock-images]({{mkdocs.site_relative_url}}/raw-docker/#dispatch-tasks-in-containers) 
+1. [Inlined containers]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-dockerfile) 
+1. [The docker host itself]({{mkdocs.site_relative_url}}/demos/polyglots#special-guests) 
 
-Whether you're using `compose.mk` as a library, a stand-alone tool, or a framework, **this simple pattern for dispatching targets in containers is one of the main features, and it's surprisingly powerful.**  
+**This simple pattern for dispatching targets in containers is one of the main features, and it's surprisingly powerful**  regardless of whether you're using `compose.mk` as a library, a stand-alone tool, or a framework.  
 
 From here, if you just want to get started, you might want to look at more detailed docs for [`compose.import` arguments]({{mkdocs.site_relative_url}}/bridge/#import-macro-arguments), or [the docker-compose.yml boilerplate that supports dispatch](#compose-file-boilerplate).  
 
@@ -141,7 +156,7 @@ If you're using dispatch idioms a lot and interested in more advanced topics, yo
 ### Compose File Boilerplate
 <hr style="width:100%;border-bottom:3px solid black;">
 
-In practice the containers you use might be already compatible with the dispatch idiom, but if they are slim or you are starting from scratch, perhaps not.  
+In practice the containers you use might be already compatible with the dispatch idiom, but if they are slim or if you are starting from scratch, perhaps not.  
 
 Below you can see a typical example of a compose file that supports dispatch, leaning more towards pedantic than minimal.  See the [integration docs]({{mkdocs.site_relative_url}}/quickstart/#docker-compose-integration) for more detailed discussion, 
 
@@ -155,7 +170,7 @@ Having introduced what the dispatch idiom looks like and what it does, let's tal
 
 This is probably a jailbreak moment for your automation!  Think about it: **Most of the ways that we use to *decouple* tasks from their execution environment actually cause our tasks to be *tightly coupled* to some platform instead**.  That's a frustrating trade-off and a huge barrier to entry if you're just trying to write/run code.  And it's not just CI/CD platforms like Jenkins and Github-- it also happens with platforms like Airflow, ArgoWF, and notebooks.  These platforms are all great at what they do, but we shouldn't need them every time we just want to decouple tasks from runtimes or express DAGs.  And if you want to use a platform later down the line, then your platform will be as happy to run `make` as your laptop is.  
 
-Another thing that we can *optionally* decouple from is **excessive use of external repos and registries for small customizations**.  It's always a pain to get pulled into a loop like *visit a separate tool-container-repository, make a change and ship an update, back to the other repository, pull the tool down, see it still needs changes,..*
+Another thing that we can optionally decouple from is **excessive use of external repos and registries for small customizations**.  It's always a pain to get pulled into a loop like *visit a separate tool-container-repository, make a change and ship an update, back to the other repository, pull the tool down, see it still needs changes,..*
 
 **Besides decoupling, arranging tasks this way tends to promote reusability and composition.**  As a rule, the more your automation is isolated into weird silos like notebooks and Jenkinsfiles, the more unruly that automation becomes.  *Is your automation growing wild copy-pasta, and turning into an ugly monolithic heap that only runs to top-to-bottom and has lots of side-effects?*  Much nicer to have discrete tasks that you can still run individually, yet quickly compose into DAGs of tasks, or DAGs of DAGs.  When you're more free from platforms and actually iterating on code in a read/write/run cycle more often, changes are easier and testing happens more continuously.
 
@@ -170,67 +185,6 @@ document.addEventListener('DOMContentLoaded', function() {setTimeout(function() 
 		['toolboxes-multiple-compose-files','packages'],
 		['other-kinds-of-dispatch','link'],
 	], mkdocs)}}
-	//addImageToHeader('container-dispatch','/{{mkdocs.config.site_name}}/img/dispatch.svg')
-	//addImageToHeader('dispatch-basics','/{{mkdocs.config.site_name}}/img/basics.svg')
-	//addImageToHeader('namespace-style-dispatch','/{{mkdocs.config.site_name}}/img/dispatch.svg')
-	//addImageToHeader('one-to-many-dispatch','/{{mkdocs.config.site_name}}/img/one2many.svg')
-	//addImageToHeader('container-agnostic-dispatch','/{{mkdocs.config.site_name}}/img/dispatch.svg')
 	addImageToHeader('compose-file-boilerplate','/{{mkdocs.config.site_name}}/img/compose.png',style="margin-top:-10px;height:2.2em;")
-	//addImageToHeader('toolboxes-multiple-compose-files','/{{mkdocs.config.site_name}}/img/packages.svg')
-	//addImageToHeader('other-kinds-of-dispatch','/{{mkdocs.config.site_name}}/img/link.svg')
 }, 100);});
 </script>
-
-{#
-Even without the more exotic features of `compose.mk`, it's worth mentioning that vanilla `make` has many under-appreciated capabilities over bash.  For example, did you know it supports ansible-style dry-runs [via --reconn](https://www.gnu.org/software/make/manual/html_node/Instead-of-Execution.html) and also parallel execution [with `make --jobs`](https://www.gnu.org/software/make/manual/make.html#Parallel-Execution)? 
-
-* [Multiple compose files are supported](), and a virtually unlimited number of tool containers.
-But where `compose.mk` really starts to shines isin is combining `compose.mk` with some docker-compose file the real magic happens when you combine `make`, `compose.mk`, `docker`,[workflow support]
-
-### Dispatch Syntax/Semantics
-<hr style="width:100%;border-bottom:3px solid black;">
-
-Let's look at the container-dispatch example in more detail.  This isn't a programming language you've never seen before, it's just a (legal) Makefile that uses unicode symbols in some of the targets.  
-
-```Makefile
-# project Makefile (make sure you have real tabs, not spaces)
-
-include compose.mk
-$(eval $(call compose.import.generic, ▰, TRUE, docker-compose.yml))
-
-# A target that runs stuff inside the `debian` container, runs from host using `make demo`
-demo: ▰/debian/self.demo
-
-# Dispatching 1 target to 2 containers looks like this
-demo.both: ▰/debian/self.demo ▰/alpine/self.demo
-
-# Displays platform info to show where target is running.
-self.demo:
-	source /etc/os-release && printf "$${PRETTY_NAME}\n"
-	uname -n -v
-```
-
-The suggested defaults here will annoy some people, but the syntax is configurable, and this hopefully won't collide with existing file paths or targets.  Using the *`self`* prefix is just a convention that you can change, but having some way to guard the target from accidental execution on the host is a good idea.  
-
-This decorator-inspired syntax is also creating a convention similar to the idea of private methods: *`self`* hopefully implies internal/private, and it's not easy to type the weird characters at the command line.  So users likely won't think to call anything except `make demo`.  For people reading the code, the visual hints make it easy to understand what's at the top-level.  Tightening it up can help to make it clear that this is sort of a logical block:
-
-```Makefile
-
-# project Makefile (make sure you have real tabs, not spaces)
-include compose.mk
-$(eval $(call compose.import.generic, ▰, TRUE, docker-compose.yml))
-
-# Two top-level "public" targets, dispatching 1 "private" target into groups of 1 or more containers
-demo: ▰/debian/self.demo
-demo.both: ▰/debian/self.demo ▰/alpine/self.demo
-self.demo:
-	source /etc/os-release && printf "$${PRETTY_NAME}\n"
-	uname -n -v
-```
-
-But what about the semantics?  In this example, the user-facing `demo` target depends on `▰/debian/demo`, which isn't really a target as much as a declaration.  The declaration means the *private* target `self.demo`, will be executed inside the `debian` container that the compose file defines.  *Crucially, the `self.demo` target can use tools the host doesn't have, stuff that's only available in the tool container.*  
-
-Look, no `docker run ..` clutter littered everywhere!  It's still kind of a weird CI/CD DSL, but the conventions are simple, it's agnostic about your CI backend, it is relatively frictionless, and there is a clean separation between automation / container specifications.
-
-Under the hood, dispatch is implemented by building on the [default targets that are provided by the bridge](({{mkdocs.site_relative_url}}/bridge).
-#}

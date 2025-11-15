@@ -14,9 +14,8 @@ $(call compose.import, file=demos/data/docker-compose.yml)
 
 # Decorator-style idiom.  
 # This binds together a container, a "public" target, 
-# and a "private" target.  The public-target becomes the main interface;
-# the "private" target runs inside the named container, and has the same
-# name but uses a "." prefix.  
+# and a "private" target.  The public-target becomes the main interface
+# while the private target runs inside the named container.
 my_target:; $(call compose.bind.target, debian)
 self.my_target:
 	echo hello container `hostname`

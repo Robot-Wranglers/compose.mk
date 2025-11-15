@@ -8,6 +8,8 @@
 
 * [ansible-playbook.mk](./ansible-playbook.mk) (45 lines)
 
+* [basic-integration-2.mk](./basic-integration-2.mk) (14 lines)
+
 * [basic-integration.mk](./basic-integration.mk) (14 lines)
 
 * [bind-def-to-env.mk](./bind-def-to-env.mk) (21 lines)
@@ -16,7 +18,7 @@
 
 * [bind-script.mk](./bind-script.mk) (33 lines)
 
-* [bind-target.mk](./bind-target.mk) (27 lines)
+* [bind-target.mk](./bind-target.mk) (26 lines)
 
 * [cli-help-shebang.mk](./cli-help-shebang.mk) (25 lines)
 
@@ -31,6 +33,10 @@
 * [container-dispatch-2.mk](./container-dispatch-2.mk) (23 lines)
 
 * [container-dispatch-3.mk](./container-dispatch-3.mk) (23 lines)
+
+* [container-dispatch-body.mk](./container-dispatch-body.mk) (1 lines)
+
+* [container-dispatch-min.mk](./container-dispatch-min.mk) (12 lines)
 
 * [container-dispatch.mk](./container-dispatch.mk) (22 lines)
 
@@ -123,6 +129,8 @@
 * [stages.mk](./stages.mk) (52 lines)
 
 * [stdlib-stream-io.mk](./stdlib-stream-io.mk) (39 lines)
+
+* [structured-io-nushell.mk](./structured-io-nushell.mk) (37 lines)
 
 * [structured-io.mk](./structured-io.mk) (18 lines)
 

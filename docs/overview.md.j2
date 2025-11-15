@@ -17,7 +17,7 @@ Typical use-cases include **general project automation**, especially decoupling 
 Whether `compose.mk` is a tool, a library, a language, or a framework depends on how you decide to use it.
 
 **For programmatic usage,**
-:  you can think of `compose.mk` as an attempt to provide a "[standard library]({{mkdocs.site_relative_url}}/standard-lib)" that extends vanilla `make`.  Besides advanced stuff like container support and [workflows]({{mkdocs.site_relative_url}}/demos/workflows), it also offers basic stuff like [clean, colored logging]({{mkdocs.site_relative_url}}/standard-lib#logging-facilities), and [structured IO]({{mkdocs.site_relative_url}}/standard-lib#structured-io).
+:  you can think of `compose.mk` as an attempt to provide a [standard library]({{mkdocs.site_relative_url}}/standard-lib) that extends vanilla `make`.  Besides advanced stuff like container support and [workflows]({{mkdocs.site_relative_url}}/demos/workflows), it also offers basic stuff like [clean, colored logging]({{mkdocs.site_relative_url}}/standard-lib#logging-facilities), and [structured IO]({{mkdocs.site_relative_url}}/standard-lib#structured-io).
 : &nbsp;
 
 **As a framework,**
@@ -29,7 +29,7 @@ Whether `compose.mk` is a tool, a library, a language, or a framework depends on
 : &nbsp;
 
 **As a language,**
-: there is support for [working with foreign languages]({{mkdocs.site_relative_url}}/demos/polyglots/), and while it remains completely backwards compatible with classical Makefile, it also *[extends make]({{mkdocs.site_relative_url}}/signals), [generalizes it]({{mkdocs.site_relative_url}}/language/#homoiconic), and adds new kinds of [idioms]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support) and [patterns]({{mkdocs.site_relative_url}}/matrioshka)*.  Additionally `compose.mk` can function as both a Makefile interpreter, and as a transpiler for [`CMK-lang`]({{mkdocs.site_relative_url}}/compiler)— a *syntactically distinct language* that exposes the `compose.mk` library and primitives for containers and polyglots, and compiles to Makefile on the backend.
+: there is support for [working with foreign languages]({{mkdocs.site_relative_url}}/demos/polyglots/), and while it remains completely backwards compatible with classical Makefile, it also *[extends make]({{mkdocs.site_relative_url}}/signals), [generalizes it]({{mkdocs.site_relative_url}}/language/#homoiconic), and adds new kinds of [idioms]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support) and [patterns]({{mkdocs.site_relative_url}}/matrioshka)*.  Additionally `compose.mk` can function as both a Makefile interpreter, and as a transpiler for [`CMK-lang`]({{mkdocs.site_relative_url}}/compiler)— a *syntactically distinct language* that exposes the `compose.mk` library and primitives for containers and polyglots, and compiles to vanilla Makefile on the backend.
 
 ### Not the Makefiles of Your Ancestors 
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -38,7 +38,7 @@ Whether `compose.mk` is a tool, a library, a language, or a framework depends on
 
 {#{macros.img_link("gui4.gif", mkdocs, "100%", align='center',link=mkdocs.site_relative_url+'/guis/#hermetic-guis')}#}
 
-Capabilities like [interactivity]({{mkdocs.site_relative_url}}/selector), [online help]({{mkdocs.site_relative_url}}/cli-help), and working with [TUIs]({{mkdocs.site_relative_url}}/embedded-tui) and [GUIs]({{mkdocs.site_relative_url}}/guis) all show a major break with traditional use-cases and create some [attention-grabbing]({{mkdocs.site_relative_url}}/guis/#hermetic-guis) demos.  You may be asking yourself: *can it run DOOM?*  And it really [kind of does]({{mkdocs.site_relative_url}}/guis/#doom).  But making weird new kinds of application development easy is just one of the places where `compose.mk` shines, and <strong>average use-cases will probably look more like automation</strong>.
+Capabilities like [interactivity]({{mkdocs.site_relative_url}}/selector), [online help]({{mkdocs.site_relative_url}}/cli-help), and working with [TUIs]({{mkdocs.site_relative_url}}/embedded-tui) and [GUIs]({{mkdocs.site_relative_url}}/guis) all show a major break with traditional use-cases and create some [attention-grabbing]({{mkdocs.site_relative_url}}/guis/#hermetic-guis) demos.  You may be asking yourself: *can it run DOOM?*  And it really [kind of does]({{mkdocs.site_relative_url}}/guis/#doom).  But making weird new kinds of application development easy is just one of the places where `compose.mk` shines.  <strong>Average use-cases will probably look more like automation</strong>.
 
 {#There's a lot of hate for `make` (especially for "creative" usage of it!), but you'll quickly find that `compose.mk` is [a different kind of animal]({{mkdocs.site_relative_url}}/compiler).  While `compose.mk` remains completely backwards compatible with classic `make`, it also *extends it, generalizes it, and adds new kinds of idioms and patterns*.
 #}

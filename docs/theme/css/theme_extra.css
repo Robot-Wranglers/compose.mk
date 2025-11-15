@@ -127,11 +127,11 @@ span.code_table_2 {
   text-align: right;
 }
 .wy-nav-content {
-  /* background-color: rgba(236, 236, 236, 0.69); */
-  /* background-color: #a694943d; */
+  background-color: rgba(236, 236, 236, 0.69);
+  background-color: #7272721a;
   /* background-color: #deddff42; */
+
   /* rgba(235, 143, 143, 0.685) */
-  /* background-color:#faf0e640; */
   /* border-left: 5px dotted #6495ed82; */
   margin-left:-1em;
   }
@@ -234,6 +234,7 @@ div .cli_output img {
   z-index: 1;
   border-left: 8px solid #358ccb;
   background-color: #2d3233;
+  border-bottom: 1px solid #bdaeae;
   /* background-image: linear-gradient(transparent 50%, rgba(69, 142, 209, .04) 50%); */
   background-attachment: local;
   background-origin: content-box;
@@ -244,7 +245,7 @@ div .cli_output img {
   position: relative;
   z-index: 1;
   border-left: 8px solid #358ccb;
-  border-bottom: 2px solid #bdaeae;
+  border-bottom: 1px solid #bdaeae;
   /* background-color: #0db7ed; */
   background-image: linear-gradient(transparent 50%, rgba(69, 142, 209, .04) 50%);
   background-attachment: local;
@@ -279,7 +280,8 @@ html.writer-html5 .rst-content table.docutils th {
   align-self: center; */
 }
 div .code_table_bottom {
-  background-color: rgb(240, 241, 231);
+  /* background-color: rgb(240, 241, 231); */
+  background-color: #b8b8b84f;
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
   align-items: center;     /* vertical alignment */
@@ -442,10 +444,11 @@ summary {
   /* font-family: "Lucida Console", "Courier New", monospace;
   background: unset;
   font-size:smaller; */
-  background-color: #f6f8fa;
+  /* background-color: #f6f8fa; */
+  font-style: oblique 12deg;
   /* color: #e36209; */
-  /* padding: 0.2em ;
-  border-radius: 3px;
+  padding: 0.2em ;
+  /* border-radius: 3px;
   font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
   font-size: 0.85em;
   font-weight:400; */
@@ -491,8 +494,8 @@ a:hover code {
     color: #3091d1;
 }
 a:not(.wy-menu a):not(sup a):not(.cli_output a):not(.rst-footer-buttons a) {
-  color: unset;
-  border-bottom: .055em dashed #4463bf;
+  /* color: unset;
+  border-bottom: .001em dashed #4463bf; */
   
   /* #bdbdbd; color:rgba(162, 94, 94, 0.358); */
 }

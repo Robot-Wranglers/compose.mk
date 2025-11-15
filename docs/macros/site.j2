@@ -12,7 +12,7 @@
 ```{{use_type}} {%raw%}{{%endraw%}{{class}} {{'.language-' + use_type}} {{'.language-cmk' if fname.endswith('.cmk') else ''}}{%raw%}}{%endraw%}
 {{open(fname,'r').read().strip()}}
 ```
-{{macros.code_table_bottom(fname, bottom_middle=bottom_middle,bottom_right=bottom_right, title=title, link_prefix=link_prefix, type=type, github=github, class=class)}}<a id="{{link_prefix}}_bottom"></a></details>{%- endmacro -%}
+</details>{{macros.code_table_bottom(fname, bottom_middle=bottom_middle,bottom_right=bottom_right, title=title, link_prefix=link_prefix, type=type, github=github, class=class)}}<a id="{{link_prefix}}_bottom"></a><br/>{%- endmacro -%}
 
 
 # API links

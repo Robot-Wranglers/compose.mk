@@ -364,6 +364,7 @@ export DEBIAN_CONTAINER_VERSION?=debian:bookworm
 export ALPINE_VERSION?=3.21.2
 
 IMG_CARBONYL?=fathyb/carbonyl
+IMG_NUSHELL?=ghcr.io/nushell/nushell:latest-alpine
 IMG_IMGROT?=robotwranglers/imgrot:07abe6a
 IMG_MONCHO_DRY=moncho/dry@sha256:6fb450454318e9cdc227e2709ee3458c252d5bd3072af226a6a7f707579b2ddd
 
@@ -1023,7 +1024,7 @@ docker.run.def:
 	${stderr_stdout_indent}
 
 docker.run.sh:
-	@# Runs the given command inside the named container.
+	@# Runs the given command inside the named container.  Also available as a macro.
 	@#
 	@# This automatically detects whether it is used as a pipe & proxies stdin as appropriate.
 	@# This always shares the working directory as a volume & uses that as a workspace.
@@ -1860,7 +1861,6 @@ define cmk.default.dialect
 ]
 endef 
 
-
 mk.clean:; rm -f .tmp.*
 	@# Cleans `.tmp.*` files
 
@@ -1889,14 +1889,20 @@ esac \
 && ${io.mktemp} && export inputf=`echo $${tmpf}` \
 && ${stream.stdin} > $${inputf} \
 && export CMK_INTERNAL=1 \
-&& printf "#!/usr/bin/env -S __interpreting__=$${__interpreting__:-stdin} ${__interpreter__} mk.interpret\nMAKEFILE_LIST+=compose.mk\n" \
+&& printf "#!/usr/bin/env -S __interpreting__=$${__interpreting__:-stdin} ${__interpreter__} mk.interpret\nMAKEFILE_LIST+=${CMK_SRC}\n" \
 && __interpreting__=$${__interpreting__:-stdin} \
 	${make} mk.src \
 && cat $${inputf} | \
 	style=monokai lexer=makefile \
 	${make} $${runner}/mk.preprocess,io.awk/.awk.main.preprocess,io.awk/.awk.dispatch
 endef
-	
+
+mk.compile! mk.compiler!:
+	@# Like `mk.compile`, but also embeds the result thus removing the include 
+	@# for `compose.mk` to produce a completely stand-alone file.  See also: `mk.fork.guest`
+	${flux.pipeline}/mk.compile,mk.preprocess.minify | sed "/^MAKEFILE_LIST+=${CMK_SRC}/d" | ${make} mk.fork.guest
+
+
 mk.kernel:
 	@# Executes the input data on stdin as a kind of "script" that 
 	@# runs inside the current make-context.  This basically allows
@@ -2758,7 +2764,7 @@ flux.apply.later.sh/%:
 	)&
 
 flux.column/%:; delim=':' ${make} flux.pipeline/${*}
-	@# Exactly flux.pipeline, but splits targets on colons.
+	@# Exactly `flux.pipeline`, but assumes `:` delimiter instead of comma
 
 flux.do.when/%:
 	@# Runs the 1st given target iff the 2nd target is successful.
@@ -3052,6 +3058,7 @@ flux.parallel/%:
 
 flux.pipeline/: flux.noop
 	@# No-op.  This just bottoms out the recursion on `flux.pipeline`.
+flux.pipeline=${make} flux.pipeline
 flux.pipeline/%:
 	@# Runs the given comma-delimited targets in a bash-style command pipeline.
 	@# Besides working with targets and allowing for DAG composition, this has 
@@ -3598,7 +3605,45 @@ stream.jb:; ${stream.jb}
 	@#
 	@# REFS:
 	@#   `[1]:` https://github.com/h4l/json.bash
+
+
+# Pass stream to nushell with given command.  (Internal use)
+ _stream.parse.nushell=img=${IMG_NUSHELL} entrypoint=nu cmd="-c '${stream.stdin} | ${1}'" CMK_INTERNAL=1 quiet=1 ${make} docker.run.sh
+stream.nushell:;  $(call  _stream.parse.nushell, $${cmd})
+	@# Runs the input stream through the given nushell pipeline.
+	@# See also: nushell [official docs](https://www.nushell.sh/cookbook/parsing.html)
+	@#
+	@# EXAMPLE: 
+	@#   echo '{}' | cmd='from json | to yaml' ${make} stream.nushell
+
+stream.nushell/%:
+	@# Runs the input stream through the given nushell pipeline.
+	@# Pipeline is given as argument, converting underscores to space and commas to pipes.  
+	@# See also: nushell [official docs](https://www.nushell.sh/cookbook/parsing.html)
+	@#
+	@# USAGE:
+	@#    echo '{"foo":"bar"}'|./compose.mk stream.nushell/from_json,to_yaml
+	@#
+	cmd="`echo ${*} | sed 's/,/|/g' | sed 's/_/ /g'`" && $(call  _stream.parse.nushell, $${cmd})
+
+stream.nushell.parse stream.parse stream.parse.patterns:
+	@# Use nushell to parse arbitrary input to JSON given a pattern.
+	@# See also: nushell [official docs](https://www.nushell.sh/cookbook/parsing.html)
+	@#
+	@# EXAMPLE: 
+	@#   cargo search shells --limit 10 
+	@#     | pattern='{crate_name} = {version} #{description}' ./compose.mk stream.parse
+	$(call  _stream.parse.nushell, parse \"$${pattern}\" | to json)
+
+stream.nushell.parse_cols stream.parse.cols stream.parse.columns:
+	@# Use nushell to try to parse column-oriented input to JSON
+	@# See also: nushell [official docs](https://www.nushell.sh/cookbook/parsing.html)
+	@#
+	@# USAGE: 
+	@#   df -h | ./compose.mk stream.parse.json
+	$(call  _stream.parse.nushell, detect columns | to json)
 	
+
 stream.glow:=${glow.run}
 stream.markdown:=${glow.run} 
 stream.glow stream.markdown:; ${stream.glow} 
@@ -4877,6 +4922,12 @@ ${compose_file_stem}.restart.fg: ${compose_file_stem}.down ${compose_file_stem}.
 ${compose_file_stem}.restart/$(compose_service_name): \
 	${compose_file_stem}/$(compose_service_name).stop ${compose_file_stem}.up/$(compose_service_name)
 
+${compose_file_stem}.with_profile/%:
+	@# USAGE: make docker-compose.with_profile/all/up,sto
+	prof=`printf $${*} | cut -d/ -f1` \
+	&& targets="`printf $${*} | cut -d/ -f2- | ${stream.comma.to.nl} | xargs -I% echo ${compose_file_stem}.%|${stream.nl.to.space}|${stream.space.to.comma}`" \
+	&& ${trace_maybe} && ${make} compose.with_profile/$$$${prof}/$$$${targets}
+
 ${compose_file_stem}/$(compose_service_name).ps:
 	@# Returns docker process-JSON for affiliated service.
 	@# If strict=1, this fails when no process is found
@@ -4896,6 +4947,11 @@ ${compose_file_stem}/$(compose_service_name).stop:
 	@#
 	$$(call log.docker, ${dim_green}${target_namespace} ${sep} ${no_ansi}${green}$(compose_service_name) ${sep} ${no_ansi_dim}stopping..)
 	${docker.compose} -f ${compose_file} stop -t 1 ${compose_service_name} $${stream.stderr.iff.failed}
+
+${compose_file_stem}.exec.shell/$(compose_service_name):
+	@# Open interactive shell for the container.  Requires that `up` already happened, and is still running
+	set -x && docker exec -it `${make} ${compose_file_stem}/$(compose_service_name).ps \
+		| ${jq} -e -r .ID` `${make} ${compose_file_stem}/$(compose_service_name).get_shell`
 
 $(eval ifeq ($$(import_to_root), TRUE)
 $(compose_service_name).ps: ${compose_file_stem}/$(compose_service_name).ps
@@ -4927,10 +4983,9 @@ $(compose_service_name).exec/%:
 	@# Shorthand for ${compose_file_stem}.exec/$(compose_service_name)/<target_name>
 	${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}
 
-$(compose_service_name).exec.shell:
-	@# Shorthand for ${compose_file_stem}.exec/$(compose_service_name)/<target_name>
-	set -x && docker exec -it `${make} $(compose_service_name).ps |${jq} -e -r .ID` `${make} $(compose_service_name).get_shell`
-
+$(compose_service_name).exec.shell: ${compose_file_stem}.exec.shell/$(compose_service_name)
+	@# Open interactive shell for the container.  Requires that `up` already happened, and is still running
+	
 $(compose_service_name).get_shell: ${compose_file_stem}/$(compose_service_name).get_shell
 	@# Shorthand for ${compose_file_stem}/$(compose_service_name).get_shell
 $(compose_service_name).get_config: ${compose_file_stem}/$(compose_service_name).get_config
@@ -4965,6 +5020,8 @@ endif)
 ${namespaced_service}.pipe:; pipe=yes ${make} ${namespaced_service}
 ${target_namespace}.$(compose_service_name).exec/%:; ${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}
 ${target_namespace}.$(compose_service_name).exec:; ${make} ${compose_file_stem}.exec/$(compose_service_name)
+${target_namespace}.$(compose_service_name).exec.shell: ${compose_file_stem}.exec.shell/$(compose_service_name)
+
 ${target_namespace}.$(compose_service_name).dispatch/%:
 	@# Dispatch named target in $(compose_service_name) container
 	${make} ${compose_file_stem}.dispatch/$(compose_service_name)/$${*}
@@ -5493,6 +5550,7 @@ compose.bind.target=$(call containerized.target,${1},prefix=self. $(if $(filter 
 define compose.bind.script
 $(call _mk.unpack.kwargs,${1},svc,${1}) \
 && $(call _mk.unpack.kwargs,${1},entrypoint,bash) \
+&& $(call _mk.unpack.kwargs,${1},entrypoint_args,-x) \
 && $(call _mk.unpack.kwargs,${1},env,$${env:-}) \
 && $(call _mk.unpack.kwargs,${1},quiet,$${quiet:-0}) \
 && $(call _mk.unpack.kwargs,${1},output,cat) \
@@ -5503,12 +5561,12 @@ $(call _mk.unpack.kwargs,${1},svc,${1}) \
 	&& env="`printf "$${env}" | ${stream.space.to.comma}`" \
 	&& ${io.mktemp} && ${mk.def.read}/${@} > $${tmpf} \
 	&& case ${CMK_INTERNAL} in \
-		1)  cat $${tmpf} | bash ${dash_x_maybe};; \
+		1)  $${entrypoint} $${entrypoint_args} $${tmpf};; \
 		*) ( true \
 			&& case $${quiet:-1} in \
 				0) cat $${tmpf} | ${stream.as.log};; \
 			esac && ${trace_maybe} \
-			&& entrypoint=$${entrypoint} cmd=$${tmpf} ${make} $${svc}) \
+			&& entrypoint=$${entrypoint} cmd="$${entrypoint_args} $${tmpf}" ${make} $${svc}) \
 			| (case "$${output}" in \
 				"stderr") ${stream.as.log};; \
 				*) cat;; \
@@ -5675,6 +5733,7 @@ jq:
 	&& cmd=$${cmd:-$${after:-.}} && dcmd="${jq.run.pipe} $${cmd}" \
 	&& ([ -p ${stdin} ] && dcmd="${stream.stdin} | $${dcmd}" || true) \
 	&& $(call mk.yield, $${dcmd})
+
 
 jb jb.pipe:
 	@# An interface to `jb`[1] tool for building JSON from the command-line.
@@ -5941,7 +6000,7 @@ mk.fork.payload/%:
 	&& case $${fname} in \
 		-) fname=/dev/stdin;; \
 	esac \
-	&& fdata=`cat $${fname}` \
+	&& fdata="`cat $${fname}`" \
 	&& $(call log.mk, mk.fork.section ${sep} ${dim}section=${dim_cyan}$${section} ${sep} ${dim}loading ${bold}$${fname}) \
 	&& [ -z "$${shebang:-}" ] \
 		&& true || printf "$${shebang}\n" \

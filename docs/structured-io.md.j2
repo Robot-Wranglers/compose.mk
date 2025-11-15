@@ -81,6 +81,15 @@ As a really simple example, targets that have to deal with streams will begin wi
 
 The above isn't exhaustive; see the [full stream API]({{mkdocs.site_relative_url}}/api/#api-stream) for other helpers.
 
+#### Structured IO: Parsing, Patterns, & Nushell
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+A related topic is nushell, which you might be familiar with already if you're looking to expand your scripting toolbox and working around a lack of types in bash.  Whether you're a fan or never heard of it, you might be interested to know that `compose.mk` provides some helpers for accessing related features.  See the examples below.
+
+{{site.embed_demo('demos/structured-io-nushell.mk', github=github)}}
+
+Via the generic and dynamic targets, you can craft any kind of pipeline that nushell supports natively.  See nushell [official docs](https://www.nushell.sh/commands/categories/conversions.html) for more inspiration.  See also the related parts of the `compose.mk`, for example [here]({{mkdocs.site_relative_url}}/api/#streamparsecolumns) or [here]({{mkdocs.site_relative_url}}/api/#streamparsepatterns) and the more general [tool mode docs]({{mkdocs.site_relative_url}}/tool-overview).
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
 	addImageToHeader('structured-io','/{{mkdocs.config.site_name}}/img/template.svg')

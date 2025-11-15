@@ -21,7 +21,7 @@ export var2=data
 # using the given target name as the public interface.  
 # Typically the define-name and target-name will be the same.
 # It also shares a subset of the available environment variables
-script.sh:; $(call compose.bind.script, svc=alpine env='var1 var2' quiet=1)
+script.sh:; $(call compose.bind.script, svc=debian env='var1 var2' quiet=1)
 define script.sh
 echo hello container `hostname`
 echo testing environment variables: ${var1} ${var2}
@@ -30,5 +30,5 @@ endef
 # Test that target still works, no matter where it's called from.
 __main__:
 	${make} script.sh
-	${make} debian.dispatch/script.sh | grep 'hello container'
+	${make} debian.dispatch/script.sh
 

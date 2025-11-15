@@ -22,18 +22,27 @@ Whether you love `make` or passionately hate it, you'll probably agree that defa
 ### About CMK Demos
 <hr style="width:100%;border-bottom:3px solid black;">
 
-All examples written in CMK rather than pure Makefile can be found in the {{macros.repo_link('demos/cmk', github=github)}} folder.  Most CMK demos are direct ports from existing pure-Makefile demos, i.e. given `demos/cmk/foo.cmk` there's a corresponding vanilla Makefile demo at `demos/foo.mk`.  
+All examples written in CMK rather than pure Makefile can be found in the {{macros.repo_link('demos/cmk', github=github)}} folder.  Most CMK demos are direct ports from existing pure-Makefile demos, i.e. given `demos/cmk/example.cmk` there's a corresponding vanilla Makefile demo at `demos/example.mk`.  
 
 ```bash {.cli_example}
 # Run some "foo" demo directly, using CMK interpreter via shebang
-$ ./demos/cmk/foo.cmk
+$ ./demos/cmk/example.cmk
 
 # Run demo explicitly using interpreter
-$ ./compose.mk mk.interpret! ./demos/cmk/foo.cmk
+$ ./compose.mk mk.interpret! ./demos/cmk/example.cmk
 
 # Test the compiler without running the result
-$ cat ./demos/cmk/foo.cmk | ./compose.mk mk.compiler
+$ cat ./demos/cmk/example.cmk | ./compose.mk mk.compiler
 ```
+
+In the last example, the "compiled" CMK source actually still requires an external `compose.mk` to access library functions.  But a stand-alone version can be obtained like this:
+
+```bash {.cli_example}
+$ cat ./demos/cmk/example.cmk | ./compose.mk mk.compile! > example
+$ chmod +x ./example
+```
+
+For related background, see the documentation for [guests & forks]({{mkdocs.site_relative_url}}/standard-lib/#forks-guests-and-payloads) and [self-extracting executables]({{mkdocs.site_relative_url}}/demos/packaging/#makeself-reference)
 
 ### Basic Example
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -55,21 +64,21 @@ We'll get to the odd arrow syntax at the end of this section, but start with mos
 : &nbsp;
 
 **Function Calls Rewritten:**
-:  Awkward stuff like `$(call log.target, ...)` can be written as `cmk.log.target(..)` instead.  Additionally, although we don't use it here,  [compose.import statements]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) previously written as `$(call ..)` can be rewritten as simply `compose.import(..)`
+:  Awkward stuff like `$(call log.target, ...)` can be written as `cmk.log.target(..)` instead.  Also works for [compose.import statements]({{mkdocs.site_relative_url}}/bridge/#other-import-statements), e.g. writing `$(call compose.import, ..)` as simply `compose.import(..)`
 : &nbsp;
 
 **Recursive Calls Rewritten:**
 :  Awkward stuff like `${make} foo` can be written as `this.foo` instead.  Recursive invocation of the current context is common, and absolutely critical for code-reuse.[^3] The choice of `this` for a new keyword is actually configurable too.. we'll get to that in the next section.
-: &nbsp;
 
-Finally, **about that arrow syntax?**  These operators just help to make JSON IO feel more native, and are sugar to safely use `jq` and `jb` for parsing and pushing JSON, respectively, regardless of whether those tools are available on the host.  If you glanced at the [original code]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) that's "ported" to CMK-lang here, then you might notice that the only code-transformation rules we really need to get from **CMK -> Makefile** in this case are just *very simple string substititions*.
+Finally, **about that arrow syntax?**  These operators just help to make JSON IO feel more native, and are sugar to safely use `jq` and `jb` for parsing and pushing JSON, respectively, regardless of whether those tools are available on the host.  A hint about what's happening here: glancing at the [original code]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) that's "ported" to CMK-lang here, you'll notice the only "code transformation" we really need to get from **CMK -> Makefile** in this case involves very simple string substititions.
 
 The next section explains the specific substitions that enable the code above at the same time as explaining "dialects" in general.
 
 ### About Dialects
 <hr style="width:100%;border-bottom:3px solid black;">
+<a name=dialects></a>
 
-**A dialect is just an array of paired substitition rules,** and during compilation these rules take effect everywhere *except* for inside define-blocks.  Using the [reflection capabilities]({{mkdocs.site_relative_url}}/standard-lib#reflection-support), we can show some info about the default dialect that the compiler supports like this:
+**A dialect is an array of paired substitition rules,** and during compilation these rules take effect everywhere *except* for inside define-blocks.  Using the [reflection capabilities]({{mkdocs.site_relative_url}}/standard-lib#reflection-support), we can show some info about the default dialect that the compiler supports like this:
 
 ```bash {.cli_example}
 $ ./compose.mk mk.def.read/cmk.default.dialect
@@ -81,9 +90,9 @@ $ ./compose.mk mk.def.read/cmk.default.dialect
 ]
 ```
 
-**Matching/substitution for dialects is strict and simple.** Regexes are not supported, and a preference for unicode symbols is an easy way to guarantee that new keywords will not collide with any other usage.  But note that since substitution does not apply *inside* define-blocks, a new keyword like `this` cannot not effect polyglots, even if they also use the same keyword. You only need to think carefully about collision with shell-commands and their arguments that appear inside normal targets.
+**Matching/substitution for dialects is strict and simple.** Regexes are not supported, so a preference for unicode symbols is an easy way to guarantee that new keywords will not collide with any other usage.  Crucially, since substitution does not apply inside define-blocks, a new keyword like `this` cannot not effect [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) even if they also use the same keyword. You only need to think carefully about collision with shell-commands and their arguments that appear inside normal targets.
 
-Full dialect details are [available in the appendix](#appendix-default-dialect), but the rules shown above are the ones relevant to the [basic example we started with](#basic-example): all we've done so far is introduce new syntax for common stuff with `jq` and `jb` and calling `make` recursively.  
+Full dialect details are [available in the appendix](#appendix-default-dialect), but the rules shown above are the ones used in the [basic example](#basic-example) above.  All we've done so far is introduce new syntax for `jq`, `jb`, and calling `make` recursively.
 
 -----------
 
@@ -110,14 +119,14 @@ $ ./compose.mk mk.get/cmk.default.dialect
 ]
 ```
 
-One layer of expansion reveals that fallback works as advertised; `compose.mk` knows that a local copy of `jq` is available already, but `jb` is missing and will have to use docker.  
+One layer of expansion reveals that fallback works as advertised; in this case `compose.mk` knows that a local copy of `jq` is available already, but `jb` is missing and will have to use docker.
 
-It also reveals that there is actually yet another layer of expansion, where `JB_CLI_VERSION` has a default value for tool versions that supports user-override.  Therefore *besides* being visually easy to parse and clarifying intent, the **usage of the arrow operators results in portable code with no extra tool installation.**
+It also reveals that there is actually yet another layer of expansion, where `JB_CLI_VERSION` has a default value for tool versions that supports user-override.  Therefore *besides* being visually easy to parse and clarifying intent, the **usage of the arrow operators results in portable code with no extra tool installation.**  And of course the value of `${make}` is expanded dynamically just in time also.  In fact, for a CMK-lang script, you'll get a different answer every time due to the compilation step!  Try it yourself like this: `./demos/cmk/structured-io.cmk mk.get/make`
 
 ### Compose File Example
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Revisiting the code from the [inlined compose-file demo]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files), here's what it looks like ported to CMK.  
+Revisiting the code from the [inlined compose-file demo]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files), let's look at a CMK port.  
 
 Like the original demo, this embeds a compose file, creates target-scaffolding for the containers involved, and demonstrates task-dispatch for them.  But this time we introduce the **⋘ name ..body.. ⋙** syntax for compose files.  *(Unicode ahead: `⋘` isn't `<<<` !)*
 
@@ -130,16 +139,19 @@ Like the original demo, this embeds a compose file, creates target-scaffolding f
 
 Most of the differences with the original demo are pretty obvious, and alternate equivalents are shown to make what's happening more clear, but let's walk through it.
 
-!!! closer_look "Closer Look"
-    1. As in the [basic example](#basic-example), `include compose.mk` is implied.
-    1. We skip the [`compose.import.string(..)`]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) the original code used to create [target scaffolding for services]({{mkdocs.site_relative_url}}/bridge)
-    1. After declaration of services with `⋘ name ..body.. ⋙` target handles are available immediately.  
-    1. We replaced a more naive *"echo ..."* command with a call to `cmk.log` that's using color and stderr.
+{#!!! closer_look "Closer Look"#}
+1. As in the [basic example](#basic-example), `include compose.mk` is implied.
+1. [Target scaffolding for services]({{mkdocs.site_relative_url}}/bridge) is automatic, or in other words
+1. [`compose.import.string(..)`]({{mkdocs.site_relative_url}}/bridge/#other-import-statements)) is implied by the ⋘ notation, and 
+1. After declaration of services with `⋘ name ..body.. ⋙` target handles are available immediately. 
+1. We replaced a more naive *"echo ..."* command with a call to `cmk.log` that's using colors and stderr.
 
-Most interestingly though, `<container_name>.dispatch(<target_name>)` now looks like a normal function invocation.  Also notice that `alternate_style1` shows that *double-rewrite rules* for transpiler substition works the way you'd expect.
+Most interestingly though, `<container_name>.dispatch(<target_name>)` now looks like a normal function invocation.  Also notice that the different equivalent styles work with or without line-breaks or line-feeds; this demonstrates that *double-rewrite rules* for transpiler substition works the way you'd expect.
 
 #### Compose-Context & Bind-Script
 <hr style="width:95%;border-bottom:1px dashed black;">
+<a name=compose-context></a>
+<a name=bind-script></a>
 
 The last example inlines a compose file, and then dispatches targets.  How about using an external compose file, then running script-dispatch with a tool-container?  This example introduces two new idioms that can help.  *(Unicode ahead: `ᝏ` isn't `@`!)*
 
@@ -172,6 +184,7 @@ See [this demo]({{mkdocs.site_relative_url}}/demos/ai/#dueling-philosophers) for
 
 #### Compose-Context & Bind-Target
 <hr style="width:95%;border-bottom:1px dashed black;">
+<a name=bind-target></a>
 
 Quick-and-dirty scripting is often convenient, but working with targets makes it much easier to leverage composition.  For this you can use `compose.bind.target`.  
 

@@ -31,27 +31,23 @@ services:
 self.internal_task:; cmk.log(Running inside ${red}`hostname`)
 
 # Dispatch demo:
-# Runs the private target inside containers, using 
-# syntax that looks like function-invocation.
-__main__: \
-	alice.dispatch(self.internal_task) \
-	bob.dispatch(self.internal_task)
+# Runs the private target inside containers, 
+# using syntax that looks like function-invocation.
+__main__: alice.dispatch(self.internal_task) bob.dispatch(self.internal_task)
 
 alternate_style1:
-	@# Equivalent to above, using target-body instead of prereqs;
-	@# For this scenario, using the `this.` prefix is required.
+	@# Equivalent to above, using target-body instead of prereqs.
+	@# Inside the body, using the `this.` prefix is required.
 	this.alice.dispatch(self.internal_task) 
 	this.bob.dispatch(self.internal_task)
 
 # More "classic" style in pure Makefile. 
 # Equivalent to __main__, no target body required.
-alternate_style2: \
-	alice.dispatch/self.internal_task \
-	bob.dispatch/self.internal_task
+alternate_style2: alice.dispatch/self.internal_task bob.dispatch/self.internal_task
 
 # More "classic" style in pure Makefile. 
 # Equivalent to alternate_style1, using target body.
 alternate_style3:
-	@# Equivalent to style1, just trading `${make}` for `this`.
+	@# Equivalent to style1, just trading `this` for explicit `${make}`.
 	${make} alice.dispatch/self.internal_task 
 	${make} bob.dispatch/self.internal_task
