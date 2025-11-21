@@ -48,9 +48,7 @@ Wrapped top-level entrypoints are documented in more detail as part of [tool mod
 
 -------------------------------
 
-Inside a project Makefile, we can always use direct calls to `compose.mk` as seen above, or recursive calls to `make`.  This is often good enough, but if arguments to these tools get complicated then quoting could get sketchy, or determining a path to `compose.mk` could be tricky, etc. 
-
-Luckily there are equivalent forms that are more idiomatic, still use local tools if available and fall back to docker if they are missing, and spawn fewer processes:
+Inside a project Makefile, you can use direct calls to `compose.mk` as seen above or recursive calls to `${make}`.  But using `${jq}` and `${jb}` are equivalent forms that are more idiomatic and spawn fewer processes:
 
 {{site.embed_demo('demos/structured-io.mk', 
     bottom_right=site.link_mirror(
@@ -83,12 +81,14 @@ The above isn't exhaustive; see the [full stream API]({{mkdocs.site_relative_url
 
 #### Structured IO: Parsing, Patterns, & Nushell
 <hr style="width:95%;border-bottom:1px dashed black;">
-
-A related topic is nushell, which you might be familiar with already if you're looking to expand your scripting toolbox and working around a lack of types in bash.  Whether you're a fan or never heard of it, you might be interested to know that `compose.mk` provides some helpers for accessing related features.  See the examples below.
+<a name=nushell></a>
+A related topic is nushell, which you might be familiar with already if you're looking to expand your scripting toolbox and trying to work around a lack of types in bash.  Whether you're a fan or never heard of it, you might be interested to know that `compose.mk` provides some helpers for accessing related features.  Like the previous examples, you can access nushell targets directly from the `compose.mk` CLI, without installing nushell.  For some hints, check out the test-cases below, or see the related API.
 
 {{site.embed_demo('demos/structured-io-nushell.mk', github=github)}}
 
-Via the generic and dynamic targets, you can craft any kind of pipeline that nushell supports natively.  See nushell [official docs](https://www.nushell.sh/commands/categories/conversions.html) for more inspiration.  See also the related parts of the `compose.mk`, for example [here]({{mkdocs.site_relative_url}}/api/#streamparsecolumns) or [here]({{mkdocs.site_relative_url}}/api/#streamparsepatterns) and the more general [tool mode docs]({{mkdocs.site_relative_url}}/tool-overview).
+{{site.api_link_many(['stream.parse','stream.nushell'], mkdocs)}}
+
+See also the nushell [official docs](https://www.nushell.sh/commands/categories/conversions.html) for more inspiration.
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

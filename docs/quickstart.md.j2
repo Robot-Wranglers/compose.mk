@@ -35,9 +35,9 @@ Read on for details about tighter integration with projects, and see the [compat
 ### Project Integration
 <hr style="width:100%;border-bottom:3px solid black;">
 
-If you're looking to integrate with existing automation or you brought your own tool containers, you'll probably be interested in setting up the [Make/Compose Bridge]({{mkdocs.site_relative_url}}/bridge), preparing for [Container Dispatch]({{mkdocs.site_relative_url}}/container-dispatch), or using [docker more directly]({{mkdocs.site_relative_url}}/raw-docker).  
+For using the [standard library]({{mkdocs.site_relative_url}}/standard-lib), just write `include compose.mk` in your Makefile.  If you brought your own tool containers, you'll probably be interested in setting up the [Make/Compose Bridge]({{mkdocs.site_relative_url}}/bridge), preparing for [Container Dispatch]({{mkdocs.site_relative_url}}/container-dispatch), or using [docker more directly]({{mkdocs.site_relative_url}}/raw-docker).  
 
-See that full documentation for more discussion, or if you already know what you're doing, read on for the copy/paste stuff.
+See that full documentation for more details, or if you already know what you're doing, read on for the copy/paste stuff.
 
 #### Makefile Integration
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -64,9 +64,7 @@ self.test:
 #### Docker Compose Integration
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-Working with docker compose is optional if you're just interested in [stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview/) or the [standard library offerings]({{mkdocs.site_relative_url}}/standard-lib).  And if you *are* using docker-compose, then simple access to tools-containers from your compose files will *just work* for many use-cases, via the [Makefile integration](makefile-integration) in the last section and via the [scaffolded targets]({{mkdocs.site_relative_url}}/bridge).
-
-**However..** more complicated use-cases will need a volume-mount for your project directory so that tool containers can read/write files, and, [using container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) means that your tool containers need `make` and `bash`.
+Working with docker compose is optional if you're just interested in [stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview/) or the [standard library offerings]({{mkdocs.site_relative_url}}/standard-lib).  And if you *are* using docker-compose, then simple access to tools-containers from your compose files will *just work* for many use-cases, via the [Makefile integration](makefile-integration) in the last section and via the [scaffolded targets]({{mkdocs.site_relative_url}}/bridge).  But, more complicated use-cases will usually need a volume-mount for your project directory so that tool containers can read/write files, and, [using container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) means that your tool containers need `make` and `bash`.
 
 Here is some fairly complete boilerplate that's usually a good starting place:
 
@@ -149,10 +147,10 @@ Given the advice above to simply embed `compose.mk` directly into your project r
 :   The [standard library]({{mkdocs.site_relative_url}}/standard-lib) for `compose.mk` is approaching *frozen*, so especially if you're not using [CMK-lang]({{mkdocs.site_relative_url}}/compiler), this is a pretty reasonable option.
 : &nbsp;
 
-**Git Submodule:**:
+**Git Submodule:**
 :   If you really need to track upstream, or if you want to track and use various plugins, you could setup the [.cmk/ repository]({{jinja.vars.cmk_plugins_repo_url}}) (or your fork of it) as a git submodule inside your project folder.
 
-To check the version you're currently using:
+To check details about the version you're using:
 
 ```bash {.cli_example}
 $ ./compose.mk mk.stat
@@ -161,6 +159,21 @@ $ ./compose.mk mk.stat
 {
   "make_version": "4.3",
   "compose.mk": "d998bdc7598a4deeacf613bee2e9fddd"
+}
+```
+
+```bash {.cli_example}
+$ ./compose.mk docker.stat
+```
+```json {.cli_output}
+{
+  "docker_bin": "/usr/bin/docker",
+  "docker_version": "28.2.2",
+  "compose_version": "2.36.2",
+  "container_count": "9",
+  "socket": "unix:///var/run/docker.sock",
+  "context_name": "default",
+  "env": {...}
 }
 ```
 
