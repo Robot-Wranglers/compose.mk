@@ -18,8 +18,8 @@ __main__: \
 # No official container (https://github.com/casey/just/issues/1497), 
 # so we'll build one.  We could use external files, but to keep the 
 # demo self-contained,we'll embed a docker-compose spec for a container
-# here, as well as a copy of the official justfile example.  Note that a
-# volume or bind-map be faster and more practical here.
+# here, as well as a copy of the official justfile example.  
+# Note: Volumes or bind-maps would be more practical for real usage!
 define just.services
 configs:
   justfile:
