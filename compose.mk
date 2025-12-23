@@ -972,8 +972,7 @@ docker.network.panic:; docker network prune -f
 	@# Runs 'docker network prune' for the entire system.
 docker.network.connect/%:
 	@# USAGE: ./compose.mk docker.network.connect/net1,net2
-	$(call bind.args.from_params) \
-	&& docker network connect $${_1st} $${_2nd}
+	$(call bind.posargs) && ${trace_maybe} && docker network connect $${_1st} $${_2nd}
 
 docker.panic: docker.stop.all docker.network.panic docker.volume.prune docker.system.prune
 	@# Debugging only!  This is good for ensuring a clean environment,
@@ -3736,7 +3735,7 @@ stream.echo:; ${stream.stdin}
 	@#   echo hello-world | ./compose.mk stream.echo
 
 # Extremely secure, for keeping hunter2 out of the public eye
-stream.grep.safe=grep -ivE 'password|passwd|key|cert'
+stream.grep.safe=grep -iv -e password -e passwd -e key -e cert
 stream.grep.safe:; ${stream.grep.safe}
 # Run image previews differently for best results in github actions. 
 # See also: https://github.com/hpjansson/chafa/issues/260
@@ -4687,8 +4686,9 @@ services:
         RUN mkdir -p /home/${DOCKER_UGNAME:-root}
         RUN curl -sL https://raw.githubusercontent.com/sunaku/home/master/bin/tmux-layout-dwindle > /usr/bin/tmux-layout-dwindle
         RUN chmod ugo+x /usr/bin/tmux-layout-dwindle
-        RUN cd /usr/share/figlet; wget https://raw.githubusercontent.com/xero/figlet-fonts/refs/heads/master/3d.flf
-        RUN cd /usr/share/figlet; wget https://raw.githubusercontent.com/xero/figlet-fonts/refs/heads/master/Roman.flf
+        RUN cd /usr/share/figlet \
+            && wget https://raw.githubusercontent.com/xero/figlet-fonts/fbf3b68dd0fcd1e63c0f04d3c79eea2743bb377c/3d.flf \
+            && wget https://raw.githubusercontent.com/xero/figlet-fonts/refs/heads/fbf3b68dd0fcd1e63c0f04d3c79eea2743bb377c/Roman.flf
         RUN wget https://github.com/jesseduffield/lazydocker/releases/download/v${LAZY_DOCKER_VERSION:-0.23.1}/lazydocker_${LAZY_DOCKER_VERSION:-0.23.1}_Linux_x86_64.tar.gz
         RUN tar -zxvf lazydocker*
         RUN mv lazydocker /usr/bin && rm lazydocker*
@@ -5610,7 +5610,7 @@ endef
 polyglot.bind=${docker.bind.script}
 bind.docker.bind.script=${docker.bind.script}
 
-bind.args.from_params=$(call bind.posargs,${1})
+bind.args.from_params=$(bind.posargs)
 bind.posargs=$(call _bind.posargs,$(strip $(or $(if $(filter undefined,$(origin 1)),,$(1)),${comma})))
 define _bind.posargs
 kwargs_delim=$(strip $(if $(filter undefined,$(origin 1)),${comma},$(1))) \
