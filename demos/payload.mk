@@ -13,7 +13,7 @@ default_services=demos/data/docker-compose.yml
 guest_makefile=demos/no-include.mk
 
 test.payload:
-	${io.mktemp} && derived=$${tmpf} \
+	$(call io.mktemp, var=derived) \
 	&& $(call log.test, Setting payload works) \
 	&& printf '${payload}' | ${make} mk.fork.payload > $${derived} \
 	&& $(call log.test, Check for new contents) \
@@ -23,7 +23,7 @@ test.payload:
 	&& $${derived} mk.def.read/PAYLOAD | ${jq} -e .hello
 
 test.guest:
-	${io.mktemp} && derived=$${tmpf} \
+	$(call io.mktemp, var=derived) \
 	&& $(call log.test, Setting guest works) \
 	&& cat ${guest_makefile} \
 		| ${make} mk.fork.guest > $${derived} \
@@ -33,7 +33,7 @@ test.guest:
 	&& chmod +x $${derived} && $${derived} flux.ok clean
 
 test.services:
-	${io.mktemp} && derived=$${tmpf} \
+	$(call io.mktemp, var=derived) \
 	&& $(call log.test, Setting services works) \
 	&& cat ${default_services} | ${make} mk.fork.services > $${derived} \
 	&& $(call log.test, Check for new contents) \
