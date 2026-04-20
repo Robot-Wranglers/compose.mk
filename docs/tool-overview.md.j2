@@ -12,7 +12,7 @@ Much of what `compose.mk` does is focused on helping you to [generate automation
 <hr style="width:100%;border-bottom:3px solid black;">
 #}
 
-1. **Wrapped versions of common tools,** so that they are available *by default* in more environments without adding more dependencies.  For example, `./compose.mk jq` defaults to using local executable if one is available, and falls back to a dockerized version of the tool otherwise. See the [tool wrappers section](#tool-wrappers) of this page for a more complete manifest.
+1. **Wrapped versions of common tools,** so that they are available *by default* in more environments without adding more dependencies.  For example, `./compose.mk jq` defaults to using local executable if one is available, and falls back to a dockerized version of the tool otherwise. See the [tool wrappers section](#tool-wrappers) of this page for a more complete manifest or [this example building a wrapper from scratch]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/#a-concrete-use-case)
 * **General bash kung-fu,** which might help clean up other scripts or can be used interactively. In many cases, `compose.mk` idioms are easier to read and write.  For examples, see [here]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-stream-types-pipes), [here]({{mkdocs.site_relative_url}}/raw-docker/#other-docker-utilities), [etc]({{mkdocs.site_relative_url}}/standard-lib/#functional-style), and refer to the [full target API]({{mkdocs.site_relative_url}}/api).
 * **Runner interface** for interactive-selection for make-targets or compose-containers.  See the separate documentation & demos [here]({{mkdocs.site_relative_url}}/selector).
 * **Loading compose files just-in-time.** Separate [documentation here]({{mkdocs.site_relative_url}}/loadf), but briefly.. this gives access to all of [the scaffolded targets]({{mkdocs.site_relative_url}}/bridge/#dynamic-api), and if no downstream targets are given, the default behaviouir is to open interactive shells for each tool container in a TUI.
@@ -40,6 +40,8 @@ A few examples of tools that `compose.mk` wraps in one way or another include:
 * [tmux](https://github.com/tmux/tmux) and friends, for console geometry management (see also: [embedded tui]({{mkdocs.site_relative_url}}/embedded-tui))
 * [makeself](https://makeself.io) for creating self-extracting archives (see also: [packaging]({{mkdocs.site_relative_url}}/demos/packaging))
 * [nushell](https://www.nushell.sh/), especially for parsing and pattern-matching
+
+
 
 #### Proxy Wrappers
 <hr style="width:100%;border-bottom:3px solid black;">

@@ -27,4 +27,4 @@ If you want better parity with docker in Linux, you might like to checkout Colim
 
 #### Pipes & Temp Files 
 
-Parts `compose.mk` that working with streaming pipes generate temporary files with `mktemp`, removing them when the process exits with `trap`.  Pure streams would be better.  Also in many cases tmp files need to be in the working directory, otherwise they can't be shared by docker volumes.  Moving to a temp-dir based approach would be better.
+Parts of `compose.mk` that working with streaming pipes generate temporary files with `mktemp`, removing them when the process exits with `trap`.  Pure streams would be better.  Also in many cases tmp files need to be in the working directory, otherwise they can't be shared by docker volumes.  Moving to a temp-dir based approach would be better.

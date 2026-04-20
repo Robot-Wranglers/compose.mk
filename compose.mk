@@ -199,7 +199,7 @@ log.fmt=( ${log} && (printf "${2}" | fmt -w 55 | ${stream.indent} | ${stream.ind
 log.json=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.docker} ${1} | ${jq.run} . | ${stream.as.log}
 log.json.trace=( [ "${TRACE}" == "0" ] && true || $(call log.json, ${1}) )
 log.json.min=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.docker} ${1} | ${jq.run} -c . | ${stream.as.log}
-log.target=$(call log.io, ${dim_green}$(strip $(shell printf "${@}" | cut -d/ -f1)) ${sep}${dim_ital} $(strip $(or $(1),$(shell printf "${@}" | cut -d/ -f2-))))
+log.target=$(call log.io, ${dim_green}$(strip $(shell printf "${@}" | cut -d/ -f1)) ${sep}${dim_ital} $(strip $(or $(strip $(if $(filter undefined,$(origin 1)),,$(1))),$(shell printf "${@}" | cut -d/ -f2-))))
 log.target.pad_top=printf '\n' >> /dev/stderr; ${log.target}
 log.target.pad_bottom=${log.target}; printf '\n'>>/dev/stderr
 log.target.pad=printf '\n' >> /dev/stderr; ${log.target}; printf '\n'>>/dev/stderr
@@ -315,6 +315,11 @@ export CMK_AT_EXIT_TARGETS?=flux.noop
 export CMK_COMPOSE_FILE?=.tmp.compose.mk.yml
 export CMK_DIND?=0
 export verbose:=$(shell [ "$${quiet:-0}" == "1" ] && echo 0 || echo $${verbose:-1})
+_docker_quiet_flag=-q
+ifeq ($(shell echo $${quiet:-}), 0)
+_docker_quiet_flag=
+endif
+
 export CMK_INTERNAL?=0
 #export CMK_SRC:=$(filter %compose.mk,${MAKEFILE_LIST})
 export CMK_SRC:=$(or $(filter %compose.mk,${MAKEFILE_LIST}),${MAKEFILE})
@@ -397,6 +402,7 @@ jb.array=docker_extra="$${docker_extra:-} --entrypoint jb-array"; ${jb.docker}
 jb=${jb.docker}
 json.from=${jb}
 jq=${jq.run}
+jq.slurp.nonempty=${jq} -s '[.[] | select(length > 0)]'
 yq=${yq.run}
 
 IMG_GUM?=v0.16.0
@@ -432,7 +438,7 @@ compose.build/%:
 	@#   svc=<svc_name> ./compose.mk compose.build/<compose_file>
 	@#
 	$(call log.docker, \
-		${compose.ctx.display} ${bold_cyan}build ${sep} ${dim_ital}$${svc:-all services})
+		${compose.ctx.display_profile} ${bold_cyan}build ${sep} ${dim_ital}$${svc:-all services})
 	label='build finished.' ${make} flux.timer/.compose.build/${*}
 .compose.build/%:
 	case $${force:-0} in \
@@ -956,14 +962,12 @@ docker.from.url:
 	@#
 	$(call log.target.part1, ${dim_ital_cyan}$${tag})
 	${docker.images} | grep -w "$${tag}" ${stream.obliviate} \
-	&& ($(call log.target.part2, ${dim_green}already cached);  exit 0 )\
+	&& ( $(call log.target.part2, already cached) &&  exit 0 )\
 	|| ( $(call log.target.part2, ${yellow}not cached) \
 		&& $(call log.target.part1, building) \
 		&& $(call log.target.part2,\n${cyan_flow_right} ${dim_ital}$${url}) \
-		&& quiet=$${quiet:-1} \
-		&& quiet=`[ -z "$${quiet:-}" ] && true || echo "-q"` \
 		&& ${trace_maybe} \
-		&& docker build $${quiet} -t compose.mk:$${tag} $${url})
+		&& docker build ${_docker_quiet_flag} -t compose.mk:$${tag} $${url})
 
 docker.help: mk.namespace.filter/docker.
 	@# Lists only the targets available under the 'docker' namespace.
@@ -972,8 +976,7 @@ docker.network.panic:; docker network prune -f
 	@# Runs 'docker network prune' for the entire system.
 docker.network.connect/%:
 	@# USAGE: ./compose.mk docker.network.connect/net1,net2
-	$(call bind.args.from_params) \
-	&& docker network connect $${_1st} $${_2nd}
+	$(call bind.posargs) && ${trace_maybe} && docker network connect $${_1st} $${_2nd}
 
 docker.panic: docker.stop.all docker.network.panic docker.volume.prune docker.system.prune
 	@# Debugging only!  This is good for ensuring a clean environment,
@@ -1205,6 +1208,10 @@ io.mktemp=export tmpf=$$(TMPDIR=`pwd` mktemp ./.tmp.XXXXXXXXX$${suffix:-}) && tr
 # Similar to io.mktemp, but returns a directory.
 io.mktempd=export tmpd=$$(TMPDIR=`pwd` mktemp -d ./.tmp.XXXXXXXXX$${suffix:-}) && trap "rm -r $${tmpd}" EXIT
 endif
+define _io.mktemp
+$(call mk.unpack.kwargs, $(strip $(if $(filter undefined,$(origin 1)),,$(1))), var, tmpf) 
+${io.mktemp} && ${kwargs_var}=$${tmpf}
+endef
 
 # Helpers for asserting environment variables are present and non-empty 
 mk.assert.env_var=[[ -z "$${$(strip ${1})}" ]] && { $(call log.io, ${red}Error:${no_ansi_dim} required variable ${no_ansi}${underline}$(strip ${1})${no_ansi_dim} is unset or empty!); exit 39; } || true
@@ -1282,6 +1289,7 @@ io.browser/%:; url="`CMK_INTERNAL=1 ${make} mk.get/${*}`" ${make} io.browser
 	@# NB: This requires python on the host and can not run from docker.
 
 IMG_CURL=curlimages/curl:8.13.0
+IO_ENV_LOG?=DOCKER,MK,MAKE
 io.curl=$(shell which curl 2>/dev/null || echo docker run --rm ${IMG_CURL}) $(if $(filter undefined,$(origin 1)),,$(1))
 _io.curl=${io.curl} ${1}
 io.curl.stat=bash ${dash_x_maybe} -c '${io.curl} -s -o /dev/null $(if $(filter undefined,$(origin 1)),$${1},$(1)) > /dev/null' -- 
@@ -1307,6 +1315,18 @@ io.env/% io.env.filter.prefix/%:
 _io.env=sed 's/,/\n/g' | xargs -I% sh -c "env | ${stream.grep.safe} | grep \"^%.*=\" || true" 
 io.env=bash -c 'echo $${1\#/} | ${_io.env}' -- 
 io.env.filter.prefix=${io.env}
+io.env.log: io.env.log/${IO_ENV_LOG}
+	@# Filters environment variables starting with DOCKER, MAKE, MK, etc.
+	@# Human-readable output sent to stderr.  Also available as a macro
+io.env.log=${make} io.env.log
+
+io.env.log/%:; $(call io.env.log,${*})
+	@# Human-readable description of the given subset of env-vars.
+	@# Multiple inputs should be comma-separated.  Also available as a macro
+define io.env.log
+	$(call log.target, prefixes ${sep} ${1}); 
+	echo '${1}' | ${stream.comma.to.space} | ${stream.space.to.nl} | ${flux.each}/io.env | ${stream.as.log}
+endef
 
 io.env.json/%:
 	@# Like `io.env/<prefix>` but returns JSON data.
@@ -1348,9 +1368,38 @@ io.file.gen.maybe=[ -n "$$(find "${1}" -mmin +1 2>/dev/null)" ] \
 	&& ($(call log,${dim} cached @ ${1} is old and will be recomputed fresh); eval "${2} > ${1}") \
 	|| (true)
 
+io.force/%:; force=1 ${make} ${*}
+	@# Context-manager.  Sets `force=1` and then runs the given target.
+
 io.get.url=$(call io.mktemp) && curl -sL $${url} > $${tmpf}
 
 io.gum.docker=${trace_maybe} && docker run $$(if [ -t 0 ]; then echo "-it"; else echo "-i"; fi) -e TERM=$${TERM:-xterm} --entrypoint /usr/local/bin/gum --rm `docker build -q - <<< $$(printf "FROM alpine:${ALPINE_VERSION}\nCOPY --from=charmcli/gum:${IMG_GUM} /usr/local/bin/gum /usr/local/bin/gum\nRUN apk add --update --no-cache bash\n")`
+
+# USAGE: see docs.mk :// css.min 
+#   $(call io.factory.file_handler, ns=css.pretty handler=css.prettify prereqs='Dockerfile.build/css.pretty' root=$${docs.root} name='*.css')
+io.factory.file_handler=$(eval $(call io.factory.file_handler.src, ${1}))
+define io.factory.file_handler.src
+$(call mk.unpack.kwargs, ${1}, ns)
+$(call mk.unpack.kwargs, ${1}, handler, $${kwargs_ns}.handler)
+$(call mk.unpack.kwargs, ${1}, root, .)
+$(call mk.unpack.kwargs, ${1}, prereqs,${space})
+$(call mk.unpack.kwargs, ${1}, name, default)
+${kwargs_ns}/%:
+	@# Generic handler for dirs or files
+	$${trace_maybe} \
+	&& if [ -d "$${*}" ]; then ( \
+		$$(call log.target, dispatching ${dim_cyan}${kwargs_handler} ${sep} path=${dim_ital}$${*}) \
+		&& find $${*} -name $${kwargs_name} \
+		| $${stream.peek} | $${flux.each}/${kwargs_handler} \
+	); else ( \
+		$$(call log.target,$${*}) && ${make} ${kwargs_handler}/$${*} \
+	); fi
+${kwargs_ns}: ${kwargs_prereqs}
+	@# Runs on given root or working directory
+	$$(call log.target, handler=${bold_green}${kwargs_handler} ${sep} name=${dim_cyan}${kwargs_name}  ${sep} root=${dim_cyan}${kwargs_root})
+	$${trace_maybe} && ${make} ${kwargs_ns}/${kwargs_root}
+endef
+
 
 ifeq ($(shell which gum >/dev/null 2> /dev/null && echo 1 || echo 0),1) 
 io.gum.run:=`which gum`
@@ -1453,9 +1502,13 @@ io.inotify/%:; path="${*}" ${make} io.inotify
 	@#
 	@# USAGE: cmd='..' ${make} io.inotify/<path>
 
-io.mkdir/%:; mkdir -p ${*}
-	@# Runs `mkdir -p` for the named directory
-
+io.mkdir/% mk.require.dir/%:
+	@# Runs `mkdir -p` for the named directory.
+	@# Set `force=1` to use sudo.
+	([ -z "$${force:-}" ] && sudo="" || sudo=sudo ) \
+	&& $(call log.target.part1, ${*} ) \
+	&& $${sudo} mkdir -p ${*} \
+	&& $(call log.target.part2,${green}${GLYPH_CHECK})
 io.preview.img/%:; cat ${*} | ${stream.img} 
 	@# Console-friendly image preview for the given file. See also: `stream.img`
 	@#
@@ -2825,9 +2878,18 @@ flux.each/%:
 	@#
 	@#  printf 'one\ntwo' | ./compose.mk flux.each/flux.echo
 	@#
-	${stream.stdin} | ${stream.space.to.nl} \
+	 ${stream.space.to.nl} | ${stream.peek.summary} \
 	| xargs -I% sh ${dash_x_maybe} -c "${make} ${*}/% || exit 255"
 flux.each=${make} flux.each
+
+flux.each.json/%:
+	@# Given a target, treats each part of the nl-delimited input stream as arguments,
+	@# returning JSON-ouput of `{key: target(key), .. }`
+	@# USAGE:
+	@#   ls *.md | make flux.each.json/flux.echo
+	$(call log.target, mapping key -> ${dim_cyan}${*}${no_ansi_dim}(key))
+	${stream.peek.summary} \
+	| xargs -I {} bash ${dash_x_maybe} -c 'echo "{\"{}\": $$(${make} ${*}/{})}"'
 
 flux.fail:
 	@# Alias for 'exit 1', which is POSIX failure.
@@ -2999,6 +3061,9 @@ flux.loop.watch/%:
 	@# Loops the given target forever, using `watch` instead of the while-loop default.
 	@# This requires `watch` is actually available.
 	watch --interval $${interval:-2} --color ${make} ${*}
+
+# like stream.peek, but prefaced with a line-count
+stream.peek.summary=tee >($(call log.target, $${msg:-streaming} ${sep} ${yellow}`${stream.stdin}|wc -l` lines)) 
 
 flux.map/% flux.for.each/%:
 	@# Like `flux.each`, but accepts input as an argument.
@@ -3736,7 +3801,7 @@ stream.echo:; ${stream.stdin}
 	@#   echo hello-world | ./compose.mk stream.echo
 
 # Extremely secure, for keeping hunter2 out of the public eye
-stream.grep.safe=grep -ivE 'password|passwd|key|cert'
+stream.grep.safe=grep -iv -e password -e passwd -e key -e cert
 stream.grep.safe:; ${stream.grep.safe}
 # Run image previews differently for best results in github actions. 
 # See also: https://github.com/hpjansson/chafa/issues/260
@@ -4687,8 +4752,8 @@ services:
         RUN mkdir -p /home/${DOCKER_UGNAME:-root}
         RUN curl -sL https://raw.githubusercontent.com/sunaku/home/master/bin/tmux-layout-dwindle > /usr/bin/tmux-layout-dwindle
         RUN chmod ugo+x /usr/bin/tmux-layout-dwindle
-        RUN cd /usr/share/figlet; wget https://raw.githubusercontent.com/xero/figlet-fonts/refs/heads/master/3d.flf
-        RUN cd /usr/share/figlet; wget https://raw.githubusercontent.com/xero/figlet-fonts/refs/heads/master/Roman.flf
+        RUN wget -q --show-progress --progress=bar:force:noscroll -O /usr/share/figlet/Roman.flf https://raw.githubusercontent.com/xero/figlet-fonts/fbf3b68dd0fcd1e63c0f04d3c79eea2743bb377c/Roman.flf
+        RUN wget -q --show-progress --progress=bar:force:noscroll -O /usr/share/figlet/3d.flf https://raw.githubusercontent.com/xero/figlet-fonts/fbf3b68dd0fcd1e63c0f04d3c79eea2743bb377c/3d.flf
         RUN wget https://github.com/jesseduffield/lazydocker/releases/download/v${LAZY_DOCKER_VERSION:-0.23.1}/lazydocker_${LAZY_DOCKER_VERSION:-0.23.1}_Linux_x86_64.tar.gz
         RUN tar -zxvf lazydocker*
         RUN mv lazydocker /usr/bin && rm lazydocker*
@@ -4764,7 +4829,8 @@ windows:
 EOF
 endef
 export COMPOSE_PROFILES?=
-compose.ctx.display=${bold_green}$(or ${target_namespace},${compose_file_stem}) ${sep} $(shell [ "$(COMPOSE_PROFILES)" = "" ] && echo "" || echo "${dim}${bold_cyan}▐░${no_ansi}${ital}$(COMPOSE_PROFILES)${no_ansi_dim}${bold_cyan}░▌") ${sep} 
+compose.ctx.display_profile=$(shell [ "$(COMPOSE_PROFILES)" = "" ] && echo "" || echo "${dim}${bold_cyan}▐░${no_ansi}${ital}$(COMPOSE_PROFILES)${no_ansi_dim}${bold_cyan}░▌") 
+compose.ctx.display=${bold_green}$(or ${target_namespace},${compose_file_stem}) ${sep} ${compose.ctx.display_profile} ${sep} 
 compose.with_profile/%:
 	@# Runs the given targets with the given COMPOSE_PROFILE.  
 	@# Comma-separated profile-names is "and", not "intersection"!
@@ -5236,7 +5302,7 @@ ${compose_file_stem}.build $(target_namespace).build:
 	@#
 	$$(call log.docker, ${compose.ctx.display} ${bold_cyan}build ${sep} ${dim_ital}all services) \
 	&&  $(trace_maybe) \
-	&& ${docker.compose} $${COMPOSE_EXTRA_ARGS} -f ${compose_file} build -q 
+	&& ${docker.compose} $${COMPOSE_EXTRA_ARGS} -f ${compose_file} build $${_docker_quiet_flag}
 
 ${compose_file_stem}.build.quiet $(target_namespace).build.quiet:
 	@# Quiet build for all services in the given file.
@@ -5259,7 +5325,7 @@ ${compose_file_stem}.build.quiet/% ${compose_file_stem}.require/%:
 	@#
 	$(trace_maybe) && ${make} io.quiet.stderr/${compose_file_stem}.build/$${*}
 
-${compose_file_stem}.build/%:
+${compose_file_stem}.build/% $(target_namespace).build/%:
 	@# Builds the given service(s) for the ${compose_file} file.
 	@#
 	@# Note that explicit ordering is the only way to guarantee proper 
@@ -5610,7 +5676,7 @@ endef
 polyglot.bind=${docker.bind.script}
 bind.docker.bind.script=${docker.bind.script}
 
-bind.args.from_params=$(call bind.posargs,${1})
+bind.args.from_params=$(bind.posargs)
 bind.posargs=$(call _bind.posargs,$(strip $(or $(if $(filter undefined,$(origin 1)),,$(1)),${comma})))
 define _bind.posargs
 kwargs_delim=$(strip $(if $(filter undefined,$(origin 1)),${comma},$(1))) \

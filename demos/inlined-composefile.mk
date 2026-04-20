@@ -4,7 +4,7 @@
 #   which works exactly like `compose.import`, but accepts embedded data instead of files.
 #   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 #
-#   USAGE: ./demos/inlined-composefile.mk
+# USAGE: ./demos/inlined-composefile.mk
 
 include compose.mk
 
