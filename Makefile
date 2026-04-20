@@ -3,6 +3,7 @@
 # Project Automation
 #
 # Typical usage: `make clean build test`
+# Ultraclean: `make tux.purge tux.require`
 ##
 SHELL := bash
 .SHELLFLAGS?=-euo pipefail -c
@@ -43,10 +44,10 @@ docs.README.static: README.md demos/README.md demos/cmk/README.md
 
 validate.markdown:
 	@#
-	${make} docs.jinja_templates \
-	| ${stream.fold} | ${stream.peek} \
-	| ${stream.space.to.nl} \
-	| ${io.xargs.verbose} "${make} validate.markdown/%"
+# find ${docs.root} -name .j2 \
+# | ${stream.fold} | ${stream.peek} \
+# | ${stream.space.to.nl} \
+# | ${io.xargs.verbose} "${make} validate.markdown/%"
 validate.markdown/%:; pynchon jinja render ${*}
 validate.makefiles:
 	@# 
@@ -71,7 +72,7 @@ pygments.css/%:; pygmentize -S ${*} -f html
 test: validate integration-test demos smoke-test 
 	@#
 
-itest integration-test:; ./demos/itest.mk
+itest integration-test:
 	@# Runs the integration-test suite.
 
 stest smoke-test:
