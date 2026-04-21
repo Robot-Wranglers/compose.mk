@@ -1,0 +1,32 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# exotic-targets.cmk: a make-target in a foreign language, fed structured data over a pipe.
+#
+# USAGE: ./demos/cmk/exotic-targets.cmk
+
+'''
+Builds a JSON object with jb and pipes it into a container-bound python block, which
+augments the object and echoes it back (logging a loop to stderr).
+'''
+
+import io
+from cmk import container
+
+# A python container with a pinned version
+container py(img=python:3.11-slim-bookworm entrypoint=python)(| |)
+
+# A banana body with mixed indention.
+#   Top level is just for legibility, but the
+#   smart-dedent leaves loop's indention intact.
+py.polyglot script.py(|
+  import sys, json
+  data = json.loads(sys.stdin.read())
+  data.update(hello_python=sys.platform)
+  print(json.dumps(data))
+  for x in [1, 2, 3]:
+      print(f"{x} testing loops, indents, interpolation", file=sys.stderr)
+|)
+
+__main__:
+    '''Build JSON with jb, then pipe it into the python block.'''
+    io.json_builder(hello=bash) | script.py()

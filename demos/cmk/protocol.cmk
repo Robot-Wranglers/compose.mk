@@ -1,0 +1,209 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# protocol.cmk: the protocol declaration keyword -- an ABC / interface for
+# a dunder, cmk's take on Python's data model.  Docker-free.
+#
+# USAGE: ./demos/cmk/protocol.cmk
+
+'''
+The protocol keyword gives a first-class ABC / interface for a dunder,
+beside class / container / namespace.  One declaration form:
+NAME(kwargs)(| body |), where the kwargs (abstract / dunder / bases)
+ride the call-args and the body is the OPTIONAL default -- empty for a
+pure structural interface, docstring-only for a documented one, or a
+real impl for a mixin.  A structural check (.provided_by, Python's
+__subclasshook__) verifies conformance, with .register for conformers
+the check cannot see.  A protocol is created via cmk.class, so protocols
+are objects.
+
+Built-in protocols, each describing one dunder or family:
+  Documented:
+    __doc__ -- the documentation member
+  Registry:
+    __plugins__ / __modules__ -- .has / .require members
+  Named:
+    __name__ -- namespace identity
+
+A protocol may derive another (bases=Container, Python's
+Sequence(Container)): it unions the base's abstract set and publishes
+.__bases__ / .__mro__, so issubclass and the transitive structural
+check both work.
+
+The body is the mixin (stamped onto conformers via bases=); protocol
+query tooling like Documented.get lives on the protocol object and is
+never stamped, so a name like get stays free on conformers.
+
+Cf. metaprogramming.cmk (class / dsl / container) and banana-oop.cmk.
+'''
+
+import log
+# bind the declaration keywords bare (class, container, protocol, ..)
+from cmk import protocol, class
+
+# a user-declared protocol via the bare keyword -- the interface for a
+# __hash__ dunder.  An empty body (||) makes it purely structural.
+# Creating self-registers it into lang.proto.registry (like Python's ABCMeta).
+protocol Hashable(dunder=__hash__)(||)
+
+# protocol inheritance (Python's class Sequence(Container)): a derived
+# protocol unions its bases' abstract members.  Container requires
+# __contains__; Sequence adds __getitem__ and inherits __contains__, so a
+# conformer must expose both.
+protocol Container(abstract=__contains__)(||)
+protocol Sequence(dunder=__getitem__ bases=Container)(||)
+
+# body vs surface (the valuable-real-estate guarantee): Described is both a
+# mixin (its body ships a default .describe, inherited via bases=) and a
+# carrier of a query reader on the protocol object (.get, subject passed as
+# an arg).  A conformer inherits .describe but not .get, so get stays free.
+protocol Described(dunder=__desc__)(|
+  self.describe = the self described as $(self.__desc__)
+|)
+Described.get = $(if $(call Described.provided_by,$(strip ${1})),$($(strip ${1}).__desc__),)
+class Widget(bases=Described)(||)
+# an instance of Widget: the mixin body stamps .describe onto it, the
+# protocol tooling (.get) does not.
+gadget <- Widget.new()
+gadget.__desc__ := a described thing
+
+# two module carriers: one that has a docstring member (a structural
+# conformer), one that does not.
+documented.__doc__ := a hand-written module docstring
+plain.x := 1
+
+# precompute: ( the structural checks, parse-time, for display in the
+# recipes ) registry: __plugins__, __modules__ and __ambients__ all expose
+# .has/.require, so all conform with no registration -- one ABC over three
+# real dunders.
+p.reg.plugins  := $(call Registry.provided_by,__plugins__)
+p.reg.modules  := $(call Registry.provided_by,__modules__)
+p.reg.ambients := $(call Registry.provided_by,__ambients__)
+p.reg.plain    := $(call Registry.provided_by,plain)
+# the ambient carrier's own .has/.require: declare one, then detect it
+# (round-trip).
+p.amb.before := $(call __ambients__.has,demoamb)
+$(call __ambients__.require,demoamb)
+p.amb.after  := $(call __ambients__.has,demoamb)
+# docstring: structural check + the canonical reader .get.
+p.doc.documented := $(call Documented.provided_by,documented)
+p.doc.plain      := $(call Documented.provided_by,plain)
+p.doc.get        := $(call Documented.get,documented)
+# named: a namespace exposes <ns>.__name__; here plain does not.
+p.named.plain := $(call Named.provided_by,plain)
+# inheritance: Sequence unions Container's contract; a full conformer
+# exposes both members, a partial one (only __getitem__) is rejected -- the
+# inherited requirement.
+seq.full.__contains__ := yes
+seq.full.__getitem__  := yes
+seq.partial.__getitem__ := yes
+p.seq.abstract := $(Sequence.abstract)
+p.seq.bases    := $(Sequence.__bases__)
+p.seq.mro      := $(Sequence.__mro__)
+p.seq.issub    := $(call issubclass,Sequence,Container)
+p.seq.notsub   := $(call issubclass,Container,Sequence)
+p.seq.full     := $(call Sequence.provided_by,seq.full)
+p.seq.partial  := $(call Sequence.provided_by,seq.partial)
+# register (Python's ABC.register): teach docstring about plain, then
+# re-check.
+p.reg.before := $(call Documented.provided_by,plain)
+$(call Documented.register,plain)
+p.reg.after  := $(call Documented.provided_by,plain)
+# concretized vs structural: Callable/Runnable/Templatable ship a default=
+# impl (so they have implementors and mix in via bases=); registry/named
+# are structural (a member list only).
+p.conc.template := $(Templatable.__concretized__)
+p.conc.callable := $(Callable.__concretized__)
+p.conc.registry := $(Registry.__concretized__)
+p.tmpl.abstract := $(Templatable.abstract)
+p.tmpl.mixins   := $(Templatable.__mixins)
+# body vs surface: gadget is-a Described, so it inherits .describe (the
+# body mixin) but not .get (protocol-object tooling).  The reader still
+# answers as a protocol query, subject passed as an arg.
+p.surf.conc     := $(Described.__concretized__)
+p.surf.describe := $(origin gadget.describe)
+p.surf.value    := $(gadget.describe)
+p.surf.get      := $(origin gadget.get)
+p.surf.query    := $(call Described.get,gadget)
+
+demo.model:
+  '''
+  the data model: every declared protocol + its contract.
+  list the declared protocols and their dunder / abstract members.
+  '''
+  log(protocols ${sep} ${lang.proto.registry})
+  log(Documented ${sep} dunder=${Documented.dunder} abstract=${Documented.abstract})
+  log(Registry ${sep} members=${Registry.abstract})
+  log(Named ${sep} dunder=${Named.dunder})
+  log(Hashable ${sep} dunder=${Hashable.dunder} abstract=${Hashable.abstract} user-declared)
+
+demo.structural:
+  '''
+  ABC over three real conformers: __plugins__, __modules__ and __ambients__
+  accepted.  the Registry protocol structurally accepts __plugins__,
+  __modules__ and __ambients__
+  '''
+  log(Registry.provided_by/__plugins__ ${sep} ${p.reg.plugins})
+  log(Registry.provided_by/__modules__ ${sep} ${p.reg.modules})
+  log(Registry.provided_by/__ambients__ ${sep} ${p.reg.ambients})
+  log(Registry.provided_by/plain ${sep} not-a-registry = [${p.reg.plain}])
+  log(__ambients__.has/demoamb ${sep} before-require = [${p.amb.before}] after = ${p.amb.after})
+
+demo.docstring:
+  '''
+  the Documented protocol: structural check + the canonical reader .get.
+  Documented.provided_by / .get unify the __doc__ carrier
+  '''
+  log(provided_by/documented ${sep} ${p.doc.documented})
+  log(provided_by/plain ${sep} no-doc = [${p.doc.plain}])
+  log(get/documented ${sep} ${p.doc.get})
+  log(this recipe's own doc via reflection ${sep} ${__target__.__doc__})
+
+demo.register:
+  '''
+  explicit registration: plain had no doc member (empty), then conforms.
+  ABC.register: plain was not a docstring-conformer, until registered
+  '''
+  log(before-register ${sep} provided_by/plain = [${p.reg.before}])
+  log(after-register ${sep} provided_by/plain = [${p.reg.after}])
+  log(Documented.registry now ${sep} ${Documented.registry})
+
+demo.inherit:
+  '''
+  protocol inheritance: the derived protocol unions its base's abstract
+  members, publishes __bases__/__mro__, and answers issubclass -- the
+  ABC win.  Sequence(Container): inherited __contains__ + own __getitem__,
+  one abstract set
+  '''
+  log(Sequence.abstract ${sep} ${p.seq.abstract})
+  log(Sequence.__bases__ ${sep} ${p.seq.bases})
+  log(Sequence.__mro__ ${sep} ${p.seq.mro})
+  log(issubclass/Sequence${comma}Container ${sep} ${p.seq.issub})
+  log(issubclass/Container${comma}Sequence ${sep} not-a-subclass = [${p.seq.notsub}])
+  log(provided_by/full ${sep} has both = ${p.seq.full})
+  log(provided_by/partial ${sep} missing __contains__ = [${p.seq.partial}])
+
+demo.concretized:
+  '''
+  concretized protocols: the family that ships a default impl
+  (Callable/Runnable/Templatable), distinct from the structural
+  protocols that only name a member list.  concretized protocols
+  (Callable/Runnable/Templatable) ship a default impl; structural
+  ones don't
+  '''
+  log(Templatable concretized ${sep} ${p.conc.template} ${sep} abstract=${p.tmpl.abstract} ${sep} mixins=${p.tmpl.mixins})
+  log(Callable concretized ${sep} ${p.conc.callable} ${sep} default is a fault stub)
+  log(Registry concretized ${sep} structural = [${p.conc.registry}])
+
+demo.surface:
+  '''
+  body vs surface: a conformer inherits the protocol's body (the mixin) but
+  never its protocol-object tooling.  gadget is-a Described: it inherits
+  .describe (body) yet not .get (surface), so the get name stays free,
+  while Described.get still answers as a protocol query.
+  '''
+  log(Described concretized ${sep} ${p.surf.conc} ${sep} ships a body mixin)
+  log(gadget.describe ${sep} inherited body = [${p.surf.describe}] ${p.surf.value})
+  log(gadget.get origin ${sep} not-inherited = ${p.surf.get})
+  log(Described.get/gadget ${sep} query still works = ${p.surf.query})
+
+__main__: demo.model demo.structural demo.docstring demo.register demo.inherit demo.concretized demo.surface

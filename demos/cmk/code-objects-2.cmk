@@ -1,0 +1,26 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# code-objects-2.cmk: a python code-object created by one container, namespaced,
+# with selected host env proxied in.
+#
+# USAGE: ./demos/cmk/code-objects-2.cmk
+
+from cmk import container
+
+# Constants to share with the polyglot subprocess.
+export planet=earth
+export index=616
+
+# py311: a pinned python container.  entrypoint=python, plus a base cmd of `-O`
+# (optimized bytecode) -- the customized interpreter invocation, curried into the code-object.
+container py311(img=python:3.11-slim-bookworm entrypoint=python cmd=-O)(| |)
+
+# py311 creates the code-object (currying its img + entrypoint + cmd); namespace= imports it as WORLD
+# (so WORLD / WORLD.preview), and env= proxies just planet+index into the container.
+py311.polyglot hello_world.py(namespace=WORLD env='planet index')(|
+  import os
+  print(f'hello {os.environ["planet"]} {os.environ["index"]}')
+|)
+
+# Preview the code (syntax-highlighted), then run it in the bound interpreter.
+__main__: WORLD.preview WORLD

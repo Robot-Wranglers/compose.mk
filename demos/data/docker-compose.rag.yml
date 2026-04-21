@@ -51,7 +51,7 @@ services:
           ollama==0.4.7 sentence-transformers==4.0.2 faiss-cpu==1.10.0 \
           unstructured[md]==0.17.2 click==8.1.8 \
           accelerate==1.6.0 python-magic==0.4.27
-        RUN apt-get update -qq && apt-get install -y make procps
+        RUN apt-get update -qq && apt-get install -y make
   ollama_node:
     <<: *base
     depends_on: ['ollama_server']
@@ -63,4 +63,4 @@ services:
         WORKDIR /app
         RUN npm init -y
         RUN npm install @langchain/community @langchain/core langchain
-        RUN apt-get update -qq && apt-get install -y make procps
+        RUN apt-get update -qq && apt-get install -y make

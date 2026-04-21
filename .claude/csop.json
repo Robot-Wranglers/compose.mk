@@ -1,0 +1,54 @@
+// CSOP config for compose.mk -- inert unless/until the csop plugin is installed here.
+{
+  "freeze": {
+    "default_enabled": true,
+    "frozen": [
+      {
+        "path": "via/pip/_plugins",
+        "mode": "no-touch",
+        "why": "Materialized, gitignored BUILD ARTIFACT -- via/pip/setup.py copies it out of the .cmk submodule at build time. Editing it is overwritten on the next build; even READING it invites treating a stale copy as source (divergence/data loss).",
+        "use": ".cmk/"
+      },
+      {
+        "path": ".cmk/compose.mk",
+        "mode": "no-touch",
+        "why": "The submodule's vendored copy of core. Source of truth is the nested compose.mk/compose.mk; the .cmk copy must never be read as source nor edited. (The nested path lacks the .cmk prefix, so it stays fully accessible.)",
+        "use": "compose.mk/compose.mk"
+      },
+      {
+        "path": ".cmk/",
+        "mode": "no-restructure",
+        "exempt": ["scratch/iso/", ".claude/worktrees/"],
+        "why": "The tracked .cmk submodule: edit its files in place with Edit/Write, but never restructure its tree from the shell (rm/mv/cp of the real submodule). Worktree copies are exempt.",
+        "use": ".cmk files via Edit/Write; worktree copies under scratch/iso or .claude/worktrees are exempt"
+      }
+    ]
+  },
+
+  // techwrite carries em-dash ban plus code-in-prose for docs; supersedes the docs_prose_gate hook
+  "techwrite": {
+    "default_enabled": true,
+    "prose_scope": ["docs/*.md.j2"],
+    "exempt": ["quickref.md.j2"],
+    "prose_rules": [
+      { "pattern": "\\$[({]", "message": "make/shell expansion in doc prose; put runnable code in a fenced block, a {{ macro }}, or a demo, not a paragraph" },
+      { "pattern": " := ", "message": "make assignment (:=) in doc prose; move it into a fenced example" },
+      { "pattern": "(?<![\\w.])(?:self|this)\\.\\w", "message": "bare self./this. anchor in doc prose; name the construct in words instead of pasting a snippet" },
+      { "pattern": "`[^`\\n]*\\$[({]", "in_spans": true, "message": "expansion wrapped in a backtick span; a code span is not an escape hatch, use a fenced example" },
+      { "pattern": "`\\s*(?:self|this)\\.\\w", "in_spans": true, "message": "self./this. anchor in a backtick span; name the construct in words or use a fenced example" }
+    ]
+  },
+
+  // file-hooks: post-edit reminders and per-type linters; replaces the j2_render_reminder hook
+  "file-hooks": {
+    "default_enabled": true,
+    "types": [
+      { "match": ["docs/*.md.j2"],
+        "reminder": "The baked .md for this page is now stale. Regenerate exactly this page: run make docs.render/ on the .md.j2 path shown above. Never the full docs sweep (it builds every page including the heavy api page in a detached container)." },
+      { "match": ["*/macros/*.j2", "*/includes/*.j2", "*/theme/*.j2"],
+        "reminder": "You edited a shared docs partial; no single page owns it. Re-render each importing page with make docs.render on its .md.j2 path, never the full sweep." },
+      { "match": ["demos/cmk/*.cmk"], "command": "cmk lint {file}" },
+      { "match": ["demos/*.mk"], "command": "./compose.mk mk.validate/{file}" }
+    ]
+  }
+}

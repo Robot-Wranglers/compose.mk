@@ -1,10 +1,9 @@
 #!/usr/bin/env -S make -f
-# Demonstrating idiom for container-agnostic target dispatch,
-# where the target always run from the container, but does not 
-# care where it is called from.
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/container-dispatch
+# bind-target.mk:
+#   Idiom for container-agnostic target dispatch,
+#   where the target always run from the container, but does not 
+#   care where it is called from.
 #
 # USAGE: ./demos/bind-target-2.mk
 
@@ -20,7 +19,7 @@ my_target:; $(call compose.bind.target, debian)
 self.my_target:
 	echo hello container `hostname`
 
-# Test that target still works, no matter where it's called from.
 __main__:
+	@# Test that target still works, no matter where it's called from.
 	${make} my_target | grep "hello container"
 	${make} debian.dispatch/my_target  | grep "hello container"

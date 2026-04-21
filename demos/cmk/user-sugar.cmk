@@ -1,16 +1,18 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
-# Showing user-defined rules for CMK -> Makefile transpilation.
-# You can define cmk_dialect and cmk_sugar individually or together.
-#   
-# cmk_dialect ::: [
-#   ["cmk.io.","${make} io."], 
-#   ["this.","${make} "]
-# ] :::
-# cmk_sugar ::: [
-#   ["𒀹","𒀺","$(call compose.import.string, def=__NAME__ import_to_root=TRUE)"]
-# ] :::
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# user-sugar.cmk:
+#   Define custom `cmk_dialect` and/or `cmk_sugar` rules per-file, either
+#   individually or together.  A user dialect overrides the default (it does
+#   not merge), so it must list every rule it relies on -- here the default
+#   `cmk.`/`this.` rules are repeated alongside the new `cmk.io.` rule
+#   (which must precede the broader `cmk.`).
+#
+#   cmk_dialect ::: [ ["cmk.io.","${make} io."], ["cmk.","؆"], ["this.","${make} "] ]
+#   ::: cmk_sugar ::: [ ["𒀹","𒀺","$(call compose.import.string, def=__NAME__ import_to_root=TRUE)"] ] :::
 #
 # USAGE: ./demos/cmk/user-sugar.cmk
+
+import io
 
 𒀹 inlined.services
 services:
@@ -20,7 +22,7 @@ services:
       context: .
       dockerfile_inline: |
         FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
-        RUN apt-get update -qq && apt-get install -qq -y make procps
+        RUN apt-get update -qq && apt-get install -qq -y make
     working_dir: /workspace
     volumes: ['${PWD}:/workspace']
   bob:
@@ -31,15 +33,15 @@ services:
       dockerfile_inline: |
         FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
         RUN apk add -q --update --no-cache \
-          coreutils build-base bash procps-ng
+          coreutils build-base bash
 𒀺
 
 # A task that runs inside the containers.
 self.internal_task:; cmk.log(Running inside ${red}`hostname`)
 
 __main__: 
-	cmk.log(Testing dialect substitutions)
-	cmk.io.print.banner/testing_dialect_substitution
-	cmk.log(Testing sugar and dispatching task to containers)
-	this.alice.dispatch(self.internal_task)
-	this.bob.dispatch(self.internal_task)
+    cmk.log(Testing dialect substitutions)
+    io.print.banner/testing_dialect_substitution
+    cmk.log(Testing sugar and dispatching task to containers)
+    this.alice.dispatch(self.internal_task)
+    this.bob.dispatch(self.internal_task)

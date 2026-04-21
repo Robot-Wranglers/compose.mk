@@ -1,0 +1,42 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+{{ macros.section(2, "Project Stats", id="project-statistics") }}
+
+{# Single source of truth: the `stats` plugin (.automation.cmk, loaded by the
+   project Makefile) computes every figure below, the compiler size/partition
+   metrics, the test / target / suite counts, and the coverage summary, and emits
+   one JSON object.  The render just projects it, so this page and the `make stats`
+   entrypoint can never drift.  `-s` silences make; the target's `log` banner
+   goes to stderr, so stdout is pure JSON.
+
+   The `stats` target builds its JSON with `jb` (json.bash), but the docs render
+   image ships no `jb` (and no docker for the containerized fallback), so bootstrap a
+   native json.bash into the PATH if it is missing, quiet, and only fetched once per
+   render, so `${jb}` resolves via `which jb` instead of failing to empty output. -#}
+{% set s   = bash('make -s stats', load_json=True) -%}
+{% set cov = s.get('target_coverage') or {} -%}
+
+| Statistic | Value | What it measures |
+|-----------|-------|------------------|
+| `total_sloc` | `{{ s.get('total_sloc', 'n/a') }}` | source lines of code[^sloc] in `compose.mk`, minus blank / comment / `@#` docstring lines (= compiler + core) |
+| `compiler_sloc` | `{{ s.get('compiler_sloc', 'n/a') }}` | non-blank / non-comment lines inside the core's `define .awk.*` compiler blocks (see `lang.comp.stats`) |
+| `core_sloc` | `{{ s.get('core_sloc', 'n/a') }}` | total SLOC minus the compiler `.awk.*` blocks (= seed + hosted) |
+| `hosted_sloc` | `{{ s.get('hosted_sloc', 'n/a') }}` | SLOC in the self-hosted `define __hosted__` partition |
+| `seed_sloc` | `{{ s.get('seed_sloc', 'n/a') }}` | core SLOC minus the hosted partition (the hand-written seed) |
+| `compiler_ratio` | `{{ s.get('compiler_ratio', 'n/a') }}` | non-comment core source characters per non-comment awk character |
+| `test_count` | `{{ s.get('test_count', 'n/a') }}` | `def test_*` functions across every suite |
+| `tests_sloc` | `{{ s.get('tests_sloc', 'n/a') }}` | source lines of code[^sloc] across the test suite, minus blank / comment lines |
+| `suite_list` | the pytest suite markers | `{{ s.get('suite_list', 'n/a') }}` |
+| `target_count` | `{{ s.get('target_count', 'n/a') }}` | public targets in core, via the canonical parser |
+| `target_coverage` | `{{ cov.get('covered', 'n/a') }} / {{ cov.get('denominator', 'n/a') }}` ({{ cov.get('percent', 'n/a') }}%) | core targets exercised by the suite, from the coverage summary |
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+These figures come from the compiler partition and the test suite.
+
+* [Compiler]({{_}}/cmk/compiler): what the `compiler_sloc` / `.awk.*` partition measures.
+* [Contributing]({{_}}/contributing): the test suite behind the `test_count` / coverage figures.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^sloc]: {{ tufte.wiki('Source_lines_of_code')|trim }}

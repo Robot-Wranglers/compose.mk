@@ -20,15 +20,12 @@ theme:
     code: Rasa
   logo: img/icon.png
   custom_dir: docs/theme
-  # hljs_style: stackoverflow-dark
-  # hljs_style: github-dark
-  # hljs_style: a11y-dark
-  highlightjs: true
-  hljs_style: agate
-  hljs_languages:
-    - makefile
-    - bash
-    # - json
+  # Highlighting is Prism-only (client-side; wired in docs/theme/base.html +
+  # js/theme_base.js + js/theme_extra.js).  Pygments is disabled below via
+  # `pymdownx.highlight: use_pygments:false`, and highlight.js is off here (its
+  # <script> in base.html was already commented out -- only a dead CSS <link>
+  # remained, which `highlightjs:false` now drops too).
+  highlightjs: false
   # color_mode: dark
   # user_color_mode_toggle: yes
   icon:
@@ -47,26 +44,48 @@ nav:
     # - Features: 'overview#features-design-goals'
     - Quickstart: 'quickstart.md'
   - Docker Support: #bridge.md
-    - 'Import Services from Compose': bridge.md 
+    - 'Import Services from Compose': bridge.md
     - 'Dispatch Tasks in Containers': container-dispatch.md
     - 'Raw Docker Support': 'raw-docker.md'
-  - Standard Library: 
+  - Standard Library:
     - 'Library Overview': standard-lib.md
     - 'Style & Idioms': style.md
+    - 'Macros & Functions': macros.md
     - 'Full API': api.md
   - Stand Alone Mode:
     - 'Tool Overview': tool-overview.md
-    - 'Loading Compose Files': loadf.md
+    - 'CLI Overview': cli-overview.md
+    - 'Loading Compose Files (loadf)': loadf.md
     - 'Target/Container Selector': selector.md
   - TUI Support:
     - 'TUI Overview & Gallery': embedded-tui.md
     - 'Zero-config TUIs': zero-config-tuis.md
     - 'Low-config TUIs': low-config-tuis.md
     - 'Advanced TUIs': advanced-tuis.md
+    # redirected menu-item: the REPL canonically lives under Plugins & Modules
+    # (plugins/tux.repl.md); this thin stub forwards there so it also surfaces
+    # under TUI Support without duplicating the page.
+    - 'BubbleTea REPL (tux.repl)': tui-repl.md
     - 'GUI Bonus': guis.md
     #- 'Configuration & Customization':  tui-customization-config.md
+  - Plugins & Modules:
+    - 'Overview': plugins/overview.md
+    - Modules:
+      - 'Faults / Exceptions': plugins/faults.md
+      - 'Golang Guests': plugins/code.golang.md
+      - 'BubbleTea REPL': plugins/tux.repl.md
+      - 'Git Ops': plugins/gitops.md
+      - 'Drop-in Dirs': plugins/io.fs.drop_in.md
+    - Plugins:
+      - 'mmd.cmk': plugins/mmd.md
+      - 'mkdocs.cmk': plugins/mkdocs.md
+      - 'grip.cmk': plugins/grip.md
+      - 'drawio.cmk': plugins/drawio.md
+      - 'JSON Helpers (json.*)': plugins/json.md
+      - 'CSS / HTML Tooling (css.*)': plugins/html.md
   - Tutorials:
     - 'Polyglot Index': demos/polyglots.md
+    - 'Shared-Heap Polyglots (GraalVM)': demos/graal.md
     - 'Embedded Containers and Data': demos/matrioshka.md
     - 'Custom Automation APIs': demos/custom-automation-apis.md
     - 'Pipelining & Workflow Basics': demos/workflows.md
@@ -74,24 +93,55 @@ nav:
     - 'Notebooks, Project-as-Tool': demos/notebooking.md
     - 'Obligatory AI Things': demos/ai.md
     - 'Theorem Proving': demos/lean.md
+    - 'Underload Esolang': demos/underload.md
+    - 'Flow Control': demos/flow-control.md
+    - 'Object-oriented': demos/oop.md
   - Misc Features:
       - 'CLI Help': cli-help.md
+      - 'Subcommands': subcommands.md
       - 'Stacks & Stages': stages.md
-      - 'Supervisors & Signals': signals.md
       - 'Self Extracting Executables': demos/packaging.md
   - CMK Language:
-      - 'Language Overview': language.md
-      - 'Compiler & Dialects': compiler.md
+      - 'Overview': cmk/index.md
+      - 'Concepts': cmk/concepts.md
+      - 'Quick Reference': cmk/quickref.md
+      - 'All Demos (Index)': cmk/demos.md
+      - 'Paradigm / Lineage': cmk/paradigm.md
+      - 'Banana Brackets': cmk/banana.md
+      - 'Modules': cmk/modules.md
+      - 'Compiler Tutorial': cmk/compiler.md
+      - 'Compiler Pragmas': cmk/pragmas.md
+      - 'Metaprogramming': cmk/metaprogramming.md
+      - 'DSLs': cmk/dsls.md
       - 'Matrioshka Automata': matrioshka.md
-    # - 'Theorem Proving': demos/lean.md
+      - 'Linting': cmk/lint.md
     # - 'Justfile Interoperability': demos/just.md
     # - 'Makeception': demos/makeception.md
+  - CMK Runtime:
+      - 'Supervisors & Signals': signals.md
+      - 'Runtime': runtime.md
+      - 'Virtual Machine': modules/virtual-machine.md
   - Misc:
-    - 'Design Philosophy': but-why.md 
-    # - 'Configuration / Env Vars': config.md
+    - 'Design Philosophy': but-why.md
+    - 'Performance': performance.md
+    - 'Configuration': config.md
+    - 'Developer Notes': dev.md
+    - 'Project Stats': cmk/stats.md
     # - limitations.md
     # - contributing.md
     - 'Project Source': 'https://github.com/robot-wranglers/compose.mk/'
+
+# Chapters (top-level `nav` sections) whose sidebar sub-tree starts OPEN
+# regardless of the active page.  Currently EMPTY: every chapter starts COLLAPSED
+# and the chapter holding the active page auto-expands just-in-time (so landing on
+# the home/Overview page opens its own chapter, exactly like any other).  A parallel key to
+# `nav` above, which stays untouched -- the sidebar template (docs/theme/base.html)
+# reads this to set the initial `collapsed` class, and a triangle toggle on each
+# chapter caption expands/collapses it live (theme_extra.js).  Values are chapter
+# titles exactly as written under `nav`.  MkDocs logs a benign "Unrecognised
+# configuration name" warning for this key; the (non-strict) build is unaffected
+# and the value is still exposed to templates as `config.nav_expanded`.
+nav_expanded: []
 #https://github.com/mkdocs/mkdocs-redirects
 plugins:
   # - search
@@ -100,17 +150,32 @@ plugins:
       redirect_maps:
         index.md: 'overview.md'
         tui.md: 'embedded-tui.md'
-        cmk.md: 'compiler.md'
-        cmk-lang.md: 'compiler.md'
+        # NB: no `cmk.md` redirect -- under use_directory_urls it would build to
+        # cmk/index.html, colliding with (and shadowing) the real cmk/index.md
+        # Overview page.  Old /cmk/ links now land on the Overview index directly.
+        cmk-lang.md: 'cmk/compiler.md'
+        # back-compat: pages relocated under /cmk/ (2.0 docs reorg)
+        compiler.md: 'cmk/compiler.md'
+        language.md: 'cmk/paradigm.md'
+        cmk-demos.md: 'cmk/demos.md'
+        cmk-quick-ref.md: 'cmk/quickref.md'
         json.md: 'standard-lib.md#structured-io'
         structured-io.md: 'standard-lib.md#structured-io'
+        plugins/golang.md: 'plugins/code.golang.md'
+        plugins/polyglot.golang.md: 'plugins/code.golang.md'
         demos/ansible.md: 'demos/custom-automation-apis.md'
         demos/nushell.md: 'standard-lib.md#nushell'
+        demos/event-loop.md: 'demos/flow-control.md'
 # https://squidfunk.github.io/mkdocs-material/reference/lists/#using-definition-lists
 markdown_extensions:
-  - footnotes 
+  - footnotes
   - admonition
   - pymdownx.details
+  # Prism (client-side) is the SOLE highlighter.  use_pygments:false makes
+  # superfences emit raw `<pre class="highlight"><code class="language-<x>">`
+  # blocks (no server-side Pygments token spans) for Prism to highlight.
+  - pymdownx.highlight:
+      use_pygments: false
   - pymdownx.superfences
   - abbr
   - def_list

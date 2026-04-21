@@ -1,12 +1,15 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
-# CMK-lang equivalent of demos/script-dispatch-stock.mk.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/compiler
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# script-dispatch-stock.cmk:
+#   Dispatch a shell script inside a stock container image, using the `in`
+#   machine-algebra: a recipe body `(| .. |) in container(| img=.. |)` runs in
+#   an anonymous, single-use container.  Ported from demos/script-dispatch-stock.mk.
 #
 # USAGE: ./demos/cmk/script-dispatch-stock.cmk
 
-⨖ my_dockerized_script
-echo hello `hostname` at `uname -a`
-⨖ with img=debian/buildd:bookworm as docker_context
+from cmk import container
+
+my_dockerized_script:
+  (| echo hello `hostname` at `uname -a` |) in container(| img=debian/buildd:bookworm entrypoint=bash |)
 
 __main__: my_dockerized_script

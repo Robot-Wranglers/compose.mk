@@ -1,0 +1,32 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# io.mktemp.cmk:
+#   Scratch files & directories with the `io.mktemp` family, in CMK-lang.
+#   Each helper exports a path var and registers an exit trap, so a temp
+#   lives only as long as its creating process.  CMK joins the recipe lines
+#   below with `&&`, keeping the var + trap in scope for the rest of the
+#   body.  Ported from demos/io.mktemp.mk.
+#
+# USAGE: ./demos/cmk/io.mktemp.cmk
+
+import log
+
+__main__: demo.tempfile demo.tempdir demo.custom_var
+
+demo.tempfile:
+    ${io.mktemp}
+    log.io(io.mktemp ${sep} made a fresh ./.tmp.* file at $${tmpf} (auto-removed on exit))
+    printf 'scratch data\n' > $${tmpf}
+    cat $${tmpf}
+
+demo.tempdir:
+    ${io.mktempd}
+    log.io(io.mktempd ${sep} made a fresh ./.tmp.* directory at $${tmpd})
+    touch $${tmpd}/a $${tmpd}/b
+    find $${tmpd} | ${stream.as.log}
+
+demo.custom_var:
+    cmk._io.mktemp(var=work)
+    log.io(_io.mktemp ${sep} same idea but the path lands in a var you pick $${work})
+    printf 'hi\n' > $${work}
+    cat $${work}

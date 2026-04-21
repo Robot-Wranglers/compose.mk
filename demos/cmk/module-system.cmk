@@ -1,0 +1,82 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# module-system.cmk: 
+#   the module system and its import variations.
+#
+# USAGE:
+#   ./demos/cmk/module-system.cmk
+
+'''
+Any banana-block can be treated as a module.
+Here's one named module body imported four ways, with 
+one demo.* target per import, with __main__ as a table of contents.
+
+This is the *parse-time* module system: how a define becomes namespaced targets.
+
+See also: demos/cmk/module-system-jit.cmk, the recipe-time JIT of a define.
+'''
+
+from cmk import module
+
+# MyModule: a named, indented banana body -- dedented into a reusable
+# define that the four import.module calls below consume.  A ''' docstring
+# ''' first line inside the body gives it an implicit __doc__.
+MyModule[|
+  '''MyModule: a greet plus a tiny svc lifecycle, to import four ways'''
+  greet:; cmk.log(hello)
+  svc.up:; cmk.log(starting)
+  svc.down:; cmk.log(stopping)
+  greet.to/%:; cmk.log(hello ${*})
+  shout:; ${stream.as.log}
+  report:
+    """compiled report ok""" | this.stream.as.log
+|]
+
+__main__: demo.aliased demo.partial demo.glob demo.flat demo.instance demo.first_class demo.runnable
+
+# each import.module is paired with the demo.* that exercises it:
+cmk.import.module(def=MyModule namespace=Aliased)
+demo.aliased: Aliased.report Aliased.greet
+  '''whole-module import under an alias: targets as Aliased.<name>.'''
+
+cmk.import.module(def=MyModule targets=greet namespace=Part)
+demo.partial: Part.greet
+  '''partial import: just the greet target, as Part.greet.'''
+
+cmk.import.module(def=MyModule targets='svc.*' namespace=Star)
+demo.glob: Star.svc.up Star.svc.down
+  '''glob import: the svc.* targets, as Star.svc.<name>.'''
+
+cmk.import.module(def=MyModule flat=1)
+demo.flat: greet
+  '''flat import: no prefix; targets land at root (greet bare).'''
+
+# instance-method form: a module NAME[| |] carries its own .import.
+module Kit[|
+  '''Kit: a cmk.module instance mounted via its own .import method'''
+  ping:; cmk.log(pong)
+|]
+Kit.import(namespace=Copied)
+demo.instance: Copied.ping
+  '''instance import: Kit.import(namespace=Copied) is the bound-method form of static cmk.import.module(def=Kit namespace=Copied).'''
+
+demo.first_class:
+  '''an imported namespace is a receiver, so its targets need no this.
+  anchor -- the "as Aliased" import registered the name, so anchorless
+  call-forms lower to a make invocation; also reflects MyModule.__doc__.'''
+  cmk.log(MyModule doc ${sep} ${MyModule.__doc__})
+  Aliased.greet.to/world
+  Aliased.shout["""loud and clear"""]
+
+# RunnableModule: a module that is-a program (has a __main__).
+module RunnableModule[|
+  '''a module with a __main__ entrypoint: callable as a program'''
+  greet:; cmk.log(hello from a resident target)
+  __main__:
+    ${self}.greet()
+    cmk.log(RunnableModule.__main__ ran as a program)
+|]
+
+demo.runnable:
+  '''a module has-a main: RunnableModule() runs __main__ via has_main.'''
+  RunnableModule()

@@ -1,0 +1,140 @@
+{
+  "name": "cmk-lang",
+  "displayName": "compose.mk / cmk-lang",
+  "description": "Syntax highlighting for cmk-lang (.cmk) plus enhanced highlighting for GNU Makefiles, and a shebang-aware run button above targets, from the compose.mk project.",
+  "version": "0.4.0",
+  "publisher": "robot-wranglers",
+  "license": "MIT",
+  "engines": { "vscode": "^1.60.0" },
+  "categories": ["Programming Languages"],
+  "keywords": ["cmk", "compose.mk", "makefile", "make", "polyglot"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Robot-Wranglers/compose.mk"
+  },
+  "main": "./extension.js",
+  "scripts": {
+    "test": "node test/grammar.test.js"
+  },
+  "devDependencies": {
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.0.0"
+  },
+  "activationEvents": ["onLanguage:cmk"],
+  "contributes": {
+    "commands": [
+      {
+        "command": "cmk.runTarget",
+        "title": "Run Target",
+        "category": "cmk"
+      }
+    ],
+    "configuration": {
+      "title": "cmk-lang",
+      "properties": {
+        "cmk.showRunButton": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a shebang-aware 'run' button (CodeLens) above each target in .cmk files. Running a target replays the file's shebang; files with no shebang are refused."
+        },
+        "cmk.emphasis.style": {
+          "type": "string",
+          "default": "bold",
+          "enum": ["off", "bold", "spacing", "marker", "box", "fontSize"],
+          "enumDescriptions": [
+            "No emphasis decorations.",
+            "Bold weight only. Fully supported, zero layout risk.",
+            "Bold + wider letter-spacing, so the token takes more horizontal space. Supported.",
+            "Bold + a sized colored block prepended as a pseudo-element (a genuinely bigger glyph beside the token, not a resize of it). Supported.",
+            "Bold + a rounded outline box that enlarges the token's footprint. Supported.",
+            "UNSUPPORTED HACK: injects font-size + font-weight:900 + a different font-family via the textDecoration CSS field to make the token bigger, bolder, and a distinct typeface. Line height does NOT reflow, so large scales clip the line above and skew cursor/selection. Degrades to bold+spacing if VSCode ignores the injected CSS."
+          ],
+          "markdownDescription": "How to emphasize banana-block delimiters `(| |)` and target names beyond what the color theme provides. VSCode has no per-token font-size, so most options approximate 'bigger' with weight/spacing/boxes; `fontSize` is an explicit opt-in to the unsupported CSS-injection hack (it degrades gracefully to bold+spacing)."
+        },
+        "cmk.emphasis.fontSizeScale": {
+          "type": "number",
+          "default": 1.6,
+          "minimum": 1,
+          "maximum": 2.5,
+          "markdownDescription": "Glyph scale for the `fontSize` emphasis style (em units, clamped 1.0-2.5). Higher values are more dramatic but clip the line above more severely, since the editor does not grow line height. Ignored unless `#cmk.emphasis.style#` is `fontSize`."
+        },
+        "cmk.emphasis.fontFamily": {
+          "type": "string",
+          "default": "\"Georgia\", \"Iowan Old Style\", \"Times New Roman\", serif",
+          "markdownDescription": "Font-family injected for the `fontSize` emphasis style, so emphasized tokens render in a typeface distinct from the editor's code font. A CSS font-family list (fallbacks recommended). Only the `fontSize` style can change font-family (it rides the same unsupported CSS-injection hack); if VSCode ignores the injection, the token falls back to the editor font. Ignored unless `#cmk.emphasis.style#` is `fontSize`."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "editor.tokenColorCustomizations": {
+        "comments": "The VSCode analogue of the docs' prism-cmk.base.css: force bold/bright colors onto cmk scopes over whatever color theme is active (the grammar only assigns scopes, it carries no color). Tuned for DARK themes -- the common cmk case. VSCode has NO per-token font-size, so the docs' 'bigger' tweaks (targets, banana) are approximated with bold/underline. Override any rule below in your own settings.json.",
+        "textMateRules": [
+          {
+            "scope": "keyword.operator.banana.cmk",
+            "settings": { "foreground": "#ffffff", "fontStyle": "bold" }
+          },
+          {
+            "scope": "keyword.control.import.include.cmk",
+            "settings": { "foreground": "#9cdcfe", "fontStyle": "bold" }
+          },
+          {
+            "scope": "comment.line.number-sign.cmk",
+            "settings": { "foreground": "#c8c8c8" }
+          },
+          {
+            "scope": "comment.line.documentation.cmk",
+            "settings": { "foreground": "#a8b6c0", "fontStyle": "italic" }
+          },
+          {
+            "scope": "comment.line.documentation.double.cmk",
+            "settings": { "foreground": "#d9a441" }
+          },
+          {
+            "scope": "string.quoted.docstring.cmk",
+            "settings": { "fontStyle": "italic" }
+          },
+          {
+            "scope": "entity.name.function.target.cmk",
+            "settings": { "fontStyle": "bold underline" }
+          },
+          {
+            "scope": "entity.name.function.target.prereq.cmk",
+            "settings": { "fontStyle": "italic" }
+          },
+          {
+            "scope": "comment.line.divider.cmk",
+            "settings": { "foreground": "#ffffff", "fontStyle": "bold italic" }
+          },
+          {
+            "scope": "constant.character.shade.cmk",
+            "settings": { "foreground": "#ff5555", "fontStyle": "bold" }
+          },
+          {
+            "scope": "keyword.operator.capture.cmk",
+            "settings": { "foreground": "#ffffff", "fontStyle": "bold italic" }
+          }
+        ]
+      }
+    },
+    "languages": [
+      {
+        "id": "cmk",
+        "aliases": ["cmk-lang", "CMK", "compose.mk"],
+        "extensions": [".cmk"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "cmk",
+        "scopeName": "source.cmk",
+        "path": "./syntaxes/cmk.tmLanguage.json"
+      },
+      {
+        "scopeName": "source.makefile.cmk-injection",
+        "path": "./syntaxes/cmk-makefile.injection.json",
+        "injectTo": ["source.makefile"]
+      }
+    ]
+  }
+}

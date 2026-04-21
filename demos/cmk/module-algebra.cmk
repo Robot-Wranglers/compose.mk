@@ -1,0 +1,57 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# module-algebra.cmk: dsl.cmklang -- a CMK-lang fragment (holds + cooks).
+#
+# USAGE: ./demos/cmk/module-algebra.cmk
+
+'''
+dsl.cmklang is cmk.Fragment (.shape / .fd / .file / .__call__) plus Program
+(.__main__, CMK_NO_MAIN).  A cmklang(| .. |) holds its raw CMK-lang shape;
+it does not construct resident <name>.<target>s -- that is cmk.module's
+job.  Because it holds its shape (no namespace ctor), a body __main__ never
+leaks to col-0.  Calling it cooks and re-execs the body __main__ in a
+child, or throws CMK_NO_MAIN.  The + operator composes two shapes into a
+fresh cmklang (closed).  Raw (| .. |) bodies are cooked on demand, like
+jqlang.
+
+This demo shows the surfaces: call (cook + run __main__), + algebra
+(compose shapes), and the CMK_NO_MAIN throw.
+'''
+
+from cmk import dsl
+
+# a cmklang holding a runnable body: calling it cooks + runs __main__.
+dsl.cmklang greeter(|
+  __main__:; cmk.log(hi from a cooked cmklang)
+|)
+
+# the + algebra composes two fragments into one runnable cmklang: lib
+# supplies a target, entry supplies the __main__ that runs it.
+dsl.cmklang lib(|
+  say:; cmk.log(composed then cooked)
+|)
+dsl.cmklang entry(|
+  __main__: say
+|)
+&app <- lib+entry
+
+__main__: demo.call demo.algebra
+
+demo.call:
+  '''call surface: calling greeter cooks + re-execs __main__ in a child.'''
+  greeter()
+
+demo.algebra:
+  '''
+  + algebra: &app <- lib+entry folds + into a fresh cmklang
+  (app.__class__ is dsl.cmklang, closed) whose shape holds both
+  bodies; calling app cooks + runs it.
+  '''
+  app()
+
+demo.nomain:
+  '''
+  a cmklang with no __main__ throws CMK_NO_MAIN when called; lib has
+  only a say target, so this demo throws.
+  '''
+  lib()

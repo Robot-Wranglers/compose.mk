@@ -1,0 +1,52 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+{{ macros.non_core('code.golang.cmk', detail='It needs a docker daemon: the Go toolchain runs in a container; nothing is installed on the host.', mkdocs=mkdocs) }}
+
+{{ macros.section(3, "Golang Polyglot", id="golang-polyglot") }}
+
+`code.golang.cmk` lets you embed **inline Go** in a `compose.mk`/CMK program: it cross-builds[^xc] the
+source in a dockerized Go toolchain, caches the resulting binary per-host, and execs it.  No Go
+install is required on the host, and a clean (cache-hit) run just execs the cached binary.
+
+```make
+$(call include.plugins, code.golang.cmk)
+```
+
+{{ macros.section(3, "How it works", id="how-it-works") }}
+
+The Go source is the **banana body** of a native `code.golang NAME(| body |)` construction; the
+`go.mod` is **auto-generated** (a minimal module) unless you pass `mod=<block-ref>` for dependencies.
+On first use the plugin:
+
+1. cross-compiles for the host (`GOOS`/`GOARCH` auto-detected, env-overridable) inside the toolchain
+   image, then chowns the output back to the host UID;
+2. caches the binary under the `CMK_XDG_CACHE` directory at a `<hash>/<name>` path, keyed by a checksum of the **source + module**
+   content: so editing either triggers a clean rebuild, and an unchanged program is a cache HIT;
+3. execs it, forwarding any arguments.
+
+{{ macros.section(3, "Public surface", id="public-surface") }}
+
+| Symbol | Args | Purpose |
+| --- | --- | --- |
+| `code.golang NAME(| body |)` | `[mod=] ..` | native construction: wires a `NAME` (run) target and a `NAME/%` (run with the stem as argv) target |
+| `code.golang.lambda` | `src= [mod=] [name=] [base=] [args=]` | build-if-needed, then exec |
+| `code.golang.ensure` | `<src>,<mod>,<name>,<base>` | build-if-absent (a cache HIT just logs) |
+| `code.golang.base` | -- | the toolchain image (default `golang:1.24-alpine`, overridable) |
+
+{{ macros.section(3, "Example", id="example") }}
+
+The demo below shows both idioms over one inline Go program: native construction
+`code.golang NAME(| body |)` (which wires a `NAME` run target, a `NAME/%` run-with-argv target, and a
+deferred `NAME.lambda` var) and the underlying `code.golang.lambda` macro called directly on a recipe line:
+
+{{site.embed_demo('demos/cmk/golang.cmk', type='cmk', github=github)}}
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [REPL]({{_}}/plugins/tux.repl): a client of this build-if-needed pipeline.
+* [Plugin Overview]({{_}}/plugins/overview/#plugin-api-usage): how plugins load and bind.
+* [Polyglots]({{_}}/demos/polyglots): embedding other languages inline.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^xc]: {{ tufte.wiki('Cross_compiler')|trim }}

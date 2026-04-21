@@ -1,0 +1,27 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# dashboarding-dispatch.cmk: a dashboarding TUI with container dispatch.
+#
+# USAGE: ./demos/cmk/tui/dashboarding-dispatch.cmk demo.ui
+
+'''
+Extends the dashboarding demo with
+container dispatch: the bottom pane runs clean/build (and drops to a shell) inside the golang
+toolchain image, so `which go` / `go version` resolve without a host install.
+'''
+
+golang.base=golang\:1.24-bookworm
+
+# Fake clean/build/test targets -- these probe the go toolchain to show it is present in the container.
+clean:; which gofmt; echo cleaning
+build:; which go; go version
+test:; echo testing
+
+# Top loops test on the host; bottom dispatches clean/build/shell into the golang image.
+top: flux.loopf/test
+bottom: docker.image.dispatch/${golang.base}/flux.and/clean,build,io.shell
+
+demo.ui: tux.open.horizontal/top,bottom
+    '''Open the TUI: top loops test on the host; bottom dispatches clean+build+shell into the golang image.'''
+
+__main__: clean build test

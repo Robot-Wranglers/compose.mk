@@ -1,24 +1,24 @@
 {% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ### Workflow Support
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-The flux module, aka the [**`flux.*` target namespace**]({{mkdocs.site_relative_url}}/api#api-flux), provides a tiny but powerful workflow/pipelining API, roughly comparable to something like declarative pipelines in Jenkins[^1], providing concurrency, retry operators, etc.  You can also think of it as "target algebra" for `make`, similar to how bash provides process algebra.
+The flux module, aka the [**`flux.*` target namespace**]({{_}}/api#api-flux), provides a tiny but powerful workflow/pipelining API, roughly comparable to something like declarative pipelines in Jenkins[^1], providing concurrency, retry operators, etc.  You can also think of it as "target algebra" for `make`, similar to how bash provides process algebra.
 
 What `flux.*` targets add is basic flow-control constructs and higher-level join / loop / map instructions over *other make targets*, taking inspiration from functional programming and threading libraries. 
 
 
-Alternatively: You can think of flux as a programming language where all primitives are the objects that `make` understands (e.g. targets, defines, and variables). Since every target in `make` is a DAG, you might say that task-DAGs are also primitives. Since `compose.import` [maps containers onto targets]({{mkdocs.site_relative_url}}/container-dispatch), *containers are primitives too*. Since tux targets [map targets onto TUI panes]({{mkdocs.site_relative_url}}/embedded-tui), *UI elements are also effectively primitives*  too.
+Alternatively: You can think of flux as a programming language where all primitives are the objects that `make` understands (e.g. targets, defines, and variables). Since every target in `make` is a DAG, you might say that task-DAGs are also primitives. Since `compose.import` [maps containers onto targets]({{_}}/container-dispatch), *containers are primitives too*. Since tux targets [map targets onto TUI panes]({{_}}/embedded-tui), *UI elements are also effectively primitives*  too.
 
 !!! info "See also"
-    For more background, see the [style docs]({{mkdocs.site_relative_url}}/style) and specifically the [targets-as-functions docs]({{mkdocs.site_relative_url}}/style#targets-as-functions).
+    For more background, see the [style docs]({{_}}/style) and specifically the [targets-as-functions docs]({{_}}/style#targets-as-functions).
 
 #### Workflow Rationale 🤔
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
-Internally, the flux module was started in support of the [the embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui), but it's also useful in general.  
+Internally, the flux module was started in support of the [the embedded TUI]({{_}}/embedded-tui), but it's also useful in general.  
 
-This sections starts by introducing concepts from the CLI.  Besides using workflows in your existing automation, you can also **refactor existing bash using flux primitives [without any project integration]({{mkdocs.site_relative_url}}/tool-overview)**.  
+This section starts by introducing concepts from the CLI.  Besides using workflows in your existing automation, you can also **refactor existing bash using flux primitives [without any project integration]({{_}}/tool-overview)**.  
 
 As an example of this, here's a few quick one-liners: 
 
@@ -37,7 +37,7 @@ Above, {{site.api_link('flux.each',mkdocs,arg='fxn')}} takes a newline-separated
 
 One-liners aren't really the point though, and **the main use-case for `flux` is scripting on top of it in your own projects**.  But why bother?  Well, by lifting flow-control and iteration out of *bash/make primitives* and up into `flux`, it tends to *completely eliminate a major source of errors, readability issues, and downright brutal syntax* to end up with **an elegant alternative that actually encourages good design**.
 
-To illustrate, consider this snippet of [the mini-ETL demo]({{mkdocs.site_relative_url}}/demos/workflows) that uses flux:
+To illustrate, consider this snippet of [the mini-ETL demo]({{_}}/demos/workflows) that uses flux:
 
 ```Makefile {.snippet .dense .language-makefile}
 # Declare an ETL pipeline, using `flux.pipeline` to bind tasks together.
@@ -48,10 +48,10 @@ etl: flux.pipeline/extract,transform,load
 etl.safe: flux.try.except.finally/etl,etl.failed,etl.cleanup
 ```
 
-See the demo for the full context, but let's notice how clean and declarative this is.  Individual targets like *extract/transform/load* cannot be *perfectly* flat like this of course, and at some point you have to dip into bash. But when targets inevitably become complex, the sheer simplicy of `flux` syntax over make/bash idioms provides a healthy incentive to break things up, which in turn not only improves readability, but improves composability at the same time.  Meanwhile targets like `flux.each` and even `flux.apply` also show a bias towards [functional style](#functional-style), which tends encourage clean loops, heavy usage of streams instead of temporary files or variables, etc.
+See the demo for the full context, but let's notice how clean and declarative this is.  Individual targets like *extract/transform/load* cannot be *perfectly* flat like this of course, and at some point you have to dip into bash. But when targets inevitably become complex, the sheer simplicity of `flux` syntax over make/bash idioms provides a healthy incentive to break things up, which in turn not only improves readability, but improves composability at the same time.  Meanwhile targets like `flux.each` and even `flux.apply` also show a bias towards [functional style](#functional-style), which tends to encourage clean loops, heavy usage of streams instead of temporary files or variables, etc.
 
 #### Workflow Basics
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 Before we get into code examples, let's introduce basic principles with the command line.
 
@@ -60,7 +60,7 @@ Before we get into code examples, let's introduce basic principles with the comm
 $ ./compose.mk flux.ok
 ```
 ```markdown {.cli_output}
-flux.ok // succceeding as requested!
+flux.ok // succeeding as requested!
 ```
 
 ```bash {.cli_example}
@@ -80,7 +80,7 @@ $ ./compose.mk flux.fail flux.ok
 ```
 ```markdown {.cli_output}
 flux.fail // failing as requested!
-make: *** [compose.mk:1677: flux.fail] Error 1
+make: *** [compose.mk:..: flux.fail] Error 1
 ```
 
 Above, `flux.ok` and `flux.fail` are just make-targets that exit with success and failure.  Like `true` and `false` in shell, there are no arguments (*aka nullary*).  You can think of `flux.ok` and `flux.fail` as placeholder targets for ones that you'll provide yourself.  
@@ -96,9 +96,9 @@ BANG
 ```
 
 #### **Dispatch**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
-For a more advanced example, let's use `flux.ok` with scaffolded targets for [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch), and [use loadf to avoid a project Makefile]({{mkdocs.site_relative_url}}).  The following command loads the "debian" container from `demos/data/docker-compose.yml`, then runs the `flux.ok` target inside that tool container.
+For a more advanced example, let's use `flux.ok` with scaffolded targets for [container dispatch]({{_}}/container-dispatch), and [use loadf to avoid a project Makefile]({{_}}).  The following command loads the "debian" container from `demos/data/docker-compose.yml`, then runs the `flux.ok` target inside that tool container.
 
 ```bash {.cli_example}
 $ ./compose.mk \
@@ -114,9 +114,9 @@ flux.ok // succeeding as requested!
 ```
 
 #### **Flow Control**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
-As seen in the scaffolded [`<service_name>.dispatch` target]({{mkdocs.site_relative_url}}/bridge/#svc_namedispatch) from the last example, **most targets in the `flux` module accept other targets as arguments**.  
+As seen in the scaffolded [`<service_name>.dispatch` target]({{_}}/bridge/#svc_namedispatch) from the last example, **most targets in the `flux` module accept other targets as arguments**.  
 
 Let's introduce `flux.try.except.finally` as a simple idiom for flow-control.  This target accepts 3 comma-separated arguments for a `<try_target>`, `<fail_handler>`, and a `<always_handler>`.  Since we have `flux.ok` and `flux.fail` in hand, we'll fill in the blanks with that.
 
@@ -129,8 +129,8 @@ $ ./compose.mk flux.try.except.finally/flux.fail,flux.ok,flux.ok
 flux.try.except.finally // flux.fail,flux.ok,flux.ok 
 flux.fail // failing as requested!
 make[1]: *** [compose.mk:..: flux.fail] Error 1
-flux.ok // succceeding as requested!
-flux.ok // succceeding as requested!
+flux.ok // succeeding as requested!
+flux.ok // succeeding as requested!
 ```
 
 The semantics are what you'd expect from try/except/finally construct, so the exit status is zero for success.
@@ -158,7 +158,7 @@ two
 #}
 
 #### **Iteration, Pipelining, & Looping**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 Introducing {{site.api_link('flux.each',mkdocs,arg='target')}} using `flux.echo`:
 
@@ -202,15 +202,15 @@ flux.loop.until // flux.fail (until success)
 ```
 
 #### Workflow Demos
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
-What's covered on this page isn't exhaustive, see also the [full API]({{mkdocs.site_relative_url}}/api#api-flux), and the next section that focuses on functional-style.  For examples of other idioms, see {{site.api_link('flux.loop/arg',mkdocs)}}, {{site.api_link('flux.retry/arg',mkdocs)}}, {{site.api_link('flux.timer/arg',mkdocs)}}, {{site.api_link('flux.mux/arg',mkdocs)}}, {{site.api_link('flux.timeout/arg',mkdocs)}}, etc. 
+What's covered on this page isn't exhaustive, see also the [full API]({{_}}/api#api-flux), and the next section that focuses on functional-style.  For examples of other idioms, see {{site.api_link('flux.loop/arg',mkdocs)}}, {{site.api_link('flux.retry/arg',mkdocs)}}, {{site.api_link('flux.timer/arg',mkdocs)}}, {{site.api_link('flux.mux/arg',mkdocs)}}, {{site.api_link('flux.timeout/arg',mkdocs)}}, etc. 
 
 !!! tip "Related Links"
     For more fleshed-out examples using workflows, see also:
 
-    * [Miniature ETL demo]({{mkdocs.site_relative_url}}/demos/workflows) 
-    * [Platform lifecycle demo]({{mkdocs.site_relative_url}}/demos/platform)
+    * [Miniature ETL demo]({{_}}/demos/workflows) 
+    * [Platform lifecycle demo]({{_}}/demos/platform)
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

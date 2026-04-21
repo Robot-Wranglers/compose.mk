@@ -1,12 +1,12 @@
 {% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ### Functional Style
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 We've met several concepts borrowed from functional programming constructs already.  Sometimes aliases are in place to make this more clear.. for example, the `flux.and` and `flux.or` just different names for `flux.all` and `flux.any`.  A version of `flux.each` that works directly with args instead of streaming input is called `flux.for.each`, aka {{site.api_link('flux.map', mkdocs, arg='args')}}.  
 
 #### Apply, Map, Starmap
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 Functional friends like **apply, starmap, etc** are available:
 
@@ -47,8 +47,31 @@ $ ./compose.mk flux.pipeline/flux.echo/hello,stream.echo
 hello
 ```
 
+#### Fold & Reduce
+<hr class="section-rule lvl-4">
+
+A **left-fold** over a stream is available with {{site.api_link('flux.fold', mkdocs, arg='reducer,init')}}.  It reads one line per item from stdin, threading an *accumulator* through the `<reducer>` target: the accumulator is passed on the reducer's **stdin**, the current line is passed as the `val` env-var, and the reducer prints the new accumulator.  The accumulator starts as `<init>` (or the `acc` env-var), defaulting to empty.
+
+This is the exact shape that the [`stream.*` reducers]({{_}}/standard-lib) already have, so they drop in as reducers with no glue.  For example, {{site.api_link('stream.json.array.append', mkdocs)}} (which reads an array on stdin plus a `val`) folds a stream straight into a JSON array:
+
+```bash {.cli_example .language-bash}
+# fold a stream into a JSON array, reusing a stdlib reducer as-is
+$ printf 'a\nb\nc\n' | ./compose.mk flux.fold/stream.json.array.append,[]
+```
+```json {.cli_output}
+[
+  "a",
+  "b",
+  "c"
+]
+```
+
+A *scalar* reducer just reads the accumulator from stdin instead (via the `stream.stdin` macro), with the current element in `val`; for instance an integer-summing reducer used as `flux.fold/add,0` over a column of numbers.
+
+The {{site.api_link('flux.reduce', mkdocs, arg='reducer')}} variant is the same thing seeded by the **first** line instead of an explicit init (and it errors on empty input), so `reduce` is just `fold` with the head as the starting accumulator.
+
 #### Partial Functions
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 Partials are not very difficult to get with vanilla `make`, and that approach is generally better.
 
@@ -57,11 +80,11 @@ However `__flux.partial__` adds another kind of support focused on quick partial
 {{site.embed_demo('demos/partials.mk', github=github)}}
 
 #### Other Operators
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
-Sorry, **reduce and fold operators** are deliberately ommitted as they don't often find use-cases in automation.  If this fills you with sadness, there is the consolation prize that [signals in compose.mk]({{mkdocs.site_relative_url}}/signals) are somewhat like **call/cc** =P  
+Fun tangent, [signals in compose.mk]({{_}}/signals) are somewhat like **call/cc** =P
 
-Topics related to **currying** are explored a bit in the discussion [of style]({{mkdocs.site_relative_url}}/style/#performance-and-currying) for lack of a better place.  
+Topics related to **currying** are explored a bit in the discussion [of style]({{_}}/style/#performance-and-currying) for lack of a better place.  
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

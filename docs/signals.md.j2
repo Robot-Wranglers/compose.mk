@@ -1,20 +1,19 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 {#{macros.img_link("escher-still-life.png", mkdocs, width="50%", align='center', class=" ")}#}
 
-## Signals and Supervisors
-<hr style="width:100%;border-bottom:3px solid black;">
+{{ macros.section(2, "Signals and Supervisors", id="signals-and-supervisors") }}
 
 !!! danger "Advanced topic"
     New users can safely skip this.  **Working with signals (or understanding them) is not required for most use-cases of `compose.mk`,** especially if you're using it as a library.   
 
 Every direct invocation of `compose.mk` optionally gets a "supervisor" process that allows for enhanced use (abuse?) of POSIX signals. Amongst other use-cases, you can use this pattern to yield control to another process in the middle of target-processing, or to implement entrance/exit handlers for `make`, in `make`.
 
-[Tool mode invocations]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) implicitly involve supervisors and signals, and signals also enable certain experimental features, and in principle the supervisor can be extended with new entry/exit hooks.
+[Tool mode invocations]({{_}}/tool-overview/#tool-wrappers) implicitly involve supervisors and signals, and signals also enable certain experimental features, and in principle the supervisor can be extended with new entry/exit hooks.
 
 Power users might be interested to understand the caveats and limitations around this, and anyone looking to work deeply on `compose.mk` itself might need to grok the implementation.
 
 ### Background & Motivation
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 Without [forking make](https://remake.readthedocs.io/en/latest/), there's no simple method to get hooks into the default way that it handles interrupts and signals.  But why would you want to anyway?  Most of the time this occurs to people [it's about cleanup](https://www.gnu.org/software/make/manual/html_node/Interrupts.html), but `compose.mk` doesn't exactly look like traditional use-cases.  
 
@@ -22,40 +21,42 @@ For `compose.mk` specifically, signals come up when we need to stop `make` from 
 
 Here's a few typical examples of why you might want **individual targets to essentially be able to consume the rest of the command line.**
 
-* The [help command]({{mkdocs.site_relative_url}}/cli-help) has an optional 2nd argument, a target, which must **not** be parsed by `make` because that would actually execute the target!  
-* The [`loadf` command]({{mkdocs.site_relative_url}}/loadf) is similar: the 2nd argument, a filename, must **not** be parsed as a Makefile target because no such target exists.
-*  The [wrappers for `jq` and `jb`]({{mkdocs.site_relative_url}}/tool-overview/#proxy-wrappers) are also examples where we need to read the whole command-line.
+Pulling that off means the supervisor stops `make` at just the right moment and hands the raw command line to a fresh process.  That hand-off is exactly the job of the supervisor's [bootloader](#bootloader) and the [trampoline]({{_}}/runtime/#flat-dispatch) dispatch loop it hosts, both introduced further down this page and covered in full on the [Runtime]({{_}}/runtime) page.  Keep them in mind: the rest of this page builds toward that machinery.
 
-```bash {.cli_example}
-# Several example invocations where arguments are NOT targets.
-$ ./compose.mk help docker.image.run
-
-$ ./compose.mk loadf demos/data/docker-compose.yml
-
-$ echo '{"foo":"bar"}' | ./compose.mk jq .foo
-
-$ ./compose.mk jb foo=bar
-```
-
-<br/>
+> **Typical cases.**  Several commands need a target to read the whole command line rather than let `make` parse it:
+> {: .cmk-card }
+>
+> * The [help command]({{_}}/cli-help) has an optional 2nd argument, a target, which must **not** be parsed by `make`, as that would actually execute it!
+> * The [`loadf` command]({{_}}/loadf): the 2nd argument, a filename, must **not** be parsed as a Makefile target (no such target exists).
+> * The [wrappers for `jq` and `jb`]({{_}}/tool-overview/#proxy-wrappers) likewise need to read the whole command-line.
+>
+> ```bash {.cli_example}
+> # Several example invocations where arguments are NOT targets.
+> $ ./compose.mk help docker.image.run
+> $ ./compose.mk loadf demos/data/docker-compose.yml
+> $ echo '{"foo":"bar"}' | ./compose.mk jq .foo
+> $ ./compose.mk jb foo=bar
+> ```
 
 ### Inheritance & Interpreters
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-Projects that are extending `compose.mk` might be interested in *inheriting* the capabilities for signals and supervisors.  The simplest reason you might want to do this is just for the sake of bringing [CLI help]({{mkdocs.site_relative_url}}/cli-help) to your own project, *i.e. targets that actually support positional arguments,* but [the advanced examples](#advanced-examples) on this page hint at other possibilities.  
+Projects that are extending `compose.mk` might be interested in *inheriting* the capabilities for signals and supervisors.  The simplest reason you might want to do this is just for the sake of bringing [CLI help]({{_}}/cli-help) to your own project, *i.e. targets that actually support positional arguments,* but [the advanced examples](#advanced-examples) on this page hint at other possibilities.  
 
-For [technical reasons](#implementation-details), there's unfortunately no way to inherit signal capabilities by simply using `include compose.mk` from your project Makefiles.  But, there's a work-around for this if you're willing to setup `compose.mk` itself as the interpreter.  *(For information about getting an interpreter *and* a transpiler/preprocessor, see instead [the compiler docs]({{mkdocs.site_relative_url}}/compiler))*
+{{ macros.admonition("warning", "Signals aren't inherited through `include`", "For [technical reasons](#implementation-details) there is no way to inherit signal capabilities by simply `include`-ing `compose.mk` from your project Makefiles.  The work-around is to set up `compose.mk` itself as the interpreter; and for an interpreter *and* a compiler, see instead [the compiler docs](" ~ _ ~ "/cmk/compiler).") }}
 
-This pattern is an advanced topic, and although it is both stable and portable, the semantics are strange enough that the whole thing should probably be considered experimental!
+This pattern is an advanced topic, but it is both stable and portable, even if the semantics are strange enough to take some getting used to.
+
+The end-game for this style of extension is the [trampoline]({{_}}/runtime/#flat-dispatch) dispatch loop, where re-shaping the remaining command line becomes a first-class control primitive.  But we can build up to that gradually, starting from the simplest case: short-circuiting `make`'s default command line processing with [`mk.yield`](#positional-arguments-yield).
 
 #### Positional Arguments & Yield
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 Let's start with something simple.  To demonstrate short-circuiting the default command line processing of `make`, we'll try to create a clone of the `ls` command.  
 
 In the code, the differences start right away.  See the shebang at the top of the following file which uses {{site.api_link('mk.interpret', mkdocs)}} ?
 
-{{site.embed_demo('demos/interpreter.mk', github=github)}}
+{{site.embed_mirror('demos/interpreter.mk', 'demos/cmk/interpreter.cmk', github=github)}}
 
 Using `compose.mk` to "interpret" your makefile isn't as magical as it sounds.  You can think of it as effectively *inserting **your** makefile at the bottom of the compose.mk source code,* then running the resulting temporary file as usual with `make`.  As a result of this, there are two important side-effects for project automation:
 
@@ -63,7 +64,7 @@ Using `compose.mk` to "interpret" your makefile isn't as magical as it sounds.  
 1. Automation inherits the `compose.mk` extensions to signals
 
 !!! closer_look "Closer Look"
-    The next extremely magical line is the call to `mk.yield`, where the argument is the command line that you want to *yield execution to*.  We yield in this case to `ls $${MAKE_CLI#*ls}`, where the right side expands to "the full command line, *after* the word `ls`".[^4]
+    The next extremely magical line is the call to `mk.yield`, where the argument is the command line that you want to *yield execution to*.  We yield in this case to an `ls` invocation whose argument is a `MAKE_CLI` parameter-expansion, which expands to "the full command line, *after* the word `ls`".[^4]
 
 At this point as long as the file is executable, then `./demos/interpreter.mk ls /` works as expected.  But the body of `__main__` demonstrates something surprising, which is that `mk.yield` really *does* drastically change the rest of program flow control afterwards.
 
@@ -75,28 +76,28 @@ You can skip the usage of `compose.mk` as an interpreter by invoking the file as
 If you're only interested in proxy for **positional arguments** then this won't matter, meanwhile **option-proxy** works in some cases but must always be tested carefully.
 
 #### Generic Option Proxy
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
-The end of the last section hints at a basic problem with convenient but naive option-proxy.  What if we want `ls --help` to work, or to put it another way: **how can we stop make from eating our argv?**
+The end of the last section hints at a basic problem with naive option-proxying.  What if we want `ls --help` to work, or to put it another way: **how do we stop make from eating our argv?**
 
-The solution for this is to use the *end of options* hint, aka '<main_cmd> -- <other_stuff>'[^1], which `compose.mk` has some built-in support for using the `MAKE_CLI_EXTRA` variable.[^2]
+The solution is the shell's *end of options* convention, a `--` separating the command from its arguments[^1]; `compose.mk` surfaces everything after it in the `MAKE_CLI_EXTRA` variable.[^2]
 
-{{site.embed_demo('demos/interpreter-2.mk', github=github)}}
+{{site.embed_mirror('demos/interpreter-2.mk', 'demos/cmk/interpreter-2.cmk', github=github)}}
 
-As seen above, this does require that we sacrifice the convenience of a really direct invocation.  But now `./demos/interpreter.mk ls -- --help` actually returns help for `ls` instead of help for `make`.  
+As seen above, this sacrifices a little of the direct invocation's convenience, but the tool's own argv now reaches it: `ls -- --help` returns help for `ls` instead of for `make`.  
 
-This works much more reliably for options compared with the last approach, **but still has known issues**.  To see this, try passing optional args with and without `=`, i.e. `./demos/interpreter-2.mk ls -- --width=45` will break whereas `./demos/interpreter-2.mk ls -- --width 45` does not. [^3] 
+This is far more reliable than the last approach, **but still has known issues**: an option written with `=` (`--width=45`) breaks, while the space-separated form (`--width 45`) works.[^3] 
 
 #### Advanced Examples
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 Of course, no one really cares about making an `ls` clone!  But besides the simple use-cases with targets that might want to accept pos-args and halt further execution, there are some other applications.
 
 The example below demonstrates an embedded python-script that we'll run inside a container, and uses real option parsing.  
 
-{{site.embed_demo('demos/interpreter-3.mk', github=github)}}
+{{site.embed_mirror('demos/interpreter-3.mk', 'demos/cmk/interpreter-3.cmk', github=github)}}
 
-Above we use `$(call mk.yield)` with no arguments, which is equivalent to `$(call mk.yield, true)`, i.e. just stopping CLI parsing and exiting immediately. This is often sufficient and has the correct exit status, because if the line before it should fail, execution will stop anyway.
+Above we use the `mk.yield` macro with no arguments, which is equivalent to calling `mk.yield` with `true`, i.e. just stopping CLI parsing and exiting immediately. This is often sufficient and has the correct exit status, because if the line before it should fail, execution will stop anyway.
 
 Anyway, using it looks like this:
 
@@ -131,42 +132,51 @@ Options:
 ```
 
 ### Pre & Post Hooks 
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-If you're using the interpreter as seen in the previous examples, you'll also **automatically be able to use pre and post hooks for every target that runs via the command line.**  Here's a simple example to illustrate:
-
-{{site.embed_demo('demos/interpreter-4.mk', github=github)}}
-
-Running the code above works the way you'd expect, and we can get pre and post effects with no explicit plumbing.  This is named-based with post-fixes as seen above, and **extensions can also add hooks for compose.mk builtins**.
-
-Here's the output:
-
-```bash {.cli_example}
-$ ./demos/interpreter-4.mk main_target
-```
-```bash {.cli_output}
-hello pre-hook
-hello main
-hello post-hook
-```
-
-This is partly just a style choice that an make certain code more readable, but it does also make possible a certain interesting kind of code reuse.  Many targets may wish to share the *same* pre-conditions or post-conditions.  This works because there's no need to define an explicit target body for the hooks actually, and you can just treat `my.target.pre: common.precondition` as an annotation, similar to function decorators in python, or lightweight "aspect oriented" programming.
-
---------------------------
-
-It's very important to understand the limitation that was hinted at earlier though.  What does it mean that hooks work for "*every target used via command line*" ? To put this in other words, **hooks are only fired when the interpreter is used directly,** i.e. recursive calls via `${make}` or similar will not execute them!  This makes the feature pretty useful for standalone tools and augmenting standard entrypoints like *clean/build/test*, and much less useful for libraries.
-
-Hooks are enabled by default since they don't affect peformance much, but it's possible they might conflict with existing naming conventions or similar.  To override this, you can set `CMK_DISABLE_HOOKS=1` in your environment, or in the shebang lines at the top of your script.  Always use `CMK_DISABLE_HOOKS=1` if you are making proxy-wrappers, as with our [`ls` clone earlier](#positional-arguments-yield).
+Pre- and post-hooks are a supervised-runtime feature: when the interpreter is used directly, `compose.mk` can automatically inject a `<target>.pre`/`<target>.post` hook around every target that runs via the command line.  Because they depend on the supervisor described on this page, they are documented alongside the rest of the runtime model; see [Pre & Post Hooks]({{_}}/runtime/#pre-post-hooks) on the Runtime page.
 
 ### At-Exit Handlers
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-To setup one or more exit handlers, try using the `CMK_AT_EXIT_TARGETS` environment variable with space-separated target names.  This should run if `make` dies for any reason and even if it is killed, but cannot run if the wrapper process is killed.
+To setup one or more exit handlers, try using the `CMK_POST` environment variable with space-separated target names.  This should run if `make` dies for any reason and even if it is killed, but cannot run if the wrapper process is killed.  The same handler list can also be set in-source via the `cmk_post` [pragma]({{_}}/cmk/pragmas/#pragma-lifecycle) or appended at parse-time with the `__cmk_post__.append` macro; all three surfaces accumulate.
 
-At-exit handlers defined this way are called whenever `mk.supervisor.exit` is called, which has the usual caveats that **you must be using a interpreter-style invocation,** and not running via `make -f ...`!  See the next section for more details.
+At-exit handlers defined this way are called whenever `mk.super.exit` is called, which has the usual caveats that **you must be using a interpreter-style invocation,** and not running via `make -f ...`!  See the next section for more details.
+
+The symmetric counterpart runs *before* the main pipeline: `CMK_PRE` (pragma `cmk_pre`, handle `__cmk_pre__`) names make-targets executed at the **boot stage** via `mk.super.boot`, with the same three-surface, accumulating semantics.  A failing pre-target aborts before the main pipeline (the at-exit handlers still run).
+
+### Exact Exit Codes
+<hr class="section-rule lvl-3">
+
+GNU `make` collapses *any* recipe failure to exit code **2** at every sub-make boundary, so a meaningful code (say, a tool's exit status, or an unhandled-exception code) normally never reaches the OS.  The supervisor can carry an **exact** code to the top because the bash wrapper, not `make`, is the process that finally exits.
+
+Use `mk.exit.code/<N>` to set it: it records the code out-of-band and fails *normally*, so the stack unwinds as usual (`flux.*.finally` and other cleanup still runs) and the top-level `./compose.mk` exits with exactly `<N>`:
+
+```bash
+$ ./your-program.cmk          # somewhere inside: $(call mk.exit.code,42)
+$ echo $?
+42
+```
+
+It's the "record-and-continue" cousin of [`mk.yield`](#positional-arguments-yield): where `mk.yield` short-circuits the whole stack immediately via signal (skipping `finally` arms), `mk.exit.code` unwinds so cleanup runs first.  Both need an interpreter-style invocation; without the supervisor there is no out-of-band channel and failures flatten to 2.  OS codes wrap mod 256, so keep the value in `0..255`.
+
+Because the code is read at the very end, *swallowing* a failure with a trailing or-true or or-fallback guard continues execution but does **not** retract a code already recorded.  To truly recover (continue **and** exit 0), retract it with `mk.exit.clear`:
+
+```make
+risky:
+	@${make} something || { handle_it ; ${make} mk.exit.clear ; }
+```
+
+`flux.try.except.finally` does this for you automatically: when its `except` arm *recovers* (succeeds), it calls `mk.exit.clear` and the construct returns 0.  Only hand-rolled error handling (outside the `flux.try.*` family) that intends to recover needs to call `mk.exit.clear` explicitly.
+
+### Bootloader
+<hr class="section-rule lvl-3">
+<a name=bootloader></a>
+
+Just before it runs your program, the supervisor executes a small **bootloader**: the single, header-free extension point for supervisor behavior (both `compose.mk`'s own inlined loaders and a user-defined `CMK_BOOTLOADER` script).  Since it is a property of the supervisor and hosts the trampoline dispatch loop, it is documented with the rest of the runtime model; see [Bootloader]({{_}}/runtime/#bootloader) on the Runtime page.
 
 ### Implementation Details
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 If you're already very familiar with `make` and looking over the rest of this page, you might be wondering how this kind of semi-magical behavior can be achieved.   And since the answer to that question is frankly kind of ridiculous, this should probably be considered experimental =)  *With that sternly worded warning out of the way..* 
 
@@ -177,24 +187,29 @@ The way this works is as follows:
 
 **As a consequence of this, signals can only be handled when `compose.mk` is invoked directly,** i.e. with `./compose.mk ...`, and cannot work for `make -f compose.mk`.  
 
-The [pre/post hooks](#pre-post-hooks) have exactly the same limitation, but a different implementation.  Since the bash wrapper-script ultimately controls the initial invocation of `make`, it's possible to dynamically inject targets *between* any targets that are initially declared.
+The [pre/post hooks]({{_}}/runtime/#pre-post-hooks) have exactly the same limitation, but a different implementation.  Since the bash wrapper-script ultimately controls the initial invocation of `make`, it's possible to dynamically inject targets *between* any targets that are initially declared.
 
 ### For Developers
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-All targets related to signals/supervisors can be found under the `mk.interrupt` and `mk.super` namespaces, respectively.  These targets are for low-level internal use, and even hacking directly on `compose.mk` source probably won't require editing them, considering the [other techniques available](#inheritance-interpreters).  Still, quick links to the relevant parts of the API are provided below for reference:
+All targets related to signals/supervisors can be found under the `mk.interrupt` and `mk.super` namespaces, respectively.  These targets are for low-level internal use, and even hacking directly on `compose.mk` source probably won't require editing them, considering the [other techniques available](#inheritance-interpreters).  Quick links to the relevant parts of the API are collected in the [See Also](#see-also) section below.
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Runtime]({{_}}/runtime): the control model built on top of this supervisor.
+* [Virtual Machine]({{_}}/modules/virtual-machine): the structured control stack over the trampoline.
 
 {{site.api_link_many(['mk.super', 'mk.interrupt'], mkdocs)}}
 
 ### References
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 [^1]: For people that have seen ' -- ' usage before but don't really know how it works, this isn't part of the shell itself.  It's a convention that is *almost* a guarantee, assuming [POSIX compliant getopt](https://pubs.opengroup.org/onlinepubs/9699919799.2018edition/functions/getopt.html)
-[^2]: Determining the full CLI that invoked `make` is actually pretty hard, especially if you want portability.  If you've been wondering about `procps` and `procps-ng` package references that are scattered around and [recommended for dispatch]({{mkdocs.site_relative_url}}/quickstart/#docker-compose-integration), this is the reason.
+[^2]: Determining the full CLI that invoked `make` is actually pretty hard, especially if you want portability.  On Linux, `compose.mk` recovers it by reading `/proc/<pid>/cmdline`, so no `procps`/`ps` is required.  MacOS uses `ps`, which always ships it.
 [^3]: Issues with proxying `--long-opt=..` is probably a bug and not a fundamental limitation, but this whole topic is so obscure it's probably not worth fixing =P
-[^4]: The incantation `${MAKE_CLI#*ls}` uses [bash parameter expansion](https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html) and the special variable `MAKE_CLI` that's provided by `compose.mk`.
-[^5]: [wiki://Shebang](https://en.wikipedia.org/wiki/Shebang_(Unix))
-[^6]: [wiki://polyglot](https://en.wikipedia.org/wiki/Polyglot_(computing))
+[^4]: That incantation uses [bash parameter expansion](https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html) to strip everything up to `ls` from the special variable `MAKE_CLI` that's provided by `compose.mk`.
+[^5]: {{ tufte.wiki('Shebang_(Unix)')|trim }}
+[^6]: {{ tufte.wiki('Polyglot_(computing)')|trim }}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

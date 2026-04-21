@@ -1,0 +1,158 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-cooked.cmk: cooked banana blocks and the general treatment list.
+#
+# USAGE: ./demos/cmk/banana-cooked.cmk
+
+'''
+A banana body is verbatim by default: (| body |) freezes it into a define, so it
+can hold Dockerfiles, shell, or foreign code.  The [| body |] bracket instead cooks
+the body -- the interior runs through the cmk compiler before it becomes a define,
+so you write idiomatic cmk-lang inside: macro-forms (cmk.<macro>), callforms (this.X),
+and make-var refs.
+
+The [| .. |] bracket is a first-class deep-cook; that same deep-cook is also the
+cooked_deeply postfix word, one entry in the general treatment list (see demo 6 and
+the grammar / quickref docs).
+'''
+
+# 1) raw vs cooked: ( same body, two ways )
+#   Raw (| |) keeps cmk.log(..) verbatim; cooked [| |] lowers it to
+#   $(call log,..).  demo.contrast dumps both define bodies to show
+#   the difference.  Binds class and constructor bare from the prelude
+#   (see docs/compiler prelude).
+from cmk import constructor
+raw(|
+    x:; cmk.log(from a RAW block)
+|)
+lowered[|
+    x:; cmk.log(from a COOKED block)
+|]
+
+demo.contrast:
+    cmk.log(raw block ${sep} body stays verbatim:)
+    this.mk.def.read/raw
+    cmk.log(cooked block ${sep} body is lowered:)
+    this.mk.def.read/lowered
+
+# 2) cooked targets actually run: ( a cooked block with both callform kinds )
+#   $(eval $(value ..)) splices the already-lowered body in as real targets,
+#   which we then dispatch.
+pong:; cmk.log(pong)
+sink[|
+    greet:;    cmk.log(hi from a cooked block)
+    delegate:; this.pong
+|]
+$(eval $(value sink))
+
+demo.run:
+    this.greet
+    this.delegate
+
+# 3) cooked template -> callable constructor: ( a prefix constructor over [| |] )
+#   constructor my_constructor[|..|] composes a prefix constructor with the
+#   cook bracket.  The constructor keyword (a lang.seed! front end) rewrites
+#   the cooked my_constructor define into a self-evaling macro, so
+#   cmk.my_constructor(who=..) stamps a per-who target.  Each dispatches to a
+#   plain handler (this.hi/..) with no hand-rolled declare.* boilerplate.
+hi/%:; cmk.log(hello ${*})
+
+constructor my_constructor[|
+    cmk.mk.unpack.kwargs(${1}, who)
+    ${kwargs_who}:; this.hi/${kwargs_who}
+|]
+
+cmk.my_constructor(who=alice)
+cmk.my_constructor(who=bob)
+
+demo.template:; this.alice; this.bob
+
+# 4) assignment forms: ( a block captured into a make var )
+#   An LHS = prefix captures a block as a value.  The (args) trailer applies it
+#   as a make macro, so label = $(call fmt,INFO,rdy).  The [cmd] trailer runs it
+#   as a comptime shell filter over cmd's output, so upper = $(shell echo cooked
+#   | <block>).  No inline # on a banana line: it would land inside the trailer.
+label = fmt(|[$(1)] $(2)|)(INFO, ready)
+upper = sh(|tr a-z A-Z|)[echo cooked]
+
+demo.assign:
+    cmk.log(macro form ${sep} label = ${label})
+    cmk.log(stream form ${sep} upper = ${upper})
+
+# 5) using form + next-line trailer: ( kwargs threaded to a prefix constructor )
+#   using k=v threads kwargs to the prefix constructor.  The prefixed constructor
+#   reads def= plus the using-supplied prefix.  The trailer can also spill onto
+#   following lines: after a standalone |), a with or using (or comma-continued
+#   postfix) line is stitched until a non-trailer.
+define _prefixed
+$(call mk.unpack.kwargs, ${1}, def)
+$(call mk.unpack.kwargs, ${1}, prefix)
+$(kwargs_def).labeled = ${kwargs_prefix}: $(value $(kwargs_def))
+endef
+prefixed=$(eval $(call _prefixed,${1}))
+
+prefixed note(|
+    hello
+|)
+    using prefix=INFO
+
+demo.with:; cmk.log(note.labeled = ${note.labeled})
+
+# 6) postfix list: ( the general treatment mechanism )
+#   The [| |] bracket deep-cooks directly; the same deep-cook is also the
+#   cooked_deeply postfix word.  That postfix is a comma-list applied
+#   left-to-right.  A builtin word (cooked / cooked_deeply) cooks; any other
+#   word is a stdlib target the body is piped through at compile time
+#   (stream.echo = identity).  So cooked, stream.echo cooks, then round-trips.
+#   Only stdlib/plugin targets resolve -- the file's own aren't loaded yet.
+piped(|
+    ready:; cmk.log(cooked THEN round-tripped)
+|) cooked, stream.echo
+$(eval $(value piped))
+
+demo.postfix:
+    this.mk.def.read/piped
+    this.ready
+
+# 7) nested deep-cook: ( bananas inside a cooked body )
+#   A cooked body may itself contain bananas -- the nesting-stack parser gives
+#   each its own define.  The [| |] bracket deep-cooks: it forces nested bananas
+#   to cook even when written raw.  Here inner is a raw (| |), yet outer[| |]
+#   lowers its log too.
+outer[|
+    top:; cmk.log(outer)
+    inner(|
+        deep:; cmk.log(inner)
+    |)
+|]
+
+demo.nested: mk.def.read/outer
+
+# 8) unary ! -- shallow cook: ( cook this body but not its nested banana )
+#   A ! after a block cooks it shallowly: this body's callforms lower, but a
+#   nested raw (| |) stays verbatim.  Contrast demo 7, where [| |] deep-cooks
+#   the nested one too.  shallow lowers its own top log, not inner's.
+shallow(|
+    top:; cmk.log(outer -- shallow cooked)
+    inner(|
+        deep:; cmk.log(inner -- stays raw)
+    |)
+|)!
+
+demo.shallow: mk.def.read/shallow
+
+# 9) + -- explicit composition: ( an ordered body list, spelled out )
+#   Adjacency (| A |)(| B |) hands an ordered body list to a prefix constructor.
+#   The + operator is that same composition spelled out, so it reads as an
+#   algebra: (| A |) + (| B |).  joined prints both bodies, in order.
+constructor joined[|
+    ${self}:
+    	this.mk.def.read(${body1}); this.mk.def.read(${body2})
+|]
+
+joined combo(|part one|) + (|part two|)
+
+demo.compose: combo
+
+__main__: demo.contrast demo.run demo.template demo.assign demo.with \
+          demo.postfix demo.nested demo.shallow demo.compose

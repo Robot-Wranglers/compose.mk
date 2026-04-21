@@ -1,0 +1,117 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+## Subcommands
+<hr class="section-rule lvl-2">
+
+!!! terminology "What are subcommands?"
+    Subcommands[^cli] are just the typical interface style you'd see with things like `git log ..` or `docker run ..`.  
+    
+Support for subcommand-style CLIs exists in many languages and libraries, but it's something that's normally out of reach for Makefile.  As independent goals.. `make target1 target2` are considered without any kind of layered or shared context.  Fair enough *for build automation*, but this is a significant obstacle for general scripting!
+
+To work around exactly this problem, `compose.mk` adds suport for subcommand-style CLIs that is flexible, powerful, and requires minimal code changes.  Subcommand registration can be discovered by namespacing, or by explicit attachment with decorator-style syntax.  Usage / help details are generated automatically.
+
+
+Subcommands are tested, [dog-fooded extensively]({{_}}/cmk/compiler), and fairly mature.  But..
+
+!!! caveats "Caveats"
+    Subcommand-style entrypoints do *not* require using the [cmk-language]({{_}}/cmk/compiler), and it works with vanilla Makefile.  But for reasons related to [signals & supervisors]({{_}}/signals) subcommands *do require* using the `compose.mk` interpreter.
+
+### Interface / Contract
+<hr class="section-rule lvl-3">
+
+Two pieces: an **entrypoint** whose recipe calls `cli.subcommands.enter`, and one **handler
+target per subcommand**.
+
+{{site.embed_mirror('demos/subcommands.mk', 'demos/cmk/subcommands.cmk', github=github, default='left')}}
+
+{{ site.contract_card([
+  ['<entrypoint>', 'Any target whose recipe calls <code>$(call cli.subcommands.enter)</code>.  Its own name is the default <b>namespace</b>, so <code>greet</code> puts handlers under <code>.greet.*</code>.'],
+  ['.<namespace>.<subcmd>', 'A <b>non-parametric</b> handler &mdash; no <code>%</code> stem, so the next CLI word is <i>not</i> consumed as an argument (trailing words still arrive in <code>argv</code>).'],
+  ['.<namespace>.<subcmd>/%', 'A <b>parametric</b> handler &mdash; the next CLI word becomes its <code>%</code> stem, and any further words arrive in the <code>argv</code> environment variable.'],
+], subject='cli.subcommands.enter', link=_ + '/api/#clisubcommands',
+   note='The subcommand list and the <b>default</b> subcommand are detected automatically by reflecting your handlers, and usage / help is generated from them.  With no subcommand (or <code>help</code> / <code>-h</code>), usage is printed.  An <b>unrecognized first word</b> routes to the default <i>only when the default is parametric</i> (the word becomes its argument; this is what makes <code>cmk &lt;file&gt;</code> shorthand work).  If the default is non-parametric, an unrecognized word is an &ldquo;unknown subcommand&rdquo; error.') }}
+
+### Example
+<hr class="section-rule lvl-3">
+
+The `greet` twins above, in use:
+
+```bash {.cli_example}
+# non-parametric subcommands
+$ ./demos/subcommands.mk greet world
+$ ./demos/subcommands.mk greet me
+
+# parametric subcommand -- the word after `hello` is its argument
+$ ./demos/subcommands.mk greet hello bob
+
+# bare, `help`, or `-h` prints the generated usage below
+$ ./demos/subcommands.mk greet
+```
+
+Usage is **generated from the handlers**, and marks the ones that take an argument:
+
+```bash {.cli_output}
+greet // USAGE: greet <subcommand> [args..]
+  ├─world
+  ├─me
+  ╰─hello <arg> [args..]
+```
+
+### Entrypoint Body
+<hr class="section-rule lvl-3">
+
+The entrypoint is usually just the lone `cli.subcommands.enter` macro call, but its
+recipe body is ordinary and can do more:
+
+* **Docstring.**  A `@#` docstring on the entrypoint target is surfaced as a description at
+  the top of the generated help (try `greet help`).  Keep it short; the subcommand list
+  itself is generated.
+* **Preamble.**  Recipe lines *before* the `enter` call run on every invocation, before
+  dispatch, which is handy for a banner or a preflight check (say, verifying a required
+  tool is on the host).  Caveats: the preamble also runs for `help`/unknown invocations; environment it
+  exports does **not** reach the dispatched subcommand (which runs in a separate process);
+  and lines *after* `enter` never run (it transfers control to the dispatcher).
+
+### Keyword Arguments
+<hr class="section-rule lvl-3">
+
+`cli.subcommands.enter` reflects everything it needs from your handlers, but each piece is
+overridable with a keyword argument:
+
+| kwarg | default | meaning |
+| --- | --- | --- |
+| `namespace` | the target name | one or more (space-separated) namespaces to search |
+| `subs` | reflected from the handlers | the subcommand list |
+| `default` | the first subcommand | the bare-form fallback subcommand |
+| `sep` | `.` | separator between namespace and subcommand in a handler name |
+
+{% set force_default_mk %}
+# e.g. force a specific default
+greet:; $(call cli.subcommands.enter, default=hello)
+{% endset %}
+{% set force_default_cmk %}
+# e.g. force a specific default
+@cli.subcommands(default=hello)
+greet:
+{% endset %}
+{{ site.inline_mirror('mirror_force_default', force_default_mk, force_default_cmk, default='left') }}
+
+Passing kwargs to the `@cli.subcommands` decorator opts out of the tree-glyph sugar (so
+handlers use the plain `.<namespace>.<subcmd>` names); a *bare* `@cli.subcommands` keeps the
+`├─`/`╰─` tree form shown in the twin above.
+
+!!! tip "Namespaces & MRO"
+    Because `namespace` accepts *several* namespaces, searched in order, we land not far from
+    the idea of MRO *(=method resolution order)* in object-oriented programming.  See [this
+    demo]({{_}}/demos/oop/#subcommands-as-oop) for more on that aspect.
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [CLI Overview]({{_}}/cli-overview): the built-in `cmk`/`cli` CLIs built on this engine.
+* [CLI Help]({{_}}/cli-help): how the generated usage relates to docstring-based help.
+* [Signals & Supervisors]({{_}}/signals): why the interpreter is required for dispatch.
+
+### References
+<hr class="section-rule lvl-3">
+
+[^cli]: {{ tufte.wiki('Command-line_interface')|trim }}

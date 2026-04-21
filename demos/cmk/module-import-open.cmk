@@ -1,0 +1,58 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# module-import-open.cmk: import <ns> (use a namespace) vs open <ns>
+#   (contribute to one) -- the two directives that make a namespace's
+#   members callable unqualified. A bare macro like jb imports the same
+#   way, then calls bare.
+#
+# USAGE: ./demos/cmk/module-import-open.cmk
+
+'''
+Two directives make a namespace's members callable unqualified
+(ns.method(..) with no leading anchor), smart-routed at runtime to a macro
+twin if one exists, else the published target.  They split on intent:
+
+  import <ns>:
+    Use ns (call its members).  Resolves + loads: an already-present
+    namespace (core, like flux) is a no-op; a plugin/module on
+    CMK_PLUGINS_DIR is loaded.  Errors only if the name resolves to
+    nothing.
+
+  open <ns>:
+    Contribute to ns (define ns.* here).  Register-only, never an error.
+
+The receivers stage lints the intent at compile time (all soft, disable
+with CMK_NS_LINT=0): import-then-define is pollution, open-without-defining
+is pointless, either-without-using is dead.
+'''
+
+import flux, log, jb
+open reports
+
+demo.use:
+    '''
+    import flux = use the core namespace unqualified. import jb = call
+    the json.bash macro bare, as jb(..) not cmk.jb(..).
+    Push two records onto a named stage, read the depth, then clear it.
+    '''
+    flux.stage.push(__target__)[jb(n=1)]
+    flux.stage.push(__target__)[jb(n=2)]
+    depth <- flux.stage.count(__target__)
+    log.io(__target__ ${sep} depth=$${depth})
+    flux.stage.clean(__target__)
+
+# open reports: ( contribute -- the reports.* targets are the namespace )
+#   A sibling recipe calls them unqualified (routing works for what you
+#   define).
+
+reports.header:
+    log.io(reports.header ${sep} === daily ===)
+reports.body:
+    log.io(reports.body ${sep} 3 widgets shipped)
+
+demo.contribute:
+    '''Call the members we just contributed, smart-routed, no anchor.'''
+    reports.header()
+    reports.body()
+
+__main__: demo.use demo.contribute

@@ -1,11 +1,10 @@
 #!/usr/bin/env -S make -f
-# Demonstrating idioms for container-agnostic script dispatch with 
-# compose-file backed tool containers. The target script always runs 
-# from the container, but does not care whether it's called from the host,
-# or from inside the container.
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/container-dispatch
+# bind-script.mk:
+#   Idioms for container-agnostic script dispatch with compose-file backed
+#   tool containers.  The target script always runs from the container, but
+#   does not care whether it's called from the host, or from inside the
+#   container.
 #
 # USAGE: ./demos/bind-script.mk
 
@@ -27,8 +26,8 @@ echo hello container `hostname`
 echo testing environment variables: ${var1} ${var2}
 endef
 
-# Test that target still works, no matter where it's called from.
 __main__:
+	@# Test that target still works, no matter where it's called from.
 	${make} script.sh
 	${make} debian.dispatch/script.sh
 

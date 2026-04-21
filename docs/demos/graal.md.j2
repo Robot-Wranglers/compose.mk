@@ -1,0 +1,42 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+## Shared-Heap Polyglots with GraalVM
+<hr class="section-rule lvl-2">
+
+Most of the polyglot support in `compose.mk` connects foreign languages at the *process* boundary: one interpreter runs, its stdout pipes into the next.  That's a [process algebra]({{_}}/cmk/concepts/#callforms), and it's usually what you want.  But sometimes you need languages to share *live values* -- a function defined in one language, called directly from another, with no serialization in between.
+
+This demo wires [GraalVM's polyglot runtime](https://www.graalvm.org/latest/reference-manual/polyglot-programming/) into cmk-lang so that several languages share **one heap**.  It's [Lever 5 from the roadmap](https://github.com/robot-wranglers/compose.mk): rather than competing with Graal, we wrap it, and expose heap-wise interop as ordinary cmk [DSL kinds]({{_}}/cmk/dsls).
+
+!!! danger "Caveat"
+    **This demo needs a docker daemon and builds a heavy image.**  The GraalVM polyglot runtime (JS, Python, and Ruby communities, ~23.1.x) is assembled with Maven on top of `jdk-community:21`, so the first run pays a significant build cost.  After that it's cached like any other `compose.mk` container.
+
+### The Demo
+<hr class="section-rule lvl-3">
+
+Each `graal <lang> <name>(| ..code.. |)` block creates a **language-tagged fragment**: an inert piece of source that knows which interpreter it belongs to.  Composing fragments with `+` (as `&pn <- p1+p2+p3+p4`) joins them into a single runnable whose sections all evaluate inside **one shared GraalVM `Context`**.
+
+{{site.embed_demo('demos/cmk/graal-interop.cmk', github=github)}}
+
+### How It Works
+<hr class="section-rule lvl-3">
+
+There are three ideas at play:
+
+* **Language fragments.**  `graal py`, `graal js`, and `graal rb` are language *subkinds* built on the cmk [`dsl` / `class` machinery]({{_}}/cmk/metaprogramming).  Each fragment self-tags its language and stays an inert string until it's run.
+* **Composition into one Context.**  The `+` operator concatenates fragments (each behind a `//! lang=..` marker) and re-creates them as one runnable.  When `pn` runs, every section is evaluated in turn against a *single* GraalVM `Context`, so the heap persists across language boundaries.
+* **Mirror mode.**  Calling `pn.mirror()` (instead of `pn()`) exports each section's newly-defined functions into the shared polyglot bindings, so the *next* section -- in a different language -- sees them as ambient globals.  That's how JS calls Python's `fib`, the next Python section calls JS's `fizzbuzz`, and Ruby reaches both (as `$fib` / `$fizzbuzz`, since Ruby's top-level names are `$`-sigiled globals).
+
+The final fragment, `p5`, is deliberately run on its own (`p5.mirror()`, not part of `pn`).  Because it gets a **fresh** `Context`, `fib` and `fizzbuzz` are *not* in scope -- which demonstrates that the shared heap is scoped to a single composed run, not leaked globally.
+
+### See Also
+<hr class="section-rule lvl-3">
+
+* [Polyglots demo]({{_}}/demos/polyglots): the broader tour of working with foreign languages, mostly via the process algebra.
+* [DSLs]({{_}}/cmk/dsls): the language-kind machinery the `graal` fragments are built on.
+* [Metaprogramming]({{_}}/cmk/metaprogramming): the `dsl` / `class` constructors underneath.
+
+### References
+<hr class="section-rule lvl-3">
+
+[^1]: {{ tufte.wiki('GraalVM')|trim }}
+[^2]: [GraalVM polyglot programming](https://www.graalvm.org/latest/reference-manual/polyglot-programming/)

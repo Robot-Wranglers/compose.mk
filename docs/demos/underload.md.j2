@@ -1,0 +1,82 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+## Implementing an Esolang
+<hr class="section-rule lvl-2">
+
+!!! tip "Tip"
+    This demo builds on several others: an awk [polyglot]({{_}}/demos/polyglots) for the lexer, the [`io.stack.*` structured stack]({{_}}/standard-lib) for state, and the idea that [everything is a target]({{_}}/cmk/paradigm/#homoiconic), so a decoded program is just a stream of `make` goals.
+
+Underload[^1] is a small, stack-based, concatenative esoteric language: a program is a string of single-character commands operating on a stack of strings.
+
+**Command set for Underload**
+
+| Operator | Operation | Effect |
+| :-: | --- | --- |
+| `(`...`)` | push | push the enclosed text onto the stack as a quotation |
+| `~` | swap | `(x)(y)` -> `(y)(x)` |
+| `:` | dup | `(x)` -> `(x)(x)` |
+| `!` | discard | `(x)` -> (nothing) |
+| `*` | concatenate | `(x)(y)` -> `(xy)` |
+| `a` | enclose | `(x)` -> `((x))` |
+| `S` | print | pop `(x)` and output `x` |
+| `^` | apply | pop `(x)` and *run `x` as Underload* |
+
+That last command (`^`) is what makes Underload Turing-complete, and makes quines delightfully easy.
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+This demo implements a complete Underload interpreter with `compose.mk`, and the pieces map cleanly onto the standard library.
+
+!!! goals "The pieces"
+    * The **lexer** is an awk define that rewrites program text into one dispatchable goal per line
+    * The **stack** is `io.stack.*`
+    * Each **operator** is a target
+    * The decoded program is run by `mk.kernel.each`, which dispatches each line as an instruction (order and repetition preserved).
+
+Bundled programs include a quine, a palindromic quine, and an (abstracted) factorial.
+
+```bash {.cli_example}
+# Run the bundled demo programs:
+$ ./demos/underload.mk
+
+# Evaluate a program from stdin:
+$ printf '(Hello, world!)S' | ./demos/underload.mk ul.eval
+
+# A quine, which prints its own source:
+$ printf '(a(:^)*S):^' | ./demos/underload.mk ul.eval
+```
+
+### Underload Demo
+<hr class="section-rule lvl-3">
+
+Here are two `compose.mk` implementations of the interpreter: toggle the tabs for the [cmk-lang]({{_}}/cmk/compiler) version (shown first) or its plain `Makefile` twin.  The Makefile version leans only on the [standard library]({{_}}/standard-lib); the cmk-lang version keeps that foundation but shows off more of the language primitives, and reuses the Makefile's shared pieces rather than duplicating them.
+
+{{site.embed_mirror('demos/underload.mk', 'demos/cmk/underload.cmk',
+    github=github, default='cmk')}}
+
+A few things the cmk-lang version highlights:
+
+**Single-sourcing / Imports:** we keep things DRY by pulling in shared components that we don't plan to change, i.e. pulling in shared definitions from the Makefile twin. See also the documentation for:
+
+* [`import.def`]({{_}}/macros)
+* [`import.target`]({{_}}/macros)
+
+**Triple-Quoted Inlines:** Are a form that CMK supports, with and without interpolation.
+See also the documentation [here]({{_}}/cmk/compiler/#triple-quote-literals).
+
+**Call Forms:** The `underload` VM reads its program from stdin, so the demos invoke
+it with the `[stream]` call-form sugar applied to the `underload` receiver, which lowers
+to piping the triple-quoted literal into a recursive call.  See also the documentation
+[here]({{_}}/cmk/concepts/#callforms).
+
+### See Also
+<hr class="section-rule lvl-3">
+
+* [Polyglots]({{_}}/demos/polyglots): the awk lexer is a polyglot define-block.
+* [Standard Library]({{_}}/standard-lib): the `io.stack.*` structured stack holds VM state.
+* [Compiler]({{_}}/cmk/compiler): the cmk-lang primitives used in the cmk-lang version.
+
+### References
+<hr class="section-rule lvl-3">
+
+[^1]: [Underload on the esolangs wiki](https://esolangs.org/wiki/Underload)

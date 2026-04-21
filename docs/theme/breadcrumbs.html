@@ -1,0 +1,63 @@
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="{{ nav.homepage.url|url }}" class="icon icon-home" aria-label="{% trans %}Docs{% endtrans %}"></a></li>
+    {%- if page %}
+      {%- for doc in page.ancestors[::-1] %}
+        {%- if doc.url %}
+          <li class="breadcrumb-item"><a href="{{ doc.url|url }}">{{ doc.title }}</a></li>
+        {%- else %}
+          <li class="breadcrumb-item">{{ doc.title }}</li>
+        {%- endif %}
+      {%- endfor %}
+      <li class="breadcrumb-item active">{{ page.title }}</li>
+    {%- endif %}
+    {#- aside affordances, flexed to the right in source order: theme picker / day-night / source / scroll-jump #}
+    <li class="wy-breadcrumbs-aside">
+      {#- syntax color-scheme picker: a small tabler `palette` icon with a transparent
+          native <select> overlaid on top (unobtrusive -- only the icon shows until clicked). #}
+      <span class="cmk-theme-picker" title="Syntax color scheme">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-palette" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 21a9 9 0 0 1 0 -18c4.97 0 9 3.582 9 8c0 1.06 -.474 2.078 -1.318 2.828c-.844 .75 -1.989 1.172 -3.182 1.172h-2.5a2 2 0 0 0 -1 3.75a1.3 1.3 0 0 1 -1 2.25" /><path d="M8.5 10.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M12.5 7.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M16.5 10.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
+        <select class="cmk-theme-select" aria-label="Syntax color scheme">
+          <option value="nord">Nord</option>
+          <option value="okaidia">Okaidia</option>
+          <option value="base16dark">Base16 Dark</option>
+          <option value="base16grayscale">Base16 Grayscale</option>
+          <option value="base16ashes">Base16 Ashes</option>
+          <option value="base16ocean">Base16 Ocean</option>
+          <option value="gruvbox">Gruvbox</option>
+        </select>
+      </span>
+    </li>
+    <li class="wy-breadcrumbs-aside">
+      <a title="Toggle day / night mode" id="my-toggle-id" style="border-bottom:unset;cursor:pointer;"></a>
+    </li>
+    <li class="wy-breadcrumbs-aside">
+      <a class="breadcrumb-source-link" href="{{ config.repo_url|default('https://github.com/robot-wranglers/compose.mk/', true) }}" title="Project Source" target="_blank" rel="noopener" style="border-bottom:unset;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-brand-github"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" /></svg>
+      </a>
+    </li>
+    {#- stacked half-height scroll-jump buttons, pinned to the far right: up = top of page, down =
+        bottom.  They share one vertical column so they never expand the breadcrumb bar's height. #}
+    <li class="wy-breadcrumbs-aside wy-breadcrumbs-scrolljump">
+      <span class="crumb-scrolljump">
+        <a class="crumb-scroll" role="button" tabindex="0" title="Jump to top" aria-label="Jump to top" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 15l6 -6l6 6" /></svg>
+        </a>
+        <a class="crumb-scroll" role="button" tabindex="0" title="Jump to bottom" aria-label="Jump to bottom" onclick="window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'});return false;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 9l6 6l6 -6" /></svg>
+        </a>
+      </span>
+    </li>
+  </ul>
+  {%- if config.theme.prev_next_buttons_location|lower in ['top', 'both']
+        and page and (page.next_page or page.previous_page) %}
+    <div class="rst-breadcrumbs-buttons" role="navigation" aria-label="{% trans %}Breadcrumb Navigation{% endtrans %}">
+      {%- if page.previous_page %}
+        <a href="{{ page.previous_page.url|url }}" class="btn btn-neutral float-left" title="{{ page.previous_page.title }}"><span class="icon icon-circle-arrow-left" aria-hidden="true"></span> {% trans %}Previous{% endtrans %}</a>
+      {%- endif %}
+      {%- if page.next_page %}
+        <a href="{{ page.next_page.url|url }}" class="btn btn-neutral float-right" title="{{ page.next_page.title }}">{% trans %}Next{% endtrans %} <span class="icon icon-circle-arrow-right" aria-hidden="true"></span></a>
+      {%- endif %}
+    </div>
+  {%- endif %}
+</div>

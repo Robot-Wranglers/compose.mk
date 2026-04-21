@@ -1,7 +1,7 @@
 {% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Interoperability with Just
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-2">
 
 Given the feature sets of each, `compose.mk` isn't *really* a competitor to tools like `just`, but since the comparison will come up there might as well be discussion[^1] and a demo. =)  
 
@@ -13,18 +13,24 @@ Actually the *specific* involvement of `just` and justfiles as used here is not 
 {# <hr style="width:95%;border-bottom:1px dashed black;">} #}
 
 !!! tip "Related Links"
-    If you want to see a similar demo with different base technology, check out the [ansible demo]({{mkdocs.site_relative_url}}/demos/custom-automation-apis).  
+    If you want to see a similar demo with different base technology, check out the [ansible demo]({{_}}/demos/custom-automation-apis).  
 
-    This is a concrete example of the [matrioshki bridge pattern]({{mkdocs.site_relative_url}}/matrioshka/#matrioshka-bridge-pattern), so if you prefery theory *before* looking at applications, read those docs first.  
+    This is a concrete example of the [matrioshki bridge pattern]({{_}}/matrioshka/#matrioshka-bridge-pattern), so if you prefery theory *before* looking at applications, read those docs first.  
 
-    Also related are the [many]({{mkdocs.site_relative_url}}/demos/matrioshka) [other]({{mkdocs.site_relative_url}}/demos/lean) demos that use inlined data and container-definitions.
+    Also related are the [many]({{_}}/demos/matrioshka) [other]({{_}}/demos/lean) demos that use inlined data and container-definitions.
 
 ### Justfile Demo
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-{{site.embed_demo('demos/just.mk', github=github)}}
+{{site.embed_twin('demos/just.mk', 'demos/cmk/just.cmk', github=github)}}
+
+### See Also
+<hr class="section-rule lvl-3">
+
+* [Custom Automation APIs]({{_}}/demos/custom-automation-apis): the same bridge idea with `ansible` as the foreign tool.
+* [Matrioshka Bridge pattern]({{_}}/matrioshka/#matrioshka-bridge-pattern): the theory this demo is a concrete instance of.
 
 ### References
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-[^1]: If you want more long-format discussion around this sort of thing, [there is lots in the design docs]({{mkdocs.site_relative_url}}/but-why#obligatory-comparecontrast)
+[^1]: If you want more long-format discussion around this sort of thing, [there is lots in the design docs]({{_}}/but-why#obligatory-comparecontrast)

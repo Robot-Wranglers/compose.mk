@@ -1,0 +1,26 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# dashboarding-widgets.cmk: a dashboarding TUI with containers-as-widgets.
+#
+# USAGE: ./demos/cmk/tui/dashboarding-widgets.cmk demo.ui
+
+'''
+Extends the basic dashboarding demo with a
+middle pane that runs a container-as-widget -- the `dry` docker system-monitor
+(https://github.com/moncho/dry).  Top loops test; bottom runs clean then build.
+'''
+
+# Fake clean/build/test targets, as in a classic project.
+clean:; echo cleaning
+build:; echo building
+test:; echo testing
+
+# A three-pane TUI: top loops test, middle runs the `dry` monitor container, bottom clean+build.
+top: flux.loopf/test
+middle: docker.start.tty/moncho/dry
+bottom: flux.and/clean,build
+
+demo.ui: tux.open.horizontal/top,middle,bottom
+    '''Open the three-pane TUI: test loop / `dry` monitor / clean+build.'''
+
+__main__: clean build test

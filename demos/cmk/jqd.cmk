@@ -1,0 +1,171 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# jqd.cmk: one file, three layers rebuilt into a single message-passing
+#   abstraction: a transport actor, an agent (mailbox + store) on top, and
+#   a jqd leaf that puts the agent over a socket.
+#
+# cmk_pragma ::: { "target_locals": true } :::
+#
+# USAGE:
+#   ./demos/cmk/jqd.cmk
+#   POOL=8 CMK_ACTOR_TTL=5 ./demos/cmk/jqd.cmk
+
+'''
+A message-passing stack layered over the core Actor transport: agent
+(Actor + a mailbox/store) and jqd (agent over a unix socket with a
+per-message jq fold), each detailed at its own docstring.  A subclass
+overrides a verb by plain target (leftmost-base MRO).  Instances: inproc
+alice, socketed events.
+'''
+import log
+import jb, flux
+# bind the class declaration keyword and the base Actor transport bare
+from cmk import class
+from cmk import Actor
+
+POOL      ?= 4
+# a safety cap on the serve loop only; demo.socket stops serve explicitly
+# once the casts have drained, so a normal run never waits this out.
+CMK_ACTOR_TTL ?= 30
+
+class SocketActor(bases=Actor)[|
+  '''
+  Socket transport: an out-of-process mailbox over a unix socket.  One
+  serve loop consumes concurrent casters in arrival order, so no lock is
+  needed.  Each verb's own docstring covers its mechanics.
+  '''
+  self.deliver:
+    '''Connect and send one message, retrying while the listener starts'''
+    sock <- ${self}.get_sock()
+    msg=`cat`
+    cmk.flux.retry(printf '%s\n' "$$msg" | socat - UNIX-CONNECT:"$$sock" 2>/dev/null)
+
+  self.serve.fg:
+    '''Run the socket listen loop (fg); one consumer serializes casters'''
+    sock <- ${self}.get_sock()
+    rm -f -- "$$sock" "$${sock}.fifo"; mkfifo "$${sock}.fifo"; \
+    ${self}.log(serving on ${cyan}$$sock${no_ansi_dim} ttl=${CMK_ACTOR_TTL}s ${sep} single-consumer); \
+    timeout --foreground ${CMK_ACTOR_TTL} \
+      socat UNIX-LISTEN:"$$sock",fork STDOUT 2>/dev/null > "$${sock}.fifo" & \
+    echo $$! > "$${sock}.pid"; \
+    while IFS= read -r env; do [ -z "$$env" ] && continue; """$$env""" | ${self}.recv(); done < "$${sock}.fifo"; \
+    rm -f -- "$${sock}.fifo" "$${sock}.pid"; \
+    ${self}.log(closed)
+
+  self.serve: flux.bg/self.serve.fg
+    '''Serve backgrounded so casters proceed concurrently; fg = serve.fg'''
+
+  self.serve.stop:
+    '''End the listener and settle until the queued messages drain'''
+    sock <- ${self}.get_sock()
+    p=`cat "$${sock}.pid" 2>/dev/null`; [ -n "$$p" ] && kill "$$p" 2>/dev/null || true
+    cmk.flux.retry([ ! -e "$${sock}.fifo" ])
+|]
+
+class Agent(bases=Actor)[|
+  '''
+  The default agent: an inproc transport with a mailbox (a channel) and
+  store folded in -- the casual, socket-free choice.  A message is a
+  dual-plane envelope: goals (native cmk targets, run receiver-side) and
+  data (folded through a per-instance transform into the mailbox).  Resets
+  the logger to the plain Loggable default (dropping the Actor prefix), a
+  re-specialization it must state itself since it is-a Actor.  Each verb's
+  own docstring covers its mechanics.
+  '''
+  # construct the mailbox and register teardown at exit (the channel
+  # self-purges; this adds the socket unlink).  stop is idempotent, so
+  # an early opt-in call stays safe when the exit run repeats it.
+  ${self}.__minted__ = cmk.channel(${self}.mbox)$(call __cmk_post__.append,${self}.stop)
+  self._envelope = ${jq.run} -cn --arg g "$${goals:-}" --arg d "$${body:-}" '{goals:$$g,data:$$d}'
+  ${self}.log.__call__ = cmk.log(${self} ${sep} ${__args__})
+
+  self.cast:
+    '''Frame a data message from stdin and hand it to the transport'''
+    body <- ${stream.stdin.maybe}
+    env <- ${self}._envelope()
+    """$$env""" | ${self}.deliver()
+
+  self.send:
+    '''Frame a control message from stdin and hand it to the transport'''
+    goals <- ${stream.stdin}
+    env <- ${self}._envelope()
+    """$$env""" | ${self}.deliver()
+
+  self.recv:
+    '''Dispatch one message off the wire (goals run; data folds in)'''
+    env <- ${stream.stdin}
+    goals <- """$$env""" | ${jq.run} -r '.goals // ""'
+    payload <- """$$env""" | ${jq.run} -r '.data // ""'
+    xform <- this.mk.def.read/self 2>/dev/null
+    [ -n "$$xform" ] || xform='.'
+    if [ -n "$$goals" ]; then \
+      printf '%s\n' "$$goals" | this.mk.kernel.each{CMK_EVENT=$$payload}; \
+    else \
+      obj=`"""$$payload""" | ${jq.run} -c . 2>/dev/null` || obj=`"""$$payload""" | ${jq.run} -Rc 'split(" ")|map(split("=")|{(.[0]):(.[1:]|join("="))})|add'`; \
+      n=`${make} ${self}.mbox.count`; \
+      printf '%s' "$$obj" | ${jq.run} -c "$${xform:-.}" | ${jq.run} -c --argjson s "$$((n+1))" '.seq=$$s' | $(${self}.mbox.push); \
+    fi
+
+  self.stop:
+    '''Tear down: end serve, drop the mailbox, free the socket (at exit)'''
+    sock <- ${self}.get_sock()
+    p=`cat "$${sock}.pid" 2>/dev/null`; [ -n "$$p" ] && kill "$$p" 2>/dev/null || true
+    ${make} ${self}.mbox.purge
+    rm -f -- "$$sock" "$${sock}.pid" "$${sock}.fifo" $(call flux.bg.pidfile,${self}.serve.fg)
+|]
+
+class jqd(bases=SocketActor,Agent,Materializable)[|
+  '''
+  jqd: a socketed agent whose default handler is a jq fold -- is-a agent
+  (mailbox + store) over a SocketActor transport.  SocketActor is first, so
+  its deliver/serve win the MRO over agent's inproc Actor.  The block
+  body `jqd NAME(| <jq> |)` lifts to a `define NAME`, resolved per message
+  by the socket loop (a plain agent's body is its handlers).
+  Materializable carries the raw-body trait, so an instance body stays a
+  jq payload (its .shape) rather than being evaluated as a class body.
+  '''
+|]
+
+# events: a socketed agent via jqd; the jq body is its per-message
+# transform (uppercase the producer, keep name/timestamp/seq), not a
+# fixed sink.  A jqd instance body is the jq payload, so no docstring.
+jqd events(|
+    {who: (.name | ascii_upcase), at: .timestamp, seq}
+|)
+
+
+alice <- Agent.new()
+
+demo.simple:
+  '''
+  Location-transparent callforms over the inproc transport.  The last cast
+  is a control-plane message: a native cmk target rides as the message and
+  mk.kernel.each runs it receiver-side (ping dodges a receiver-name clash).
+  '''
+  alice.cast["""user=carol action=login"""]
+  alice.cast["""user=dave action=logout"""]{src=demo}
+  n <- alice.mbox.count()
+  alice.log(holds $${n} events (inproc${comma} synchronous call))
+  alice.mbox.dump()
+  alice.send["""ping"""]
+
+ping:
+  log(${green}ping ${sep} ${dim}a target delivered as a message${no_ansi})
+
+push/%:
+  jb(name=${*} timestamp=`date +%T.%N`) | events.cast()
+
+demo.socket:
+  '''
+  events: the same agent as alice, but its mailbox lives out-of-process
+  behind a unix socket.  Several casters push concurrently over the one
+  socket; the single serve loop consumes them in arrival order.  Stopping
+  serve drains whatever is still queued, so the mailbox reads back whole.
+  '''
+  events.log(${POOL} casters over one unix socket)
+  events.serve(); \
+  flux.pool(${POOL},push/alice,push/bob,push/carol,push/dave,push/eve,push/frank,push/grace,push/heidi); \
+  events.serve.stop(); \
+  events.mbox.dump()
+
+__main__: demo.simple demo.socket

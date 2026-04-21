@@ -1,0 +1,15 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# repl-test-screen.cmk: drive the tux.repl TUI from the full-schema bridge
+# contract (tux.repl.test_screen.print) -- a fixed metadata payload
+# exercising every Go-rendered section (modeline mode_lhs/mode_rhs +
+# minimap mm_tree/mm_top/mm_bottom).  Use it to eyeball pure-Go rendering
+# changes against a known input [1].
+#
+# cmk_pragma ::: { "repl": { "read": "tux.repl.test_screen.print",
+#                 "eval": "tux.repl.kernel" } } :::
+#
+# REFS:
+#   [1]: https://robot-wranglers.github.io/compose.mk
+import tux.repl
+__main__: flux.ok

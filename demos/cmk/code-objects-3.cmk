@@ -1,0 +1,34 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# code-objects-3.cmk: python code-objects sharing one container -- bound to
+# py311's `optimized` interpreter via the pattern= glob.
+#
+# USAGE: ./demos/cmk/code-objects-3.cmk
+
+from cmk import container
+
+# py311: a pinned python container (entrypoint=python).
+container py311(img=python:3.11-slim-bookworm entrypoint=python)(| |)
+
+# optimized: run a file with python -O -B in py311 (the customized interpreter
+# invocation) -- the code-objects bind to THIS target (not py311 directly), so
+# it never re-enters py311's dispatch.
+optimized/%:; $(call py311.__call__,-O -B ${*})
+
+one.py(|
+  import sys
+  print([sys.platform, sys.argv])
+|)
+
+two.py(|
+  import sys
+  print(f'hello world, from {sys.version_info}')
+  for i in range(3):
+      print(f"  count{i}")
+|)
+
+# Bind every .py block to py311's optimized interpreter (glob), scaffolding a
+# target per block.
+cmk.code.import(pattern=[.]py bind=optimized)
+
+__main__: one.py two.py

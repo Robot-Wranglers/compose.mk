@@ -1,0 +1,98 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-svc.cmk: spiking [R] & = serviceize, yielding a handle not stdout.
+#
+# USAGE:
+#   ./demos/cmk/banana-svc.cmk            # actor handle (no docker)
+#   ./demos/cmk/banana-svc.cmk demo.svc   # compose service (needs docker)
+
+'''
+Where a bare banana is a run-once machine and <- captures its stdout, an
+&-banana is a long-lived service, and & yields a thin lifecycle handle over
+it: start / stop / send / status.  The point of the spike is that a handle
+is built by aliasing targets that already exist, not new machinery.  Two
+backends share one handle shape:
+
+  1. a compose service -- the handle aliases the scaffolded verbs.
+  2. an actor (light)  -- reuse jqd.cmk's agent, a handle already.
+
+See the & (unary) row in TODO-banana-algebra.md.
+'''
+
+import log
+
+# 1) compose service handle: ( aliases the scaffolded container verbs )
+#   Embed a compose-file with a long-lived box container (make installed so
+#   we can exec targets into it).  compose.import already scaffolds the
+#   lifecycle verbs, ready to alias.
+
+compose.import.string svcfile(|
+  services:
+    box:
+      hostname: box
+      build:
+        context: .
+        dockerfile_inline: |
+          FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
+          RUN apt-get update -qq && apt-get install -qq -y make
+      entrypoint: ["sleep", "infinity"]
+      working_dir: /workspace
+      volumes:
+        - ${PWD}:/workspace
+|)
+
+box.svc.start: box.up.detach
+  '''
+  The handle & creates: thin aliases over the scaffolded box.* verbs; send
+  execs into the running container, not a fresh dispatch.
+  '''
+box.svc.stop:    box.stop               # lifecycle: stop
+box.svc.status:  box.ps                 # lifecycle: status
+box.svc.send/%:; this.box.exec/${*}     # send: exec a target in the running box
+
+svc.greet:
+  '''Sent into the running service; execs inside the container'''
+  log(hi from inside the service ${sep} `hostname`)
+
+demo.svc:
+  '''
+  & over a compose service: the handle aliases the scaffolded box.*
+  verbs (start / stop / send / status); serviceizing is renaming.
+  '''
+  log(& serviceize -> handle over a compose service:)
+  this.box.svc.start
+  this.box.svc.send/svc.greet
+  this.box.svc.status
+  this.box.svc.stop
+
+# 2) actor handle (light): ( reuse jqd.cmk's Agent )
+#   A lighter backend for the same idea.  open the jqd/actor demo (flat
+#   dissolve of the file) for its `Agent` class; an inproc instance is
+#   the handle by construction -- cast to send, its mailbox answers
+#   count / dump, stop tears it down (ready on creation, so no start).
+#   Inproc, so this part runs with no docker.
+
+open demos/cmk/jqd.cmk
+
+worker <- Agent.new()
+
+demo.actor:
+  '''
+  & over an inproc actor: a jqd Agent instance is already a handle by construction,
+  so cast sends, its mailbox answers count / dump, and stop tears it down.
+  '''
+  log(& serviceize -> handle over an actor (inproc):)
+  worker.cast["""job=build status=queued"""]
+  worker.cast["""job=test status=queued"""]
+  n <- worker.mbox.count()
+  log(worker handle ${sep} holds $${n} messages)
+  worker.mbox.dump()
+  worker.stop()
+
+__main__: demo.actor
+  '''
+  Both are a machine you hold a handle to, so & is backend-agnostic: it
+  names whichever verbs the backend already has, the compose service's
+  start / stop / send / status or the inproc actor's send / stop / count /
+  dump (ready on creation, so no start).
+  '''

@@ -1,0 +1,55 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# repl-form.cmk: a non-debugger tux.repl client -- the wrapper as a general
+# TUI host (no VM/trace) [1].
+#
+# It exercises the general-client surface:
+#   * chrome via the metadata (read) channel -- a window `title`, a custom
+#     `prompt`, and a determinate `progress` bar (here tied to how many UI
+#     events have arrived, so interactivity visibly fills it).
+#   * the event channel (UI -> client) -- the wrapper writes one JSON event
+#     per line (key/submit/resize/focus/scroll) to `form.events` stdin;
+#     that target logs them to a file; `form.read` tails the log back into
+#     a bottom minimap.  A full UI -> client -> UI round trip.
+#   * a custom (non-make) eval kernel -- `form.eval` just echoes what you
+#     type (+ the \036<rc> done marker), showing the eval region is
+#     client-defined, not tied to make-target dispatch.
+#
+#   USAGE:  ./demos/cmk/repl-form.cmk
+#       -> needs a tty.  Type, resize the window, press F-keys/arrows --
+#          watch the (UI events) pane and the progress bar react.
+#
+# cmk_pragma ::: { "repl": { "read":"form.read", "eval":"form.eval",
+# "events":"form.events" } } :::
+#
+# REFS:
+#   [1]: https://robot-wranglers.github.io/compose.mk
+import tux.repl
+
+form.log=.tmp.cmk.form.events
+
+# form.events: the event sink -- the wrapper writes one JSON UI-event per
+# line to our stdin; we append each to a log file (a real client would
+# parse + act on these).  Truncated on start so each session begins fresh.
+form.events:; : > ${form.log} ; while IFS= read -r ev; do printf '%s\n' "$$ev" >> ${form.log} ; done
+
+# form.eval: a custom kernel -- not make-dispatch, just an echo, proving
+# eval is client-defined.  Emits the \036<rc> done marker so the modeline's
+# idle status indicator goes green.
+form.eval:; while IFS= read -r line; do printf 'echo: %s\n' "$$line" ; printf '\036%s\n' 0 ; done
+
+# form.read: the metadata feeder.  Sets chrome (title/prompt/progress) and
+# tails the UI-event log into a bottom minimap (mode = overwrite snapshot).
+# The progress bar fills with the count of events received.  (No literal
+# `#` in the jq value -- make would treat it as a comment.)
+form.read.jq={ title:"compose.mk · tux.repl general-client demo", prompt:"form> ", mode_lhs:"type, resize the window, or press keys -> UI events stream into the pane at right", mode_rhs:$$now, progress:{pct:($$pct|tonumber),label:"events",color:"45",show:true}, mm_width:40, mm_config:{bottom:"mode"}, bottom_mm_top:"(UI events)", bottom_mm_bottom:($$cnt+" total"), bottom_mm_buffer:$$ev }
+form.read:; while true; do \
+  now=$$(date +%H:%M:%S) ; \
+  cnt=$$(wc -l < ${form.log} 2>/dev/null | tr -d ' ') ; [ -n "$$cnt" ] || cnt=0 ; \
+  pct=$$(awk "BEGIN{printf \"%.2f\",($$cnt%20)/20}") ; \
+  ev=$$(tail -n 10 ${form.log} 2>/dev/null | sed 's/[{}\"]//g') ; \
+  ${jq.run} -nc --arg now "$$now" --arg pct "$$pct" --arg ev "$$ev" --arg cnt "$$cnt" '${form.read.jq}' ; \
+  sleep 0.5 ; \
+  done
+
+__main__: flux.ok

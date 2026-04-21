@@ -1,0 +1,75 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-templates.cmk: the % template-fill operator on pure bananas.
+
+'''
+A pure banana (| text |) is a string, and it carries a string algebra: %
+fills its @@holes@@ from a kwargs banana, the same way + concatenates and |
+pipes.  Every result is another banana, so % chains left to right.
+
+Nothing runs here: a pure banana has no machine bound, so the & handle just
+binds the filled fragment and `handle` reads its text.  Binding a machine
+(in host.native.sh, in host.native.python, ..) is the separate step
+that would execute it.
+
+USAGE:
+  ./demos/cmk/banana-templates.cmk
+    runs __main__, docker-free
+'''
+
+__main__: fill chain repeat custom modlevel
+
+fill:
+  '''
+  fill: ( one hole ) @@who@@ is filled from the kwargs banana; the & handle
+  binds the result and `x` reads the filled text, no execution.
+  '''
+  &x <- (| hello @@who@@ |) % (| who=world |)
+  cmk.log(x = [$(x)])
+
+chain:
+  '''
+  chain: ( % chains left to right ) each % fills the running fragment
+  against its own kwargs banana; the operator is the same fold as + and |.
+  '''
+  &y <- (| @@greet@@, @@name@@! |) % (| greet=hi |) % (| name=bob |)
+  cmk.log(y = [$(y)])
+  &y <- (| @@greet@@, @@name@@! |) % (| greet=hi name=bob |)
+  cmk.log(y = [$(y)])
+
+repeat:
+  '''
+  repeat: ( a repeated hole ) a single kwarg fills every occurrence of the
+  hole in the body.
+  '''
+  &z <- (| @@w@@/@@w@@/@@w@@ |) % (| w=X |)
+  cmk.log(z = [$(z)])
+
+# A Fragment subclass whose % uses {hole}, not @@hole@@.  brace.fill1 is
+# the {} twin of m5.quasi%, brace.fold of lang.banana.fill.
+# __mod__ folds kwargs over its shape, then __eval__s the result.
+from cmk import class
+brace.fill1 = $(subst {$(strip ${2})},${3},${1})
+brace.fold = $(if $(strip ${2}),$(call brace.fold,$(call brace.fill1,${1},$(firstword $(subst =, ,$(firstword ${2}))),$(patsubst $(firstword $(subst =, ,$(firstword ${2})))=%,%,$(firstword ${2}))),$(wordlist 2,$(words ${2}),${2})),${1})
+class brace(bases=cmk.Fragment)[|
+  ${self}.__mod__ = $(call ${self}.__eval__,$(call brace.fold,$(${self}.shape),$($(strip ${__args__}).shape)))
+|]
+
+custom:
+  '''
+  custom: ( a subclass with {hole} syntax ) brace overrides __mod__ so %
+  fills {who}/{where}, not @@holes@@; it still chains and binds like any %.
+  '''
+  &b <- brace(| hi {who} from {where} |) % (| who=bob where=NYC |)
+  cmk.log(b = [$(b)])
+
+# module scope: % also binds a handle at column 0, not only in a recipe;
+# the fold flushes in place, so a later reference (eager or lazy) reads it.
+&greeting <- (| hello, @@who@@ |) % (| who=world |)
+
+modlevel:
+  '''
+  modlevel: ( % at module scope ) greeting was filled + bound at column 0
+  above; recipes and later module lines read it just like recipe scope.
+  '''
+  cmk.log(greeting = [$(greeting)])

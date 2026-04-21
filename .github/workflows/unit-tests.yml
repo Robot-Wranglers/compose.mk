@@ -1,0 +1,32 @@
+# See also: https://docs.github.com/en/actions
+# Fast, no-docker unit tests (pytest via tox). One pytest suite per workflow;
+# the compiler suite has its own (compiler-tests.yml). Gives quick PR signal.
+name: Unit Tests
+on:
+  workflow_dispatch: {}
+  workflow_call: {}
+  push:
+    branches: [ "main", "[0-9]+.[0-9]+" ]
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
+  pull_request:
+    branches: [ "main", "[0-9]+.[0-9]+" ]
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
+permissions:
+  contents: read
+jobs:
+  unit:
+    name: Unit (pytest via tox)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Initialize
+        run: make clean init
+      - name: Run unit-tests (requires python)
+        run: make unit-test

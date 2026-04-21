@@ -1,0 +1,62 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+### Concurrency
+<hr class="section-rule lvl-3">
+
+Plain `make` exposes exactly one concurrency knob, the `--jobs` jobserver, and it is shared across the whole recursive build, so "run *these N things* at once" is surprisingly awkward to say cleanly.  The `flux.*` family adds a few **target-level** concurrency primitives.  They share one comma signature (a leading size field where applicable, then the worker targets) and are [callform-friendly]({{_}}/cmk/concepts/#callforms), so the same thing reads naturally inline in CMK (`cmk.flux.pool(2,build,test)`).
+
+The three "run many targets" strategies differ mainly in *what* they bound:
+
+| Target | Mechanism | Bounds | Fail-fast |
+| --- | --- | --- | --- |
+| {{site.api_link('flux.pool', mkdocs, arg='n,targets')}} | `xargs -P` | exactly **N workers** | yes |
+| {{site.api_link('flux.pool.bounded', mkdocs, arg='n,targets')}} | `make --jobs` | the **recursion budget** (shared with every sub-make) | no |
+| {{site.api_link('flux.mux', mkdocs)}} *(aka `flux.join`)* | background `&` + `wait` | **unbounded** | no |
+
+{{ macros.section(4, "Bounded Worker Pool", id="bounded-worker-pool") }}
+
+{{site.api_link('flux.pool', mkdocs, arg='n,targets')}} is a true bounded *worker pool*: at most `<n>` workers run at once, and a free slot is filled by the next target the instant one finishes (streaming, not batched).  It is **fail-fast**, a worker that exits nonzero stops new work from launching, and is built on `xargs -P`, so it is portable (no `wait -n`) and the bound is on *your* workers, not on a shared budget.
+
+```bash {.cli_example .language-bash}
+# at most 2 at a time over 6 one-second targets -> ~3 waves -> ~3s
+$ ./compose.mk flux.pool/2,io.time.wait/1,io.time.wait/1,io.time.wait/1,io.time.wait/1,io.time.wait/1,io.time.wait/1
+```
+
+The canonical implementation is a macro, so it reads cleanly inline:
+
+```cmk {.language-cmk}
+build.all:; cmk.flux.pool(3, build.api, build.web, build.docs, build.cli)
+```
+
+The [agent layer]({{_}}/stages/#channels-agents) builds on this directly: an agent's `<ns>.pool/<size>` op runs `<size>` concurrent drainers over its inbox via `flux.pool`.
+
+{{ macros.section(4, "Jobserver Pool", id="jobserver-pool") }}
+
+{{site.api_link('flux.pool.bounded', mkdocs, arg='n,targets')}} has the same signature but runs the targets under `make --jobs <n>`.  The difference is *what* gets bounded: the jobserver budget is shared with **every sub-make in the DAG**, so `<n>` caps total concurrent recursion, **not** `<n>` top-level workers; a target that itself recurses competes for the same tokens.  It is also noisier (the jobserver's warnings are filtered for you) and inherits a genuine `make` quirk: **identical goals are deduplicated**, so `flux.pool.bounded/2,t,t,t` runs `t` only once.
+
+Reach for `flux.pool.bounded` when you specifically want the recursion-aware budget; reach for `flux.pool` when you want a literal worker cap with fail-fast.
+
+{{site.api_link('flux.parallel', mkdocs, arg='targets')}} is the same jobserver mechanism with the count taken from the `jobs` env-var (default 2) instead of a leading argument; it is now just a thin alias of `flux.pool.bounded`:
+
+```bash {.cli_example .language-bash}
+$ jobs=8 ./compose.mk flux.parallel/clean,build,test
+```
+
+{{ macros.section(4, "Unbounded Fan-out", id="unbounded-fan-out") }}
+
+When you simply want everything at once, {{site.api_link('flux.mux', mkdocs)}} (aka `flux.join`) backgrounds each target with `&` and `wait`s on all of them.  There is no bound and no ordering guarantee on the merged stdout/stderr, so it is happiest with targets that emit nothing, or a single line of minified JSON, which `printf` + `jq -c` keep atomic enough to consume downstream.
+
+{{ macros.section(4, "Deferred Apply", id="deferred-apply") }}
+
+Two siblings schedule work in *time* rather than in parallel.  Both take `<secs>,<targets>` and are [callform-friendly]({{_}}/cmk/concepts/#callforms):
+
+* {{site.api_link('flux.after', mkdocs, arg='secs,targets')}}: **blocking**: sleep `<secs>` (via `io.wait`), then run the targets in the foreground.  Pipe-safe and ordered; handy as an actor-tick preamble before, say, draining a channel.
+* {{site.api_link('flux.delay', mkdocs, arg='secs,targets')}}: **non-blocking**: schedule the targets to run `<secs>` later in the background and return immediately.  Not pipe-safe (background output can interleave).
+
+See also the retry/timeout operators ({{site.api_link('flux.retry', mkdocs, arg='times/target')}}, {{site.api_link('flux.timeout', mkdocs, arg='secs/target')}}) and the loop family in the [flux API]({{_}}/api#api-flux).
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	addImageToHeader('concurrency','/{{mkdocs.config.site_name}}/img/arrow-fork')
+}, 100);});
+</script>

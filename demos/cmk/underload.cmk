@@ -1,0 +1,108 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# underload.cmk:
+#   An implementation of Underload: a stack-based concatenative esolang.
+#   CMK-lang port of demos/underload.mk; imports its lexer via import.def.
+#   See also [1].
+#
+# USAGE: ( run from the repo root )
+#   ./demos/cmk/underload.cmk  # run the demo
+#   printf '(Hello, world!)S' | ./demos/cmk/underload.cmk ul.eval
+#   printf '(a(:^)*S):^'      | ./demos/cmk/underload.cmk ul.eval   # quine
+#
+# REFS:
+#   [1]: https://esolangs.org/wiki/Underload
+
+# A lexer for underload lang, in awk.  
+# Rewrites source text into the command vocabulary.
+# Imported verbatim from the makefile twin for DRYness
+import io, log
+
+import.def(file=demos/underload.mk def=ul.lexer)
+
+# The underload stack maps directly onto the standard-lib stack helpers: a
+# quotation is popped with `io.stack.pop_word` (top as a raw word) and
+# pushed with `io.stack.push_word` (reads a raw word from stdin), needing
+# no demo-specific wrappers.  The lexer (imported below) emits
+# `io.stack.push_word/<literal>` for quotation literals.  This port leans
+# on the callable-target sugar: `x <- this.io.stack.pop_word` captures a
+# pop, and `io.stack.push_word[<literal>]` pushes (lowers to
+# `<literal> | ...push_word`).
+
+# Reuse the push-free machinery (lexer, apply, discard, the VM) from the
+# makefile twin.
+import.targets(file=demos/underload.mk targets='ul.* underload')
+import.def(file=demos/underload.mk defs='underload_*')
+
+ul.swap:
+    '''
+    Swap operator:  "~"
+      (x)(y) -> (y)(x)
+    '''
+    y <- this.io.stack.pop_word
+    x <- this.io.stack.pop_word
+    io.stack.push_word["""$${y}"""]
+    io.stack.push_word["""$${x}"""]
+
+ul.dup:
+    '''
+    Duplicate operator: ":"
+      (x) -> (x)(x)
+    '''
+    x <- this.io.stack.pop_word
+    io.stack.push_word["""$${x}"""]
+    io.stack.push_word["""$${x}"""]
+
+ul.cat:
+    '''
+    Concat operator: "*"
+      (x)(y) -> (xy)
+    '''
+    y <- this.io.stack.pop_word
+    x <- this.io.stack.pop_word
+    io.stack.push_word["""$${x}$${y}"""]
+
+ul.enclose:
+    '''
+    Enclose operator: "a"
+      (x) -> ((x))
+    '''
+    io.stack.push_word["""(`${io.stack.pop_word}`)"""]
+
+ul.print:
+    '''
+    Pop/print operator.  "S"
+      (x) -> ; pop x and output it
+    '''
+    """`${io.stack.pop_word}`"""
+
+# The `underload` VM reads a program from stdin; the callable-target sugar
+# `this.underload[<literal>]` feeds it directly (lowers to `<literal> |
+# this.underload`). Program text is literal, so it uses the single-quote
+# form '''...''' (the double-quote """...""" form below interpolates shell
+# vars, which factorial needs for `$${arg}`).
+hello.world: io.stack.reset
+    this.underload['''(Hello, world!)S''']
+
+swapper: io.stack.reset
+    this.underload['''(A)(B)~*S''']
+
+quine: io.stack.reset
+    this.underload['''${underload_quine}''']
+
+quine.palindromic: io.stack.reset
+    this.underload['''${underload_quine_palindromic}''']
+
+factorial/%:
+    '''
+    Generic access to the factorial function.  Underload's factorial only
+    accepts and returns *unary* arguments, so we encode the input as a run of
+    `:` (a bounded generator) and decode the output (`wc`) around the raw function.
+    '''
+    log(calculating ${*}! ..)
+    arg <- printf ':%.0s' $$(seq ${*})
+    prog <- """($${arg}):${underload_factorial_fxn}"""
+    printf "$${prog}" | this.ul.eval | tail -1 | ${stream.peek} | wc -c
+factorial: factorial/4
+
+__main__: hello.world swapper quine quine.palindromic #factorial

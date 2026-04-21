@@ -1,6 +1,8 @@
 #!/usr/bin/env -S CMK_DISABLE_HOOKS=1 ./compose.mk mk.interpret
-# Demonstrating compose.mk as an alternate interpreter for make.
-# This is mostly used with extensions that want to inherit signals/supervisors.
+#
+# interpreter.mk:
+#   Using compose.mk as an alternate interpreter for make.  This is mostly
+#   used with extensions that want to inherit signals/supervisors.
 #
 # Main docs: https://robot-wranglers.github.io/compose.mk/signals/
 

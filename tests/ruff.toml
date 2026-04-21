@@ -1,0 +1,17 @@
+# Style config for the compose.mk python test-suite.
+# Preference: 2-space indentation. `line-length` is only a *formatter target*
+# (ruff format wraps code toward it); the E501 line-length LINT is disabled, so
+# long comments / string literals never fail checks (that friction wasn't worth
+# it). Formatting + import-sorting are auto-applied by `ruff format`/`--fix`.
+line-length = 79
+indent-width = 2
+
+[format]
+indent-style = "space"
+
+[lint]
+# E = pycodestyle, F = pyflakes, W = warnings, I = import sorting.
+# E501 (line-too-long) is intentionally ignored -- the formatter handles
+# wrapping; we don't want lint failures on un-wrappable strings/comments.
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]

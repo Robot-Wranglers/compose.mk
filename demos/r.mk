@@ -1,7 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrating polyglots using R
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
+#
+# r.mk: Polyglots using R
+#
 # USAGE: ./demos/r.mk
 
 include compose.mk
@@ -28,9 +28,9 @@ ggplot(df, aes(x = x, y = y)) +
   theme_minimal()
 endef
 
-# Creates the sine_plot.R target, with env-variable pass-through
-$(call polyglot.import, def=sine_plot.R \
-	local_img=RBase entrypoint=Rscript env=output_file)
+# A code-object bound to the locally-built image (compose.mk:RBase is the tag
+# Dockerfile.build/RBase produces), with env-variable pass-through.
+$(call code, def=sine_plot.R img=compose.mk:RBase entrypoint=Rscript env=output_file)
 
-# Runs rscript on the polyglot, then previews output.
-__main__: sine_plot.R io.preview.img/${output_file}
+# Build the image, run rscript on the polyglot, then preview output.
+__main__: Dockerfile.build/RBase sine_plot.R io.preview.img/${output_file}

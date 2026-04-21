@@ -1,0 +1,42 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# all-glyphs.cmk:
+#   Formerly a catalog of sugar-block glyphs -- now that cmk-lang is glyph-free,
+#   the three surviving block / dispatch forms, side by side: the `module`
+#   keyword, a `compose.import.string NAME(| .. |)` callform banana, and a
+#   `(| .. |) in container(| .. |)` container dispatch.  __main__ exercises all three.
+#
+#   Needs docker: the compose and container forms execute in a container, both
+#   pinned to `debian:bookworm-slim`.
+#
+# USAGE: ./demos/cmk/all-glyphs.cmk
+
+from cmk import container
+
+# module: a named namespace of targets (here just one, tools.hi)
+cmk.module tools[|
+  hi:; echo "[module] hello from a module target"
+|]
+
+# inlined compose: a raw banana of YAML, imported to root (web is callable bare).
+# `_` is a throw-away instance name -- the services import to root regardless.
+compose.import.string _(|
+services:
+  web:
+    image: debian:bookworm-slim
+    command: echo "[compose] hello from a compose service"
+|)
+
+# container dispatch: run an inline block inside an anonymous stock container via `in`
+inctx:
+  (| echo "[context] hello from a docker context" |) \
+    in \
+  container(| img=debian:bookworm-slim entrypoint=bash |)
+
+# Exercise every form: the host-safe module block plus the two
+# containerized ones (compose, container-dispatch).
+__main__: \
+    tools.hi \
+    web \
+    inctx
+

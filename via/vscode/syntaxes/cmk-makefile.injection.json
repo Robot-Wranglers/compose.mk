@@ -1,0 +1,72 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "scopeName": "source.makefile.cmk-injection",
+  "injectionSelector": "L:source.makefile -comment -string",
+  "information_for_contributors": [
+    "Enhanced highlighting for plain GNU Makefiles: injects the compose.mk cmk-flavored EXTRAS",
+    "(pragmas, ## doc-comments, @# docstrings, import/declare callforms, __dunders__, embed",
+    "fences, integral/flow glyphs) on TOP of VSCode's built-in `source.makefile` grammar.",
+    "`L:` = low priority, so the base makefile grammar wins and these only add.  Scopes match",
+    "the taxonomy in compose.mk/docs/theme/js/prism-cmk.js (shared with the cmk grammar + Prism)."
+  ],
+  "patterns": [
+    { "include": "#cmk-pragma" },
+    { "include": "#cmk-divider" },
+    { "include": "#cmk-doc-comment" },
+    { "include": "#cmk-docstring" },
+    { "include": "#cmk-module-call" },
+    { "include": "#cmk-dunder" },
+    { "include": "#cmk-embed-fence" },
+    { "include": "#cmk-capture" },
+    { "include": "#cmk-glyphs" }
+  ],
+  "repository": {
+    "cmk-pragma": {
+      "name": "meta.preprocessor.pragma.cmk",
+      "begin": "^[ \\t]*(#)[ \\t]*(CMK_PRAGMA|cmk_pragma)[ \\t]*(:::)",
+      "beginCaptures": {
+        "2": { "name": "keyword.control.directive.cmk" },
+        "3": { "name": "punctuation.definition.pragma.cmk" }
+      },
+      "end": "(:::)",
+      "endCaptures": { "1": { "name": "punctuation.definition.pragma.cmk" } }
+    },
+    "cmk-divider": {
+      "name": "comment.line.divider.cmk",
+      "match": "#*\\x{2591}{4,}"
+    },
+    "cmk-doc-comment": {
+      "name": "comment.line.documentation.double.cmk",
+      "match": "^[ \\t]*##.*$"
+    },
+    "cmk-docstring": {
+      "name": "comment.line.documentation.cmk",
+      "match": "@#.*$"
+    },
+    "cmk-module-call": {
+      "match": "^((?:[\\w+-]+\\.)*(?:import|declare)(?:\\.[\\w+-]+)*)[ \\t]*(?=\\()",
+      "captures": {
+        "1": { "name": "entity.name.function.cmk" }
+      }
+    },
+    "cmk-dunder": {
+      "name": "constant.language.dunder.cmk",
+      "match": "__(?:main|init|name)__"
+    },
+    "cmk-embed-fence": {
+      "name": "punctuation.definition.embed.cmk",
+      "match": "\\x{2AFB}|\\x{1F7B9}"
+    },
+    "cmk-capture": {
+      "name": "keyword.operator.capture.cmk",
+      "match": "(?<![<$])<-"
+    },
+    "cmk-glyphs": {
+      "patterns": [
+        { "name": "keyword.operator.integral.cmk", "match": "\\x{2A16}" },
+        { "name": "keyword.operator.flow.cmk", "match": "[\\x{21D0}\\x{1409}\\x{1F844}\\x{1F846}\\x{2B26}\\x{2B25}\\x{174F}]" },
+        { "name": "keyword.operator.sigil.cmk", "match": "[\\x{25B0}\\x{27E6}\\x{27E7}\\x{22D9}\\x{22D8}]" }
+      ]
+    }
+  }
+}

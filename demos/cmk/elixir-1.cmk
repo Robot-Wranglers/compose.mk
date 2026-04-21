@@ -1,0 +1,30 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# elixir-1.cmk:
+#   An inline elixir snippet bound to a container-backed code-object.
+#
+# USAGE: ./demos/cmk/elixir-1.cmk
+
+from cmk import container
+
+# An explicit version: 
+#   setup a container, setup code, then bind them together.
+container my_elixir(img=elixir:otp-27-alpine entrypoint=elixir)(| |)
+
+code demo_one(|
+  import IO, only: [puts: 1]
+  puts("elixir World 1!")
+  System.halt(0)
+|)
+
+demo_one.bind(machine=my_elixir)
+
+# A compressed version:
+#   Code + bindings, declared in one step.
+code demo_two(img=elixir:otp-27-alpine entrypoint=elixir)(|
+  import IO, only: [puts: 1]
+  puts("elixir World 2!")
+  System.halt(0)
+|)
+
+__main__: demo_one demo_two

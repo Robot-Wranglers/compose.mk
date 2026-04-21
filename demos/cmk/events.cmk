@@ -1,0 +1,74 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# events.cmk: a tiny event-driven system showing off polyglots and callforms.
+#
+# USAGE:
+#   ./demos/cmk/events.cmk          # 5 ticks of the loop
+#   ./demos/cmk/events.cmk driver   # a single tick
+
+'''
+A generator (bash) emits a random event token, a router (python) maps it to
+handler tags, and a dispatcher (cmk) runs each tag's handler.  Handlers are
+written in several languages; an unrecognized tag falls through to dead.letters.
+Routing is just make's own rule lookup -- there is no registry -- and a dry run
+of make on a tag/token is the "does a handler exist?" probe.
+'''
+
+# generator: ( bash, fed in via the ⬦ stream-FD glyph )
+#   Emits a random 4-char token.
+bash_script(|
+LC_ALL=C tr -dc 'a-z0-9' < /dev/urandom | head -c4; echo
+|)
+generator:; bash ⬦bash_script
+
+# router: ( python, fed in via the ⬥ real-file glyph )
+#   Reads the token on stdin and prints "TOKEN tag1 tag2 ..." -- the token, then
+#   one tag per rule it hits.
+python_script(|
+import sys, log
+s = sys.stdin.read().strip()
+digits = [int(c) for c in s if c.isdigit()]
+tags = []
+if any(d % 2 == 0 for d in digits): tags.append('has_even')
+if any(d % 2 == 1 for d in digits): tags.append('has_odd')
+if s[:1].isalpha():                 tags.append('first_is_letter')
+if s[-1:].isdigit():                tags.append('last_is_digit')   # has no handler
+print(s, *tags)
+|)
+router:; python3 ⬥python_script
+
+# dispatcher: ( cmk )
+#   Reads "TOKEN tags...", then for each tag runs its handler if one exists, else
+#   hands the tag to dead.letters.  Handlers and dead.letters all log to stderr,
+#   so they survive flux.loop's stdout suppression.
+dispatcher:
+    read -r token tags; \
+    log(${bold}event ${sep} $${token} ${no_ansi_dim}${sep} tags=[$${tags}]); \
+    for tag in $${tags}; do \
+        if ${make} -n $${tag}/$${token} >/dev/null 2>&1; \
+        then ${make} $${tag}/$${token}; \
+        else this.dead.letters/$${tag} </dev/null; fi; \
+    done
+dead.letters/%:; log(${red}no handler ${sep} ${*} ${no_ansi_dim}dropped)
+
+# handlers: ( polyglot -- only some tags are handled, the rest dead-letter )
+has_even/%:;        log(${green}even digit ${sep} ${*})
+has_odd/%:
+    '''This handler shells out to awk for its response.'''
+    echo ${*} | awk '{ print "  odd digit  // " $$0 }' >/dev/stderr
+first_is_letter/%:; log(${yellow}starts with a letter ${sep} ${*})
+
+# the loop: ( one tick = generator | router | dispatcher )
+#   Two equivalent spellings of the same pipeline, both lowering to
+#   ${make} generator | ${make} router | ${make} dispatcher:
+#     driver -- a callform stream for the generator->router leg, then a plain pipe on.
+#     nested -- one fully-nested callform; the inner [stream] composes left-to-right.
+driver:; this.router[this.generator] | this.dispatcher
+nested:; this.dispatcher[this.router[this.generator]]
+loop:        flux.loop/5/driver
+loop.nested: flux.loop/5/nested
+__main__:
+    log(${sep} ===== loop A: callform stream + pipe =====)
+    this.loop
+    log(${sep} ===== loop B: one fully-nested callform =====)
+    this.loop.nested

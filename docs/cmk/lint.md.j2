@@ -1,0 +1,39 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+{{ macros.section(2, "Linting", id="linting") }}
+
+`compose.mk` ships two distinct linters, both reachable directly through the `lang.lint.*` targets: **`cmk lint`** vets *your* programs before you run them, and **`lang.lint.self`** audits the framework's *own* source (a maintainer / CI concern, off the `cmk lint` path).
+
+{{ macros.section(3, "Vetting a Program", id="cmk-lint") }}
+
+The [`cmk lint`]({{_}}/cli-overview/#the-cmk-subcommand) subcommand vets programs across three tiers:
+
+* **source hygiene**: extension / existence checks on the file(s).
+* **compile pass**: runs the file through the compiler, surfacing namespace & shadow warnings.
+* **legality**: a `make -n` pass that catches source that would not even parse as Makefile.
+
+It accepts multiple files (each linted independently); with no file, it audits the active standard library for name collisions.
+
+The legality tier shares the runtime's [typed-fault taxonomy]({{_}}/runtime): a `SyntaxError`-class fault you would otherwise hit at runtime is surfaced at lint time instead.
+
+{{ macros.section(3, "Auditing the Framework", id="lang-lint-self") }}
+
+Auditing compose.mk's *own* source is a separate maintainer / CI concern; it checks the framework, not user code, so it is off the `cmk lint` path.  Run it directly or from CI:
+
+```bash {.cli_example}
+$ ./compose.mk lang.lint.self
+```
+
+It bundles two checks:
+
+* **`lang.lint.self.collisions`**: reports macro/target name collisions ("twins") and their smart-route safety class.  Fails *only* on the one mechanically-provable hazard: an arg-dropping trampoline over a parametric target.
+* **`lang.lint.self.phase`**: audits the `#:phase` markers on every embedded-awk block, in one awk pass.  Fails (exit 48) on a missing/inconsistent marker, a `SUPERVISOR` block that holds a `@@` placeholder or lives inside `__hosted__`, or a parse-time reference to a hosted/undefined block (the "seed quarantine").
+
+See [Contributing]({{_}}/contributing) for where the self-audit sits in the maintainer workflow.
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [CLI Overview]({{_}}/cli-overview/#the-cmk-subcommand): the `cmk lint` subcommand on the command-line surface.
+* [Compiler Tutorial]({{_}}/cmk/compiler): the compile pass the lint runs over.
+* [Runtime]({{_}}/runtime): the typed-fault taxonomy the legality tier reports against.
+* [Contributing]({{_}}/contributing): the framework self-audit in the maintainer workflow.

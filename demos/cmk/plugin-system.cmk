@@ -1,0 +1,21 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# plugin-system.cmk: loading plugins, where the file extension picks the binding.
+#
+# USAGE: ./demos/cmk/plugin-system.cmk
+
+'''
+Two plugins load in a single import -- comma-separated sources, both routed to
+the plugin namespace (flat=1).  The file extension picks how each one binds:
+
+  1. A .mk plugin is included verbatim -- fast and copy-free, so plain-make
+     plugins stay simple,
+  2. A .cmk plugin is JIT-compiled (lowered via mk.compile) at include time
+     before it is included, so cmk-lang plugins load the same way.
+
+The lowering happens whether this driver runs via cmk run (as here) or make -f.
+'''
+
+import demos/cmk/plugins/plain.mk, demos/cmk/plugins/hello.cmk as plugin, flat=1
+
+__main__: plugin.plain plugin.hello

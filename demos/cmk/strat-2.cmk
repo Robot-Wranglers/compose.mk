@@ -1,0 +1,145 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# strat-2.cmk: defer the frontier ordering to an external constraint
+#   solver by encoding a logic puzzle.
+#
+#   Part 2 of strat.cmk.  There, every discipline orders the frontier
+#   with a local greedy select (firstword, min-cost, DFS).  Here the
+#   ordering is a global solve: strategy.oracle hands a puzzle (the
+#   racers plus semantic clues) to z3 running in a container, and takes
+#   back the one finishing order that satisfies every clue.  A per-step
+#   select cannot honor a clue like "immediately before" or "first or
+#   last"; a solver can, and it also certifies the answer unique (or
+#   reports no valid order at all).
+#
+# USAGE:
+#   ./demos/cmk/strat-2.cmk              # build z3, solve, run the racers
+#   ./demos/cmk/strat-2.cmk demo.puzzle  # just the solve
+#   ./demos/cmk/strat-2.cmk demo.infeasible  # a contradictory clue, UNSAT
+#
+# needs docker
+
+'''
+Defer frontier ordering to a z3 oracle by encoding a small logic puzzle:
+five racers, four clues, one finishing order.
+'''
+
+# the strategy machinery: the kind, the registry, and the disciplines
+$(call include.plugins, strategy.cmk)
+
+from cmk import Dockerfile, container, dsl
+
+# the z3 image: python plus the z3 solver, built once from this recipe
+Dockerfile z3env(|
+  FROM python:3.11-slim
+  RUN pip install z3-solver --break-system-packages
+|)
+
+# pyc: a python program bound to the built z3 image; a call runs its
+#   shape inside that image (compose.mk:z3env is z3env's built tag), with
+#   stdin free to carry the puzzle.  machine=z3 backs the kind with the
+#   container, so the invoke delegates to it -- no hand-written body.
+container z3(img=compose.mk:z3env entrypoint=python3)(| |)
+dsl pyc(machine=z3)(| |)
+
+# solve: read a puzzle (entities plus clues) as JSON on stdin, print the
+#   finishing order (or UNSAT).  The clue vocabulary lives here, in one
+#   small place, so the cmk side stays declarative.
+pyc solve(|
+  import sys, json
+  from z3 import Int, Solver, Distinct, Or, sat
+  p = json.load(sys.stdin)
+  ents, clues = p["entities"], p["clues"]
+  n = len(ents)
+  pos = {e: Int(e) for e in ents}
+  s = Solver()
+  for e in ents:
+      s.add(pos[e] >= 1, pos[e] <= n)
+  s.add(Distinct(list(pos.values())))
+  for c in clues:
+      k = c[0]
+      if k == "before":          s.add(pos[c[1]] < pos[c[2]])
+      elif k == "imm_before":    s.add(pos[c[2]] == pos[c[1]] + 1)
+      elif k == "first":         s.add(pos[c[1]] == 1)
+      elif k == "last":          s.add(pos[c[1]] == n)
+      elif k == "first_or_last": s.add(Or(pos[c[1]] == 1, pos[c[1]] == n))
+  if s.check() != sat:
+      print("order:")
+      print("status: unsat")
+      sys.exit(0)
+  m = s.model()
+  order = sorted(ents, key=lambda e: m[pos[e]].as_long())
+  # a second model would mean the puzzle is under-specified; forbid this
+  # one and re-check to certify the answer is the only one
+  s.add(Or([pos[e] != m[pos[e]].as_long() for e in ents]))
+  print("order:", " ".join(order))
+  print("status:", "unique" if s.check() != sat else "multiple")
+|)
+
+# the puzzle: five racers (the frontier) and four semantic clues.
+#   Eve came first or last; Dan came last; Ana finished immediately ahead
+#   of Ben; Cy beat Ana.  Exactly one order fits: eve cy ana ben dan.
+frontier := ana ben cy dan eve
+racer/%:; printf '  · %s\n' '${*}'
+clue.1 := first_or_last eve
+clue.2 := last dan
+clue.3 := imm_before ana ben
+clue.4 := before cy ana
+clues  := clue.1 clue.2 clue.3 clue.4
+
+oracle.order:
+  '''
+  Assemble the puzzle JSON from the clue vars and hand it to the
+  containerized solver, which prints the finishing order and a
+  uniqueness certificate.
+  '''
+  ents="$$(printf '%s\n' ${frontier} | ${jq.run} -Rc . | ${jq.run} -sc .)"
+  clues="$$(printf '%s\n' $(foreach c,${clues},'$(strip $($c))') | ${jq.run} -Rc 'split(" ")' | ${jq.run} -sc .)"
+  ${jq.run} -nc --argjson e "$$ents" --argjson c "$$clues" '{entities:$$e,clues:$$c}' | solve()
+
+# strategy.oracle: a discipline whose ordering is a global solve.  Its
+#   select errors (there is no per-step choice), and its eval delegates to
+#   the z3 oracle above, returning the solved order.
+strategy oracle(|
+  '''
+  oracle strategy: order the frontier by solving a constraint puzzle in an
+  external z3 oracle, not by any local per-step heuristic.
+  '''
+  ${self}.select = $(error oracle orders globally; there is no per-step select)
+  ${self}.eval   = $$(${make} oracle.order 2>${devnull} | sed -n 's/^ *order: //p')
+|)
+
+demo.puzzle: z3env.build
+  # state the clues, then show the order (and its certificate) the oracle
+  # solved for, from one solver run
+  cmk.log(clues ${sep} $(foreach c,${clues},[$(strip $($c))] ))
+  solved="$$(${make} oracle.order 2>${devnull})"
+  cmk.strategy.oracle.log(finishing order ${sep} $$(printf '%s' "$$solved" | sed -n 's/^ *order: //p'))
+  cmk.strategy.oracle.log(z3 certificate ${sep} $$(printf '%s' "$$solved" | sed -n 's/^ *status: //p'))
+
+demo.contrast:
+  # the built-in disciplines cannot honor the clues: step keeps the
+  # declaration order, which puts dan fourth (not last) and cy after ana
+  linear="cmk.strategy.step.eval(${frontier})"
+  cmk.strategy.step.log($$linear ${sep} declaration order ${sep} clues unmet)
+
+# the contradictory extra clue: Ben before Ana fights clue.3 (Ana
+#   immediately before Ben), so the two together form a cycle
+clue.5 := before ben ana
+
+demo.infeasible: z3env.build
+  # hand the oracle a cycle (clue.3 plus clue.5) and let it report that no
+  # valid order exists, instead of a greedy walk's plausible wrong guess
+  cmk.log(extra clue ${sep} [$(strip ${clue.5})] ${sep} fights [$(strip ${clue.3})])
+  solved="$$(${make} oracle.order clues='clue.1 clue.2 clue.3 clue.4 clue.5' 2>${devnull})"
+  ord="$$(printf '%s' "$$solved" | sed -n 's/^ *order: //p')"
+  cmk.strategy.oracle.log(finishing order ${sep} $${ord:-<none>})
+  cmk.strategy.oracle.log(z3 certificate ${sep} $$(printf '%s' "$$solved" | sed -n 's/^ *status: //p'))
+
+run.active: z3env.build
+  # run the racers in the oracle's solved finishing order
+  order="cmk.strategy.oracle.eval(${frontier})"
+  cmk.log(${bold}running racers in finishing order ${sep} $$order)
+  for r in $$order; do ${make} racer/$$r; done
+
+__main__: demo.puzzle demo.contrast demo.infeasible run.active

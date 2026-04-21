@@ -15,13 +15,13 @@
     </tr>
     <tr>
         <td><code>prefix</code></td>
-        <td>❌</td>
+        <td>—</td>
         <td>Prefix used to find private target.<br/> Defaults to "self."</td>
         <td>prefix=.</td>
     </tr>
     <tr>
         <td><code>env</code></td>
-        <td>❌</td>
+        <td>—</td>
         <td class=wrap>
             Variables to pass through to container.
             <br/>Defaults to value from environment
@@ -30,7 +30,7 @@
     </tr>
     <tr>
         <td><code>quiet</code></td>
-        <td>❌</td>
+        <td>—</td>
         <td class=wrap>Defaults to value from environment, or 0</td>
         <td>quiet=1</td>
     </tr>

@@ -1,0 +1,31 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# subcommands.cmk:
+#   A minimal subcommand CLI built with the `@cli.subcommands`
+#   decorator.  Ported from demos/subcommands.mk.
+#
+# USAGE: (non-parametric subcommands)
+#   ./demos/cmk/subcommands.cmk greet world       # -> hello world
+#   ./demos/cmk/subcommands.cmk greet me          # -> hello <user>
+#
+# USAGE: (parametric subcommands)
+#   ./demos/cmk/subcommands.cmk greet hello bob   # -> hello, bob!
+#
+# USAGE: (help)
+#   ./demos/cmk/subcommands.cmk greet             # -> usage
+#   ./demos/cmk/subcommands.cmk greet help        # -> usage
+#   ./demos/cmk/subcommands.cmk                   # -> usage
+
+@cli.subcommands
+greet:
+	@# # greet
+	@# A tiny greeting CLI, built with the `@cli.subcommands` decorator.
+	@#
+	@# It routes the first argument to a subcommand handler below; run a
+	@# bare `greet` (or `greet help`) to print this block, the usage line,
+	@# and the subcommand tree.
+├─world:; """hello world\n"""
+├─me:; printf 'hello %s\n' "$${USER}"
+╰─hello/%:; printf 'hello, %s! (argv=%s)\n' "${*}" "$${argv:-}"
+
+__main__: greet

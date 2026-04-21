@@ -1,5 +1,6 @@
 #!/usr/bin/env -S make -f
-# demos/itest.mk: 
+#
+# itest.mk:
 #   Integration test-suite.  
 #   This isn't pretty or instructive like the other demos, 
 #   might contain WIP, and the main point is just increasing test coverage.
@@ -7,32 +8,33 @@
 #  This is integration'y because it actually uses external compose files
 #  and exercises the bridge / automation scaffolding generation.
 #
-#   USAGE: ./demos/itest.mk
+# USAGE: ./demos/itest.mk
 
 # Include compose.mk so we can use `compose.import` macro, and
 # otherwise exercise base-targets that are provided by the lib
 include compose.mk
 
 # Load all services from 1 compose file, *not* into the root namespace.
-# $(call compose.import.as, file=demos/data/docker-compose.cm-tools.yml namespace=▰)
+# $(call compose.import.as, file=demos/data/docker-compose.cm-tools.yml
+# namespace=▰)
 
 # Load all services from 2 compose files into 1 namespace.
 $(call compose.import, file=demos/data/docker-compose.yml namespace=▰)
 
 __main__: flux.star/test
 	
-test.mk.assert_env_var:
+test.assert.env.var:
 	$(call log.test, Testing assert.env_var macros)
-	my_var=1; $(call mk.assert.env, my_var)
+	my_var=1; $(call assert.env, my_var)
 	$(call log.test, assert.env_var fails if env not set)
-	! $(call mk.assert.env, my_var) ${stderr_devnull}
+	! $(call assert.env, my_var) ${stderr_devnull}
 	$(call log.test, assert works for multiple vars)
-	another_var=2; my_var=1; $(call mk.assert.env, my_var another_var)
+	another_var=2; my_var=1; $(call assert.env, my_var another_var)
 	$(call log.test, assert fails for multiple vars when one is not set)
-	! ( another_var=2; my_var=1; $(call mk.assert.env, my_var another_var missing) ) ${stderr_devnull}
+	! ( another_var=2; my_var=1; $(call assert.env, my_var another_var missing) ) ${stderr_devnull}
 	$(call log.test, assert.env works as target for multiple vars when one is not set)
-	foo=1 bar=2 ./compose.mk mk.assert.env/foo,bar
-	! bar=2 ./compose.mk mk.assert.env/foo,bar ${stderr_devnull}
+	foo=1 bar=2 ./compose.mk assert.env/foo,bar
+	! bar=2 ./compose.mk assert.env/foo,bar ${stderr_devnull}
 
 test.compose.validate:
 	$(call log.test, Testing compose-file validation)
@@ -68,7 +70,7 @@ test.signals:
 	$(call log.test, mk.interrupt should throw an error)
 	! ./compose.mk mk.interrupt
 	$(call log.test, Signal handler should not be installed for library usage)
-	! ${make} mk.parse.local | grep mk.interrupt
+	! ${make} mk.targets | grep mk.interrupt
 	
 demo: ▰/debian/self.demo
 	@# New target declaration that we can use to run stuff
@@ -76,31 +78,28 @@ demo: ▰/debian/self.demo
 	@# are configured by the `compose.import` call we used above.
 
 test.ticker:
-	@# FIXME: timeout kills the whole process?
-	@# text=" testing ticker " ${make} flux.timeout/2/tux.widget.ticker || true
+	@# FIXME: timeout kills the whole process?  text=" testing ticker "
+	@# make flux.timeout/2/tux.widget.ticker || true
 
-# Displays platform info to show where target is running.
-# Since this target is intended to be private, we will 
-# prefix "self" to indicate it should not run on host.
 self.demo:
+	@# Displays platform info to show where target is running.
+	@# Since this target is intended to be private, we will 
+	@# prefix "self" to indicate it should not run on host.
 	. /etc/os-release && printf "$${PRETTY_NAME}\n"
 	uname -n -v
 demo.double.dispatch: ▰/debian/self.demo ▰/alpine/self.demo
 
 # test.containerized.tty.output: 
-# 	cmd='sleep 2' label='testing gum spinner inside container' ${make} io.gum.spin
+# 	cmd='sleep 2' label='testing gum spinner inside container' ${make}
+# 	io.gum.spin
 
 # test.compiler:
 # 	$(call log.test, Compilation of CMK gives legal makefile + library fxns)
-# 	${io.mktemp} \
-# 	&& cat demos/cmk/structured-io.cmk | ./compose.mk mk.compile > $${tmpf} \
-# 	&& chmod +x $${tmpf} \
-# 	&& $${tmpf} flux.ok
-# 	$(call log.test, Compilation of makefile gives legal makefile + library fxns)
-# 	${io.mktemp} \
-# 	&& cat demos/no-include.mk | ./compose.mk mk.compile > $${tmpf} \
-# 	&& chmod +x $${tmpf} \
-# 	&& $${tmpf} clean flux.ok
+# 	${io.mktemp} \ && cat demos/cmk/structured-io.cmk | ./compose.mk
+# 	mk.compile > $${tmpf} \ && chmod +x $${tmpf} \ && $${tmpf} flux.ok
+# 	$(call log.test, Compilation of makefile gives legal makefile + library
+# 	fxns) ${io.mktemp} \ && cat demos/no-include.mk | ./compose.mk
+# 	mk.compile > $${tmpf} \ && chmod +x $${tmpf} \ && $${tmpf} clean flux.ok
 
 test.main.bridge:
 	$(call log.test, main bridge)
@@ -144,13 +143,14 @@ my_ctx_man.exit:; printf "${@}"
 
 test.flux.finally:
 	$(call log.test, testing flux.finally)
-	# demo of using finally/always functionality in a pipeline.  touches a tmpfile 
-	# somewhere in the middle of a failing pipeline without getting to the cleanup 
-	# task, and it should be cleaned up anyway.
+	# demo of using finally/always functionality in a pipeline.  touches a
+	# tmpfile somewhere in the middle of a failing pipeline without getting to
+	# the cleanup task, and it should be cleaned up anyway.
 	bash -i -c "(${make} \
 		flux.finally/.file.cleanup \
 		.file.touch flux.fail file-cleanup || true)"
-	# NB: cannot assert this from here because cleanup only runs when the *test process* exits
+	# NB: cannot assert this from here because cleanup only runs when the
+	# *test process* exits
 	# ! ls .tmp.test.flux.finally	
 .file.touch:
 	touch .tmp.test.flux.finally

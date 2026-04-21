@@ -1,0 +1,60 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# logging.cmk:
+#   Some of the compose.mk logging facilities, in CMK-lang.  Ported from
+#   demos/logging.mk.
+#
+# USAGE: ./demos/cmk/logging.cmk
+
+import io, log
+
+__main__: \
+    demo.command demo.files \
+    demo.basic demo.json \
+    demo.formatting
+
+demo.command:
+    '''
+    Send stdout for any command to the logging stream.
+    '''
+    echo hello logging | ${stream.as.log}
+
+demo.files:
+    '''
+    Since `io.preview.file` writes to stderr, this is technically
+    logging.
+    '''
+    io.preview.file/demos/cmk/logging.cmk
+    log.preview.file(demos/cmk/logging.cmk)
+
+demo.basic:
+    '''
+    Basic example: write a message to each module's log.
+    '''
+    cmk.log(unquoted message that should go to log)
+    log.io(msg from io module)
+    log.flux(msg from flux module)
+    log.docker(msg from docker module)
+
+demo.formatting:
+    '''
+    Formatting example, using some of the available ANSI color
+    constants.
+    '''
+    cmk.log(${red}unquoted message ${sep} ${no_ansi}that should ${dim}go to ${bold}log)
+
+demo.trace:
+    '''
+    Trace-logging: shows output only when `trace`/`TRACE` is 1 in the
+    environment.
+    '''
+    log.trace(unquoted message that should go to log)
+
+demo.json:
+    '''
+    JSON-logging: decodes input with `jb`, then pretty-prints JSON to
+    stderr.  Indented + expanded by default; use `log.json.min` for the
+    minified form.
+    '''
+    log.json.min(stage=Building)
+    log.json(stage=Building more=info anything=you_want)

@@ -1,0 +1,18 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# julia.cmk: JIT polyglot using ccall FFI into C.
+
+'''
+A julia container creates the code-object; the program calls into C's libc via `ccall`.
+'''
+
+from cmk import container
+
+container julia(img=julia:1.10.9-alpine3.21 entrypoint=julia)(| |)
+julia.polyglot hello_world(|
+  println("Hello world! (from Julia & C)")
+  n = ccall(:rand, Int32, ())
+  println("a random int from C's rand() = $n")
+|)
+
+# run the script in the bound interpreter, then preview it
+__main__: hello_world hello_world.preview

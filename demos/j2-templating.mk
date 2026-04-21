@@ -1,8 +1,5 @@
 #!/usr/bin/env -S make -f
-# Demonstrates templating in jinja.
-#
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# USAGE: ./demos/j2-templating.mk
+# j2-templating.mk: jinja via dsl; twin of j2-templating.cmk.
 
 include compose.mk
 
@@ -21,20 +18,12 @@ define bye_template.j2
 bye {{name}}!
 endef
 
-# An "interpreter" for templates.
-# This renders the given template file using JSON on stdin.
-render/%:
-	cmd="--quiet -fjson ${*} /dev/stdin" \
-		${make} mk.docker/jinjanator,jinjanate
+# create the jinja dsl kind + a fragment per template (both self-eval).
+$(call cmk.dsl, def=jinja img=compose.mk:jinjanator entrypoint=jinjanate cmd=--quiet flag=-fjson feed=flag)
+$(call jinja, def=hello_template.j2)
+$(call jinja, def=bye_template.j2)
 
-# Import the template-block, binding the 
-# interpreter & creating `*.j2` targets
-$(call polyglots.import, pattern=[.]j2 bind=render)
-
-# Generates JSON with `jb`, then pushes it into the template renderer.
-# This shows how to call targets using generated symbols, 
-# and then (equivalently) using explicit targets.
 __main__: Dockerfile.build/jinjanator
-	${jb} name=foo | ${hello_template.j2}
-	${jb} name=foo | ${bye_template.j2}
-	${jb} name=foo | ${make} bye_template.j2
+	@# build, then feed JSON into each template fragment
+	$(call io.json_builder,name=foo) | $(hello_template.j2.__call__)
+	$(call io.json_builder,name=foo) | $(bye_template.j2.__call__)

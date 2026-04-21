@@ -1,0 +1,30 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# etl-img.cmk:
+#   The JSON ETL extended into an image pipeline.
+#   `extract` injects a PNG, `transform` streams it through a dockerized imagemagick
+#   `convert` to JPEG, and `load` previews the JPEG in the terminal via a dockerized
+#   `chafa` -- all leaning on compose.mk's docker idioms, no local dependencies.
+#
+# USAGE: ./demos/cmk/etl-img.cmk
+
+# A default docker image + tag for the imagemagick tool container.
+img.imagemagick="dpokidov/imagemagick:latest"
+
+# Fix an image and the entrypoint, but defer the exact command to callers.
+convert:; ${docker.image.run}/${img.imagemagick},magick
+
+# Kick off the pipeline by injecting an image.
+extract:; cat docs/img/icon.png
+
+# Stream stdin through the dockerized `convert` tool -- imagemagick's own
+# "png on stdin -> jpg on stdout" syntax lives in `cmd`.
+transform:; ${stream.stdin} | cmd="png:- jpg:-" this.convert
+
+# For "load", preview the jpeg in the terminal via a dockerized `chafa`.
+load: stream.img.preview
+
+# Putting it together.
+etl: flux.pipeline/extract,transform,load
+
+__main__: etl

@@ -1,6 +1,25 @@
 --ignore-dir=.tmp
+# io.mktempd drops `.tmp.XXXXXXXXX` working dirs in the cwd (cf. the `.tmp.*` file
+# rule below); skip those dirs too. `.tmp` (exact) above covers a plain temp dir.
+--ignore-dir=match:/^[.]tmp[.]/
 --ignore-dir=docs/theme
 --ignore-dir=site/
 --ignore-dir=scratch/
 --ignore-dir=.tox
+--ignore-dir=.pytest_cache
+--ignore-dir=__pycache__
+# pip packaging build artifacts -- staged copies of sources under via/pip/.
+# `_plugins` duplicates .cmk/; dist/egg-info are packaging outputs; build is a
+# staged compose.mk copy under scripts-*. (`__pycache__` covered generically.)
+--ignore-dir=via/pip/_plugins
+--ignore-dir=via/pip/dist
+--ignore-dir=via/pip/compose_mk.egg-info
+--ignore-dir=via/pip/build
 --ignore-file=match:/[.]ipynb$/
+--ignore-file=match:/^[.]?coverage.*[.](json|md)$/
+# Rendered markdown is generated from `.md.j2` sources -- search only the source.
+# (`.md.j2` ends in `.j2`, so this `[.]md$` rule skips the rendered `.md` only.)
+--ignore-file=match:/[.]md$/
+--ignore-file=is:typescript
+--ignore-file=ext:pyc
+--ignore-file=ext:pdf

@@ -1,0 +1,99 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# agents-2.cmk:
+#   A banana-built actor that daemonizes an interface to io.stack data.
+#   Where agent.cmk is an in-process Elixir agent, `jqd` ("jq daemon")
+#   is an out-of-process one: a loop wrapping a private io.stack (its
+#   context), listening on a unix socket that speaks HTTP/1, folding each
+#   request into the stack through a jq transform (the actor's receive/2).
+#   Concurrent producers (flux.pool + curl) hit it at once; a flock makes
+#   the read-modify-write of the shared stack atomic, so the actor
+#   serializes mutations, mailbox-style.  Cf. banana-oop.cmk (a banana
+#   constructor eval'ing a dispatcher) and the mailbox pub/sub demos, of
+#   which this is the concurrent, socketed version.
+#
+#   Declare one with a banana:  `jqd NAME(| <jq transform> |)`
+#   The body is applied to each parsed request `.` before it is pushed.
+#
+# USAGE:
+#   ./demos/cmk/agents-2.cmk         # start actor, fire N concurrent posts
+#   JQD_TTL=5 POOL=6 ./demos/cmk/agents-2.cmk demo
+
+import flux, io, log
+
+POOL    ?= 4
+JQD_TTL ?= 3
+
+# the `jqd` banana constructor (cf. banana-oop `class`)
+# `jqd NAME(| body |)` -> $(call jqd, def=NAME) + `define NAME` (the jq
+# transform).  Thin per-actor targets delegate to the generic `_jqd.*`
+# runners (plain targets, so callforms lower + no double-eval escaping).
+define _declare.jqd
+$(call mk.unpack.kwargs, ${1}, def)
+${kwargs_def}.serve:; ${make} _jqd.serve/${kwargs_def}
+${kwargs_def}.cast:;  ${make} _jqd.cast/${kwargs_def}
+${kwargs_def}.dump:;  ${make} _jqd.dump/${kwargs_def}
+${kwargs_def}.reset:; ${make} _jqd.reset/${kwargs_def}
+endef
+jqd = $(eval $(call _declare.jqd,${1}))
+
+# per-actor paths, derived from the name in shell var $nm.
+_jqd.paths=sock=".tmp.jqd.$${nm}.sock" ; data=".tmp.jqd.$${nm}.json"
+
+_jqd.reset/%:; nm="${*}"; ${_jqd.paths}; rm -f "$$sock" "$$data.lock"; echo '[]' > "$$data"
+
+# listen: bounded HTTP/1 server over the unix socket; socat forks one
+# handler per request (concurrency), the handler serializes the stack.
+_jqd.serve/%:
+  nm="${*}"; ${_jqd.paths}; rm -f "$$sock"; [ -s "$$data" ] || echo '[]' > "$$data"; \
+  log.target(${dim}jqd:$$nm ${sep} serving HTTP on ${cyan}$$sock ${no_ansi_dim} ttl=${JQD_TTL}s); \
+  timeout ${JQD_TTL} socat UNIX-LISTEN:"$$sock",fork SYSTEM:"${make} _jqd.handle/$$nm" 2>/dev/null; \
+  log.target(${dim}jqd:$$nm ${sep} closed)
+
+# handle one HTTP request (execed by socat per connection): read headers
+# for Content-Length, read the body, parse k=v -> JSON, apply the actor's
+# jq transform, then flock-serialize the io.stack push.  Reply 200.
+_jqd.handle/%:
+  nm="${*}"; ${_jqd.paths}; \
+  clen=0; while IFS= read -r line; do line="$${line%$$'\r'}"; [ -z "$$line" ] && break; \
+    case "$$line" in [Cc]ontent-[Ll]ength:*) clen=`printf '%s' "$$line" | tr -dc 0-9`;; esac; done; \
+  body=`head -c "$${clen:-0}"`; \
+  xform=`${make} mk.def.read/$$nm 2>/dev/null`; [ -n "$$xform" ] || xform='.'; \
+  rec=`printf '%s' "$$body" | jq -Rc 'split(" ")|map(split("=")|{(.[0]):(.[1:]|join("="))})|add' | jq -c "$$xform"`; \
+  ( flock 9; \
+    n=`io.stack.count($$data) 2>/dev/null | tr -dc 0-9`; \
+    printf '%s' "$$rec" | jq -c --argjson s "$$(( $${n:-0} + 1 ))" '.seq=$$s' | io.stack.push($$data); \
+  ) 9>"$$data.lock"; \
+  resp='{"ok":true}'; \
+  printf 'HTTP/1.1 200 OK\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' "$${#resp}" "$$resp"
+
+# cast: POST stdin to the actor over HTTP via curl (the client interface).
+_jqd.cast/%:; nm="${*}"; ${_jqd.paths}; body=`${stream.stdin}`; \
+  curl -s --unix-socket "$$sock" -H 'Connection: close' --data-binary "$$body" http://jqd/push >/dev/null
+
+_jqd.dump/%:
+  nm="${*}"; ${_jqd.paths}; \
+  log.target(${bold}$$nm stack ${sep} ${dim}`io.stack.count($$data) 2>/dev/null` records, arrival order); \
+  io.stack($$data) | jq -c '.[]'
+
+# declare the actor (banana)
+# receive/2: uppercase the producer name, keep name/timestamp/seq.  Mixing
+# real jq here shows the body is a first-class transform, not a fixed sink.
+jqd events(|
+    {who: (.name | ascii_upcase), at: .timestamp, seq}
+|)
+
+# a worker: POST `name=<me> timestamp=<now>` to the actor.  N of these run
+# at once under flux.pool, all racing to mutate the one io.stack.
+push/%:; printf 'name=%s timestamp=%s' "${@}" "`date +%T.%N`" | this.events.cast
+
+demo:
+  log.target(${bold}jqd ${sep} ${POOL}-way concurrent POSTs -> one flock'd io.stack)
+  this.events.reset; \
+  this.events.serve & spid=$$!; \
+  for i in `seq 1 20`; do [ -S .tmp.jqd.events.sock ] && break; sleep 0.1; done; \
+  flux.pool(${POOL},push/alice,push/bob,push/carol,push/dave,push/eve,push/frank,push/grace,push/heidi); \
+  wait $$spid 2>/dev/null; \
+  this.events.dump
+
+__main__: demo

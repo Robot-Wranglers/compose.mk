@@ -1,0 +1,71 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# stages.cmk:
+#   Stacks & stages, feature by feature.  A stage is a named, file-backed
+#   JSON stack (`.flux.stage.<name>`).  `enter`/`exit` add a banner, an
+#   entry-record, and auto-cleanup; but a stage is just a lazy stack
+#   underneath, so it also gets the stack primitives -- count, get (a jq
+#   query), and update (a jq transform in place).
+#
+#   Idioms used here:
+#     - `__target__`  : the CMK alias for `${@}` (current target);
+#       used as the stage name so each feature owns an independent stack.
+#     - `flux.stage.push(S)[<cmd>]` : the `[stream]` call-form feeds
+#       <cmd>'s stdout as stdin to the op (the JSON to push / the query).
+#     - `var <- this.flux.stage.<op>(S)`  : cmk-lang capture of stdout.
+#
+#   See the docs [1].
+#
+# USAGE: ./demos/cmk/stages.cmk
+#
+# REFS:
+#   [1]: https://robot-wranglers.github.io/compose.mk/stages
+
+# Draw banners with the plain built-in instead of the (dockerized) gum
+# default.
+import flux, log, jb
+
+export FLUX_STAGE_BANNER?=io.print.banner
+
+stage.lifecycle:
+    '''
+    The full lifecycle: enter (banner + an entry-record) -> push -> read
+    stack -> pop (LIFO) -> exit (dumps, then deletes the stack file).
+    '''
+    flux.stage.enter(__target__)
+    flux.stage.push(__target__)[jb(step=build)]
+    flux.stage.push(__target__)[jb(step=test)]
+    log.io(__target__ ${sep} the whole stack, newest last:)
+    flux.stage.stack(__target__) | ${jq} -c .[]
+    popped <- flux.stage.pop(__target__) | ${jq} -c .
+    log.io(__target__ ${sep} popped the top ${sep} $${popped})
+    flux.stage.exit(__target__)
+
+stage.query:
+    '''
+    A stage is a lazy stack: skip `enter` (no banner/entry-record), push
+    straight in, then use the read-only primitives -- count and get (a
+    jq projection).  `clean` at end.
+    '''
+    flux.stage.push(__target__)[jb(user=alice role=admin)]
+    flux.stage.push(__target__)[jb(user=bob role=user)]
+    flux.stage.push(__target__)[jb(user=carol role=admin)]
+    n <- flux.stage.count(__target__)
+    admins <- flux.stage.get(__target__)["""[.[]|select(.role=="admin")|.user]"""]
+    log.io(__target__ ${sep} count=$${n} ${sep} admins=$${admins})
+    flux.stage.clean(__target__)
+
+stage.transform:
+    '''
+    update: rewrite the whole stack in place with a jq function (scale
+    each .n by 10).
+    '''
+    flux.stage.push(__target__)[jb(n=1)]
+    flux.stage.push(__target__)[jb(n=2)]
+    flux.stage.push(__target__)[jb(n=3)]
+    flux.stage.update(__target__)["""map(.n | tonumber * 10)"""]
+    scaled <- flux.stage.stack(__target__) | ${jq} -c .
+    log.io(__target__ ${sep} after update ${sep} $${scaled})
+    flux.stage.clean(__target__)
+
+__main__: stage.lifecycle stage.query stage.transform

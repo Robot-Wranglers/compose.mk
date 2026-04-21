@@ -1,17 +1,17 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 
 ## Selectors
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-2">
 
-Interactive selectors based on [gum's chooser](https://github.com/charmbracelet/gum?tab=readme-ov-file#choose) are something of a primitive for `compose.mk`.  This page covers these main use-cases for stand-alone mode:
+Interactive selectors[^menu] based on [gum's chooser](https://github.com/charmbracelet/gum?tab=readme-ov-file#choose) are something of a primitive for `compose.mk`.  This page covers these main use-cases for stand-alone mode:
 
 * [Interactive target-selection from Makefiles](#interactive-target-selection) 
 * [Interactive container-selection from compose files](#interactive-container-selection).
 
-For lower-level programmatic usage see instead the [user-input section of the standard-lib docs]({{mkdocs.site_relative_url}}/standard-lib/#user-input-interactivity).  For higher-level usage like apps with layered dialogs, see the examples in the [advanced TUI docs]({{mkdocs.site_relative_url}}/advanced-tuis/).
+For lower-level programmatic usage see instead the [user-input section of the standard-lib docs]({{_}}/standard-lib/#user-input-interactivity).  For higher-level usage like apps with layered dialogs, see the examples in the [advanced TUI docs]({{_}}/advanced-tuis/).
 
 ### Interactive Target-Selection
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 Given any random Makefile, `compose.mk` can wrap it with runner that offers target-selection using the {{site.api_link("mk.select", mkdocs, arg='path_to_makefile')}} target.
 
@@ -27,7 +27,7 @@ $ ./compose.mk flux.loopf/mk.select/demos/no-include.mk
 {{macros.img_link("user-input.gif", mkdocs, "95%",class="cli_output")}}
 
 ### Interactive Container-Selection
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 Given any random docker compose file, `compose.mk` can wrap it with runner that offers container-selection, using {{site.api_link('compose.select',mkdocs,arg='path_to_compose_file')}}.  
 
@@ -39,7 +39,7 @@ $ ./compose.mk compose.select/demos/data/docker-compose.minimal.yml
 
 After selecting a service, you'll be dropped into an interactive shell for that container.  
 
-This should work for most containers regardless of their default entrypoint, and `compose.mk` can help to autodetect whether using `bash` or `sh` is appropriate.  If there's no shell at all available in the container though, you're out of luck!
+{{ macros.admonition("note", "Shell autodetection", "This should work for most containers regardless of their default entrypoint, and `compose.mk` can help to autodetect whether using `bash` or `sh` is appropriate.  If there's no shell at all available in the container though, you're out of luck!") }}
 
 As with the `mk.select` example above, we can use {{site.api_link('flux.loopf',mkdocs,arg='target_name')}} to easily turn this into a a simple looping interface:
 
@@ -48,7 +48,14 @@ $ ./compose.mk \
     flux.loopf/compose.select/demos/data/docker-compose.minimal.yml
 ```
 
-<hr style="width:100%;border-bottom:3px solid black;">
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Loading Compose Files]({{_}}/loadf): `loadf` wraps `compose.select` for container pick-and-shell.
+* [Embedded TUI]({{_}}/embedded-tui): higher-level layered dialogs built over these primitives.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^menu]: {{ tufte.wiki('Menu_(computing)')|trim }}
 
 
 <script>

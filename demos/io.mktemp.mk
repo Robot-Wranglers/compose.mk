@@ -1,33 +1,39 @@
 #!/usr/bin/env -S make -f
-# Demonstrating io.mktemp.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/standard-lib
-# USAGE: ./demos/guests.mk
+#
+# io.mktemp.mk:
+#   Scratch files & directories with the `io.mktemp` family.  Each helper
+#   exports a shell var holding the path AND registers an EXIT trap that
+#   removes it, so a temp lives only as long as the process that created
+#   it.  Keep the whole recipe in one shell (chain with `&&`/`;`) so the
+#   var and its trap stay in scope.
+#
+# USAGE: ./demos/io.mktemp.mk
 
 include compose.mk
 
-__main__: flux.star/test
+__main__: demo.tempfile demo.tempdir demo.custom_var
 
-test.mktemp_var:
-	@# Use `io.mktemp` to create a tempfile, 
-	@# storing path details in `tmpf` var. This will 
-	@# be removed when the process that created it exits, 
-	@# so ensure process management with `&&` or `;` etc
+demo.tempfile:
+	@# `io.mktemp` exports `tmpf`: a fresh ./.tmp.* file, auto-removed on
+	@# exit.
 	${io.mktemp} \
-	&& $(call log.test, $${tmpf}) \
-	&& ls $${tmpf} > /dev/null
+	&& $(call log.io, io.mktemp ${sep} made a tempfile at $${tmpf}) \
+	&& printf 'scratch data\n' > $${tmpf} \
+	&& cat $${tmpf}
 
-test.mktempd_var:
-	@# Use `io.mktempd` for a tempdir, 
-	@# storing path details in `tmpd` var.
+demo.tempdir:
+	@# `io.mktempd` exports `tmpd`: a fresh ./.tmp.* directory (also
+	@# auto-removed).
 	${io.mktempd} \
-	&& $(call log.test, $${tmpd}) \
-	&& touch $${tmpd}/my-tmp-file \
+	&& $(call log.io, io.mktempd ${sep} made a tempdir at $${tmpd}) \
+	&& touch $${tmpd}/a $${tmpd}/b \
 	&& find $${tmpd} | ${stream.as.log}
 
-test.mktemp_macro:
-	@# Call _io.mktemp to use a given var instead of `tmpf`
-	$(call _io.mktemp, var=derived) \
-	&& $(call log.test, $${derived}) \
-	&& ls $${derived} > /dev/null
-	
+demo.custom_var:
+	@# `_io.mktemp` takes a `var=` so the path lands in a name you pick (here
+	@# `work`) instead of the default `tmpf` -- handy when juggling several
+	@# at once.
+	$(call _io.mktemp, var=work) \
+	&& $(call log.io, _io.mktemp ${sep} made a tempfile in a custom var $${work}) \
+	&& printf 'hi\n' > $${work} \
+	&& cat $${work}

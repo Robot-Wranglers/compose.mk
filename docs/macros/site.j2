@@ -2,17 +2,124 @@
 
 ## File Previews
 {#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
-{% macro embed_demo(fname, github={}, 
-    bottom_middle='', bottom_right='',
-    type='Makefile', title='', 
-    extra_label='', class="")-%}{% set link_prefix=macros.normalize_fname(fname) %}
-<a id="{{link_prefix}}"></a>{% set use_type= (type=='cmk' and 'Makefile') or type %}{{macros.code_table(fname, 
-    type=type, github=github, 
-    link_prefix=link_prefix, code_table_2=extra_label, class=class)}}<details id="{{link_prefix}}_details" open><summary style="display:none;">Summary</summary>
-```{{use_type}} {%raw%}{{%endraw%}{{class}} {{'.language-' + use_type}} {{'.language-cmk' if fname.endswith('.cmk') else ''}}{%raw%}}{%endraw%}
+{# embed_body: the inner code area (back-to-top anchor + <details> code block + bottom bar).
+   ONE source of truth, shared by the SOLO one-tab mirror (embed_demo top=True) AND every
+   embed_mirror pane (embed_demo top=False).  `.cmk` files render with the real `cmk` Prism
+   grammar (extends makefile); plain `.mk` use the makefile base. #}
+{% macro embed_body(fname, link_prefix, github={}, type='Makefile', title='', bottom_middle='', bottom_right='', extra_label='', class="", collapsed=False)-%}<a id="{{link_prefix}}_top"></a><details id="{{link_prefix}}_details"{% if not collapsed %} open{% endif %}><summary{% if collapsed %} class="embed-collapse-summary"{% else %} style="display:none;"{% endif %}>{% if collapsed %}Show / hide source{% else %}Summary{% endif %}</summary>
+{#- lead with `cmk` for .cmk files: Prism resolves an element's language from the FIRST
+    `language-*` class, so `cmk` must precede `Makefile`; otherwise .cmk embeds highlight
+    with the makefile base grammar and lose every cmk-only token (named-bananas, decl heads). #}
+```{{ 'cmk' if fname.endswith('.cmk') else type }} {%raw%}{{%endraw%}{{class}} {{ '.language-' + ('cmk' if fname.endswith('.cmk') else type) }}{%raw%}}{%endraw%}
 {{open(fname,'r').read().strip()}}
 ```
-</details>{{macros.code_table_bottom(fname, bottom_middle=bottom_middle,bottom_right=bottom_right, title=title, link_prefix=link_prefix, type=type, github=github, class=class)}}<a id="{{link_prefix}}_bottom"></a><br/>{%- endmacro -%}
+</details>{{macros.code_table_bottom(fname, bottom_middle=bottom_middle, bottom_right=bottom_right, extra_label=extra_label, title=title, link_prefix=link_prefix, type=type, github=github, class=class)}}<a id="{{link_prefix}}_bottom"></a><br/>{%- endmacro -%}
+
+{# embed_demo: a SOLO file preview.  Now unified with embed_mirror; it renders as a
+   ONE-TAB `code_mirror` (identical tab-row + pane chrome, minus the radio toggle; the
+   single pane is always shown).  top=False yields the bare body for use inside a mirror
+   pane.  (The old `code_table_top` bar is retired for embeds; code_table stays for its
+   other callers.) #}
+{% macro embed_demo(fname, github={},
+    bottom_middle='', bottom_right='',
+    type='Makefile', title='',
+    extra_label='', class="", top=True, collapsed=False)-%}{% set link_prefix=macros.normalize_fname(fname) %}<a id="{{link_prefix}}"></a>{%- if top -%}<div class="code_mirror code_mirror_solo {{class}}" id="{{link_prefix}}__mirror"><div class="mirror_tabs" role="tablist"><span class="mirror_tab mirror_tab_active" role="tab">{% if fname.endswith('.cmk') %}cmk-lang{% else %}{{type|default('notype')}}{% endif %}</span><a class="mirror_src" href="{{macros.repo_url(fname, github=github)}}" title="Project Source: {{fname}}" target="_blank" rel="noopener"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" /></svg><span class="mirror_src_name">{{macros.demo_label(fname)}}</span></a></div>
+<div class="mirror_pane" role="tabpanel">
+{{ embed_body(fname, link_prefix, github=github, type=type, title=title, bottom_middle=bottom_middle, bottom_right=bottom_right, extra_label=extra_label, class=class, collapsed=collapsed) | trim }}
+</div>
+</div>
+{%- else -%}
+{{ embed_body(fname, link_prefix, github=github, type=type, title=title, bottom_middle=bottom_middle, bottom_right=bottom_right, extra_label=extra_label, class=class, collapsed=collapsed) | trim }}
+{%- endif -%}
+{%- endmacro -%}
+
+{# embed_mirror: like `embed_demo`, but for a TWIN pair, e.g. a plain `Makefile` and
+   its `cmk-lang` equivalent.  Instead of embedding one and LINKING to the other (the
+   `embed_demo(..., bottom_right=link_mirror(..))` pattern), it embeds BOTH in a single
+   widget with a CSS-only tab toggle; `default` ('left'|'right', or 'cmk'|'mk') picks the
+   pane shown first.  Styling/markup contract lives in `.code_mirror` (compose.mk.css).
+   `left`/`right` are the two file paths (order = tab order). #}
+{% macro embed_mirror(left, right, github={}, default='left', type_left='Makefile', type_right='cmk', class='', see_also='', see_also_text='See also')-%}
+{%- set gid = 'mirror_' + macros.normalize_fname(left) + '__' + macros.normalize_fname(right) -%}
+{%- set label_left = 'cmk-lang' if left.endswith('.cmk') else 'Plain Makefile' -%}
+{%- set label_right = 'cmk-lang' if right.endswith('.cmk') else 'Plain Makefile' -%}
+{%- set right_default = default in ['right', right] or (default == 'cmk' and right.endswith('.cmk')) or (default == 'mk' and right.endswith('.mk')) -%}
+<div class="code_mirror{% if right_default %} mirror_lead_R{% endif %} {{class}}" id="{{gid}}">
+<input type="radio" class="mirror_toggle mirror_toggle_L" name="{{gid}}" id="{{gid}}__L"{% if not right_default %} checked{% endif %}>
+<input type="radio" class="mirror_toggle mirror_toggle_R" name="{{gid}}" id="{{gid}}__R"{% if right_default %} checked{% endif %}>
+<div class="mirror_tabs" role="tablist">
+<label class="mirror_tab mirror_tab_L" for="{{gid}}__L" role="tab">{{label_left}}</label>
+<label class="mirror_tab mirror_tab_R" for="{{gid}}__R" role="tab">{{label_right}}</label>
+<a class="mirror_src mirror_src_L" href="{{macros.repo_url(left, github=github)}}" title="Project Source: {{left}}" target="_blank" rel="noopener"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" /></svg><span class="mirror_src_name">{{macros.demo_label(left)}}</span></a>
+<a class="mirror_src mirror_src_R" href="{{macros.repo_url(right, github=github)}}" title="Project Source: {{right}}" target="_blank" rel="noopener"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" /></svg><span class="mirror_src_name">{{macros.demo_label(right)}}</span></a>
+</div>
+<div class="mirror_pane mirror_pane_L" role="tabpanel">
+{{ embed_demo(left, github=github, type=type_left, top=False) | trim }}
+</div>
+<div class="mirror_pane mirror_pane_R" role="tabpanel">
+{{ embed_demo(right, github=github, type=type_right, top=False) | trim }}
+</div>
+{%- if see_also %}
+<div class="mirror_see_also">See also: <a href="{{see_also}}">{{see_also_text}}</a></div>
+{%- endif %}
+</div>
+{%- endmacro -%}
+
+{# embed_twin: friendlier alias of `embed_mirror` (reads naturally with the "twin demos"
+   terminology used throughout the docs).  Same signature, forwarded verbatim. #}
+{% macro embed_twin(left, right, github={}, default='left', type_left='Makefile', type_right='cmk', class='', see_also='', see_also_text='See also')-%}
+{{ embed_mirror(left, right, github=github, default=default, type_left=type_left, type_right=type_right, class=class, see_also=see_also, see_also_text=see_also_text) }}
+{%- endmacro -%}
+
+{# inline_mirror: the `embed_mirror` tabbed-twin chrome around INLINE code snippets rather
+   than files: for a short Makefile / cmk-lang example that has no demo file of its own.
+   Panes are real superfences blocks (extracted + Prism-highlighted even inside this raw-
+   HTML div, exactly as the file-based embeds are), so it stays a genuine mirror, not a
+   plain fence pair.  There is no source-link (no file); the rest of the `.code_mirror`
+   markup contract (compose.mk.css) is identical.  `gid` must be unique on the page;
+   `default` ('left'|'right'|'mk'|'cmk') picks the pane shown first. #}
+{% macro inline_mirror(gid, left_code, right_code, label_left='Plain Makefile', label_right='cmk-lang', type_left='Makefile', lang_left='Makefile', type_right='cmk', lang_right='cmk', default='left', class='')-%}
+{%- set right_default = default in ['right', 'cmk'] -%}
+<div class="code_mirror{% if right_default %} mirror_lead_R{% endif %} {{class}}" id="{{gid}}">
+<input type="radio" class="mirror_toggle mirror_toggle_L" name="{{gid}}" id="{{gid}}__L"{% if not right_default %} checked{% endif %}>
+<input type="radio" class="mirror_toggle mirror_toggle_R" name="{{gid}}" id="{{gid}}__R"{% if right_default %} checked{% endif %}>
+<div class="mirror_tabs" role="tablist">
+<label class="mirror_tab mirror_tab_L" for="{{gid}}__L" role="tab">{{label_left}}</label>
+<label class="mirror_tab mirror_tab_R" for="{{gid}}__R" role="tab">{{label_right}}</label>
+</div>
+<div class="mirror_pane mirror_pane_L" role="tabpanel">
+```{{type_left}} { .language-{{lang_left}} }
+{{left_code|trim}}
+```
+</div>
+<div class="mirror_pane mirror_pane_R" role="tabpanel">
+```{{type_right}} { .language-{{lang_right}} }
+{{right_code|trim}}
+```
+</div>
+</div>
+{%- endmacro -%}
+
+{# contract_card: a reusable "contract" panel -- a titled card that lays out the SHAPE of an
+   interface as simple `<b>label</b>: gloss` paragraphs (one per rule).  Reach for it wherever
+   a doc would otherwise hand-roll a "here are the naming / arity rules" bullet list.  `rows` =
+   list of `[label, desc]` pairs: `label` is emitted as an auto-escaped bold monospace token
+   (so `<name>` placeholders survive as literal text), `desc` is inline HTML -- this renders as
+   a raw-HTML block, so python-markdown does NOT process markdown inside it; write
+   `<code>`/`<b>`/`<i>`, not backticks / `**` / `_`.  `subject` = the MAIN LABEL: the API / entity this is the
+   contract *for* (e.g. `cli.subcommands.enter`), rendered in the header so the reader always
+   knows what the rules govern; the muted kind-tag `title` (default `contract`) prints BEFORE
+   it.  Pass `link` to make the subject a hyperlink (e.g. into `/api/#..`); without it the
+   subject is an inert monospace chip.  The card gets a stable `id` (default
+   `contract_<subject>`, dots / slashes -> `_`) so it can be deep-linked; override via `id`.
+   Optional `note` = an HTML footer caption for behaviour that doesn't fit a single row (e.g.
+   dispatch semantics).  Kept blank-line-free so python-markdown passes the whole div through
+   as one raw-HTML block.  Styling: `.contract_card` (compose.mk.css), sharing the
+   `.related_api` card chrome. #}
+{% macro contract_card(rows, subject='', link='', title='contract', note='', id='')-%}
+{%- set cid = id if id else ('contract_' + subject.replace('.','_').replace('/','_').replace(' ','_') if subject else '') -%}
+<div class="contract_card"{% if cid %} id="{{cid}}"{% endif %}><div class="contract_card_header"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" /><path d="M9 12l.01 0" /><path d="M13 12l2 0" /><path d="M9 16l.01 0" /><path d="M13 16l2 0" /></svg>{% if subject %}<span class="contract_card_kind">{{title}}</span>{% if link %}<a class="contract_card_subject" href="{{link}}">{{subject}}</a>{% else %}<code class="contract_card_subject">{{subject}}</code>{% endif %}{% else %}<span class="contract_card_kind_solo">{{title}}</span>{% endif %}</div>{% for label, desc in rows %}<p class="contract_row"><b class="contract_row_label">{{ label|e }}</b>: {{ desc }}</p>{% endfor %}{% if note %}<div class="contract_card_note">{{ note }}</div>{% endif %}</div>
+{%- endmacro -%}
 
 
 # API links
@@ -20,17 +127,22 @@
 
 {% macro api_link(target, mkdocs, arg='',style="") -%}{%set link=target.replace('-','').replace('.','').replace('/','').replace('&lt;','').replace('&gt;','').replace('<','').replace('>','')%}{%if arg%}{%set name=target.replace('/&lt;arg','').replace('&gt;','').replace('/<arg','').replace('>','') + '/&lt;'+arg+'&gt;'%}{%set link=link+'arg' if not link.endswith('arg') else link %}{%else%}{%set name=target%}{%endif%} <a style="{{style}}" href="{{mkdocs.site_relative_url}}/api/#{{link}}" >{{name}}</a>{%- endmacro -%}
 
+{# Related-API widget: a self-contained card linking into the main /api docs.  Instead of
+   a one-row-per-target table (sparse + unwieldy), it reflects the matching targets from
+   compose.mk and renders them as a single WRAPPED, comma-separated list of links, under an
+   `<icon> Related API` header plus a caption naming the filter that generated it.  Styling
+   lives in `.related_api` (compose.mk.css); the markup is kept blank-line-free so
+   python-markdown passes the whole div through as one raw-HTML block. #}
 {% macro api_link_many(target_fam, mkdocs, arg='', exclude='None') -%}
-<div class="docutils api_table">
-<table class="docutils api_docs"><tr><th align=left><strong> <svg  xmlns="http://www.w3.org/2000/svg"  width="20"  height="20"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-map-2"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 18.5l-3 -1.5l-6 3v-13l6 -3l6 3l6 -3v7.5" /><path d="M9 4v13" /><path d="M15 7v5.5" /><path d="M21.121 20.121a3 3 0 1 0 -4.242 0c.418 .419 1.125 1.045 2.121 1.879c1.051 -.89 1.759 -1.516 2.121 -1.879z" /><path d="M19 18v.01" /></svg> Related API</strong></th></tr>
-{%for target_f in target_fam %}
-{% set targets=bash('mk.parse targets compose.mk --names-only --prefix '+target_f) %}
-{%if not targets%}<tr><td><small>No targets found for target-family: `{{target_f}}`</small></td></tr>
-{%else%}
-
-{% set targets=targets.split('\n') %}
-{%for target in targets %} {% set target=target.strip().replace('%','&lt;arg&gt;') %}{%if target and not target.startswith(exclude)%}
-<tr><td>{{api_link(target, mkdocs, arg=arg, style="color=black")}}</td></tr>{%endif%}{%endfor%}{%endif%}{%endfor%}</table></div>
+{%- set ns = namespace(links=[]) -%}
+{%- for target_f in target_fam -%}
+{%- set targets = bash('mk.parse targets compose.mk --names-only --prefix '+target_f) -%}
+{%- if targets -%}{%- for target in targets.split('\n') -%}
+{%- set target = target.strip().replace('%','&lt;arg&gt;') -%}
+{%- if target and not target.startswith(exclude) -%}{%- set _ = ns.links.append(api_link(target, mkdocs, arg=arg)|trim) -%}{%- endif -%}
+{%- endfor -%}{%- endif -%}
+{%- endfor -%}
+<div class="related_api"><div class="related_api_header"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-map-2"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 18.5l-3 -1.5l-6 3v-13l6 -3l6 3l6 -3v7.5" /><path d="M9 4v13" /><path d="M15 7v5.5" /><path d="M21.121 20.121a3 3 0 1 0 -4.242 0c.418 .419 1.125 1.045 2.121 1.879c1.051 -.89 1.759 -1.516 2.121 -1.879z" /><path d="M19 18v.01" /></svg><span>Related API</span></div><div class="related_api_filter">reflected from <code>compose.mk</code> by prefix {% for tf in target_fam %}<code>{{tf}}</code>{{ ", " if not loop.last else "" }}{% endfor %}{% if exclude and exclude != 'None' %} <span class="related_api_excl">(excluding <code>{{exclude}}</code>)</span>{% endif %}</div>{% if ns.links %}<div class="related_api_links">{{ ns.links|join(', ') }}</div>{% else %}<div class="related_api_empty">No targets matched.</div>{% endif %}</div>
 {%- endmacro -%}
 
 # CMK-Specific
@@ -38,22 +150,67 @@
 {% macro link_mirror(fname='',link='',base='')-%}{%set default_link=base+"#"+macros.normalize_fname(fname)%}Alternate Syntax: <a href="{{link or default_link}}">{%if fname.endswith('cmk')%}CMK-Lang{%else%}Plain Makefile{%endif%} Equivalent </a><small>✔️</small>{%- endmacro -%}
 
 
-{% macro block_docs(pattern, mkdocs, arg='') -%}
-{% for line in bash('pattern='+pattern+' ./compose.mk mk.parse.block/compose.mk').split('\n')%}
-{%if line.lstrip().startswith('##')%}<h4>{{line.lstrip().replace('##','')}}</h4><hr style="width:95%;border-bottom:1px dashed black;">
-{%endif%}{%endfor%}
+{# Renders the `## BEGIN: <pattern>` doc-block from compose.mk as markdown.
+   The cblock body (prose + any markdown table) is emitted verbatim; the caller
+   supplies the surrounding heading.  See e.g. the `DeclarationIndex` block.
+   NB: extracted with awk, NOT the dockerized `lang.parse.doc_block`; the docs render
+   runs inside a container with no nested docker, where mkparse returns "failed". #}
+{% macro block_docs(pattern, mkdocs=None, arg='', caption=True) -%}
+{%- set cmd = 'awk \'/^## BEGIN: ' + pattern + '/{f=1;next} f{if($0~/^## END:/ || ($0!~/^## / && $0!="##"))exit;sub(/^## ?/,"");print}\' compose.mk' -%}
+{{ bash(cmd) }}
+{% if caption %}<center><small><i>Generated from the `{{pattern}}` doc-block in `compose.mk`</i></small></center>{% endif %}
 {%- endmacro -%}
 
-{% macro inlined_help(target, mkdocs, arg='') -%}{{api_link(target,mkdocs,arg=arg)}}
-{{bash('./compose.mk .mk.help.target/'+target)}}
+{# ── Signature rendering ──────────────────────────────────────────────────
+   `signature(spec)` styles one arglist/optlist synopsis (the "brings into
+   scope" mini-notation used by the Declaration Family, e.g.
+   `def=<name>|file=<path> [namespace=] [strict=0 -> log+continue]`).
+
+   The grammar it recognises, and the class each token maps to:
+     name=      required key ...................... .sig-key + .sig-op (the `=`)
+     <name>     placeholder / metavariable ........ .sig-ph   (`..` marks variadic)
+     [ ... ]    optional group (brackets dropped, .. .sig-opt  (CSS re-adds `[ ]`)
+                re-added by CSS so nesting styles)
+     |          alternation ...................... .sig-op.sig-alt
+     ->         effect annotation ................ .sig-op.sig-arrow
+     ( ... )    parenthetical note ............... .sig-note
+
+   Implementation: a small ordered chain of `re.sub`, built once via the
+   `eval` jinja-global (the same escape-hatch `bash`/`block_docs` lean on).
+   Keys are matched FIRST, before any `class="..."` is injected, so the key
+   regex never re-matches an attribute inside a span we just emitted. HTML is
+   escaped up front; the injected `<span>`s are the only live tags.  Styling
+   lives in `.sig*` (docs/theme/css/compose.mk.css). #}
+{%- set _sig = eval(
+  "(lambda re, html: (lambda s: '<code class=\"sig\">' + "
+  "re.sub(r'\\[([^\\[\\]]*)\\]', lambda m:'<span class=\"sig-opt\">'+m.group(1)+'</span>', "
+  "re.sub(r'\\(([^)]*)\\)', lambda m:'<span class=\"sig-note\">('+m.group(1)+')</span>', "
+  "re.sub(r'-&gt;', lambda m:'<span class=\"sig-op sig-arrow\">-&gt;</span>', "
+  "re.sub(r'&lt;([^&]*?)&gt;', lambda m:'<span class=\"sig-ph\">&lt;'+m.group(1)+'&gt;</span>', "
+  "re.sub(r'([A-Za-z_][\\w.]*)=', lambda m:'<span class=\"sig-key\">'+m.group(1)+'</span><span class=\"sig-op\">=</span>', "
+  "html.escape(s, False))))).replace('|','<span class=\"sig-op sig-alt\">|</span>')) + '</code>'"
+  "))(__import__('re'), __import__('html'))"
+) -%}
+{% macro signature(spec) -%}{{ _sig(spec) }}{%- endmacro -%}
+
+{# `signature_legend()`: a one-line key for the tokens above, rendered from
+   the same component so the legend can never drift from the real styling. #}
+{% macro signature_legend() -%}
+<div class="sig-legend">
+  {{ signature('name=') }} required
+  {{ signature('<value>') }} placeholder
+  {{ signature('[opt=]') }} optional
+  {{ signature('a|b') }} either
+  {{ signature('->') }} effect
+</div>
 {%- endmacro -%}
 
 {% macro parse_module_help(fname, namespace,github={}) -%}
-{% set lines=bash('pynchon makefile parse --module-docs ' + fname + '| jq \'.'+namespace+'\'', load_json=True) %}{% if not lines %}{%set lines=[]%}{%endif%}
+{% set lines=bash('mk.parse cblocks --pattern ' + namespace + ' ' + fname + '| jq \'[.[][]]\'', load_json=True) %}{% if not lines %}{%set lines=[]%}{%endif%}
 {#% if lines|length > 2%}{% set lines=lines[1:-1] %}{% endif %#}
-{% for line in lines %}
+{% for line in lines %}{% if '░' not in line or line.replace('░','').strip() %}
 {{line}}
-{% endfor %}
+{% endif %}{% endfor %}
 
 {%- endmacro -%}
 
@@ -61,7 +218,7 @@
 {% set include_private='--private' if include_private else '' %}
 {% set cmd='mk.parse targets ' + include_private + ' ' + fname + " --target " + target %}
 {% set tdata=tdata or bash(cmd, load_json=True) %}
-{%set arity_info=("[Parametric]" if target.endswith('%') else '[Nullary]')%}
+{%set arity_info=('<span class="api_arity api_arity_param" title="Parametric target: takes an argument via the /&lt;arg&gt; stem">Parametric</span>' if target.endswith('%') else '<span class="api_arity api_arity_nullary" title="Nullary target: takes no arguments; run it directly">Nullary</span>')%}
 {%set tname_n=target.replace('%','<arg>').replace('<','').replace('>','')%} {%set line_no=tdata['lineno']|default(-1)|string %}{%set err=false if 'docs' in tdata else true %}{%set docs=tdata.docs|default(["error=pulling docs for "+target,"targets="+str(tdata), "target="+target, "tname_n="+tname_n]) %}
 {% set src_ref=(macros.repo_link(
     fname+"#L"+line_no,
@@ -70,27 +227,25 @@
     )|default("???")) if line_no!="-1" 
     else "<font color=red>not found</font>" %}
 ##### `{{tname_n}}`
-<br/>
-{{macros.code_table('',  
-    style="margin-top:-2em;",
-    code_table_1='<a style="text-decoration:none;padding:5px;" href="#'+tname_n.replace('/','').replace('.','').replace('_','') + '"><font style="margin-top:5px;font-size:120%;">❡</font><code style="background-color:unset; font-size:large">'+tname_n+'</code></a>', 
-    code_table_2=arity_info,
-    code_table_3=src_ref,
-    github=github, class="api_docs", title='')}}
 
-{%if tdata['alias']|default(false)%}{%set primary=(tdata.primary|default('?')).replace('%','<arg>') %} {% set primary_slug=primary.replace('<','').replace('>','').replace('/','').replace('-', '').replace('.','') %}<div style="font-size:larger;margin-top:1em;margin-left:1.5em;">Alias for <a href="#{{primary_slug}}"><code>{{primary}}</code></a></div>{% else %}
-```bash {.api_docs .nohighlight}
+<div class="api_card">
+{{macros.code_table('', style="", code_table_1='<label class="api-collapse" title="Collapse / expand"><input type="checkbox" class="api-collapse-cb"><span class="api-collapse-glyph"></span></label>', code_table_2=arity_info, code_table_3=src_ref, mirror_tab='<a class="api_sig_permalink" href="#'+tname_n.replace('/','').replace('.','').replace('_','')+'" title="Permalink">❡</a><a class="api_sig_name" href="#'+tname_n.replace('/','').replace('.','').replace('_','')+'"><code>'+tname_n+'</code></a>', github=github, class="api_docs", title='') -}}
+{% if tdata['alias']|default(false) %}{%set primary=(tdata.primary|default('?')).replace('%','<arg>') %}{% set primary_slug=primary.replace('<','').replace('>','').replace('/','').replace('-', '').replace('.','') %}
+<div class="api_alias">Alias for <a href="#{{primary_slug}}"><code>{{primary}}</code></a></div>
+{%- else %}
+```markdown {.api_docs}
 {{ "\n".join(docs)}}
 ```
-{%endif%}
+{%- endif %}
+</div>
 {%- endmacro -%}
 
 {% macro parse_help(fname, namespace, github={}, include_private=False) -%}
-{% set include_private = '--include-private' if include_private else '' %}
+{% set include_private = '' if include_private else '--public' %}
 {% set help_extra = help_extra|default('')%}
 {% set help_extra = ' '+help_extra if help_extra else ''%}
 *This documentation is pulled automatically from [source]({{github.repo_url}}/tree/main/{{fname}}).{{help_extra}}*
-{% set targets=bash('pynchon makefile parse ' + include_private + ' ' + fname + '| jq \'with_entries(select(.key | startswith("'+namespace+'")))\'', load_json=True) %}
+{% set targets=bash('mk.parse targets ' + include_private + ' ' + fname + '| jq \'with_entries(select(.key | startswith("'+namespace+'")))\'', load_json=True) %}
 {% for tname in targets %} {%set tdata=targets[tname]%}{%set tname_n=tname.replace('%','<arg>').replace('<','').replace('>','')%}
 
 {{parse_target_help(fname, tname, tdata=tdata, github=github, include_private=include_private)}}
@@ -102,6 +257,6 @@
 {%- endmacro -%}
 
 {% macro link_mirror(fname='',link='',base='')-%}{%set default_link=base+"#"+macros.normalize_fname(fname)%}Alternate Syntax: <a href="{{link or default_link}}">{%if fname.endswith('cmk')%}CMK-Lang{%else%}Plain Makefile{%endif%} Equivalent </a><small>✔️</small>{%- endmacro -%}
-{% macro code_table_bottom(fname, 
-    bottom='', bottom_middle='', bottom_right='', 
-    github={}, style="", link_prefix='', class="", type='', title='', code_table_2='',top='')-%}<div style="{{style}}" role=navigation class="code_table_bottom {{class}}"><span class=code_table_1>⠀<a href=#{{link_prefix}}_top>Back to top</a></span><span class=code_table_2>{%if bottom_middle%}{{bottom_middle}}{%endif%}</span><span class=code_table_3>{%if bottom_right%}{{bottom_right}}{%endif%}⠀</span></div>{%- endmacro -%}
+{#- code_table / code_table_bottom live in macros/base.j2 (imported as `macros`).  This
+    file's duplicate `code_table_bottom` was DEAD (embed_demo calls `macros.code_table_bottom`),
+    so it was removed to keep a single source of truth for the embed chrome. -#}

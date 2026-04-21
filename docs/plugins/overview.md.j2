@@ -1,0 +1,164 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+{{ macros.section(3, "Plugin System", id="plugin-system") }}
+
+{# A flexible core and support for modules/plugins is the right design for most things; [forever-development is considered harmful]({{_}}/but-why#forever-development-considered-harmful), the plugin-system for `compose.mk` leans on a simple, well-worn principle: .  In fact the plugin-system *is* just a sophisticated approach to module-management, so much of it should feel familiar. #}
+
+{# In the simple case nothing is very different from a vanilla Makefile `include`; it's only a way to divide behaviour into pieces.  The more interesting case leans on **just-in-time compilation**, so that components *written in [cmk-lang]({{_}}/cmk/compiler)* can be `import`ed straight into classic Makefiles.  Because JIT compilation erases most of the seams, the line between *modules vs plugins*, or *user-defined vs "official"*, is mostly terminology.  The distinction that actually earns its keep is about what a thing does to the **namespace**: 
+
+Since forever development is considered harmful, and because it is a core
+#}
+
+Plugins and modules for `compose.mk` use the same flexible extension system, which is ultimately powered by CMK-lang's namespaces, import helpers, and low-level [compiler facilities]({{_}}/cmk/compiler).
+
+One surprising thing about this system is that **plain Makefiles can leverage extensions written in CMK**.  
+
+**[Modules are first-class]({{_}}/cmk/modules)**, something that be created and manipulated dynamically, as well as loaded from the files in the separate module / plugin search paths.  
+
+**The extension system isn't joking around,** because out of the box `compose.mk` already supports hooking everything from targets to [bootloaders]({{_}}/runtime).  Modules and plugins can also read/set [compiler pragma]({{_}}/cmk/pragmas), and otherwise extend the language/runtime in various ways pretty directly.  To get a sense of this: check out how the VM and debugger for [cmk-lang]({{_}}/cmk/compiler) itself is... a optional module that's also written in CMK.
+
+Regarding the difference between modules / plugins, it is mostly a matter of connotation (not capability).  But roughly speaking:
+
+> **Plugins inject content into existing namespaces.**  See for example the [repl plugin]({{_}}/zero-config-tuis), which depends on other plugins but ultimately extends the [TUI capabilities]({{_}}/embedded-tui) and the [`tux.*` namespace]({{_}}/api/#api-tux).
+> {: .cmk-card }
+
+A plugin, in other words, blends into vocabulary that already exists; it makes some existing surface do more.  
+
+A **module** arrives with a new vocabulary and owns it outright.
+
+> **Modules create new namespaces.**  See for example the [CMK VM module]({{_}}/modules/virtual-machine) or the [Faults module]({{_}}/plugins/faults), which owns the `fault` typed-exception vocabulary.  The [Modules]({{_}}/cmk/modules) page covers the underlying namespacing / non-destructive-import / JIT-compile mechanism the loader is built on.
+> {: .cmk-card }
+
+**Official Extensions** are tracked in a submodule of the main project and tested as part of the main project's test suite, and documented here.  If you want the full set you can [vendor the submodule](https://github.com/robot-wranglers/.cmk) too, or [fork and forget](https://github.com/robot-wranglers/.cmk).
+
+**User-Defined Extensions** are whatever else `compose.mk` discovers on the [plugins search path](#where-plugins-are-found).
+
+{{ macros.section(3, "Plugin API & Usage", id="plugin-api-usage") }}
+
+The {{site.api_link('include.plugins', mkdocs)}} macro loads one or more plugins.  A plain Makefile calls it directly; a cmk-lang program usually reaches for the `import` keyword instead (same loader underneath; drop the extension, comma-separate for many):
+
+{% set load_mk %}
+$(call include.plugins, virtual-machine.cmk)
+$(call include.plugins, code.golang.cmk tux.repl.cmk)
+{% endset %}
+{% set load_cmk %}
+import virtual-machine
+import code.golang, tux.repl
+{% endset %}
+{{site.inline_mirror('mirror_plugin_load', load_mk, load_cmk, default='left')}}
+
+{{ macros.section(4, "How plugins bind", id="how-plugins-bind") }}
+
+The file **extension** decides how a plugin binds:
+
+| Extension | Binds by | Notes |
+| --- | --- | --- |
+| `*.mk` | verbatim `include` (fast, copy-free) | pure-make plugins stay simple |
+| `*.cmk` (and `.cmk.mk`/`.CMK`) | JIT-compiled (lowered) then included | a cmk-lang plugin, transpiled at include time |
+
+`strict=1` (the default) errors on a missing plugin; `strict=0` logs and continues, which is handy
+for conditional features:
+
+```Makefile {.snippet}
+$(call include.plugins, optional.cmk strict=0)
+```
+
+A plugin can also be **directly runnable**: give it a [`__main__:`]({{_}}/config#dunder-names-__name__) rule and `./plugin.mk` runs it, while importing the same file demotes that `__main__` to a plain `<name>:` target (no collision).  See [Executable Modules]({{_}}/cmk/modules#executable-modules).
+
+{{ macros.section(4, "Where plugins are found", id="where-plugins-are-found") }}
+
+Plugins resolve from [`CMK_PLUGINS_DIR`]({{_}}/config#general-environment-variables),
+a **`:`-separated search path** (like `$PATH`) whose default
+is the project-local `.cmk` directory.  Each element is tried in order and the first match wins, so a
+project-local `.cmk` can override or extend a globally-installed set of plugins.  The **first** element
+is also the single writable staging dir ([`CMK_MODULES_DIR`]({{_}}/config#general-environment-variables)) and stays working-directory-relative, so
+plugins remain visible under [container dispatch]({{_}}/container-dispatch)
+(which bind-mounts the working directory).  An absolute path may be passed explicitly:
+
+```Makefile {.snippet}
+$(call include.plugins, prefix=path/to/plugins plain.mk hello.cmk)
+```
+
+The demo below loads a `.mk` and a `.cmk` plugin from one `prefix=` in a single call: the `.mk` is
+`include`d verbatim, the `.cmk` is lowered first.  It is shown as **twins**: the same program as a
+cmk-lang driver and as a plain-`make` mirror (toggle the tabs).
+
+{{site.embed_mirror('demos/cmk/plugin-system.cmk', 'demos/plugin-system.mk', github=github, default='left')}}
+
+{{ macros.section(4, "Protocol", id="plugins-protocol") }}
+
+{{ macros.protocol('__plugins__',
+    capability='The registry of loaded plugins, with a twin `__modules__` for imported modules.',
+    requires='`.has` / `.require` / `.assert`', tier='Structural (a `Registry` carrier)',
+    surface='`.has` (loaded?), `.require` (import once, idempotent and child-safe), `.assert` (a dependency guard).',
+    notes='Exported, so a re-parsing child process inherits what the parent already loaded.',
+    mkdocs=mkdocs) }}
+
+What has loaded is tracked in a registry, `__plugins__` (with a twin `__modules__` for imported
+modules).  Each exposes the same small **protocol**: a uniform `.has` / `.require` / `.assert`
+interface; and both registries are **exported**, so a re-parsing child process inherits "what the
+parent already loaded".  That is what makes `require` idempotent and child-safe: it imports a plugin
+once and is a no-op when the registry already lists it.
+
+```Makefile {.snippet}
+$(call __plugins__.has, virtual-machine.cmk)       # non-empty iff already loaded
+$(call __plugins__.require, virtual-machine.cmk)    # import once; a no-op if already loaded
+$(call __plugins__.assert, virtual-machine.cmk)     # error unless it is loaded (a dependency guard)
+```
+
+{{ macros.section(4, "Program self-models", id="program-self-models") }}
+
+The registries above are the first members of a small **triad** of reflective singletons that describe
+the running program to itself: `__plugins__` / `__modules__` (what it *imported*) and
+[`__pragma__`]({{_}}/cmk/pragmas#pragma-protocol) (the resolved pragma *manifest*).
+Each is both a **var** you can embed and a same-name **target** you can query (the var/target duality make
+gives for free), alongside the [`__vm__`]({{_}}/modules/virtual-machine)
+machine snapshot:
+
+```bash {.cli_example}
+$ ./compose.mk __plugins__.paths   # the RESOLVED path (prefix+file) of every imported plugin
+$ ./compose.mk __pragma__          # the resolved pragma manifest, one compact JSON object
+```
+
+The `__plugins__.paths` registry is the parallel of `__plugins__`: where the registry holds the import *tokens*,
+`.paths` holds each token's fully-resolved `prefix/file`.  It is also what the two-pass pragma discovery
+reads back after a program's real imports run (see
+[`plugin_pragma_allowed`]({{_}}/cmk/pragmas#pragma-plugin_pragma_allowed)).
+
+{{ macros.section(3, "Plugin Index", id="plugin-index") }}
+
+The plugins that ship under `.cmk/` are indexed below, generated directly from each plugin's
+header.  Recall from [How plugins bind](#how-plugins-bind) that a `.cmk` plugin is JIT-compiled
+at include-time while a `.mk` plugin is `include`d verbatim.  Each is also described in the
+[`.cmk` repo's README](https://github.com/robot-wranglers/.cmk/blob/main/README.md).
+
+{% set _pages = {'virtual-machine.cmk': 'modules/virtual-machine', 'code.golang.cmk': 'plugins/golang', 'tux.repl.cmk': 'zero-config-tuis', 'fault.cmk': 'plugins/faults', 'gitops.cmk': 'plugins/gitops', 'io.fs.drop_in.cmk': 'plugins/io.fs.drop_in'} %}
+{% set _idx = bash('for p in $(ls .cmk/*.mk .cmk/*.cmk 2>/dev/null | sort); do f=${p##*/}; [ "$f" = compose.mk ] && continue; kind=$(grep -m1 cmk_pragma "$p" | grep -oE \'plugin|module\' | head -1); [ -z "$kind" ] && case "$f" in *.mk) kind=plugin;; *) kind=module;; esac; desc=$(awk -v f="$f" \'BEGIN{re="^#+ *" f ":"} function emit(s){sub(/^ +/,"",s);sub(/ +$/,"",s);p=index(s,". ");if(p>0)s=substr(s,1,p);print s;done=1;exit} !s && $0~re{s=1;sub(re" *","");acc=$0;if(acc~/[.]( |$)/)emit(acc);next} s{if($0!~/^#/)emit(acc);l=$0;sub(/^#+ */,"",l);if(l~/cmk_pragma/)emit(acc);if(l~/^[░#]*$/)next;acc=(acc==""?l:acc" " l);if(acc~/[.]( |$)/)emit(acc)} END{if(!done&&s)emit(acc)}\' "$p"); echo "$f|$kind|$desc"; done') %}
+
+{{ macros.section(4, "Modules", id="index-modules") }}
+
+Modules arrive with a *new* namespace and own it outright.
+
+| Module | Binds | Description |
+| --- | --- | --- |
+{% for row in _idx.strip().split('\n') %}{% set _p = row.split('|') %}{% set _name = _p[0] %}{% set _kind = _p[1] if _p|length > 1 else 'plugin' %}{% if _kind == 'module' %}{% set _desc = (_p[2] if _p|length > 2 else '')|trim %}{% set _bind = 'JIT (`.cmk`)' if _name.endswith('.cmk') else 'include (`.mk`)' %}| {% if _name in _pages %}[`{{_name}}`]({{_}}/{{_pages[_name]}}){% else %}`{{_name}}`{% endif %} | {{_bind}} | {{_desc}} |
+{% endif %}{% endfor %}
+
+{{ macros.section(4, "Plugins", id="index-plugins") }}
+
+Plugins inject content into namespaces that already exist.
+
+| Plugin | Binds | Description |
+| --- | --- | --- |
+{% for row in _idx.strip().split('\n') %}{% set _p = row.split('|') %}{% set _name = _p[0] %}{% set _kind = _p[1] if _p|length > 1 else 'plugin' %}{% if _kind == 'plugin' %}{% set _desc = (_p[2] if _p|length > 2 else '')|trim %}{% set _bind = 'JIT (`.cmk`)' if _name.endswith('.cmk') else 'include (`.mk`)' %}| {% if _name in _pages %}[`{{_name}}`]({{_}}/{{_pages[_name]}}){% else %}`{{_name}}`{% endif %} | {{_bind}} | {{_desc}} |
+{% endif %}{% endfor %}
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Modules]({{_}}/cmk/modules): the namespacing / non-destructive-import / JIT-compile mechanism the loader is built on.
+* [Faults]({{_}}/plugins/faults): a module that owns the `fault` typed-exception vocabulary.
+* [CMK VM]({{_}}/modules/virtual-machine): a module that creates a new namespace.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^1]: The official plugins live in their own repository at <https://github.com/robot-wranglers/.cmk>, vendored here as the `.cmk` git submodule.

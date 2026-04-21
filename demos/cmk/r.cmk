@@ -1,0 +1,35 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# r.cmk: 
+#   Make a plot with R in a container, then preview it.
+#
+# USAGE: ./demos/cmk/r.cmk
+
+
+
+from cmk import Dockerfile
+export output_file := ${CMK_SCRATCH}.png
+
+Dockerfile RBase(entrypoint=Rscript)(|
+    FROM r-base:4.3.1
+    RUN R -e "install.packages('ggplot2', repos='https://cran.rstudio.com/')"
+|)
+
+__main__: RBase.build plot io.preview.img/${output_file}
+
+plot:
+  '''
+  render a sine wave to the output_file, inside the RBase machine.
+  The env channel rides the output path into the container.
+  '''
+  (|
+    library(ggplot2)
+    x <- seq(0, 2 * pi, length.out = 1000)
+    df <- data.frame(x = x, y = sin(x))
+    outfile <- Sys.getenv("output_file")
+    png(filename = outfile, width = 400, height = 200)
+    ggplot(df, aes(x = x, y = y)) +
+      geom_line(linewidth = 1, color = "blue") +
+      ggtitle("Sine Wave") +
+      xlab("x") + ylab("sin(x)") +
+      theme_minimal()
+  |) in RBase {env=output_file}

@@ -1,0 +1,34 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# guests.cmk:
+#   "Special guest" polyglots in awk/bash.
+#   Each test.* target runs an embedded awk/bash script through io.awk / io.bash,
+#   which support piped input by default (io.bash also proxies arguments).
+#
+# USAGE: ./demos/cmk/guests.cmk
+
+import io, log
+
+# Runs all of the test.* targets
+__main__: flux.timer/flux.star/test.
+
+echo.awk(|
+  {print $0}
+|)
+test.io.awk:
+  log.test(Run the embedded awk script on stdin)
+  echo foo bar | io.awk(echo.awk)
+
+echo.sh(|
+  cat /dev/stdin
+|)
+test.io.bash.stdin:
+  log.test(Run the embedded bash script on stdin)
+  echo foo bar | io.bash(echo.sh)
+
+tmp.sh(|
+  echo hello ${1} ${2}
+|)
+test.io.bash.args:
+  log.test(Run the embedded bash with arguments)
+  io.bash(tmp.sh, foo, bar)

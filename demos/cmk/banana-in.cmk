@@ -1,0 +1,38 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-in.cmk: polyglot via the ambient in, using banana forms.
+
+'''
+A recipe banana (| body |) in X runs the body inside ambient X.  When X
+is an interpreter (python, sh, ..) the body is a program in that
+language; when X is an image name the body runs in a container.  No
+embed glyph, no import: just in.  Contrast code-objects.cmk, the
+NAME(| .. |) embed surface.
+
+USAGE:
+  ./demos/cmk/banana-in.cmk
+    runs __main__, docker-free
+  ./demos/cmk/banana-in.cmk boxed
+    container variant, needs docker
+'''
+
+# A container ambient names an image + runner once.  Created from the
+# factory (like dsl/machine), it carries its own img/entrypoint, so in
+# box needs no call-site config.
+from cmk import container
+container box(img=python:3.12-slim entrypoint=python3)(| |)
+
+__main__: hello compute
+
+hello:
+  # Host interpreters are core singletons; name them in full: host.native.python.
+  (| print("hello from a python ambient") |) in host.native.python
+
+compute:
+  # Multi-statement bodies stay on one recipe line via ; (a multi-line
+  # body would collide the recipe tab with the body's own indent).
+  (| import math; print("factorial(10) =", math.factorial(10)) |) in host.native.python
+
+boxed:
+  # The box ambient carries image and entrypoint, no override needed here.
+  (| print("6 * 7 =", 6 * 7) |) in box

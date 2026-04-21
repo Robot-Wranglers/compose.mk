@@ -1,0 +1,25 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# dashboarding.cmk: a very basic demo for getting started with custom TUIs.
+#
+# USAGE: ./demos/cmk/dashboarding.cmk demo.ui
+
+'''
+A minimal two-pane TUI built over ordinary targets:
+the top pane loops the test target forever, and the bottom pane runs clean then build in
+sequence, then waits for user input.
+'''
+
+# Fake clean/build/test targets, as in a classic project.
+clean:; echo cleaning
+build:; echo building
+test:; echo testing
+
+# A two-pane TUI over the targets above.
+top: flux.loopf/test
+bottom: flux.and/clean,build
+
+demo.ui: tux.open.horizontal/top,bottom
+    '''Open the two-pane TUI: top loops `test`, bottom runs clean then build.'''
+
+__main__: clean build test

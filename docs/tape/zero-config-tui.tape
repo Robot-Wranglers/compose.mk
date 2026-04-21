@@ -9,7 +9,7 @@ Set Height 768
 Show 
 Type "layout=horizontal ./compose.mk \"
 Enter 
-Type "  mk.include/demos/no-include.mk \"
+Type "  include/demos/no-include.mk \"
 Enter
 Type "  tux.open/flux.loopf/test,flux.wrap/clean:build"
 Enter

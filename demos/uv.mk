@@ -1,21 +1,13 @@
 #!/usr/bin/env -S make -f
-# Demonstrate polyglots with compose.mk.  Python code running in a container, 
-# with dependencies and no venv, using uv. No caching! Note that this implicitly 
-# pulls not only dependencies but the python version itself is lazy and built 
-# just in time.
-#
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.
-# USAGE: ./demos/uv.mk
+# uv.mk: uv-run a PEP-723 python script in a container (no venv).
 
 include compose.mk
 
-# Pick an image and a interpreter for the language kernel
-# https://docs.astral.sh/uv/guides/integration/docker/
+# uv runtime image (the script carries its own deps + python version)
 uv.img=ghcr.io/astral-sh/uv:debian
-uv.interpreter=uv
 
-# Now define the script and dependencies
-define uv.hello_world 
+# the PEP-723 inline-script: its own uv shebang + dependency block
+define hello_world
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.12"
@@ -24,16 +16,10 @@ define uv.hello_world
 # ]
 # ///
 import requests
-r = requests.get(
-  'https://httpbin.org/basic-auth/user/pass', 
-  auth=('user', 'pass'))
+r = requests.get('https://httpbin.org/basic-auth/user/pass', auth=('user', 'pass'))
 print(r.status_code)
 endef
 
-# Run the code in the container, using low-level helpers.
 __main__:
-	img=${uv.img} \
-	entrypoint=${uv.interpreter} \
-	cmd="run --script" \
-	def=uv.hello_world \
-	${make} docker.run.def
+	@# run the code-object's source in the uv container (low-level helper)
+	img=${uv.img} entrypoint=uv cmd="run --script" def=hello_world ${make} docker.run.def

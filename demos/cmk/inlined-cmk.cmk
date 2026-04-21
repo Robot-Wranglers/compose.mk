@@ -1,0 +1,27 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# inlined-cmk.cmk:
+#   The cmk-lang twin of demos/inlined-cmk.mk.
+#
+# USAGE:
+#   ./demos/cmk/inlined-cmk.cmk
+
+'''
+The plain-Makefile twin quarantines its cmk-lang in a define so stock
+make never sees it; here the whole file is cmk-lang, so the same Report
+body is native and needs no define wrapper.  Only the import differs.
+'''
+
+Report[|
+  report:
+    '''two ways to send a heredoc literal to a stream target'''
+    """piped in""" | this.stream.as.log
+    this.stream.as.log["""and via the bracket receiver form"""]
+|]
+cmk.import.module(def=Report flat=1)
+
+plain:
+  '''a native target: no define wrapper, since the file is cmk-lang'''
+  cmk.log(native target ${sep} no define wrapper needed)
+
+__main__: plain report

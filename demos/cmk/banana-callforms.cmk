@@ -1,0 +1,111 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-callforms.cmk: the callform trailers that ride a name -- the {env}
+# channel (runtime env-prefix) and the [stream] channel used at compile
+# time (run a banana block as a shell filter during the parse).
+#
+# USAGE: ./demos/cmk/banana-callforms.cmk
+
+'''
+A callform is a name with trailers.  Three brackets, each a distinct
+channel, so they never collide and compose order-free:
+
+  (args):
+    arguments -- cmk.f(a,b)
+  [stream]:
+    stdin / a filter -- cmk.f[S]
+  {env}:
+    an environment -- cmk.f{e=v}
+
+  cmk.f(a,b){e=v}[S]  ->  S | e='v' (call f,a,b)
+
+The {env} channel is the dual of the [stream] pipe-prefix: one env-prefixes
+the lowered command, the other pipes into it.  Both work for targets
+({make}) and macros (a call-form).  At module scope {env} warns, reserved for
+later.
+
+The [stream] trailer also has a compile-time face: on a module-level banana
+name(| filter |)[S] it lowers to name := (shell S | bash <block>), running
+the block as a filter over S during the parse and binding the result.  An
+empty stream [] is a producer (the block runs with no input).  The same
+block can then be referenced by its ⬥name handle to run again at runtime --
+one noun, two phases.
+'''
+
+import stream
+import log
+
+# Part 1: ( the {env} channel -- a trailer that env-prefixes the command )
+
+env.probe:
+  '''
+  env.probe: ( echo env vars set via the {env} channel ) The recipe just
+  reports WHO and GREETING; callers set them through the trailer.
+  '''
+  stream.as.log["""WHO=[$${WHO:-unset}] GREETING=[$${GREETING:-unset}]"""]
+
+stdin.probe:
+  '''
+  stdin.probe: ( read both stdin and env ) Shows {env} and [stream]
+  composing: the stream supplies stdin while the trailer supplies the
+  environment.
+  '''
+  stream.as.log["""$${GREETING:-hi} $$(cat)"""]
+
+# say.macro: ( a macro whose command reads its env at runtime )
+#   A plain echo "$WHO" would expand the arg before the transient prefix
+#   applies, so the macro defers to sh -c and lets the shell read WHO when
+#   it runs.
+say.macro = sh -c 'echo "macro sees WHO=$$WHO"'
+
+# Part 2: ( the [stream] channel -- a compile-time banana filter )
+
+# stream capture: ( run a block body as a shell filter over a stream )
+#   filter tr a-z A-Z over the stream echo hello world; producer [] emits
+#   its own output with nothing piped in; compose feeds a producer into a
+#   filter.
+shout(| tr a-z A-Z |)[echo hello world]
+banner(| printf 'compose.mk' | tr a-z A-Z |)[]
+lines(| wc -l | tr -d ' ' |)[printf 'alpha\nbeta\ngamma\n']
+
+# codegen: ( a plain block emits make text, run at parse and included )
+#   Turns a word-list into targets via ⬥rules into a temp file, then
+#   includes it.  Generated rules are raw make (include bypasses the cmk
+#   stages), so plain echo.
+rules(| sed 's/.*/&:; @echo built-&/' |)
+GENF := $(shell f=$$(mktemp) && printf 'x\ny\nz\n' | bash ⬥rules > $$f && echo $$f)
+include $(GENF)
+
+# phase-polymorphism: ( one plain block used in both phases )
+#   The same up block filters at parse here (:=) and at runtime in
+#   __main__.
+up(| tr a-z A-Z |)
+COMPILED := $(shell echo 'at compile time' | bash ⬥up)
+
+# ---------------------------------------------------------------------------
+
+demo.env:
+    @# The {env} channel tour:
+    @#   1) {env} on a target -> the sub-make's recipe inherits WHO
+    @#   2) several vars at once
+    @#   3) {env} + [stream], order-free: [S] = stdin, {e=v} = environment
+    @#   4) {env} on a macro -> env-prefixes what the call-form expands to
+    this.env.probe{WHO=world}
+    this.env.probe{WHO=all GREETING=yo}
+    this.stdin.probe{GREETING=hello}[echo world]
+    cmk.say.macro{WHO=macroland}
+
+demo.streams:
+    @# Everything below was computed at parse; the recipe only prints it
+    @# back:
+    log(1 filter   ${sep} $(shout))
+    log(1 producer ${sep} $(banner))
+    log(1 compose  ${sep} $(lines))
+    @# run the targets the rules block generated at parse:
+    ${make} x y z
+    @# the same up block, both phases: parse-captured value, then a live
+    @# run:
+    log(3 parse   ${sep} $(COMPILED))
+    echo 'at runtime' | bash ⬥up
+
+__main__: demo.env demo.streams

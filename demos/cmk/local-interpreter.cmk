@@ -1,0 +1,32 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# local-interpreter.cmk:
+#   Run foreign-code with the host's interpreter.
+#
+# USAGE: ./demos/cmk/local-interpreter.cmk
+
+# uses in host.native.python -- the core host python3 machine.
+
+__main__: hello version
+
+hello:
+  '''
+  on the host interpreter: ( a python program run by host python )
+  The banana body spans multiple lines; lambdalift folds it into a
+  module block dispatched into the ambient, so the program's own
+  newlines and indentation are preserved.  Dollar signs in a raw banana
+  are literal: no make or shell expansion.
+  '''
+  (|
+    print("python world")
+    print("dollars are safe: $")
+  |) in host.native.python
+
+version:
+  '''
+  the same idiom, reporting the interpreter it landed on ( host python )
+  '''
+  (|
+    import sys
+    print("running on", sys.version.split()[0])
+  |) in host.native.python

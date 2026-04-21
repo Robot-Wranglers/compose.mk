@@ -1,0 +1,92 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+## Flow Control
+<hr class="section-rule lvl-2">
+
+Because CMK is [homoiconic on targets]({{_}}/cmk/paradigm/#homoiconic), "everything is a target," exotic flow control rarely needs new syntax.  Instead a handful of reusable [standard-library]({{_}}/standard-lib) and [module]({{_}}/cmk/modules) primitives compose into event loops, search loops, typed exceptions, and coroutines.
+
+!!! advanced_demo "Advanced demos"
+    A **high-level tour** of several flavors, new users can safely skip ahead.  Each is a small, self-contained CMK program, and the embedded source is the source of truth, so the prose here stays conceptual and the code is free to evolve.  Read the demo for the specifics; read the remarks for how the pieces fit together.
+
+A few building blocks recur:
+
+* **Targets as the universal unit.**  Dispatch is just `make`'s own rule lookup: a tag is "handled" if and only if a target by that name exists, so there is no registry to maintain.  The same idea underlies dead-letter routing and [typed exceptions]({{_}}/standard-lib).
+* **Events & channels.**  The [Events stdlib]({{_}}/stages/#events) (`channel`) turns a name into a first-class event-stack plus a family of code-generated `emit` / `filter` / `dispatch` operators: the substrate for message-passing flow.
+* **The `__vm__` control stack.**  The [CMK Virtual Machine]({{_}}/modules/virtual-machine) module exposes the live continuation as a control stack with `call` / `return` / `yield` / `fork` over saved frames: the substrate for coroutines.
+
+These pieces are intentionally decoupled; the walkthroughs below use them independently and in combination.
+
+### An Event Loop
+<hr class="section-rule lvl-3">
+
+!!! tip "Tip"
+    This one ties together [polyglots]({{_}}/demos/polyglots), [block-references]({{_}}/cmk/compiler/#block-references), and [call-forms]({{_}}/cmk/concepts/#callforms).
+
+A tiny event-driven system: a *generator*, a *router*, a *dispatcher*, and one handler per event-tag, several written in different languages, each just a contract on stdin/stdout.  Routing needs no registry: an unrecognized tag simply falls through to a dead-letter target.
+
+```bash {.cli_example}
+$ ./demos/cmk/events.cmk          # run the loop (5 ticks)
+$ ./demos/cmk/events.cmk driver   # a single tick
+```
+
+{{site.embed_demo('demos/cmk/events.cmk', type='cmk', github=github)}}
+
+### Events & Channels
+<hr class="section-rule lvl-3">
+
+The event-loop above hand-wires its routing; the **Events stdlib** packages that pattern.  Declaring a name a channel makes it a first-class [receiver]({{_}}/cmk/compiler/#receiver-form) whose operators are called anchorless, so seeding and filtering a stream of events reads like method calls.  The same core backs the search loop and the typed exceptions below.
+
+```bash {.cli_example}
+$ ./demos/cmk/channel.cmk
+```
+
+{{site.embed_demo('demos/cmk/channel.cmk', type='cmk', github=github)}}
+
+### A Multi-Exit Search Loop
+<hr class="section-rule lvl-3">
+
+!!! terminology "Zahn's construct"
+    A loop with several *named exits* that drive what happens next.[^zahn]  Built on the event system, it scans candidate events, takes the first match, emits a typed outcome (`found` / `exhausted`), and dispatches; the exit selects the continuation (recover vs. commit).
+
+```bash {.cli_example}
+$ ./demos/cmk/zahn.cmk
+```
+
+{{site.embed_demo('demos/cmk/zahn.cmk', type='cmk', github=github)}}
+
+### Typed Exceptions
+<hr class="section-rule lvl-3">
+
+The same named-exit dispatch as Zahn, but **deferred**.  An exception is just an event on a `fault` channel where `emit` *also fails the caller*, and dispatch is registered as an [at-exit handler]({{_}}/signals/#at-exit-handlers) rather than run synchronously.  A target raises with `cmk.fault.throw(<Type>, <k=v ...>)` and exits non-zero; a *swallowed* failure (one guarded by a trailing or-true) leaves the fault **in flight**, and at end-of-run the drain routes each by `.type` to a `fault/<Type>:` handler, or the `fault/%` fallback, which is again just make's rule precedence, so there's no registry.  A `@fault.guarded` decorator bridges a raw subprocess failure into a typed `SubprocessFault`, and a handler may itself re-throw.
+
+The demo below builds this from scratch; for the same idea distilled into an **importable module** (`fault.cmk`, callable from plain Makefiles, with a transparent `assert.env.var` upgrade), see the [Faults plugin page]({{_}}/plugins/faults).
+
+```bash {.cli_example}
+$ ./demos/cmk/exceptions.cmk            # tour: several raised, all dispatched at exit
+$ ./demos/cmk/exceptions.cmk demo.boom  # one UNCAUGHT -> nonzero exit
+```
+
+{{site.embed_demo('demos/cmk/exceptions.cmk', type='cmk', github=github)}}
+
+### Coroutines
+<hr class="section-rule lvl-3">
+
+Where the pieces above pass *messages*, coroutines suspend and resume *execution*.  This walkthrough builds resumable coroutines on the `__vm__` control stack: the reusable coroutine demo (`vm-coroutines.cmk`) opts into a reflective environment so a suspended coroutine's bindings persist across re-entry, and the body advances itself with a `goto` call-form.  For the operators and the reflective-environment policy behind this, see the [CMK Virtual Machine]({{_}}/modules/virtual-machine/#coroutines) module page.
+
+```bash {.cli_example}
+$ ./demos/cmk/vm-coroutines.cmk
+```
+
+{{site.embed_demo('demos/cmk/vm-coroutines.cmk', type='cmk', github=github)}}
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+The standard library's `mk.yield` is a one-shot escape continuation.  For the general case, a resumable, multi-shot, nestable yield built in user-space on a trampoline (of which `mk.yield` is the degenerate single-frame case), see {{macros.repo_link('demos/cmk/flow_control.cmk', name='flow_control.cmk', github=github)}}.
+
+* [Virtual Machine module]({{_}}/modules/virtual-machine): the `__vm__` control stack behind coroutines.
+* [Faults plugin]({{_}}/plugins/faults): typed exceptions distilled into an importable module.
+* [Polyglots demo]({{_}}/demos/polyglots): the multi-language handlers used in the event loop.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^zahn]: {{ tufte.wiki('Control_flow#Loops_with_multiple_exit_points')|trim }}

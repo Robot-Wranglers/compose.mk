@@ -1,6 +1,8 @@
 #!/usr/bin/env -S make -f
-# Demonstrating first-class support for foreign code-blocks in `compose.mk`.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+#
+# code-objects.mk:
+#   First-class support for foreign code-blocks in `compose.mk`.
+#
 # USAGE: ./demos/code-objects.mk
 
 include compose.mk
@@ -16,7 +18,7 @@ print(f'hello world, from {sys.version_info}')
 endef
 
 # Import the code-block, creating additional target scaffolding for it.
-$(call polyglot.import, def=hello_world \
+$(call code, def=hello_world \
 	img=${python.img} entrypoint=${python.interpreter})
 
 # With the new target-scaffolding in place, now we can use it.

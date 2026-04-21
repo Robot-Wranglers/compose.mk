@@ -1,14 +1,14 @@
 #!/usr/bin/env -S make -f
-# demos/matrioshka.mk: 
+#
+# matrioshka.mk:
 #   To demonstrate matrioshka-language features, we use `compose.mk`
 #   to embed a compose service, that embeds a docker container 
 #   description, where the container build and run stages both defer
 #   back to the matrioshka. This also demonstrates passing data between
 #   container layers using stage-stacks[1].
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See the main docs: https://robot-wranglers.github.io/compose.mk/matrioshka
-# See also: https://robot-wranglers.github.io/compose.mk/stages
+# See the main docs:
+# https://robot-wranglers.github.io/compose.mk/matrioshka
 #
 # USAGE: ./demos/matrioshka.mk
 
@@ -27,7 +27,7 @@ services:
       dockerfile_inline: |
         FROM docker:dind
         RUN apk add -q --update --update --no-cache \
-          coreutils build-base bash procps-ng
+          coreutils build-base bash
         COPY . /app
         RUN cd /app && make -f ${MAKEFILE} ${BUILD_TARGET}
     working_dir: /workspace
@@ -64,10 +64,10 @@ demo.build: flux.stage.enter/BUILD
 # very small and generic.  Just to differentiate alice and bob, 
 # we add different tools.
 #
-# It's nice that we don't have to prefix every provisioning line with
-# "RUN ...", but the main benefit to deferring to `make` for setup 
-# like this is the ability to do more complex scripting without hassle.  
 alice.provision:
+	@# It's nice that we don't have to prefix every provisioning line with
+	@# "RUN ...", but the main benefit to deferring to `make` for setup 
+	@# like this is the ability to do more complex scripting without hassle.  
 	apk add -q figlet
 
 bob.provision:

@@ -1,0 +1,51 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# ambients.cmk:
+#   The [R] (recipe-level) side of the mobile ambient calculus [1] over compose.mk.
+#   A recipe banana `(| src |)` is an inert string until an operator attaches it
+#   to an execution context; the operators do the attaching and wiring:
+#     `in X`  moves it into an ambient (container / interpreter / host)
+#     `out`   moves it out to the enclosing / host ambient
+#     `|`     pipes two machines' stdio
+#     `+`     sequences them
+#   (For the [M] module-level side -- `open`/`*` dissolve, `import .. as` mount --
+#   see ambients-open.cmk.)
+#
+# USAGE: ./demos/cmk/ambients.cmk
+#
+# REFS:
+#   [1] Cardelli & Gordon, Mobile Ambients, ETAPS/FoSSaCS 1998.
+#       http://lucacardelli.name/Papers/MobileAmbientsETAPS98.A4.pdf
+
+# `in A` -- move a machine into an ambient
+demo.enter:
+  cmk.log()
+  (| echo "A small machine" |) in host.native.sh
+
+# `A out` is the dual of `in`: the argument runs in the enclosing ambient.
+# On the host that is an in-place run, but inside a container it escapes 
+# to the host daemon via the mounted socket.  Socket itself is what the 
+# calculus calls "unforgeable exit capability"
+demo.exit:
+  cmk.log()
+  (| echo "Running on `hostname`" |) out
+
+# A shell pipe lives inside one banana: (| a | b |) pipes a into b.  A |
+# between two raw bananas is undefined; a pipe is a typed operator owned
+# by a kind, not part of a raw banana's string-algebra.  Under <- the
+# pipeline's final stdout is captured.
+demo.pipe:
+	cmk.log()
+	(| printf "  hi from a pipe" | tr a-z A-Z |) in host.native.sh
+	capt <- (| printf "  hi from a pipe" | tr a-z A-Z |)
+	cmk.log($${capt})
+
+# `A + B` = "a then b": the two bodies concatenate.  A bare concat is an inert
+# string and errors on its own recipe line, so capture it under `<-`; the
+# captured outputs join in order.
+demo.compose:
+	cmk.log()
+	capt <- (| echo "  + first" |) + (| echo "  + second" |)
+	cmk.log($${capt})
+
+__main__: demo.enter demo.exit demo.pipe demo.compose

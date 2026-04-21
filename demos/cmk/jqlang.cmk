@@ -1,0 +1,80 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# jqlang.cmk:
+#   jqlang fragments and their closed composition algebra: each
+#   fragment is a jq program you can run, and composing two creates a
+#   fresh fragment that composes exactly like a leaf.
+#
+# USAGE: ./demos/cmk/jqlang.cmk
+
+'''
+A jqlang instance is a fragment: cmk.Fragment gives it .shape (the jq
+program), .fd / .file (materialize it as a process-sub / tmpfile) and
+.__call__ / .stream (run it).  jqlang adds the jq base call plus one
+algebra operator, .__concat__, which pipes this fragment's shape into
+the argument's.  Because .__concat__ returns a fresh fragment rather
+than a string, the result is first-class: pipelines nest to any depth
+and run through the same .fd interface as a leaf.  See
+TODO-dsl-fragment.md for where this is heading (one fragment base for
+jqlang / awk / bash).
+'''
+
+import io, log
+from cmk import dsl, class
+
+# a jqlang subkind: subjq overrides __call__ so each k=v call arg
+# becomes a jq CLI variable (--argjson, jq's typed analog), letting a
+# program reference $k at run time.
+class subjq(bases=dsl.jqlang)[|
+  ${self}.__call__ = ${jq} $(foreach _kv,$(m5.__splat__),--argjson $(subst =, ,$(_kv))) -f ${self}.fd()
+|]
+
+# scale multiplies .n by a runtime factor: scale(factor=10) supplies it.
+subjq scale(| .n * $factor |)
+
+# three leaf fragments -- each is one jq program.  jqlang opts into
+# docstrings: addone's triple-quote binds __doc__, leaving .shape pure jq.
+dsl.jqlang addone(|
+  '''add one to .n'''
+  .n + 1
+|)
+dsl.jqlang double(| . * 2 |)
+dsl.jqlang wrap(|   { result: . } |)
+
+# compose fragments with the | operator and bind the result under a
+# name.  The fold is gated on the & handle marker: a bare <- is an
+# eager shell capture (there | is a shell pipe), so fragment algebra
+# lives in the lazy & form.  | folds left-assoc via .__pipe__ (jq
+# pipe).  The result is itself a first-class fragment (own .shape /
+# .fd, it re-composes) and, being a capture LHS, is
+# receiver-registered, so it runs by name.
+&pipeline <- addone|double|wrap
+
+demo.inline.pipe:
+  '''
+  the same pipe algebra inline via the banana operator (no names):
+  the | between two jqlang bananas folds through .__pipe__, which is
+  .__concat__ joined by jq's own |.  So the external pipe maps onto
+  the internal jq one; this recipe is the jq program .n | .+1 | .*10
+  run over the recipe's stdin.
+  '''
+  io.json_builder(n:raw=4) | dsl.jqlang(| .n |) | dsl.jqlang(| .+1 |) | dsl.jqlang(| .*10 |)
+
+__main__: demo.leaf demo.macro demo.handle demo.inline.pipe \
+          demo.subjq demo.docstring
+
+demo.docstring:
+  '''addone's docstring reifies as __doc__; its .shape stays pure jq.'''
+  log(addone.__doc__ ${sep} ${addone.__doc__})
+
+demo.leaf:; io.json_builder(n:raw=4) | addone()
+demo.handle:; io.json_builder(n:raw=4) | this.pipeline
+
+demo.macro:; io.json_builder(n:raw=4) | pipeline()
+
+demo.subjq:
+  '''
+  subjq's __call__ injects each k=v as a jq CLI var (--argjson), so
+  scaling .n by factor with factor=10 over n=4 gives 40.
+  '''
+  io.json_builder(n:raw=4) | scale(factor=10)

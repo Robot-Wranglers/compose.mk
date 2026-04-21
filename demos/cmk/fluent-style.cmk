@@ -1,0 +1,64 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# fluent-style.cmk:
+#   Method-chaining for sends: `a().b().c()` composes left-to-right.
+#   A call-close directly followed by `.<receiver>(` is a chain junction;
+#   the compiler rewrites the `.` to a shell-pipe boundary, so each stage
+#   feeds its stdout to the next.  Chaining is delegated to the one
+#   smart-send router, so it works for every receiver kind uniformly.
+#
+# USAGE: ./demos/cmk/fluent-style.cmk
+#
+
+'''
+Fluent style is pure sugar over composition that already existed: a `|`
+between two lowered sends is a shell pipe.  The junction rule only inserts
+those pipes at each `<close>.<receiver>` boundary.  Because the right
+operand routes through the same receiver machinery as any other send, the
+same `.` works over banana-block filters, plain macros, and targets --
+there is no per-form chaining code.
+
+  * The junction fires only after a call-close `)` `]` `}`, so ordinary
+    dotted names (`this.x`, a bare `date.log`) are never touched.
+  * Args and stream/env trailers ride along: `a(x).b[in].c{e=v}` chains
+    across `)` `]` `}` alike.
+  * A right operand may itself be a dotted send: `a().b.method()`.
+
+A chain may also span multiple lines: a continuation line beginning with
+`.<receiver>(` is folded onto the previous line before compilation, so the
+one-line and multi-line forms lower identically.  The links must stay
+adjacent (a blank line between them ends the chain).
+'''
+
+import log
+
+# Three banana-block filters -- each is a shell stage reading stdin.
+#   emit  -- a producer (no input); the other two transform their stdin.
+emit(| printf 'alpha\nbeta\ngamma\n' |)
+upper(| tr a-z A-Z |)
+count(| wc -l | tr -d ' ' |)
+
+# A parametric filter: `grep` for the argument passed as `$(1)`.
+only(| grep "$(1)" |)
+
+
+stream:
+  '''Producer piped through two filters -- emit | upper | count.'''
+  log(three lines uppercased then counted:)
+  emit().upper().count()
+
+args:
+  '''A chain link carrying an argument -- only(p) keeps matching lines.'''
+  log(only the line containing 'p' -- uppercased:)
+  emit().only(p).upper()
+
+multiline:
+  '''The same chain spread over several lines -- each `.link()` on its own,
+  aligned under the producer.  It folds to one pipe before compiling, so it
+  lowers identically to the single-line `emit().upper().count()`.'''
+  log(multi-line chain -- three lines counted:)
+  emit()
+    .upper()
+    .count()
+
+__main__: stream args multiline

@@ -1,7 +1,7 @@
 {% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Custom Automation APIs
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-2">
 
 This demo describes one way to very quickly expose custom automation APIs using `compose.mk`.  But *what does that even mean?*
 
@@ -12,16 +12,16 @@ When it comes to automation, combining different tools that might be in differen
 Those verbs might be the classic *build/clean/test*, but even then you're often orchestrating across different containers. And your vocabulary might look more like *build/deploy*, or if things get complicated enough, your vocabulary might develop more object-oriented instructions, like *queue.stop* and *cluster.create*.  So that's an automation API in broad strokes, and `compose.mk` has the tools to build it.
 
 ### A Concrete Use-Case
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 **For our purposes here, we need a concrete use-case that's pretty small, so we'll talk about hacking Ansible.**  
 
-The rest of this page is a tutorial about how to do that, but the involvement of ansible *specifically* is not that important.  If you're more interested in *patterns, architectures, and theory*.. you might prefer to [start here instead]({{mkdocs.site_relative_url}}/matrioshka/#matrioshka-bridge-pattern).  If you want to see a similar demo with different base technology, you can see a smaller bridge-building project [in the justfile demo]({{mkdocs.site_relative_url}}/demos/just), or a larger project with jupyter in [the notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).
+The rest of this page is a tutorial about how to do that, but the involvement of ansible *specifically* is not that important.  If you're more interested in *patterns, architectures, and theory*.. you might prefer to [start here instead]({{_}}/matrioshka/#matrioshka-bridge-pattern).  If you want to see a similar demo with different base technology, you can see a smaller bridge-building project [in the justfile demo]({{_}}/demos/just), or a larger project with jupyter in [the notebooking demo]({{_}}/demos/notebooking).
 
-This demo doesn't have lots of prerequisites, but it does us jq/jb to parse/create JSON.  See the [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib#structured-io-basic) for more background.
+This demo doesn't have lots of prerequisites, but it does us jq/jb to parse/create JSON.  See the [structured IO docs]({{_}}/standard-lib#structured-io-basic) for more background.
 
 ### Hijacking Ansible
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 Ansible is neat for lots of stuff, but it comes with a lot of baggage.
 
@@ -32,12 +32,12 @@ Ansible is neat for lots of stuff, but it comes with a lot of baggage.
 
 As an exercise.. let's look at what `compose.mk` can bring to adress some of that.  
 
-### Map Ansible Modules to Targets
-<hr style="width:100%;border-bottom:3px solid black;">
+### Bridging Ansible / Targets
+<hr class="section-rule lvl-3">
 
 {#<hr style="width:95%;border-bottom:1px dashed black;">#}
 
-[Ansible's adhoc mode](https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html) already gives some direct access to ansible-modules and lets you skip a playbook.  For our first trick, we'll try to expose access to those modules.  Here are the basic goals:
+[Ansible's adhoc mode](https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html) already gives some direct access to ansible-modules and lets you skip a playbook.[^adhoc]  For our first trick, we'll try to expose access to those modules.  Here are the basic goals:
 
 !!! goals "Goals"
     * No ansible-dependency on our host (of course we'll use docker)
@@ -45,9 +45,9 @@ As an exercise.. let's look at what `compose.mk` can bring to adress some of tha
     * Full access to ansible-modules in `make` world, e.g. as composable target prerequisites
     * Ensure that output is *always* JSON, in case we want to use it downstream
 
-Typically, you would want to begin by sketching out an ansible container inside a docker-compose file, then use `compose.import` to [autogenerate related targets]({{mkdocs.site_relative_url}}/bridge).  Just to keep things simple though and to demonstrate [raw docker support in compose.mk]({{mkdocs.site_relative_url}}/raw-docker) at the same time, we'll embed the ansible container directly.
+Typically, you would want to begin by sketching out an ansible container inside a docker-compose file, then use `compose.import` to [autogenerate related targets]({{_}}/bridge).  Just to keep things simple though and to demonstrate [raw docker support in compose.mk]({{_}}/raw-docker) at the same time, we'll embed the ansible container directly.
 
-{{site.embed_demo('demos/ansible-adhoc.mk', github=github)}}
+{{site.embed_mirror('demos/ansible-adhoc.mk', 'demos/cmk/ansible-adhoc.cmk', github=github)}}
 
 The implementation is small, and the result is powerful.  As mentioned above, `make ansible.adhoc/ping` works as expected to call the [ping module](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/ping_module.html), and to call the [docker_image_info](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_image_info_module.html) module with arguments. Output looks like this:
 
@@ -74,12 +74,12 @@ $ ./demos/ansible-adhoc.mk ansible.adhoc/ping
 The argument-passing is somewhat awkward for *people*, but it supports JSON, so this is already fairly usable from other automation. For common use-cases, you just make a more friendly alias, as is done with the `list_images` target above. 
 
 !!! closer_look "Closer Look"
-    The eagle-eyed reader will have noticed that `docker_image_info` actually returns data, i.e. it is using the **host docker socket**, because under the hood, {{site.api_link("docker.dispatch",mkdocs,arg='target')}} [shares the socket and the working directory automatically]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults).  Effectively the ansible container can orchestrate tasks on the host in many respects, even though the host doesn't have ansible.
+    The eagle-eyed reader will have noticed that `docker_image_info` actually returns data, i.e. it is using the **host docker socket**, because under the hood, {{site.api_link("docker.dispatch",mkdocs,arg='target')}} [shares the socket and the working directory automatically]({{_}}/raw-docker/#tool-container-defaults).  Effectively the ansible container can orchestrate tasks on the host in many respects, even though the host doesn't have ansible.
 
 ### Discussion
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-The examples for this demo might feel contrived, but the [technique itself is more interesting]({{mkdocs.site_relative_url}}/matrioshka#matrioshka-bridge-pattern) than the involvement of ansible.  Although.. ansible *does* have lots of random cool utilities, even if the friction involved to actually use them might feel daunting.  So, our new targets now make it easy to pull in a discrete chunk of ansible very quickly without having to "ansible all the things".  
+The examples for this demo might feel contrived, but the [technique itself is more interesting]({{_}}/matrioshka#matrioshka-bridge-pattern) than the involvement of ansible.  Although.. ansible *does* have lots of random cool utilities, even if the friction involved to actually use them might feel daunting.  So, our new targets now make it easy to pull in a discrete chunk of ansible very quickly without having to "ansible all the things".  
 
 As a more practical example, you can imagine raiding the [kubernetes.core.k8s module](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_module.html) for useful stuff:
 
@@ -96,22 +96,26 @@ Importing something like `cluster.purge` is what we were aiming at originally: *
 
 Where this gets really interesting is larger projects.  Suppose for example that your `cluster.create` operation is using a terraform container, and you work at a place that mostly writes golang code.  Whereas using `ansible` previously wasn't a good *cultural fit*, once you strip away the detail and expose an interface as we've seen here, it doesn't feel like as much of a commitment to a whole ecosystem, and that makes it easier to combine tools.  
 
-Although `Makefile` isn't anyone's favorite programming language, notice how the hypothetical `cluster.purge` target is very effective at reducing friction for new contributions.  Focusing just on the custom automation API that we're exposing and now able to compose.. we're talking about one line in one file now, and it's reasonably accessible to devops, engineers, data-science, etc.  If you're looking at just the `cluster.purge` operation as an action, all you need is the right kubeconfig and otherwise it doesn't care if you're working on a local cluster, a production one, or running from CI.  A powerful abstraction, since the list of stacks and topics that are *safe to ignore now* basically includes *yaml, python, pip, docker*, and ansible itself too.
+!!! closer_look "Reducing friction"
+    Although `Makefile` isn't anyone's favorite programming language, notice how the hypothetical `cluster.purge` target is very effective at reducing friction for new contributions.  Focusing just on the custom automation API that we're exposing and now able to compose.. we're talking about one line in one file now, and it's reasonably accessible to devops, engineers, data-science, etc.  If you're looking at just the `cluster.purge` operation as an action, all you need is the right kubeconfig and otherwise it doesn't care if you're working on a local cluster, a production one, or running from CI.  A powerful abstraction, since the list of stacks and topics that are *safe to ignore now* basically includes *yaml, python, pip, docker*, and ansible itself too.
 
 Combining `compose.mk` with your own toolkit and building a new vocabulary is where it really starts to shine, because really, `compose.mk` is a foundation to build on, and it doesn't make assumptions about your domain.
 
-!!! related_links "Related Links"
-    * See also the [packaging demo]({{mkdocs.site_relative_url}}/demos/packaging#example-extension-to-executable), which bundles this demo into a frozen release / stand-alone tool.
-    * For a similar demo with different base technology, see another bridge-building project like this [in the justfile demo]({{mkdocs.site_relative_url}}/demos/just), or a larger bridge-building project with `jupyter` in [the notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).
-    * For a larger example of this kind where `compose.mk` is used for orchestrating kubernetes tools, see a preview of the [sibling project at k8s-tools.git]({{jinja.vars.k8stools_docs_url}}).  Amongst other things, it actually ships with the [ansible tooling]({{jinja.vars.k8stools_docs_url}}/demos/ansible), similar to what we've built here.
+{{ macros.section(3, "See Also", id="see-also") }}
 
-<hr style="width:100%;border-bottom:3px solid black;">
+* [Packaging demo]({{_}}/demos/packaging#example-extension-to-executable): bundles this demo into a frozen release / stand-alone tool.
+* [Justfile demo]({{_}}/demos/just): the same bridge idea with different base technology, and a larger `jupyter` variant in [the notebooking demo]({{_}}/demos/notebooking).
+* [Sibling project at k8s-tools.git]({{ jinja.vars.k8stools_docs_url }}): a larger orchestration of kubernetes tools, which ships [ansible tooling]({{ jinja.vars.k8stools_docs_url }}/demos/ansible) similar to what we've built here.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^adhoc]: [Ansible ad-hoc commands](https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html)
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
 	addImageToHeader('discussion','/{{mkdocs.config.site_name}}/img/discussion.svg');
   addImageToHeader('a-concrete-use-case','/{{mkdocs.config.site_name}}/img/ansible.svg')
   addImageToHeader('hijacking-ansible','/{{mkdocs.config.site_name}}/img/ansible.svg')
-  addImageToHeader('map-ansible-modules-to-targets','/{{mkdocs.config.site_name}}/img/ansible.svg')
+  addImageToHeader('bridging-ansible-targets','/{{mkdocs.config.site_name}}/img/ansible.svg')
 }, 100);});
 </script>

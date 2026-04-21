@@ -1,0 +1,33 @@
+# See also: https://docs.github.com/en/actions
+# The CMK compiler/transpiler pytest suite (via tox). Pure transforms, no
+# docker required (a single needs_docker case auto-runs since ubuntu-latest
+# has a daemon). One pytest suite per workflow; runnable on demand.
+name: Compiler Tests
+on:
+  workflow_dispatch: {}
+  workflow_call: {}
+  push:
+    branches: [ "main", "[0-9]+.[0-9]+" ]
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
+  pull_request:
+    branches: [ "main", "[0-9]+.[0-9]+" ]
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
+permissions:
+  contents: read
+jobs:
+  compiler:
+    name: Compiler (pytest via tox)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Initialize
+        run: make clean init
+      - name: Run compiler-tests
+        run: make compiler-test

@@ -1,0 +1,26 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# stage-wrapper.cmk:
+#   The implicit context-manager
+#   form (flux.stage.wrap), with the JSON pushes written in the
+#   square-bracket [stream] call-form.
+#
+#   See the docs for more discussion [1].
+#
+# USAGE: ./demos/cmk/stage-wrapper.cmk
+#
+# REFS:
+#   [1]: https://robot-wranglers.github.io/compose.mk/stages
+
+# Override the default target used to print the entry-banner
+import flux
+
+export FLUX_STAGE_BANNER?=io.figlet
+
+__main__: flux.stage.wrap/VALIDATION/project.scan,project.analyze
+
+project.scan:
+    flux.stage.push(VALIDATION)["""["results"]"""]
+
+project.analyze:
+    flux.stage.push(VALIDATION)["""["other results"]"""]

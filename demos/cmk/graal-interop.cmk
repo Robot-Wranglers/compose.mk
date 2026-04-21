@@ -1,0 +1,66 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+'''
+graal-interop.cmk: GraalVM shared-heap polyglot via graal (IDEAS.md Lever 5).
+Three fragments, one Context, both directions: py defines fib, js defines
+fizzbuzz and calls fib, py calls fizzbuzz(fib(i)). Mirror mode. Needs docker.
+'''
+
+cmk.include.plugins(graal.cmk)
+
+graal.group G1[|
+  
+  graal.py p1(|
+    ''' A Python fragment: just define fib; graal.py injects the rest. '''
+    def fib(n):
+        a, b = 0, 1
+        for _ in range(n):
+            a, b = b, a + b
+        return a
+  |)
+
+  graal.js p2(|
+    '''A JS fragment: define fizzbuzz; also call Python fib (JS -> Python). '''
+    function fizzbuzz(n) {
+      if (n % 15 === 0) return "FizzBuzz";
+      if (n % 3 === 0) return "Fizz";
+      if (n % 5 === 0) return "Buzz";
+      return String(n);
+    }
+    console.log("JS calling Python: fib(10) = " + fib(10));
+  |)
+
+  graal.py p3(|
+    ''' A new Python fragment: fib and fizzbuzz arrive as ambient globals. '''
+    print(" ".join(fizzbuzz(fib(i)) for i in range(1, 11)))
+  |)
+
+  graal rb p4(|
+    '''A Ruby fragment: mirror imports arrive as ruby global variables.'''
+    puts((1..10).map { |i| $fizzbuzz.call($fib.call(i)) }.join(" "))
+  |)
+|]!
+
+# G1() runs its members composed (+) into one shared mirrored context.
+&combined <- G1.p1+G1.p2+G1.p3+G1.p4
+G1.__call__ = $(combined.mirror)
+
+graal.py p5(|
+  ''' A separate run (not in pn): its fresh context lacks fib/fizzbuzz. '''
+  try:
+      fib(5)
+      print("p5: fib WAS in scope (unexpected)")
+  except NameError as e:
+      print("p5: fib not in scope ->", e)
+  try:
+      fizzbuzz(5)
+      print("p5: fizzbuzz WAS in scope (unexpected)")
+  except NameError as e:
+      print("p5: fizzbuzz not in scope ->", e)
+|)
+
+# G1() triggers the whole group in one context; p5 stays isolated.
+__main__:
+  G1()
+  p5.mirror()
+  p5()

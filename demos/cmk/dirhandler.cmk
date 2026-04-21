@@ -1,0 +1,74 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# dirhandler.cmk: demo for the io.dirhandler decorator (promoted into __hosted__).
+# USAGE: ./demos/cmk/dirhandler.cmk
+
+'''
+A single-file parametric target opts into directory handling by wearing an
+`@io.dirhandler(glob=.., progress=..)` decorator.  The compiler relocates a
+decorator to the head of the recipe, so it gets first look at the stem: a plain
+file is a no-op (the body runs undecorated), a directory is fanned out over its
+matching files and then short-circuited so the body never sees the directory.
+
+The decorator is glue over two reusable core helpers, split along the axes it
+would otherwise conflate:
+
+  * flux.progress/<target> -- OBSERVABILITY.  An observed serial iterator: read
+    items on stdin, run <target>/<item> for each.  progress=0 narrates `X / N`
+    per item and lets output flow; any other value swallows output behind a
+    determinate bar and replays only the last (failed) command output.
+
+  * flux.each.dir/<target>/<dir> -- ENUMERATION.  Find files under the dir
+    matching the glob, then hand them to flux.progress.
+
+This demo just exercises the decorator; the helpers themselves live in core.
+'''
+
+import log
+
+process.one/%:
+    '''Report line and word counts for one file; fail if it contains BOOM.'''
+    log(${*})
+    if grep -q BOOM ${*}; then log.error(found BOOM in ${*}) ; exit 3 ; fi
+    printf '  lines=%s words=%s\n' "$$(wc -l < ${*})" "$$(wc -w < ${*})"
+
+# process fans a directory out verbosely (the default): a per-file progress line
+# plus the worker's own output.  Handed a single file it just runs the worker.
+@io.dirhandler(glob=*.txt)
+process/%:
+    ${make} process.one/${*}
+
+# report fans a directory out quietly: the worker's output is swallowed behind a
+# progress bar, unless a file fails, in which case its output is replayed.
+@io.dirhandler(glob=*.txt, progress=1)
+report/%:
+    ${make} process.one/${*}
+
+__main__: setup demo.dir demo.progress demo.file demo.error
+
+setup:
+    '''Stage a clean sample dir and a poisoned one (a BOOM file to force a failure).'''
+    rm -rf .tmp.dirhandler.demo .tmp.dirhandler.err
+    mkdir -p .tmp.dirhandler.demo .tmp.dirhandler.err
+    printf 'alpha\nbeta\n' > .tmp.dirhandler.demo/one.txt
+    printf 'gamma\n' > .tmp.dirhandler.demo/two.txt
+    printf 'delta\nepsilon\nzeta\n' > .tmp.dirhandler.demo/three.txt
+    printf 'ignored by the glob\n' > .tmp.dirhandler.demo/notes.md
+    printf 'safe\n' > .tmp.dirhandler.err/aaa.txt
+    printf 'this file says BOOM\n' > .tmp.dirhandler.err/bbb.txt
+    printf 'never reached\n' > .tmp.dirhandler.err/ccc.txt
+
+demo.dir:
+    '''Verbose fan-out: hand the decorated target a directory.'''
+    ${make} process/.tmp.dirhandler.demo
+
+demo.progress:
+    '''Quiet fan-out with a progress bar over a directory that all succeeds.'''
+    ${make} report/.tmp.dirhandler.demo
+
+demo.file:
+    '''Single file: the body runs directly, no fan-out.'''
+    ${make} process/.tmp.dirhandler.demo/one.txt
+
+demo.error:
+    '''Quiet fan-out that hits a failing file: the bar aborts and the error shows.'''
+    ${make} report/.tmp.dirhandler.err || log.warn(demo.error ${sep} report aborted as expected)

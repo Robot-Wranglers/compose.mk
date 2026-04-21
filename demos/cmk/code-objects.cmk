@@ -1,44 +1,79 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
-# CMK-lang translation of demos/code-objects.mk
-# USAGE: ./demos/cmk/code-objects.cmk
+#!/usr/bin/env -S ./compose.mk cmk run
 
-# Main entrypoint, showing how to preview and run embedded code.
-__main__: \
-	hello_world1.preview hello_world1 \
-	hello_world2 \
-	hello_world3 \
-	hello_world4.preview
+'''
+code-objects.cmk: embedded code-objects across interpreters, created in a
+container, bound to a target-as-interpreter, or left unbound.
+USAGE: ./demos/cmk/code-objects.cmk
+'''
 
-# Code bound to a containerized interpreter using literals.
-elixir.img=elixir:otp-27-alpine
-elixir.interpreter=elixir
-⟦ hello_world1
-import IO, only: [puts: 1]
-puts("elixir World!")
-System.halt(0)
-⟧ with ${elixir.img}, ${elixir.interpreter} as container
+from cmk import container
 
-# Code bound to a containerized interpreter using variables.
-# In this case, you can accept user-overrides from env-vars.
-export python_interpreter=python
-export python_img?=python:3.11-slim-bookworm
-⟦ hello_world3
-print('hello world 2')
-⟧ with $${python_img}, $${python_interpreter} as container
-
-# Code bound to a target-as-interpreter.
-# Target must be parametric, then do something with the parameter!
-⟦ hello_world2
-hello world2 !
-⟧ with my_interpreter as target
-
-# A custom interpreter, as used above.
-# This always takes a file argument as a parameter:
-# we do nothing except for displaying the file-contents.
+# Code bound to a parametric target-as-interpreter that runs the file.
 my_interpreter/%:; cat ${*}
+code target_src(entrypoint=@my_interpreter)(|
+  hello world2 !
+|)
 
-# Unbound code block: only `.preview` target is available 
-# unless you bind something else to `.interpreter` later
-🞹 hello_world4
-print('hello world 4')
-🞹
+# Bound code with combinators (pipe in this case),
+# across process boundary, different lang / entrypoint.
+code first(entrypoint=sh)(| echo hello world |)
+code second(entrypoint=bash)(| rev |)
+&combinator <- first|second
+
+# Unbound code might get bound later, 
+# until then it can't run, but can be previewed
+code.unbound unbound_src(|
+  print('hello world 3')
+|)
+
+# Bound code can gets a callform, supports args pass-through
+code argv_src(entrypoint=sh)(|
+  echo "hello world 5, argv: $@"
+|)
+argv.demo:; argv_src(alpha beta)
+
+# Binding code to a machine unlocks ambient 
+# algebra and enables code mobility / "execute in".
+code mobility_src(machine=host.local)(|
+  echo "hello world 6, running via ambient mobility"
+|)
+mobility.demo:
+	&mobility_src in host.local
+
+# Two-axis templating: 
+#  * Compile-time for the quasiquoted '@@',
+#  * Runtime for the argv.
+code template_src(entrypoint=python3)(|
+  import sys
+  print("hello world 7, name=@@name@@ args=%s" % sys.argv[1:])
+|)
+template.bob := cmk.template_src.render(name=bob)
+template.demo:; $(call $(template.bob).__call__,x y)
+
+# All containers are machines; all machines can print polyglots.
+# A polyglot is code that's bound to that machine.
+container elixir_box(img=elixir:otp-27-alpine entrypoint=elixir)(| |)
+elixir_box.polyglot elixir_src(|
+  import IO, only: [puts: 1]
+  puts("elixir World!")
+  System.halt(0)
+|)
+
+# Same for python; container config comes from env-overridable vars.
+export python_interpreter ?= python
+export python_img ?= python:3.11-slim-bookworm
+container py(| img=$(python_img) entrypoint=$(python_interpreter) |)
+py.polyglot python_src(|
+  print('hello world 2')
+|)
+
+# Preview and run the embedded code across the interpreters.
+__main__: \
+    elixir_src.preview elixir_src \
+    target_src \
+    python_src \
+    unbound_src.preview \
+    argv.demo \
+    mobility.demo \
+    template.demo \
+    combinator

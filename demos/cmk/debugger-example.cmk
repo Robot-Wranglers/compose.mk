@@ -1,0 +1,100 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# debugger-example.cmk: 
+#   A live call-stack of program flow control, from realistic to exotic,
+#   which is used to demo the the visual debugger implemented inside the
+#   `tux.repl.debugger` module (see [1]).  The debugger+demo in this file 
+#   exercises the CMK virtual machine, the CEK machine, and coroutines.
+#   
+# Compiler pragma below enables frame-level tracing in the VM (see [2]).
+# Also configures the debugger, which is a special case of the repl, and 
+# loads the live the program here.
+#
+# CMK_PRAGMA ::: { 
+#   "vm_trace": true,
+#   "repl": { "read": "tux.repl.debugger.feed", 
+#             "eval": "tux.repl.kernel",
+#             "print":"__main__" } } :::
+#
+# USAGE: ./demos/cmk/debugger-example.cmk
+#
+# REFS:
+#   [1]: https://robot-wranglers.github.io/compose.mk/plugins/tux.repl
+#   [2]: https://robot-wranglers.github.io/compose.mk/modules/virtual-machine
+#
+
+import flux, log
+
+import tux.repl.debugger
+
+__main__:
+  '''
+  ── print region: a __vm__ goto loop wrapping a deep call graph + flux
+  fan-out (mixed flow control) ── Recipe lines join implicitly (joinbody
+  `&&`); target runs use `this.<t>`; the `__vm__.frame.enter` prelude is injected.
+  '''
+  log([demo] cycle)
+  this.demo.build || true
+  step=$$(cat .tmp.cmk.vmstep.* 2>/dev/null | sort -n | tail -1 || echo 0)
+  if [ "$${step:-0}" -ge "$${CMK_FRAME_MAX:-100000}" ]; then log([demo] step $$step '>=' bound -- halt) ; else sleep $${CMK_FRAME_WAIT:-1} ; cmk.vm.goto(__main__) ; fi
+
+demo.build:
+  log([build] resolve -> compile -> test -> package)
+  this.demo.resolve
+  this.demo.compile
+  this.demo.test
+  this.demo.package
+
+demo.resolve:
+  log([resolve] flux.pipeline deps)
+  flux.pipeline(demo.fetch.a,demo.fetch.b,demo.fetch.c)
+
+demo.compile:
+  log([compile] parse + codegen)
+  this.demo.parse
+  this.demo.codegen
+
+demo.codegen:
+  log([codegen] -> optimize)
+  this.demo.optimize
+
+demo.test:
+  log([test] flux.pool parallel)
+  flux.pool(3,demo.test.unit,demo.test.integration,demo.test.e2e)
+
+demo.fetch.a:
+  '''
+  Leaves do real, non-make shell work (printf/seq/awk/grep/sort/date/sleep)
+  so the DEBUG trap captures a genuine non-target command -- which is what
+  the (Command Log) minimap shows, distinct from the IP target.
+  '''
+  log([fetch] a)
+  url=a.tgz ; printf 'GET %s\n' "$$url" >/dev/null ; sleep 0.7 ; bytes=$$(( 240 * 1024 ))
+demo.fetch.b:
+  log([fetch] b)
+  url=b.tgz ; date +%s >/dev/null ; head -c 4096 /dev/urandom | wc -c >/dev/null ; sleep 0.9
+demo.fetch.c:
+  log([fetch] c)
+  url=c.tgz ; printf 'GET %s\n' "$$url" >/dev/null ; seq 1 700000 | wc -l >/dev/null
+
+demo.parse:
+  log([parse])
+  ast=ok ; grep -c . /etc/hostname >/dev/null 2>&1 ; sleep 0.8 ; tokens=1207
+demo.optimize:
+  log([optimize])
+  passes=3 ; awk 'BEGIN{for(i=0;i<6000000;i++)s+=i}' ; sleep 0.3
+
+demo.test.unit:
+  log([test] unit)
+  suite=unit ; sleep 0.6 ; printf 'PASS unit\n' >/dev/null
+demo.test.integration:
+  log([test] integration)
+  suite=integration ; sort /etc/hostname >/dev/null 2>&1 ; sleep 1.0
+demo.test.e2e:
+  log([test] e2e)
+  suite=e2e ; sleep 0.8 ; printf 'PASS e2e\n' >/dev/null
+
+demo.package:
+  log([package])
+  artifact=app.tgz ; tar cf /dev/null /etc/hostname 2>/dev/null ; sleep 0.5
+

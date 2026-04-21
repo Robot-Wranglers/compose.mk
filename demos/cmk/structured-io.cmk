@@ -1,12 +1,17 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
-# CMK-lang translation of demos/structured-io.mk
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# structured-io.cmk:
+#   Emit and consume JSON with the 🡄 / 🡆 arrow operators.
+#   Ported from demos/structured-io.mk.
+
+import log
 
 emit: 
-	🡄 key=val
+    🡄 key=val
 
 consume:
-	🡆 .key
+    🡆 .key
 
 __main__:
-	this.emit | this.consume
-	cmk.log.target(hello world!)
+    this.emit | this.consume
+    log(hello world!)

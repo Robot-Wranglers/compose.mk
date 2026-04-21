@@ -1,7 +1,20 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 
 # Features
 
--------
+<hr class="section-rule lvl-1">
 
+This page collects the notable capabilities[^1] of `compose.mk`.
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+For the reasoning and the caveats behind the feature set:
+
+* [Motivation & Design Philosophy]({{_}}/but-why): why these features exist.
+* [Limitations]({{_}}/limitations): the rough edges to expect.
+* [Overview]({{_}}/overview): a guided tour.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^1]: {{ tufte.wiki('Software_feature')|trim }}
 

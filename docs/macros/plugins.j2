@@ -1,0 +1,113 @@
+{#- docs/macros/plugins.j2: macros for surfacing plugin/module docs that are authored in the
+    `.cmk` submodule (`.cmk/docs/<name>.md`, plain markdown that ships with the plugin) as
+    first-class site pages.  `make docs.plugins.sync` scans the submodule and generates one thin
+    `docs/plugins/<name>.md.j2` wrapper per doc, each a one-line call to `submodule_doc(<name>)`.
+    See docs/plugins/overview for the convention. -#}
+{% import 'macros/base.j2' as macros -%}
+
+{#- Per-plugin footer data, keyed by submodule-doc name.  The auto-generated wrappers are pure
+    one-liners (`submodule_doc('<name>')`), so a `docs.plugins.sync` regeneration would drop any
+    hand-passed args; keeping the data here (looked up by `submodule_doc`) makes it sync-safe.
+      _plugin_references -- official page(s) for the tool(s) the plugin wraps (the "References" block).
+      _plugin_related    -- sibling-page cross-refs (the "See Also" block, after the central overview xref).
+    Each item is a `[label, link, note]` triple; `@/foo` expands site-relative. -#}
+{%- set _plugin_references = {
+  'drawio': [
+    ['draw.io', 'https://www.drawio.com/', 'the diagramming app whose `*.drawio` / `*.dio` files this renders'],
+    ['drawio-export', 'https://github.com/rlespinasse/drawio-export', 'the headless exporter image the render wrapper is built on'],
+  ],
+  'gitops': [
+    ['Git', 'https://git-scm.com/', 'the version-control system this orchestrates'],
+    ['Git Hooks', 'https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks', 'the hook mechanism `gitops.hooks.*` installs into'],
+  ],
+  'grip': [
+    ['grip', 'https://github.com/joeyespo/grip', 'GitHub Readme Instant Preview: the renderer served from the container'],
+    ['GitHub Markdown API', 'https://docs.github.com/en/rest/markdown', 'the GitHub-flavored rendering grip calls out to'],
+  ],
+  'html': [
+    ['clean-css', 'https://github.com/clean-css/clean-css', 'the CSS minifier behind `css.minifier` / `css.min`'],
+    ['Prettier', 'https://prettier.io/', 'the formatter behind `css.prettify` / `css.pretty`'],
+  ],
+  'io.fs.drop_in': [
+    ['run-parts', 'https://manpages.debian.org/run-parts', 'the classic `*.d` drop-in runner idiom this packages'],
+    ['systemd drop-ins', 'https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html#Description', 'the `<name>.d` drop-in-directory convention'],
+  ],
+  'json': [
+    ['jq', 'https://jqlang.github.io/jq/', 'the JSON processor the validation / conversion helpers wrap'],
+    ['yq', 'https://github.com/mikefarah/yq', 'the YAML/JSON tool behind `json.to_yaml`'],
+    ['JSON', 'https://www.json.org/', 'the interchange format itself'],
+  ],
+  'mkdocs': [
+    ['MkDocs', 'https://www.mkdocs.org/', 'the static-site generator these `build` / `serve` / `open` helpers wrap'],
+    ['yq', 'https://github.com/mikefarah/yq', 'reads values from `mkdocs.yml` for `mkdocs.get`'],
+  ],
+  'mmd': [
+    ['Mermaid', 'https://mermaid.js.org/', 'the diagram-as-text language whose `*.mmd` files this renders'],
+    ['mermaid-cli (mmdc)', 'https://github.com/mermaid-js/mermaid-cli', 'the CLI renderer wrapped in the container'],
+    ['ImageMagick', 'https://imagemagick.org/', 'trims each rendered PNG to its content'],
+  ],
+} -%}
+{%- set _plugin_related = {
+  'drawio': [['Mermaid Plugin', '@/plugins/mmd', 'the sibling `*.mmd` diagram renderer']],
+  'mmd':    [['draw.io Plugin', '@/plugins/drawio', 'the sibling `*.drawio` diagram renderer']],
+  'grip':   [['MkDocs Plugin', '@/plugins/mkdocs', 'build / serve the full docs site (vs a single README preview)']],
+  'mkdocs': [['grip Plugin', '@/plugins/grip', 'a quick GitHub-styled preview of a single README']],
+  'gitops': [['Drop-in Dirs Plugin', '@/plugins/io.fs.drop_in', 'the drop-in mechanism `gitops.hooks.*` installs git hooks with']],
+  'io.fs.drop_in': [['gitops Plugin', '@/plugins/gitops', 'a consumer: `gitops.hooks.*` installs git hooks as drop-ins']],
+} -%}
+
+{#- submodule_banner(name, mkdocs): the standard provenance HEADER for a submodule-sourced page.
+    Reuses the site-wide `non_core` admonition (every non-core plugin/module page carries it), folding
+    the `.cmk`-submodule provenance (links to BOTH the plugin code and the canonical reference doc, so
+    a reader knows where to look/edit) into its `detail` clause.  One standardized banner, not a
+    bespoke info box. -#}
+{% macro submodule_banner(name, mkdocs=none) -%}
+{%- set repo = 'https://github.com/robot-wranglers/.cmk/blob/main' -%}
+{{ macros.non_core(name ~ '.cmk', detail="Ships in the [`.cmk`](https://github.com/robot-wranglers/.cmk) submodule: [`" ~ name ~ ".cmk`](" ~ repo ~ "/" ~ name ~ ".cmk) (plugin code) and [`docs/" ~ name ~ ".md`](" ~ repo ~ "/docs/" ~ name ~ ".md) (this reference doc): edit it there, not here; surfaced into the site by `make docs.plugins.sync`.", mkdocs=mkdocs) }}
+{%- endmacro -%}
+
+{#- _ll(item, mkdocs): render one link-list bullet.  An item is either a full-sentence string
+    (verbatim) or a `[label, link]` / `[label, link, note]` pair/triple (`[label](link): note`).
+    `@/foo` expands to the site-relative URL, matching the `related_links` item grammar. -#}
+{% macro _ll(item, mkdocs) -%}
+{%- if item is string -%}{{ item.replace('@/', mkdocs.site_relative_url ~ '/') }}
+{%- else -%}[{{ item[0] }}]({{ item[1].replace('@/', mkdocs.site_relative_url ~ '/') }}){% if item|length > 2 %}: {{ item[2].replace('@/', mkdocs.site_relative_url ~ '/') }}{% endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+{#- submodule_doc(name): inject the plugin's canonical markdown from the submodule, HEADED by the
+    standard `submodule_banner` provenance marker (links to the submodule code + doc).  The submodule
+    doc is authored standalone (its own H1 title + H2 sections), so its headings are demoted two levels
+    on injection (H1 -> H3, ...) to match the site's staged convention (pages start at H3, never H1):
+    a shallower heading skews the generated nav tree and breaks the sidebar collapse below it.  The
+    markdown is emitted, never re-parsed as Jinja.  Two H3 footer sections are always appended, matching
+    the hand-authored plugin pages: a "See Also" cross-reference block (led by an xref to the central
+    plugin-usage docs, since a submodule doc reinvents its own local `include.plugins` snippet, then any
+    page-specific `related` items), and a "References" block linking the official page(s) for the tool(s)
+    the plugin wraps (the page-specific `references` items).  Each item is a full-sentence string or a
+    `[label, link, note]` triple (`@/` expands site-relative).  If the submodule doc is absent (submodule
+    not checked out), degrade to a warning. -#}
+{% macro submodule_doc(name, related=[], references=[], mkdocs=none) -%}
+{%- set path = '.cmk/docs/' ~ name ~ '.md' -%}
+{%- if bash('test -f ' ~ path ~ ' && echo 1 || true', load_json=False)|trim -%}
+{{ submodule_banner(name, mkdocs=mkdocs) }}
+
+{{ bash('awk -f docs/macros/demote_headings.awk ' ~ path, load_json=False) }}
+{%- set related = related or _plugin_related.get(name, []) -%}
+{%- set references = references or _plugin_references.get(name, []) -%}
+{%- set _onward = [['Plugin Overview', '@/plugins/overview/#plugin-api-usage', 'the central plugin-usage docs: how plugins load (`import` / `include.plugins`), how the file extension binds (`.mk` verbatim vs `.cmk` JIT-compiled), and where plugins are found']] + related %}
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+{% for item in _onward %}* {{ _ll(item, mkdocs) }}
+{% endfor %}
+{%- if references %}
+{{ macros.section(3, "References", id="references") }}
+
+{% for item in references %}* {{ _ll(item, mkdocs) }}
+{% endfor %}
+{%- endif -%}
+{%- else -%}
+{{ macros.admonition("danger", "Missing submodule doc", "Expected `" ~ path ~ "` but it was not found; is the `.cmk` submodule checked out?  Run `git submodule update --init`.") }}
+{%- endif -%}
+{%- endmacro -%}

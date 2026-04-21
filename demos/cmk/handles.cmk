@@ -1,0 +1,37 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# handles.cmk:
+#   A handle is a deferred, named call.  The reference-bind form
+#   (&name <- rhs) stores the call without running it; a plain capture
+#   (name <- cmd) runs it now and grabs the output.  The leading & also
+#   selects cmk-lang for the RHS, so a handle can name a target, a
+#   fragment fold (% fill, + join), or a receiver to run in a machine.
+#
+# USAGE: ./demos/cmk/handles.cmk
+
+greet:
+  '''the call we want to defer'''
+  printf '  hello from the deferred call\n'
+
+# bind a handle naming that target; nothing runs until it is called.
+# The reference sigil (&) stores the callable by name.
+&bound <- this.greet
+
+# the & RHS is cmk-lang, so it may be a fragment expression: fill the
+# @@holes@@ with %, or join two bodies with +.  Each result is another
+# block, bound lazily under the handle (still nothing runs).
+&filled <- (| echo hi @@who@@ |) % (| who=world |)
+&joined <- (| echo one |) + (| echo two |)
+
+__main__:
+  cmk.log(handles bound; nothing has run yet)
+  bound()
+  # a handle is a receiver, so it can be run in a machine with in.  The
+  # & keeps this cmk-lang; without it the line would be an ordinary shell.
+  cmk.log(run the filled block in host.native.sh)
+  &filled in host.native.sh
+  cmk.log(run the + join in host.native.sh)
+  &joined in host.native.sh
+  # capture a run with a second handle; the result is a recipe variable.
+  &out <- filled in host.native.sh
+  cmk.log(captured the run: $${out})

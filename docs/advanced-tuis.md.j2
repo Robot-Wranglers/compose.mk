@@ -1,26 +1,26 @@
 {% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ## Advanced TUIs 
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-2">
 
-In the limit, `compose.mk` can help you to script *custom console applications* that potentially involve many containers, and by using [mk.self]({{mkdocs.site_relative_url}}/demos/packaging) you can "compile" them to stand-alone executables.  This works best for building things like dashboards, but it's even possible to build things that resemble **portable, project-specific IDEs**.
+In the limit, `compose.mk` can help you to script *custom console applications* that potentially involve many containers, and by using [lang.pkg]({{_}}/demos/packaging) you can "compile" them to stand-alone executables.  This works best for building things like dashboards, but it's even possible to build things that resemble **portable, project-specific IDEs**.
 
 Extreme customization of the TUI isn't well documented yet, but this page has a few hints and an overview of existing examples.
 
 ### Extensions & Scripting
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 As a minimal example of extending the TUI, let's throw together some support for `yazi`, a pretty cool terminal-based file-manager.  It supports lots of stuff[^2], including file-previews, skins, and plugins.  
 
-Consider the following Makefile:
+Consider the following Makefile (toggle the tabs for the [cmk-lang]({{_}}/cmk/compiler) twin):
 
-{{site.embed_demo('demos/tui/extension-1.mk', github=github)}}
+{{site.embed_mirror('demos/tui/extension-1.mk', 'demos/cmk/tui/extension-1.cmk', github=github)}}
 
------------------------------
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 Running this opens a split-screen console with both panes showing file browsers.  
 
------------------------------
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 {{macros.img_link("tui-extension-1.png", mkdocs, "350px")}}
 
@@ -30,11 +30,11 @@ Running this opens a split-screen console with both panes showing file browsers.
 So you can see that while things like `vim` and `emacs` don't ship with the default container that enables the embedded TUI.. we don't really *need that* because it's already extensible.  Adding the editor of your choice can be accomplished with the same technique we used for the file manager.
 
 ### Understanding Widgets
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-We've seen [previously]({{mkdocs.site_relative_url}}/low-config-tuis/) that "widgets", i.e. TUI pane-content, are nothing very special.  Whether it's adding a file browser widget-from-container or just working with your [your existing automation tasks]({{mkdocs.site_relative_url}}/low-config-tuis/), pane content declarations are ultimately just targets [like everything else is]({{mkdocs.site_relative_url}}/language#homoiconic).
+We've seen [previously]({{_}}/low-config-tuis/) that "widgets", i.e. TUI pane-content, are nothing very special.  Whether it's adding a file browser widget-from-container or just working with your [your existing automation tasks]({{_}}/low-config-tuis/), pane content declarations are ultimately just targets [like everything else is]({{_}}/cmk/paradigm#homoiconic).
 
-In a TUI though, some targets are more useful than others, and typically you might want targets that loop, like we [saw before in the docs for low-config TUIs]({{mkdocs.site_relative_url}}/low-config-tuis).  Looping tricks with {{site.api_link('flux.loopf', mkdocs,arg='target')}} and friends can also restore pane content in case of crash, like say a hiccup in networking activity.
+In a TUI though, some targets are more useful than others, and typically you might want targets that loop, like we [saw before in the docs for low-config TUIs]({{_}}/low-config-tuis).  Looping tricks with {{site.api_link('flux.loopf', mkdocs,arg='target')}} and friends can also restore pane content in case of crash, like say a hiccup in networking activity.
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
@@ -47,30 +47,30 @@ Although the resolution is low.. the browser actually works and includes mouse s
 
 The code for the above looks like this:
 
-{{site.embed_demo('demos/tui/extension-2.mk', github=github)}}
+{{site.embed_mirror('demos/tui/extension-2.mk', 'demos/cmk/tui/extension-2.cmk', github=github)}}
 
-The browser container defaults to using the host network. This is used elsewhere [in the notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking) to create a TUI for jupyter-lab.  
+The browser container defaults to using the host network. This is used elsewhere [in the notebooking demo]({{_}}/demos/notebooking) to create a TUI for jupyter-lab.  
 
-Another interesting possibility is using the browser *without* relying on container port-forwarding and the host's network.. this way you can get visibility and interaction into *otherwise completely sandboxed docker-compose networks*.  This trick is used in the demo for [hermetic GUIs]({{mkdocs.site_relative_url}}/guis#hermetic-guis).
+Another interesting possibility is using the browser *without* relying on container port-forwarding and the host's network.. this way you can get visibility and interaction into *otherwise completely sandboxed docker-compose networks*.  This trick is used in the demo for [hermetic GUIs]({{_}}/guis#hermetic-guis).
 
 ### Custom Geometry & Dynamic Panes
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 You can setup a custom layout by just exporting a magic value for the `geometry` variable.  This variable is respected by targets such as {{site.api_link('tux.open',mkdocs, arg='targets')}} and ultimately acted on by `tmux`. [^1]
 
 But the easiest way to get started with custom geometries is to do something like this:
 
 1. Setup your TUI initially to use the built-in spiral/horizontal/vertical layout that's closest to what you want.
-1. Start your app and manually rearrange the pane sizes to suit.  There's a few ways to do that, but you probably want `Alt` + arrows keys to resize existing panes. (See also the [tmux docs](https://github.com/tmux/tmux/wiki) and the [compose.mk keybindings overview](#/embedded-tui/#default-keybindings))
+1. Start your app and manually rearrange the pane sizes to suit.  There's a few ways to do that, but you probably want `Alt` + arrows keys to resize existing panes. (See also the [tmux docs](https://github.com/tmux/tmux/wiki) and the [compose.mk keybindings overview]({{_}}/embedded-tui/#default-keybindings))
 1. Add new panes using the 'New Pane' button at the bottom of the TUI, or 
 1. Add new panes by right clicking an existing pane and choosing split-horizontal or split-vertical
 
 Once your geometry is how you like it, run `./compose.mk .tux.geo.get > .tmp.geo` from inside the TUI.  Exit the TUI, copy the magic string from the file, and add a line like `export geometry=...` inside your code.  Note that this preserves *relative geometry* for the *number of panes that you are using* at the time of the snapshot.  If you added panes in the TUI, you need to adjust your code to launch and populate the same number of panes!  If you want specific contents in specific panes, just adjust the order of the arguments for `tux.open/`.
 
 ### Environment Variables
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-{#{bash('pattern="TUI Environment" ./compose.mk mk.parse.block/compose.mk')}#}
+{#{bash('pattern="TUI Environment" ./compose.mk lang.parse.doc_block/compose.mk')}#}
 
 Here's a list of environment variables related to the TUI.
 
@@ -90,16 +90,22 @@ label=mytext ./compose.mk tux.widget.ticker
 #}
 
 ### Implementation Details
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-To keep `compose.mk` itself self-contained, the base container for the TUI is actually inlined, and it is unpacked and built only on demand. For the exact specification, see [the source]({{jinja.vars.mkparse_repo_url}}/tree/master/compose.mk) and look for `${TUI_COMPOSE_FILE}`.
+To keep `compose.mk` itself self-contained, the base container for the TUI is actually inlined, and it is unpacked and built only on demand. For the exact specification, see [the source]({{github.repo_url}}/tree/main/compose.mk) and look for the `TUI_COMPOSE_FILE` variable.
 
 Note that the base container is required for a few use-cases that are not, strictly speaking, the TUI.  (For example {{site.api_link('io.figlet',mkdocs)}}.)
 
 To ensure the TUI container is built before trying to use it, use {{site.api_link('tux.require',mkdocs)}} as a prerequisite target.  The TUI container is cached by default after the initial build, but you can force purge/rebuild by using `force=1 ./compose.mk tux.require`.
 
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Embedded TUI]({{_}}/embedded-tui): the layout basics these examples build on.
+* [Low Config TUIs]({{_}}/low-config-tuis): the declarative widget style extended here.
+* [Bonus: GUIs]({{_}}/guis): pushing beyond text interfaces into windowed apps.
+
 ### References
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 [^1]: For that matter, if you're already knowledgeable about scripting with `tmux`, then you can use it directly and `compose.mk` will try to stay out of the way.. see also the env-var for `TUI_TMUX_SOCKET`.
 [^2]: [https://yazi-rs.github.io/features](https://yazi-rs.github.io/features)

@@ -1,0 +1,68 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-lambda.cmk: a recipe-level code block run via a host machine.
+#
+# USAGE: ./demos/cmk/banana-lambda.cmk
+
+'''
+A recipe-level block `<machine>(| code |){env}(args)` runs `code` via a typed
+machine: the compiler hoists the block to a module define __lambda_N and
+routes it to the machine's `.__call__` as a blockref, executed through the
+machine's entrypoint.  Trailer channels: `{k=v}` is the env channel (an env
+prefix on the run), `(a,b)` is positional (appended after the block).
+
+Here the machine is `host.native.sh` (the host sh interpreter), so a block is
+a shell snippet and needs no docker; swap it for a `container`/`Dockerfile`
+instance to run inside an image.  A bare anonymous `(| .. |){env}` -- with no
+machine -- has only a string algebra, no callforms.
+
+Cf. code-objects.cmk (named code objects `code.unbound NAME(| .. |)`),
+banana-callables.cmk (user-defined constructors), banana-composition /
+banana-oop for the module-level forms.
+'''
+
+import log
+
+demo.plain:
+  '''
+  1) plain: ( a plain inline block ) Hoisted to a define, then run via sh.
+  '''
+  host.native.sh(| echo "hello from a hoisted inline block" |){}
+
+demo.env:
+  '''
+  2) env: ( the {k=v} env channel ) The value lands in the run env, so the
+  block reads the `WHO` env var at runtime.
+  '''
+  host.native.sh(| echo "greetings, $WHO" |){WHO=world}
+
+demo.two:
+  '''
+  3) two: ( two blocks in one recipe ) Each hoists to a distinct __lambda_N
+  with its own env, run independently.
+  '''
+  host.native.sh(| echo "first: $TAG" |){TAG=one}
+  host.native.sh(| echo "second: $TAG" |){TAG=two}
+
+demo.capture:
+	'''
+	4) capture: ( LHS <- (| body |) ) The recipe-level counterpart: the block
+	runs at recipe time and its stdout is captured into a shell var for the
+	later lines.  (The module-level X <- (| .. |) is instead a parse-time
+	parse-time shell-eval.)  Capture is not a callform, so an anonymous banana keeps it.
+	'''
+	greeting <- (| echo "hello from a captured block" |)
+	log(got: $$greeting)
+
+compute:; @printf computed-42
+demo.cooked.capture:
+	'''
+	5) cooked capture: ( LHS <- [| body |] ) Cook the interior (callforms
+	lower), then make-expand and run it at recipe time.  this.compute cooks
+	to a make invocation of compute, which runs to yield the value.  (<- (| .. |) runs a
+	raw shell body; <- [| .. |] a cooked cmk-lang one.)
+	'''
+	result <- [| this.compute |]
+	log(cooked capture: $$result)
+
+__main__: demo.plain demo.env demo.two demo.capture demo.cooked.capture

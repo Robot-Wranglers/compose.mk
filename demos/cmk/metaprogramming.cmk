@@ -1,0 +1,185 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# metaprogramming.cmk: 
+#   Metaprogramming constructors, each proven in isolation,
+#   so higher-level kinds rest on established patterns.  Use 
+#   each construct and provide a demo target that exercises it.
+#
+# USAGE: ./demos/cmk/metaprogramming.cmk
+#
+
+'''
+These constructors tame the underlying "raw" macro system.  Capture-based instantiation
+substitutes the self-name into a body before it lands, so a body -- its macro values and
+its recipes alike -- reads as ordinary single-dollar make.  A doubled dollar means just what it
+does in a plain Makefile: the escape for a literal shell dollar in a recipe.
+
+The self-name binder is provided for convenience.
+'''
+
+
+# Imports and opens first.  
+# This binds the declaration keywords unqualified, bringing
+# into scope: class, constructor, dsl, protocol.
+
+import log
+from cmk import class, constructor, dsl, protocol
+
+
+# class + inline body: a class whose methods are recipe targets keyed on
+# the instance; banana-oop.cmk is the fuller object-orientation demo.
+
+class Crew[|
+  '''
+  Crew: a base class -- each member can report for duty.
+  '''
+  self.report:
+    log(self.__im_self__ standing by)
+|]
+
+baker <- Crew.new()  # named instances, bound via <-
+cook <- Crew.new()
+
+demo.class:
+  ''' baker and cook are Crew instances; each reports for duty '''
+  baker.report()
+  cook.report()
+
+# class-compiled self: a classvar, an instance-var, and a target.
+class Widget(classvars='kind=gadget')[|
+  '''kind is a classvar (class + instances); color is an instance-var; show is a target'''
+  color = red
+  self.label = a self.kind in self.color
+  self.show:
+    log(show ${sep} self.label)
+|]
+
+gizmo <- Widget.new()
+
+demo.self:
+  ''' classvar reaches the CLASS and instances; the instance-var does not reach the class; body reads use bare self.x, a target is invoked with the ()-callform. '''
+  log(classvar ${sep} Widget.kind=${Widget.kind} gizmo.kind=${gizmo.kind})
+  log(instance-var ${sep} gizmo.color=${gizmo.color} Widget.color=$(origin Widget.color))
+  log(method ${sep} ${gizmo.label})
+  gizmo.show()
+
+demo.reflection:
+  ''' A docstring lives on the KIND; an instance reflects it through __class__. '''
+  log(module doc ${sep} ${__doc__})
+  log(cls ${sep} ${cook.__class__})
+  log(self ${sep} ${baker.__im_self__})
+  log(kind doc ${sep} $(${cook.__class__}.__doc__))
+  log(contents ${sep} ${baker.__dir__})
+
+# dsl / lang.seed!: ( a kind whose instances are data, callable via a callform )
+#   dsl NAME[|..|] creates a kind; each instance stashes its own banana body as .shape (the
+#   data, read back with $(value self)) and every instance gets the .__call__ dunder for
+#   free, so a bare NAME() callform invokes it.  bclang is a tiny calculator: a named
+#   instance is a bc program NAME() computes, and an anonymous one runs inline at recipe
+#   level via the anon-immediate NAME(|..|).__call__().
+#   Focused version: demos/cmk/dsl-bclang.cmk (kept here too for the
+#   subclassing example below).
+
+dsl bclang[|
+  ''' bclang: a dsl kind -- each instance is a bc program; call it to compute '''
+  ${self} = printf '%s\n' '${self}.shape()' | bc
+|]
+bclang area(| 3.14159 * 5 ^ 2 |)
+
+demo.dsl:
+  ''' A named instance is callable as area(); an anonymous one via .__call__() '''
+  area()
+  bclang(| 5 ^ 3 |).__call__()
+
+# inheritance: a subclass inherits its parent's chain and overrides a
+# method by redefining it; banana-oop.cmk goes on to the leftmost-wins MRO.
+
+class Squad(bases=Crew)[|
+  '''Squad is-a Crew that reports louder.'''
+  self.report:
+    log(self.__im_self__ sounding off)
+|]
+
+sergeant <- Squad.new()
+
+demo.inherit:
+  '''
+  Squad is-a Crew that overrides report: baker keeps Crew's, sergeant
+  gets Squad's.
+  '''
+  log(bases=${Squad.__bases__})
+  this.baker.report
+  this.sergeant.report
+
+# subclassing a non-class: ( the "class" / "bases" naming is looser than it reads )
+#   A `bases=` entry need not itself be a class.  bclang above is a `dsl` kind, not a class --
+#   it has no .__class__.  Yet class Volume(bases=bclang) subclasses it and it just works: bclang's
+#   callable behavior flows to Volume's instances, which also gain class reflection.  So "subclass a
+#   non-class" succeeds -- the semantics compose and break nothing; only the naming suggests a
+#   constraint that isn't enforced.  (A `dsl` or mixin base flows this way; a `constructor` kind does
+#   not -- noted for reference.  This is where the subjq/jqlang subkind in jqlang.cmk comes from.)
+
+class Volume(bases=bclang classvars='units=cubic')[||]
+
+Volume box(| 2 ^ 3 |)
+
+demo.nonclass.base:
+  ''' A class subclassing the non-class `dsl` kind bclang: inheritance flows, terminology is loose '''
+  log(bclang is a KIND ${sep} origin bclang.__class__ = $(origin bclang.__class__))
+  log(box gains reflection ${sep} box.__class__ = ${box.__class__})
+  log(units classvar ${sep} Volume.units=${Volume.units} ${sep} box.units=${box.units})
+  box()
+
+# class umbrella: a polyhedra module whose children are kinds
+class polyhedra(umbrella=1)[| |]
+
+polyhedra tetrahedron[| |]
+polyhedra octahedron[| |]
+polyhedra dodecahedron[| |]
+
+demo.umbrella:
+  ''' each polyhedra child creates a kind polyhedra.NAME; its bare leaf aliases that FQN '''
+  log(solids ${sep} polyhedra.__all__ = ${polyhedra.__all__})
+  log(polyhedra.octahedron ${sep} is a kind ${sep} mro = ${polyhedra.octahedron.__mro__})
+  log(bare alias ${sep} octahedron mro = ${octahedron.__mro__})
+
+# protocol + bases= : ( a contract that creates a mixin + a default )
+#   cmk.protocol NAME(abstract=hook)(| '''doc''' + default |) is a KIND
+#   that is really a MIXIN factory.  (kwargs) are metaclass arguments --
+#   abstract= names the contract member (feeds structural conformance,
+#   lang.proto.provided_by).  (| body |) is a '''docstring''' + default
+#   impl.  A class with bases=NAME captures the default impl (last
+#   write wins, linear MRO); the docstring stays on the protocol.
+#   So Robot overrides greet; Plant inherits the protocol default.
+
+greet.default/%:; log(default greet from ${*})
+greet.loud/%:; log(beep boop, i am ${*})
+
+cmk.protocol Greetable(abstract=greet)(|
+  ''' Greetable: has a greet hook; the default just announces itself '''
+  self.greet := greet.default
+|)
+
+class Robot(bases=Greetable)[| greet = greet.loud |]
+r2d2 <- Robot.new()
+
+# Plant declares no override, so it inherits the protocol's default greet.
+class Plant(bases=Greetable)(||)
+fern <- Plant.new()
+
+demo.protocol:
+  ''' Mixin default flows to conformers; the protocol carries its own docstring. '''
+  log(override ${sep} r2d2.greet=${r2d2.greet})
+  log(inherited ${sep} fern.greet=${fern.greet})
+  log(contract ${sep} Greetable.abstract=${Greetable.abstract})
+  log(protocol doc ${sep} ${Greetable.__doc__})
+  ${make} ${r2d2.greet}/r2d2
+  ${make} ${fern.greet}/fern
+
+# eager-factory anti-pattern: ( a counterexample, documented but not run )
+#   Wrapping a deferred method body in an inner eval double-evaluates it,
+#   because the macro template already eval-wraps the body -- the generated
+#   method keeps a stray $$ and reads empty at call.  Fine for a plain :=
+#   value, fatal for a = with $$; prefer a plain deferred = macro.
+
+__main__: demo.dsl demo.class demo.self demo.reflection demo.inherit demo.nonclass.base demo.umbrella demo.protocol

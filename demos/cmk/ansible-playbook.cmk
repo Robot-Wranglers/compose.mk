@@ -1,0 +1,44 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+'''
+Pass an embedded data structure into an embedded container.  An inline
+Dockerfile provides ansible; an inline playbook (a verbatim banana block)
+is streamed in and run inside it.  Ported from ansible-playbook.mk.
+'''
+
+import log
+from cmk import Dockerfile
+
+# A container that has ansible.
+Dockerfile AnsiblePlaybook(|
+    FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
+    RUN apt-get update -qq && apt-get install -qq -y ansible make
+|)
+
+# Embedded data: a verbatim banana block freezes into a named define.
+Ansible.playbook(|
+- name: Example Playbook with Debug Task
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Print a debug message
+      debug:
+        msg: "Hello, this is a debug message!"
+|)
+
+self.playbook_runner/%:
+    '''
+    Runs inside the ansible container.  Reads the named playbook define into a
+    tempfile, then runs ansible-playbook over it with JSON output.
+    '''
+    log.io(${dim_green} Running playbook:)
+    ${io.mktemp} \
+    && ${mk.def.read}/${*} | ${stream.peek} > $${tmpf} \
+    && ANSIBLE_STDOUT_CALLBACK=json \
+        ansible-playbook -i localhost, -c local $${tmpf}
+    log.io(${dim_green} Playbook finished.)
+
+# Main entrypoint: build the image, then run the playbook inside it.
+__main__: AnsiblePlaybook.build
+    ''' Pass the embedded playbook into the embedded container and run it. '''
+    this.AnsiblePlaybook.dispatch/self.playbook_runner/Ansible.playbook

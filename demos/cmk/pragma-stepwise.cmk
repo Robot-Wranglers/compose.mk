@@ -1,0 +1,15 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# cmk_pragma ::: { "compiler_stepwise": 1 } :::
+#
+# pragma-stepwise.cmk:
+#   A compiler-knob pragma (companion to compiler_verbose).  The
+#   `compiler_stepwise` key makes the compiler run its lowering pipeline
+#   stage-by-stage -- each pass as its own syntax-highlighted step --
+#   instead of the fused fast path, for a per-program view of the compile.
+#
+# USAGE:  ./demos/cmk/pragma-stepwise.cmk
+#             # -> watch the staged compiler output, then:
+
+__main__:
+    echo "compiled stage-by-stage, thanks to the compiler_stepwise pragma"

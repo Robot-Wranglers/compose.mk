@@ -1,0 +1,127 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# swarm-search.cmk:
+#   A spike for the swarm searcher: workers are full supervised processes (each its
+#   own trampoline), so each runs a real backtracking search.  They race over the
+#   same problem with diversified orderings; the first to a solution wins and the
+#   rest are cancelled -- Holzmann's swarm verification on the compose.mk VM.
+#
+# USAGE:
+#   ./demos/cmk/swarm-search.cmk                       # race WORKERS searches, first wins
+#   ./demos/cmk/swarm-search.cmk search/5              # one search, top-level (no race)
+#   TARGET=7 WORKERS=6 DELAY=0.1 ./demos/cmk/swarm-search.cmk
+
+'''
+The earlier spikes ran workers CMK_SUPERVISOR=0: straight-line builders with no
+trampoline, so they could not backtrack.  This one flips the switch.  A worker is a
+fresh supervised run -- it re-execs the compiled program (CMK_SRC already carries the
+supervised shebang, so no recompile) with CMK_SUPERVISOR=1.  That gives each worker
+its own MAKE_SUPER, its own trampoline, and thus its own goal-directed search: real
+vm.choose / vm.backtrack over a private control stack.  This is the phase transition
+-- from one supervisor and a bag of traces to a bag of supervisor trees.
+
+Diversification makes it a swarm rather than N identical runs: each worker scans the
+same space in a seed-rotated order, so they reach the solution at different times.
+The first to find it claims a shared sink (an atomic mkdir lock, keyed by the parent
+run so every worker can find it), and the parent -- polling the sink -- cancels the
+survivors.  Coordination is share-nothing except that one sink: no blackboard, no
+visited-set, the maximally process-tree-aligned design.
+
+Known rough edges (honest for a spike): cancellation kills each worker's pid and its
+direct children best-effort -- a deep grandchild can reparent to init and finish its
+current step; and the winner is only first-to-find, not provably-optimal.
+'''
+
+import virtual-machine.cmk as vm, flat=1
+import log
+from cmk import class
+from cmk import Actor
+
+# swarm.race creates one SupervisedActor worker per racer and serves it a
+# diversified search; swarm/% is left with reset/report policy.
+class SupervisedActor(bases=Actor)[|
+  '''
+  Supervised-spawn transport (the swarm worker): a one-shot re-exec of
+  the compiled self with its own trampoline.  Negative isolation: unset
+  the inherited VM state so the child supervisor recomputes its own.
+  Runs the `ACTOR_GOAL`, extra env from `extra`.
+  deliver and serve are the same spawn.  Mailbox-less.
+  '''
+  ${self}.spawner.__call__ = env -u CMK_IO_STACK -u CONTROL_STACK_FRAMES -u CMK_BRF_PREFIX \
+    CMK_SUPERVISOR=1 CMK_INTERNAL=0 $${extra:-} \
+    $${CMK_SRC} $${ACTOR_GOAL:-__main__} 2>/dev/null
+  self.deliver:
+    ${self}.spawner()
+  self.serve:
+    ${self}.spawner()
+|]
+worker <- SupervisedActor.new()
+
+SPACE   ?= 16      # size of the search space (candidates 0 .. SPACE-1)
+TARGET  ?= 13      # the value a search is looking for
+WORKERS ?= 4       # how many diversified searches race
+# per-probe delay (seconds).  Kept well above supervised-startup jitter so search
+# ORDER, not process-launch noise, decides the race: the seed nearest the target
+# reaches it first.  Lower it and the winner becomes noise-dominated (still valid,
+# just not a clean demonstration of diversification).
+DELAY   ?= 0.35
+
+# search/<target>: ( a seed-diversified backtracking scan of the space )
+#   Builds the candidate order rotated by SEED (so different workers explore in
+#   different orders), then alternates over it with vm.choose -- classic Icon
+#   generate-and-test.  Runs only under a trampoline, which is why a worker must be
+#   supervised.
+search/%:
+  t="${*}"; alts=""; k=0; \
+  while [ "$$k" -lt "${SPACE}" ]; do \
+    c=$$(( ($${SEED:-0} + k) % ${SPACE} )); alts="$$alts probe/$$t.$$c"; k=$$((k+1)); \
+  done; \
+  vm.choose($$alts)
+
+# probe/<target>.<candidate>: ( test one candidate; win or backtrack )
+#   A hit that is first-to-claim the sink wins; a hit that lost the race still stops
+#   (someone won); a miss fails, so the trampoline resumes the next alternative.
+probe/%:
+  sleep ${DELAY}; \
+  t=`printf '%s' "${*}" | cut -d. -f1`; c=`printf '%s' "${*}" | cut -d. -f2`; \
+  if [ "$$c" = "$$t" ]; then \
+    printf 'seed=%s found target=%s\n' "$${SEED:-0}" "$$t" >/dev/stderr; \
+    { [ -n "$${WIN_SINK:-}" ] && mkdir "$${WIN_SINK}.lock" 2>/dev/null \
+        && printf 'seed=%s candidate=%s\n' "$${SEED:-0}" "$$c" > "$${WIN_SINK}"; } || true; \
+  else \
+    vm.backtrack(); \
+  fi
+
+# swarm/<target>: policy -- race WORKERS searches for <target>, first wins.
+#   Resets the shared sink, runs the race, reports the winner, clears it.
+#   swarm.race owns the launch/poll/cancel; swarm is left with policy.
+swarm/%:
+  run="$${MAKE_SUPER:-$$$$}"; sink=".tmp.swarm.win.$${run}"; \
+  cmk.io.safe_rm($${sink}); rmdir -- "$${sink}.lock" 2>/dev/null || true; \
+  this.swarm.race/${*}; \
+  if [ -f "$${sink}" ]; then printf '  winner: '; cat "$${sink}"; else printf '  no solution\n'; fi; \
+  cmk.io.safe_rm($${sink}); rmdir -- "$${sink}.lock" 2>/dev/null || true
+
+# swarm.race/<target>: the supervisor half -- launch, poll, cancel.
+#   Shares the keyed-background-spawn + pid-ledger launch pattern with
+#   fork.scatter, but its workers are supervised re-execs (own trampolines,
+#   real backtracking) not unsupervised _vm.ambient branches, and its join
+#   is first-wins + cancel, not wait-all + collect (two isolation modes).
+swarm.race/%:
+  t="${*}"; run="$${MAKE_SUPER:-$$$$}"; sink=".tmp.swarm.win.$${run}"; \
+  pids=""; i=0; \
+  while [ "$$i" -lt "${WORKERS}" ]; do \
+    seed=$$(( i * ${SPACE} / ${WORKERS} )); \
+    extra="SEED=$$seed WIN_SINK=$${sink}" ACTOR_GOAL="search/$$t" ${make} worker.serve 2>/dev/null & \
+    pids="$${pids} $$!"; i=$$((i+1)); \
+  done; \
+  $(call log, ${dim}launched ${cyan}${WORKERS}${no_ansi_dim} searches ${sep} racing for ${yellow}$$t); \
+  while [ ! -f "$${sink}" ]; do \
+    alive=0; for p in $$pids; do kill -0 "$$p" 2>/dev/null && alive=1; done; \
+    [ "$$alive" = 1 ] || break; sleep 0.1; \
+  done; \
+  for p in $$pids; do pkill -P "$$p" 2>/dev/null; kill "$$p" 2>/dev/null; done
+
+__main__:
+  log(${bold}swarm search ${sep} ${dim}${WORKERS} supervised searchers race for ${TARGET})
+  ${make} swarm/${TARGET}

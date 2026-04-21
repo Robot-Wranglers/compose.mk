@@ -1,9 +1,9 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 
 ## Loading Compose Files
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-2">
 
-For use-cases where you have a compose-file, and want some of the `compose.mk` features, but you **don't have a project Makefile**, you can skip [the usual integration]({{mkdocs.site_relative_url}}/quickstart#docker-compose-integration) by letting `loadf` generate integration for you just in time.
+For use-cases where you have a compose-file[^compose], and want some of the `compose.mk` features, but you **don't have a project Makefile**, you can skip [the usual integration]({{_}}/quickstart#docker-compose-integration) by letting `loadf` generate integration for you just in time.
 
 General usage looks like this:
 
@@ -12,34 +12,34 @@ $ ./compose.mk loadf <path_to_compose_file> <other_instructions>
 ```
 
 ### Basic Usage
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-If no additional downstream targets are passed, the default behaviour is to open a shell for each tool container [using the TUI]({{mkdocs.site_relative_url}}/embedded-tui).  Here's what it looks like:
+If no additional downstream targets are passed, the default behaviour is to open a shell for each tool container [using the TUI]({{_}}/embedded-tui).  Here's what it looks like:
 
 {{macros.img_link("loadf-1.gif", mkdocs)}}
 
-See instead [the selector docs]({{mkdocs.site_relative_url}}/selector#interactive-container-selection) for interactively selecting a container instead of opening all of them. 
+See instead [the selector docs]({{_}}/selector#interactive-container-selection) for interactively selecting a container instead of opening all of them. 
 
 ### Arbitrary Downstream Targets
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-Using `loadf` effectively runs [`compose.import`]({{mkdocs.site_relative_url}}/bridge) *for you* so that afterwards you can use any of the other targets documented as [part of the bridge]({{mkdocs.site_relative_url}}/bridge/#target-scaffolding) or the [static targets]({{mkdocs.site_relative_url}}/api).
+Using `loadf` effectively runs [`compose.import`]({{_}}/bridge) *for you* so that afterwards you can use any of the other targets documented as [part of the bridge]({{_}}/bridge/#target-scaffolding) or the [static targets]({{_}}/api).
 
-This means that `loadf` doesn't really need to involve the TUI at all.  The example below is using the [`<svc_name>.get_shell`]({{mkdocs.site_relative_url}}/bridge/#svc_namespecial) target:
+This means that `loadf` doesn't really need to involve the TUI at all.  The example below is using the [`<svc_name>.get_shell`]({{_}}/bridge/#svc_namespecial) target:
 
 {{macros.img_link("loadf-no-tui.png", mkdocs)}}
 
 Note that despite all the output **this is pipe-safe**, in case the commands involved might return JSON for downstream parsing, etc.  
 
----------------------------------------
+<hr style="width:95%;border-bottom:1px dashed black;">
 
-As another example, you can use the [`<svc_name>.pipe` target]({{mkdocs.site_relative_url}}/bridge/#svc_nameshellpipe) to push data *into* a container with a command like this:
+As another example, you can use the [`<svc_name>.pipe` target]({{_}}/bridge/#svc_nameshellpipe) to push data *into* a container with a command like this:
 
-```bash  {.cli_example .line-numbers}
-
+```bash  {.cli_example}
 $ echo hostname | ./compose.mk loadf \
     demos/data/docker-compose.yml debian.shell.pipe
 ```
+
 ```bash {.cli_output}
 debian
 ```
@@ -60,14 +60,15 @@ $ ./compose.mk loadf demos/data/docker-compose.yml \
        tux.open/io.shell,io.shell
 ```
 
-### Related Links
-<hr style="width:100%;border-bottom:3px solid black;">
+{{ macros.section(3, "See Also", id="see-also") }}
 
-The [Embedded TUI]({{mkdocs.site_relative_url}}/embedded-tui/#zero-config-tuis) documentation has other examples that are using `loadf`, discussion of default pane layouts, etc.
+* [Embedded TUI]({{_}}/embedded-tui/#zero-config-tuis): more `loadf` examples and default pane layouts.
+* [Bridge]({{_}}/bridge#target-scaffolding): the scaffolded targets `loadf` makes available.
+* [Selectors]({{_}}/selector#interactive-container-selection): pick one container interactively instead of opening all.
 
-For more details about available targets, see the [bridge documentation]({{mkdocs.site_relative_url}}/bridge#target-scaffolding).
+{{ macros.section(3, "References", id="references") }}
 
-<hr style="width:100%;border-bottom:3px solid black;">
+[^compose]: {{ tufte.wiki('Docker_(software)#Docker_Compose')|trim }}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
@@ -76,6 +77,6 @@ document.addEventListener('DOMContentLoaded', function() {setTimeout(function() 
         ['related-links','list-details'],
         ['arbitrary-downstream','code-dots'],
     ], mkdocs)}}
-       addImageToHeader('loading-compose-files','/{{mkdocs.config.site_name}}/img/compose.png',style="margin-top:-10px;height:2.2em;")
+       addImageToHeader('loading-compose-files','/{{mkdocs.config.site_name}}/img/compose.png',style="height:2.2em;")
 }, 100);});
 </script>

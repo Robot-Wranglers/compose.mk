@@ -1,0 +1,32 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+'''
+dsl-python.cmk: the `python` dsl base runs instance bodies in a container and
+reflects them via griffe. stats() streams stdin; funcs.__reflect__() lists the
+functions it defines. USAGE: ./demos/cmk/dsl-python.cmk (needs docker).
+'''
+
+cmk.include.plugins(dsl.python.cmk)
+
+# stats: a python program over a stdin stream, using the stdlib.
+python stats(|
+  import sys, statistics as st
+  xs = [float(x) for x in sys.stdin.read().split()]
+  print(f"n={len(xs)} mean={st.mean(xs):.2f} max={max(xs):g}")
+|)
+
+# funcs: a shape griffe reflects on (its functions), not run.
+python funcs(|
+  def add(a, b):
+      return a + b
+  def mul(a, b):
+      return a * b
+|)
+
+demo.stream:
+  '''stream numbers into the container-python program on stdin.'''
+  printf '3 1 4 1 5 9 2 6' | stats()
+
+demo.reflect:; funcs.__reflect__()
+
+__main__: demo.stream demo.reflect

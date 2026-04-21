@@ -1,18 +1,21 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
-# Demonstrating GUI capabilities with dockerized XPra,
-# plus a dockerized app, served via HTTP / HTML5 and 
-# accessed via a host browser.
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# xpra-doom.cmk:
+#   GUI capabilities with dockerized XPra plus a dockerized app,
+#   served via HTTP / HTML5 and accessed from a host browser.
 #
 # USAGE: ./demos/cmk/xpra-doom.cmk serve
+
+import io
 
 export DISPLAY=:10
 export XPRA_PORT_INTERNAL?=14500
 export XPRA_ARGS?=--mdns=no --printing=no --speaker=no --sharing=yes --audio=no --pulseaudio=no --webcam=no --microphone=off --html=on --daemon=no --window-close=disconnect --file-transfer=no --tray=no --system-tray=no --exit-with-children=yes --terminate-children=yes 
 export XPRA_PORT_EXTERNAL?=9091
 export XPRA_SOURCES=https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra-lts.sources
-export CMK_AT_EXIT_TARGETS=doom.stop
+export CMK_POST=doom.stop
 
-⋘ gui.services
+compose.import.string gui.services(|
 services:
   doom:
     build:
@@ -37,15 +40,19 @@ services:
     volumes:
       - ${PWD}:/workspace
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
-⋙
+|)
 
 serve: doom.stop doom.build doom.up.detach flux.timeout/5/doom.logs
-	@# Start an XOrg server, rebuild the i3 container if necessary.
-	@# Then start/detach i3 WM, and start a few apps inside.
-	cmk.io.user_exit(Serving: http://localhost:${XPRA_PORT_EXTERNAL})
+    '''
+    Rebuild the doom container if necessary, then start/detach it
+    and tail the logs.  Serves the game over HTML5 to a host browser.
+    '''
+    io.user_exit(Serving: http://localhost:${XPRA_PORT_EXTERNAL})
 
 __main__:
-	@# Print usage info and exit.
-	@# Main entrypoint does not actually start the GUI
-	@# because we don't want this running from main test-suite
-	cmk.log(${red}USAGE: ${__file__} serve)
+    '''
+    Print usage info and exit.
+    Main entrypoint does not actually start the GUI
+    because we don't want this running from main test-suite
+    '''
+    cmk.log(${red}USAGE: ${__file__} serve)

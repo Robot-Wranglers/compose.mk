@@ -1,0 +1,69 @@
+<mxfile host="65bd71144e">
+    <diagram name="concepts" id="concepts">
+        <mxGraphModel dx="1147" dy="2945" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1710" pageHeight="1210" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                
+                <mxCell id="cell_ambient" value="&lt;b&gt;Ambient (protocol)&lt;/b&gt;&lt;br&gt;MEMBERSHIP  ·  __ambient_parent__&lt;br&gt;machine + namespace CONFORM (not a class)" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#333333;fontColor=#1a1a1a;fontSize=15;verticalAlign=middle;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="710" y="-120" width="300" height="86" as="geometry"/>
+                </mxCell>
+                <mxCell id="cell_machine" value="&lt;b&gt;cmk.machine&lt;/b&gt;&lt;br&gt;conforms Runnable + Callable + Ambient&lt;br&gt;img empty → host, set → container" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#333333;fontColor=#1a1a1a;fontSize=15;verticalAlign=middle;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="370" y="200" width="300" height="86" as="geometry"/>
+                </mxCell>
+                <mxCell id="cell_polyglot" value="&lt;b&gt;code / code.unbound&lt;/b&gt;&lt;br&gt;code-object (content, OFF the machine axis)&lt;br&gt;BINDS to a machine: has-a, not is-a" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#333333;fontColor=#1a1a1a;fontSize=15;verticalAlign=middle;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="380" width="300" height="86" as="geometry"/>
+                </mxCell>
+                <mxCell id="cell_host" value="&lt;b&gt;cmk.host&lt;/b&gt;&lt;br&gt;host-backed  ·  .run pinned to host&lt;br&gt;host.local / host.native.*" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#333333;fontColor=#1a1a1a;fontSize=15;verticalAlign=middle;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="370" y="380" width="300" height="86" as="geometry"/>
+                </mxCell>
+                <mxCell id="cell_container" value="&lt;b&gt;cmk.container&lt;/b&gt;&lt;br&gt;image-backed  ·&lt;br&gt;.run pinned to docker" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#333333;fontColor=#1a1a1a;fontSize=15;verticalAlign=middle;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="710" y="380" width="300" height="86" as="geometry"/>
+                </mxCell>
+                <mxCell id="cell_dockerfile" value="&lt;b&gt;cmk.Dockerfile&lt;/b&gt;&lt;br&gt;body IS the Dockerfile" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#333333;fontColor=#1a1a1a;fontSize=15;verticalAlign=middle;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="710" y="560" width="300" height="86" as="geometry"/>
+                </mxCell>
+                <mxCell id="cell_namespace" value="&lt;b&gt;cmk.namespace&lt;/b&gt;&lt;br&gt;dissolve-into ambient  ·  open&lt;br&gt;(a block dissolves in)" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#333333;fontColor=#1a1a1a;fontSize=15;verticalAlign=middle;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="1050" y="200" width="300" height="86" as="geometry"/>
+                </mxCell>
+                <mxCell id="cell_module" value="&lt;b&gt;cmk.module&lt;/b&gt;&lt;br&gt;a packaged namespace  ·&lt;br&gt;import / include" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#333333;fontColor=#1a1a1a;fontSize=15;verticalAlign=middle;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="1050" y="380" width="300" height="86" as="geometry"/>
+                </mxCell>
+                <mxCell id="cell_npython" value="&lt;b&gt;host.native&lt;/b&gt;&lt;br&gt;.python" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#333333;fontColor=#1a1a1a;fontSize=15;verticalAlign=middle;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="370" y="560" width="130" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="cell_nbash" value="&lt;b&gt;host.native&lt;/b&gt;&lt;br&gt;.bash" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#333333;fontColor=#1a1a1a;fontSize=15;verticalAlign=middle;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="510" y="560" width="130" height="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_4" value="BINDS" style="endArrow=open;html=1;strokeColor=#333333;strokeWidth=1.6;fontColor=#c2185b;fontSize=16;labelBackgroundColor=#fde4ee;edgeStyle=none;rounded=0;" parent="1" source="cell_polyglot" target="cell_machine" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_5" value="IS-A" style="endArrow=classic;html=1;strokeColor=#333333;strokeWidth=1.6;fontColor=#c2185b;fontSize=16;labelBackgroundColor=#fde4ee;edgeStyle=none;rounded=0;" parent="1" source="cell_host" target="cell_machine" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_6" value="IS-A" style="endArrow=classic;html=1;strokeColor=#333333;strokeWidth=1.6;fontColor=#c2185b;fontSize=16;labelBackgroundColor=#fde4ee;edgeStyle=none;rounded=0;" parent="1" source="cell_container" target="cell_machine" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_7" value="IS-A" style="endArrow=classic;html=1;strokeColor=#333333;strokeWidth=1.6;fontColor=#c2185b;fontSize=16;labelBackgroundColor=#fde4ee;edgeStyle=none;rounded=0;" parent="1" source="cell_dockerfile" target="cell_container" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_8" value="IS-A" style="endArrow=classic;html=1;strokeColor=#333333;strokeWidth=1.6;fontColor=#c2185b;fontSize=16;labelBackgroundColor=#fde4ee;edgeStyle=none;rounded=0;" parent="1" source="cell_npython" target="cell_host" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_9" value="IS-A" style="endArrow=classic;html=1;strokeColor=#333333;strokeWidth=1.6;fontColor=#c2185b;fontSize=16;labelBackgroundColor=#fde4ee;edgeStyle=none;rounded=0;" parent="1" source="cell_nbash" target="cell_host" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_10" value="IS-A" style="endArrow=classic;html=1;strokeColor=#333333;strokeWidth=1.6;fontColor=#c2185b;fontSize=16;labelBackgroundColor=#fde4ee;edgeStyle=none;rounded=0;" parent="1" source="cell_namespace" target="cell_ambient" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_11" value="IS-A" style="endArrow=classic;html=1;strokeColor=#333333;strokeWidth=1.6;fontColor=#c2185b;fontSize=16;labelBackgroundColor=#fde4ee;edgeStyle=none;rounded=0;" parent="1" source="cell_module" target="cell_namespace" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_14" value="IS-A" style="endArrow=classic;html=1;strokeColor=#333333;strokeWidth=1.6;fontColor=#c2185b;fontSize=16;labelBackgroundColor=#fde4ee;edgeStyle=none;rounded=0;" parent="1" source="cell_machine" target="cell_ambient" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

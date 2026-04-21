@@ -1,0 +1,9 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# cmk_pragma ::: { "repl": true } :::
+
+# repl.cmk: the pragma above is the whole wiring; ctrl-d exits.
+
+# USAGE: ./demos/cmk/repl.cmk (type a demo.* target; needs a tty).
+__main__: demo.hello
+demo.hello:; cmk.log(hello from the repl demo)
+demo.wait: io.time.wait/1

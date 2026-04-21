@@ -1,0 +1,58 @@
+#!/usr/bin/env -S CMK_DISABLE_HOOKS=1 ./compose.mk cmk run
+#
+# call_stack.cmk:
+#   The MAKE_CLI continuation used as a control stack, via the `__vm__`
+#   module.  Transfers use the cmk callform `cmk.vm.goto(arrive)`, which
+#   stays inline (the transfer reads the live ${@} + MAKE_CLI).  The
+#   nullary inspect ops (${__vm__.peek} / .rest / .depth) are `${..}`-style.
+#
+#   ./demos/cmk/call_stack.cmk peek A B
+#   ./demos/cmk/call_stack.cmk need.setup C
+#   ./demos/cmk/call_stack.cmk router B arrive C
+#   ./demos/cmk/call_stack.cmk count/3
+#   ./demos/cmk/call_stack.cmk find/hit C
+
+# The __vm__ plugin (control stack + CEK machine) is not in core -- import it.
+import virtual-machine.cmk as vm, flat=1
+
+# The no-args default: showcase the bounded goto-loop.
+__main__: count/3
+
+A:; echo A
+B:; echo B
+C:; echo C
+
+peek:
+  '''inspect: the pending goals after this target are the control stack.'''
+  printf 'top=%s rest=%s depth=%s\n' \
+    "`${__vm__.peek}`" "`${__vm__.rest}`" "`${__vm__.depth}`"
+
+need.setup:
+  '''push: subroutine call with implicit return to the caller's continuation.'''
+  echo "need.setup -> push setup"
+  vm.push(setup)
+setup:; echo "  setup"
+
+skipper:
+  '''drop: pop/skip the next pending goal.'''
+  echo "skipper -> drop next"
+  vm.drop()
+
+router:
+  '''goto: tail-jump forward -- skip goals before the target, keep goals after it.'''
+  echo "router -> goto arrive"
+  vm.goto(arrive)
+arrive:; echo "  arrive"
+
+count/%:
+  '''loop: a bounded loop expressed purely as goto-back over the control stack.'''
+  echo "count ${*}"
+  [ "${*}" = 0 ] && echo "  done" || vm.goto(count/$$((${*}-1)))
+
+find/%:
+  '''call / return: disciplined non-local return (the callee always returns).'''
+  echo "find ${*} -> call probe/${*}"
+  vm.call(probe/${*})
+probe/%:
+  case "${*}" in hit) echo "  probe hit (early return)";; *) echo "  probe miss";; esac \
+  ; vm.return()

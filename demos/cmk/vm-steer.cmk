@@ -1,0 +1,39 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# cmk_pragma ::: { "repl": { "eval": "vm-steer.eval",
+#   "print": "vm-steer.print" }, "compiler_pre": ["vm_hydrate"] } :::
+
+'''
+A REPL that is both a live dashboard and a driver's seat for the reflective vm machine: the print region runs a paused CEK machine that blocks waiting for a steer command, so the mode-line can reflect its live self-model.
+The eval region turns a typed goal into a steer -- the machine wakes, jumps to it, runs it, then re-blocks -- so you drive it from the prompt instead of only watching.  A blocking (not self-looping) machine is deliberate: a self-loop would race an external steer, whereas blocking yields control cleanly.
+It needs only the reflective vm env (not the coroutine), so it imports the virtual-machine library directly and opts in with vm.reflect.
+'''
+
+# usage: run for a REPL (tty), then type a goal, e.g. vm-steer.alt
+
+# headless: post goals to the command file; see the test in tests/
+
+# ref: robot-wranglers.github.io/compose.mk/modules/virtual-machine
+import virtual-machine.cmk as vm, __vm__, flat=1
+$(call vm.reflect, exclude=MAKE CMK MFLAGS kwargs_ CONTROL_STACK)
+
+# print region: idle, block on a steer command, then goto the goal.
+
+# bounded by VM_STEER_MAX poll-ticks so a headless run terminates.
+vm-steer.print: vm-steer.machine
+vm-steer.machine:
+    export tick=$$(( $${tick:-0} + 1 ))
+    cmk.log([machine] idle tick=$${tick} -- steer me: type a goal (e.g. vm-steer.alt / vm-steer.work))
+    cmd=`${__vm__.steer.wait}`
+    [ -n "$$cmd" ] && { cmk.log.warn([machine] >>> steering to: $$cmd) ; vm.goto($$cmd) ; } || cmk.log([machine] no steer -- idle timeout, exiting)
+
+# visible steer targets; each resumes the idle loop afterwards.
+vm-steer.alt:; cmk.log.warn([machine] >>> ALT goal reached) && vm.goto(vm-steer.machine)
+vm-steer.work:; cmk.log.warn([machine] >>> WORK subroutine ran) && vm.goto(vm-steer.machine)
+
+# eval region: last word of the typed line is the goal; post it.
+vm-steer.eval:; trap ':' INT ; while IFS= read -r line; do [ -z "$$line" ] && { printf '\036\n'; continue; } ; g=`printf '%s' "$$line"|awk '{print $$NF}'` ; ${make} "vm-steer.post/$$g" >/dev/null 2>&1 && printf '[posted steer: %s]\n' "$$g" ; printf '\036\n' ; done
+
+# post a typed goal to the waiting machine's command channel.
+vm-steer.post/%:; __vm__.steer.post(${*})
+
+__main__: vm-steer.machine

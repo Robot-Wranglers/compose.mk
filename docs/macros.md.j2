@@ -1,0 +1,183 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+## Macros &amp; Functions
+<hr class="section-rule lvl-2">
+
+Targets have a complete, auto-generated [API reference]({{_}}/api).  But `compose.mk` also ships a large collection of GNU-make **macros / functions**[^make-functions] that are **not** part of the reflected API reference.  This page collects that side of the library.
+
+!!! tip "Targets vs. Macros, in one line"
+    A **target** is a rule you *run* (`./compose.mk io.bash`, or the same
+    recursively).  A **macro** is text you *expand* in place: `${name}` (nullary) <!-- docs-code-ok -->
+    or `$(call name, arg1, arg2)` (parametric).  Many things exist as **both**. <!-- docs-code-ok -->
+
+### Why macros exist
+<hr class="section-rule lvl-3">
+
+As covered in [Style & Idioms]({{_}}/style), the project *prefers* targets (they compose and reflect better), but reaches for a macro in three situations:
+
+* **Readability:** the `stream.stdin` macro reads better than `cat /dev/stdin`, and the `log` macro better than the equivalent `printf`/`cut` incantation.
+* **Performance:** a macro expands in the current shell, avoiding the cost of a recursive `make` call for hot, inner-loop helpers.
+* **Scaffolding:** some macros emit *whole or partial makefiles* at parse-time (most the "import" macros).
+
+And by the way, if you're ready to move past vanilla `make` and use the [CMK language]({{_}}/cmk/intro), then [callforms]({{_}}/cmk/concepts/#callforms) actually *unify* the macro and the target syntax as simple callables, so that you can simply write things like `log(..)` instead.
+
+### Calling conventions
+<hr class="section-rule lvl-3">
+
+{{site.embed_mirror('demos/callforms.mk', 'demos/cmk/callforms.cmk', github=github, default='left')}}
+
+Above: **nullary** macros are just referenced; **parametric** helpers take arguments through a macro call; and many targets ALSO publish a same-named **macro** (the macro form expands inline, saving a process and avoiding a recursive re-parse; the target form is the equivalent recursive `make` call).  In [cmk-lang]({{_}}/cmk/compiler) (the right-hand tab) the syntax is sugared: a macro-anchored `fn` callform compiles to a `fn` macro call, and a target-anchored `x` callform with a stream compiles to that stream piped into a recursive call of `x` (see the [Quick Reference]({{_}}/cmk/quickref)).
+
+### Inspecting macros
+<hr class="section-rule lvl-3">
+
+Two reflection helpers (each is *itself* available as both a target and a macro;
+see [Reflection]({{_}}/reflection)) let you inspect any
+macro or define at runtime:
+
+```bash {.cli_example}
+# Show the raw, unexpanded value of a macro/variable:
+$ ./compose.mk mk.get/stream.nl.to.space
+xargs
+
+# Dump a `define ... endef` block verbatim
+$ ./compose.mk mk.def.read/mk.unpack.kwargs
+```
+
+{{site.api_link('mk.get', mkdocs)}} expands a name; {{site.api_link('mk.def.read', mkdocs)}} reads a define block.  Both are the reflection primitives that the importer macros (`import.def` / `import.target`) build on.
+
+### Families
+<hr class="section-rule lvl-3">
+
+A map of the macro/function families.  Most members mirror a same-named target. The **More** column links to the page where that area is covered in depth.
+
+<table> 
+  <thead>
+    <tr><th>Representative macros</th><th>More</th></tr>
+  </thead>
+  <tbody>
+    <tr><td colspan="2"><strong><code>log.*</code>:</strong> Structured logging to stderr (glyph-prefixed, color-aware).</td></tr>
+    <tr>
+      <td class="macro-list"><code>log</code>, <code>log.json</code>, <code>log.trace</code>, <code>log.io</code>/<code>log.mk</code>/<code>log.docker</code></td>
+      <td><a href="{{_}}/logging">Logging</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>stream.*</code>:</strong> Composable stdin/stdout text transforms.</td></tr>
+    <tr>
+      <td class="macro-list"><code>stream.stdin</code>, <code>stream.peek</code>, <code>stream.nl.to.space</code>, <code>stream.comma.to.nl</code>, <code>stream.indent</code>, <code>stream.dim</code></td>
+      <td><a href="{{_}}/standard-lib">Standard Library</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>io.*</code>:</strong> Files, tempfiles, HTTP, and user-input helpers.</td></tr>
+    <tr>
+      <td class="macro-list"><code>io.mktemp</code>, <code>io.mktempd</code>, <code>io.curl</code>, <code>io.gum.run</code>, <code>io.get.choice</code></td>
+      <td><a href="{{_}}/io.mktemp">io.mktemp</a>, <a href="{{_}}/user-input">User Input</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>bind.*</code>:</strong> Decorators that bind args/containers to a target.</td></tr>
+    <tr>
+      <td class="macro-list"><code>bind.args</code>, <code>bind.posargs</code>, <code>log</code></td>
+      <td><a href="{{_}}/argument-parsing">Argument Parsing</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>mk.*</code>:</strong> Meta-tooling: reflection, kwargs, importing, assertions.</td></tr>
+    <tr>
+      <td class="macro-list"><code>mk.get</code>, <code>mk.def.read</code>, <code>mk.unpack.kwargs</code>, <code>import.def</code>, <code>import.target</code>, <code>assert.env</code></td>
+      <td><a href="{{_}}/reflection">Reflection</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>flux.*</code>:</strong> Workflow / functional operators (pipelines, map/fold, retries).</td></tr>
+    <tr>
+      <td class="macro-list"><code>flux.pipeline</code>, <code>flux.map</code>, <code>flux.apply</code>, <code>flux.each</code></td>
+      <td><a href="{{_}}/functional">Functional</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>docker.*</code>:</strong> Container plumbing (run bases, mounts, image/tag queries).</td></tr>
+    <tr>
+      <td class="macro-list"><code>docker.run.base</code>, <code>docker.compose</code>, <code>docker.images.filter</code>, <code>docker.curry.command</code></td>
+      <td><a href="{{_}}/raw-docker">Raw Docker</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>compose.*</code>:</strong> Parse-time scaffolding from docker-compose files.</td></tr>
+    <tr>
+      <td class="macro-list"><code>compose.import</code>, <code>compose.import.string</code>, <code>compose.bind.target</code>, <code>compose.bind.script</code></td>
+      <td><a href="{{_}}/bridge">Compose Bridge</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>polyglot.*</code>:</strong> Parse-time scaffolding for embedded foreign code.</td></tr>
+    <tr>
+      <td class="macro-list"><code>code</code>, <code>code.unbound</code>, <code>code.config</code>, <code>code.pipe</code></td>
+      <td><a href="{{_}}/demos/polyglots">Polyglots</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>declare.*</code>:</strong> Parse-time <em>declaration</em> namespace: the registrars created by constructors, plus the core primitive <code>declare.stack</code>.  Bring things into scope with the canonical <code>*.import</code> verbs.</td></tr>
+    <tr>
+      <td class="macro-list"><code>import.module</code>, <code>include.plugin</code>, <code>compose.import</code>, <code>declare.stack</code></td>
+      <td><a href="{{_}}/reflection">Reflection</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><i>colors / glyphs</i>:</strong> ANSI color &amp; brand-glyph constants for log/output formatting.</td></tr>
+    <tr>
+      <td class="macro-list"><code>${red}</code>, <code>${dim}</code>, <code>${green}</code>, <code>${no_ansi}</code>, <code>${sep}</code>, <code>${GLYPH_MK}</code></td>
+      <td><a href="{{_}}/style">Style &amp; Idioms</a></td>
+    </tr>
+  </tbody>
+</table>
+
+### `declare.*` Namespace
+<hr class="section-rule lvl-3">
+<a name=declare-namespace></a>
+
+{{site.block_docs('DeclarationIndex', mkdocs)}}
+
+A `declare.*` macro is also the **constructor** a [banana block]({{_}}/cmk/banana/#banana-declare) is handed to:
+
+> `declare docker lambda NAME(| .. |)`  lowers to a call of the `declare.docker.lambda` macro with `def=NAME`
+
+A name declared here (a channel, module, polyglot, or single-image container) also becomes a
+first-class **[receiver]({{_}}/cmk/compiler/#receivers)** in cmk-lang: once
+declared, you can call its scaffolded targets anchorless, with no target-anchor prefix:
+
+> `name.method[...]`
+
+### Worked examples
+<hr class="section-rule lvl-3">
+
+**Stream composition:** macros chain like any shell command:
+
+```Makefile {.snippet .language-makefile}
+pretty: ; cat data.json | ${jq} . | ${stream.dim} | ${stream.indent}
+```
+
+**Logging with an argument:** a macro call passes positional args:
+
+```Makefile {.snippet .language-makefile}
+build:
+	$(call log, building ${app_name})
+	@# ... real work ...
+```
+
+**Keyword arguments:** `mk.unpack.kwargs` powers the `key=value` idiom used by `import.def`, `compose.bind.*`, and friends (full treatment in
+[Argument Parsing]({{_}}/argument-parsing)).  One call unpacks a single key (below) or a space-separated spec of many (`, a b=def c='x y'`):
+
+```Makefile {.snippet .language-makefile}
+greet:
+	$(call mk.unpack.kwargs, ${MAKEFLAGS}, name, world)
+	@printf 'hello, %s\n' "${kwargs_name}"
+```
+
+**Tempfiles with auto-cleanup:** `io.mktemp` exports `tmpf` and traps its
+removal on exit ([details]({{_}}/io.mktemp)):
+
+```Makefile {.snippet .language-makefile}
+work: ; ${io.mktemp} && echo hi > ${tmpf} && cat ${tmpf}
+```
+
+### See Also
+<hr class="section-rule lvl-3">
+
+The macro/function story is spread across several pages; this one is the index.
+
+* [Argument Parsing:]({{_}}/argument-parsing) `bind.args.*`, `mk.unpack.kwargs`, positional helpers.
+* [Logging:]({{_}}/logging) the `log.*` family.
+* [io.mktemp:]({{_}}/io.mktemp) tempfile/tempdir macros.
+* [Reflection:]({{_}}/reflection) `mk.get`, `mk.def.read`, inspecting symbols.
+* [Functional:]({{_}}/functional) `flux.*` operators.
+* [Style &amp; Idioms:]({{_}}/style) how to *write* macros (public/private, currying, when to prefer a target).
+* [Compiler &amp; Dialects:]({{_}}/cmk/compiler) the `cmk.fn(args)` shorthand for calling macros from cmk-lang.
+* [Full API:]({{_}}/api) the reflected reference for *targets* (the other half of the library).
+
+### References
+<hr class="section-rule lvl-3">
+
+[^make-functions]: [GNU Make Functions manual](https://www.gnu.org/software/make/manual/html_node/Functions.html)

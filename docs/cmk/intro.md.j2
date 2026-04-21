@@ -1,0 +1,85 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+# CMK: Introduction & Classification
+<hr class="section-rule lvl-1">
+
+{{ macros.road_map([
+    'Want to *write* CMK?  Jump straight to the [compiler tutorial](@/cmk/compiler) (syntax and lowering).',
+    ['CMK Quick Reference', '@/cmk/quickref', 'a syntax cheat-sheet'],
+    ['Language Properties', '@/cmk/paradigm/#language-properties', 'the multi-paradigm classification in full'],
+], mkdocs) }}
+Most documentation doesn't emphasize that `compose.mk` is actually *a programming language*.  The shocking secret truth is safe to ignore, and you don't need to care about this if you're only interested in [tools]({{_}}/tool-overview) or a [standard-library]({{_}}/standard-lib) for Makefiles.
+
+{%include "cmk/tldr.md.j2"%}
+
+## Run it
+<hr class="section-rule lvl-2">
+
+A CMK file is executable via a shebang, or through the `cmk` subcommand:
+
+```bash
+#!/usr/bin/env -S ./compose.mk cmk run        # line 1, then `chmod +x`
+
+./compose.mk cmk run     greet.cmk            # compile + run
+./compose.mk cmk compile greet.cmk            # just show the generated Makefile
+./compose.mk cmk compile greet.cmk greet      # emit a self-contained ./greet executable
+```
+
+`__main__` is the default goal (think Python's `if __name__ == "__main__"`):
+
+```makefile
+#!/usr/bin/env -S ./compose.mk cmk run
+# greet.cmk
+
+shout:; tr '[:lower:]' '[:upper:]'
+
+__main__:
+    this.shout["""hello, world"""]        # pipe a literal into a target
+```
+
+```console
+$ ./greet.cmk
+HELLO, WORLD
+```
+
+Two lines, three ideas: a target that reads stdin (`shout`), an entrypoint (`__main__`),
+and a **call-form** that pipes a literal into a target.  Nothing here is magic; every
+construct is sugar over ordinary `make`, and the [compiler tutorial]({{_}}/cmk/compiler) shows exactly what it
+becomes.
+
+Since CMK inherits all of the `compose.mk` standard library and primitives, it has the same native support for things like [workflows]({{_}}/demos/workflows), [containers]({{_}}/demos/matrioshka) and [polyglots]({{_}}/demos/polyglots).  But it also gets first-class [modules]({{_}}/cmk/modules) and a simple-but-powerful [metaprogramming environment]({{_}}/cmk/metaprogramming).
+
+Since CMK uses `compose.mk` as the *interpreter*, it also [extends make]({{_}}/signals), [generalizes it]({{_}}/cmk/paradigm/#homoiconic), and adds new kinds of [patterns]({{_}}/matrioshka).
+
+Writing code in the CMK language does not add new core capabilities to what `compose.mk` already does *without* CMK.  But by *elevating existing idioms to native syntax*, the payoff is actually huge, because notation is part of how we think.[^1]
+
+## A few rules that bite
+<hr class="section-rule lvl-2">
+
+The behaviours worth knowing before your first surprise:
+
+* **`define … endef` is a force field.**  *No* sugar fires inside it: that is the whole trick that lets embedded foreign code (which may use `$`, `'''`, `[`, …) survive intact.
+* **Recipe lines are joined with `&&`.**  Unlike vanilla `make` (one shell per line), a CMK recipe body runs as *one* shell: variables and `cd` persist across lines, and the first failure stops the rest.  Write one statement per line and it just works.
+* **Indentation is Python-style.**  Tabs *or* spaces (consistently): no more "missing tab" papercuts.  Mixing them in one body is an error, on purpose.
+* **Adjacency matters.**  A target-anchored `foo(x)` is a call; the same with a space before the paren is a plain target reference followed by a shell `(x)`.  The space is your opt-out.
+* **The target anchor is a real sub-process.**  It re-invokes `make` (new process, fresh parse): cheap, but a subprocess, not a function call.  The macro anchor is the in-process one.
+* **The glyphs are deliberate Unicode.**  `⬦ ⬥ 🡄 🡆 ⇐` are chosen never to collide with shell or other languages.  Copy-paste them; don't retype.
+
+## Where this fits
+<hr class="section-rule lvl-2">
+
+CMK is intentionally small and closer to a **preprocessor than a compiler**: the target language (Makefile) barely has syntax, so transpiling is mostly matching and rewriting strings.  That keeps it fast, dependency-free, and easy to reason about; when in doubt, compile your file and read the Makefile it produces.  The substitution rules ("dialects" and "sugar") are even configurable per file, so the syntax itself is something you can bend.
+
+If you like `make`, this removes the friction.  If you hate `make`, this might be the version you don't.
+
+## See Also
+<hr class="section-rule lvl-2">
+
+* [Paradigm / Lineage]({{_}}/cmk/paradigm): the multi-paradigm classification in full.
+* [Compiler Tutorial]({{_}}/cmk/compiler): the concrete syntax, hands-on.
+* [Quick Reference]({{_}}/cmk/quickref): the one-page syntax cheat-sheet.
+
+## References
+<hr class="section-rule lvl-2">
+
+[^1]: [Notation is part of how we think](https://dl.acm.org/doi/pdf/10.1145/1283920.1283935)

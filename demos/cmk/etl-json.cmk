@@ -1,0 +1,27 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# etl-json.cmk:
+#   A JSON-backed miniature ETL.  `flux.pipeline`
+#   binds extract/transform/load into one flow, and `flux.try.except.finally` wraps it
+#   with failure + cleanup handlers.  Each stage emits fresh JSON with the `jb` tool.
+#
+# USAGE: ./demos/cmk/etl-json.cmk
+
+import io
+
+# Bind the tasks into a pipeline -- roughly `make extract | make transform | make load`.
+etl: flux.pipeline.verbose/extract,transform,load
+
+# A "safe" version of the pipeline that handles failure and cleanup.
+etl.safe: flux.try.except.finally/etl,etl.failed,etl.cleanup
+
+# The extract/transform/load tasks: ignore input, emit fresh JSON.
+extract:; io.json_builder(stage=extracted)
+transform:; io.json_builder(stage=transformed)
+load:; io.json_builder(stage=loaded)
+
+# Failure + cleanup handlers for the safe pipeline.
+etl.failed:; cmk.log(ETL failed!)
+etl.cleanup:; cmk.log(Cleaning up ETL!)
+
+__main__: etl.safe

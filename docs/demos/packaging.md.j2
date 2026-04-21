@@ -1,74 +1,73 @@
 {% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
-## Self Extracting Executables
-<hr style="width:100%;border-bottom:3px solid black;">
+{{ macros.section(2, "Self Extracting Executables", id="self-extracting-executables") }}
 
-One of the strangest features of `compose.mk` is that it can **create self-extracting executable archives** from Makefiles (or anything else really) using a dockerized version of [makeself](https://makeself.io/). 
+One of the strangest features of `compose.mk` is that it can **create self-extracting executable archives** from Makefiles (or anything else really) using a dockerized version of [makeself](https://makeself.io/).[^makeself]
 
 {{macros.img_link("escher.jpg", mkdocs, "78%",class=" ")}}
 
 Besides offering [generic access to makeself](#makeself-reference), `compose.mk` offers simple support for bundling a project Makefile, plus any dependencies, **into a single executable file.**  Dependencies might include things like `compose.mk` itself, data files, and any docker compose file you're using.
 
-!!! commentary "Terminology"
+!!! terminology "Terminology"
     This technique is more like packaging or bundling than compilation, because there's no way to remove the dependency on `make`, and we still need an interpreter after decompressing archives. This caveat is often safe to ignore though since `make` is nearly as ubiquitous as shell.
     
-    For a simpler approach to packaging that doesn't require archives, see instead the documentation for [guests and payloads]({{mkdocs.site_relative_url}}/standard-lib#forks-guests-and-payloads).
+    For a simpler approach to packaging that doesn't require archives, see instead the documentation for [guests and payloads]({{_}}/standard-lib#forks-guests-and-payloads).
     
-    For the separate topic of transpiling CMK-lang to Makefile, see instead the [compiler docs]({{mkdocs.site_relative_url}}/compiler).
+    For the separate topic of transpiling cmk-lang to Makefile, see instead the [compiler docs]({{_}}/cmk/compiler).
 
 Packaging can remove the explicit dependency on the rest of the stack represented by your project filesystem state though, **resulting in frozen 'release' where you can set a custom entrypoint.**  
 
 ### Use-Cases & Motivation
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 There are two main reasons why native support for this is interesting:
 
-* First, `compose.mk` is both a [tool factory]({{mkdocs.site_relative_url}}/demos/custom-automation-apis/) and [an application factory]({{mkdocs.site_relative_url}}/embedded-tui), and wanting to "package" your way into a frozen release comes up naturally.
-* Second, *project automation and pipelines* are also a big part of what `compose.mk` is used for, and compressing *that* down into a snapshotted "release" could be useful for stuff like *checkpointing/rollbacks*, or for topics in notebookes / reproducible research.  See also the [notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking) for a sketch of something like that.
+* First, `compose.mk` is both a [tool factory]({{_}}/demos/custom-automation-apis/) and [an application factory]({{_}}/embedded-tui), and wanting to "package" your way into a frozen release comes up naturally.
+* Second, *project automation and pipelines* are also a big part of what `compose.mk` is used for, and compressing *that* down into a snapshotted "release" could be useful for stuff like *checkpointing/rollbacks*, or for topics in notebookes / reproducible research.  See also the [notebooking demo]({{_}}/demos/notebooking) for a sketch of something like that.
 
 !!! question "Hmm.."
     More philosophically: the ability to reference, run, and script over potentially *lots* of possibly customized containers in an organized way using `docker-compose.yml` and `compose.mk` without *explicitly shipping either* feels like a different way to build and release tools.
     
-Put simply, [easy access to containers]({{mkdocs.site_relative_url}}/container-dispatch) [and multiple programming languages]({{mkdocs.site_relative_url}}/demos/polyglots) and [workflows]({{mkdocs.site_relative_url}}/demos/workflows) is usually stuff that we associate with microservices and distributed systems like Kubernetes, Jenkins or Airflow.  What happens if it is easy to design *undistributed* applications, tools, and pipelines with similar architectures?  
+Put simply, [easy access to containers]({{_}}/container-dispatch) [and multiple programming languages]({{_}}/demos/polyglots) and [workflows]({{_}}/demos/workflows) is usually stuff that we associate with microservices and distributed systems like Kubernetes, Jenkins or Airflow.  What happens if it is easy to design *undistributed* applications, tools, and pipelines with similar architectures?  
 
 Another point of view is that what we're really talking about is **the ability to export a project into a tool**.  Because let's be real: *No one wants to look at your project, because it's a mess of docs/examples/tests/support data, and they have to clone it, then understand how it's all organized before they can even try to use it.  Usually, even after a project is understood, it's not like you can *use* it directly, it must adapted or edited, or you go down a rabbit hole of dependencies.*  Self-extracting archives are far from *new*, but since they can actually help with some of this, they seem underutilized.
 
 ### Example: Make-target to Executable 
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-Shortcuts for packaging up targets-as-entrypoints use [`mk.pkg`]({{mkdocs.site_relative_url}}/api#mkpkg).
+Shortcuts for packaging up targets-as-entrypoints use [`lang.pkg`]({{_}}/api#mkpkg).
 
 For the first example, we'll spin-off an individual utility from `compose.mk` as a stand-alone executable.  Let's look at the {{site.api_link('stream.img', mkdocs)}} target, which uses a dockerized version of the `chafa` tool for displaying images on console, comparable to `imgcat` or similar.  It takes no arguments, and works with streams.
 
 ```bash {.cli_example}
-$ bin=./stream.img ./compose.mk mk.pkg/stream.img
+$ bin=./stream.img ./compose.mk lang.pkg/stream.img
 $ cat img.png | ./stream.img
 ```
 
 It works, and we use `chafa` without *having* chafa, because containers don't build or pull before they are used.
 
 ### Example: TUI to Executable
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-While `stream.img` is just a small utility, the approach demonstrated above also works with "applications" implemented using `compose.mk`, i.e. [full blown TUIs]({{mkdocs.site_relative_url}}/embedded-tui).  
+While `stream.img` is just a small utility, the approach demonstrated above also works with "applications" implemented using `compose.mk`, i.e. [full blown TUIs]({{_}}/embedded-tui).  
 
 As an example, how about exporting the {{site.api_link('tux.demo',mkdocs)}}?
 
 ```bash {.cli_example}
-$ bin=./tux.demo ./compose.mk mk.pkg/tux.demo
+$ bin=./tux.demo ./compose.mk lang.pkg/tux.demo
 ```
 
 ### Example: Extension to Executable
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-In the examples so far, the `./compose.mk mk.pkg/<target>` examples only use *targets that are built-in*.  If you want to extend `compose.mk` with your own automation and export *that*, then you'll want to use `mk.pkg` from the extension instead.
+In the examples so far, the `./compose.mk lang.pkg/<target>` examples only use *targets that are built-in*.  If you want to extend `compose.mk` with your own automation and export *that*, then you'll want to use `lang.pkg` from the extension instead.
 
-As an example, let's export the tools built as part of the [Custom Automation APIs Demo]({{mkdocs.site_relative_url}}/demos/custom-automation-apis).
+As an example, let's export the tools built as part of the [Custom Automation APIs Demo]({{_}}/demos/custom-automation-apis).
 
 ```bash {.cli_example}
 # create binary for the `ansible.adhoc.pipe` target
 $ bin=./ansible.adhoc archive=demos \
-    ./demos/ansible-adhoc.mk mk.pkg/ansible.adhoc.pipe
+    ./demos/ansible-adhoc.mk lang.pkg/ansible.adhoc.pipe
 
 # confirm/inspect the generated executable
 $ file ./ansible.adhoc 
@@ -89,14 +88,66 @@ $ echo msg=HelloWorld | module=debug ./ansible.adhoc
 }
 ```
 
-### Makeself Reference 
-<hr style="width:100%;border-bottom:3px solid black;">
+### Example: CMK App to Executable
+<hr class="section-rule lvl-3">
+
+For freezing a [cmk-lang]({{_}}/cmk/compiler) program (or a `.mk` makefile), the friendly subcommand **`cmk build <file>`** does it in one step: it picks a sensible `bin` name from the file and delegates to `lang.pkg` under the hood (no `archive=` juggling, no manual `cmk run`).  `lang.pkg` remains the general form; it also packages a *target-as-entrypoint* (the examples above); `cmk build` is just the file-oriented shortcut.  Take this small structured-IO app, which emits a key/value and consumes it back:
+
+```Makefile {.snippet .language-Makefile}
+emit:
+	🡄 key=val
+
+consume:
+	🡆 .key
+
+__main__:
+	this.emit | this.consume
+	cmk.log(hello world!)
+```
+
+```bash {.cli_example}
+# freeze the .cmk (bin defaults to the file's basename)
+$ ./compose.mk cmk build demos/cmk/structured-io.cmk
+
+# ...equivalent to the underlying packaging target:
+$ ./compose.mk lang.pkg/demos/cmk/structured-io.cmk
+
+# now portable, runs anywhere, with no compose.mk / source on disk:
+$ ./structured-io
+```
+```bash {.cli_output}
+val
+⇄ __main__ // hello world!
+```
+
+Under the hood this bundles `compose.mk` plus your `.cmk` and sets the entrypoint to re-interpret the bundled source, so the freed binary **transpiles the CMK on each run** (you'll see the compiler's progress before your output).  Passing a `.mk` file instead works the same way, with the makefile's default goal as the entrypoint.
+
+!!! tip "Bundling dependencies"
+    A self-contained `.cmk`/`.mk` needs nothing extra.  If yours pulls in sibling files (a relative `include`, or `import.*` of another file), add them to the archive with `archive=` (it passes through `cmk build` to `lang.pkg`), e.g. `archive=demos ./compose.mk cmk build demos/cmk/underload.cmk`.
+
+### Example: Omnibus Distribution
+<hr class="section-rule lvl-3">
+
+An app that resolves a plugin from `CMK_PLUGINS_DIR` (the project-local `.cmk` directory by default) breaks once that directory is gone from the host.  The **`cmk omni`** subcommand handles this: it packages exactly like `cmk build`, then also bundles the host context's `CMK_PLUGINS_DIR` and `CMK_MODULES_DIR` directories into the archive, so the frozen binary carries its plugins and modules along with it.
+
+```bash {.cli_example}
+# freeze an app plus the plugins it resolves from ./.cmk
+$ ./compose.mk cmk omni demos/cmk/strat.cmk
+
+# with no file, freeze the compose.mk root plus plugins
+$ ./compose.mk cmk omni
+```
+
+The output defaults to `./omnibus` (override with `bin=<name>`).  Bundled directories land at the archive root by basename, and since the archive runs from its own extraction directory, the default `.cmk` layout resolves automatically with no extra setup.  A search path pointing at absolute or differently-named directories is still bundled, but needs `CMK_PLUGINS_DIR` set at runtime to be found.
+
+### Makeself Reference
+<hr class="section-rule lvl-3">
 
 Direct access to `makeself` is via {{site.api_link('mk.self',mkdocs)}}.  For those unfamiliar with `makeself`, this section is a quick tutorial, but you can use this to package up anything.  
 
 Let's look at an example of freezing the contents of a directory and an arbitrary script that *uses* that directory.  
 
-We only need to provide a space-separated list of stuff to archive, plus a name for the executable file, plus a script for the entrypoint. The script can be anything as long as it works properly relative to the archive root.. so for now we'll just use `pwd; find .` to demonstrate that we are indeed running *in* the archive.
+We only need to provide a space-separated list of stuff to archive, plus a name for the executable file, plus a script for the entrypoint. The script can be anything as long as it works properly relative to the archive root.. so for now we'll just run `pwd` followed by `find .` to demonstrate that we are indeed running *in* the archive.
 
 ```bash {.cli_example}
 $ archive=docs/demos bin=archive.run \
@@ -129,7 +180,7 @@ $  ./archive.run
 ```
 
 ### Argument Passing 
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 Argument passing with makeself hasn't been demonstrated so far, and this can get tricky.  Here's an example where the generated executable we want to build will *take arguments in the form of a shell script*, which script will run inside the archive directory.  In this case since we're passing in a script, we need to quote all the input like this:
   
 ```bash {.cli_example}
@@ -150,3 +201,15 @@ $ ./archive.run -- 'pwd; find .'
     A major limitation of `makeself` is that *passing arguments to the generated executable always requires the ` -- ` syntax that you see above.*  
 
 To pass arguments to `makeself` you can put stuff before the ` -- `.  Mostly this isn't useful because `compose.mk` already uses `makeself` in such a way that `--quiet --noprogress` is implied for pipe-safety.  For debugging workflows though, check out `--keep` to preserve the uncompressed archive, and `--noexec` to disable the script execution.  See also the output of `./archive.run --help`, which provides help for `makeself` and **not** for whatever you've packaged with it.
+
+### See Also
+<hr class="section-rule lvl-3">
+
+* [Notebooking]({{_}}/demos/notebooking): ships an entire jupyter distribution as a frozen release.
+* [Standard Library]({{_}}/standard-lib#forks-guests-and-payloads): the archive-free alternative (guests and payloads).
+* [Compiler]({{_}}/cmk/compiler): transpiling cmk-lang, the separate sense of "build".
+
+### References
+<hr class="section-rule lvl-3">
+
+[^makeself]: [Self-extracting archives (makeself)](https://makeself.io/)

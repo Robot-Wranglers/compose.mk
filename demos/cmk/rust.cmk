@@ -1,0 +1,31 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# rust.cmk: embed inline Rust via the dsl.rust plugin.
+
+'''
+Cross-build inline Rust in a dockerized cargo toolchain (nested src/main.rs); Cargo.toml auto-generates.
+'''
+
+import dsl.rust
+
+dsl.rust my_rust(|
+  fn main() {
+    let who = std::env::args().nth(1).unwrap_or("world".to_string());
+    println!("hi {}!", who);
+  }
+|)
+
+# a hand-written Cargo.toml, to override the generated default
+cargotoml(|
+  [package]
+  name = "greeter"
+  version = "0.1.0"
+  edition = "2021"
+|)
+
+run.inline:
+    '''run.inline: call the dsl.rust.lambda macro directly.'''
+    my_rust(args=team)
+# run.custom: build with the hand-written Cargo.toml (cargo=).
+run.custom:; cmk.code.compiled.lambda(lang=dsl.rust src=my_rust cargo=cargotoml)
+
+__main__: my_rust my_rust/you run.inline run.custom

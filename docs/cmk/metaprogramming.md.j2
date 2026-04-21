@@ -1,0 +1,231 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/cmk_math.j2' as cmkmath -%}{% import 'macros/tufte.j2' as tufte -%}
+
+## Metaprogramming
+<hr class="section-rule lvl-2">
+
+{# 
+{{ macros.escape_hatch([
+    '...',
+    ['Banana Forms', '@/cmk/banana', 'the block family and its cooked-block metaprogramming (the through-line below)'],
+    ['Compiler Tutorial', '@/cmk/compiler', 'how the compiler applies all of this'],
+    ['Macros &amp; Functions', '@/macros', 'the `declare.*` verb family'],
+    ['Quick Reference', '@/cmk/quickref', 'a one-page cheat-sheet of the syntax'],
+], mkdocs) }} #}
+
+CMK is an *extensible language*.  There's [a few different aspects to that]({{_}}/cmk/paradigm/#language-properties) including support for [macros, templating, and constructors]({{_}}/cmk/banana) that are powerful enough to implement [classes and metaclasses]({{_}}/demos/oop), but this page is focused on other aspects of the **metaprogramming playground.**  
+
+What does that even mean?  Well, besides just making stuff by using the language, there are several ways to reshape the language itself.  CMK isn't actually *one* language, but rather a language family.  Add to that the [support for polyglots]({{_}}/demos/polyglots) or [DSLs]({{_}}/cmk/dsls).. and maybe you could say that *language itself* is supported as a primitive.  The rest of this page is a guided tour of this layer.
+
+{# The unifying piece is [banana forms]({{_}}/cmk/banana).  The {{ cmkmath.imath("(|@body|)") }} block is a generic, native *declare*, and it composes with streams, args, env-prefixes, currying, and compile-twice "cooking".  That makes bananas more than a compiler nicety: they are the through-line that ties the rest of this layer together.  You can see how far it reaches in the [`banana-oop` class demo]({{_}}/cmk/banana/#banana-cooked), where cooked {{ cmkmath.imath("(|..|)") }} mixins compose into a small object system *with inheritance*, built entirely from the primitives on this page.  It is the kind of thing that may eventually earn promotion to core language support. #}
+
+* **[Bananas](#bananas)**: block-structured native declares.
+* **[DSLs](#dsls)**: guest-language fragments (jqlang / awklang).
+* **[Sugar](#about-sugar)**: block-structured rewrites that add semantics to a block.
+* **[Dialects](#about-dialects)**: simple *paired* (token) rewrites.
+* **[Pragma](#pragma)**: per-file compiler settings.
+
+{{ macros.section(3, "Banana Blocks", id="bananas") }}
+
+!!! terminology "Banana"
+    CMK's block-structured *quote*, available in many forms that are documented in more detail [here]({{_}}/cmk/banana), but here's the quick version.  A banana block captures the body and optionally names it, reformats it, cooks it, or passes it into other constructors.  That means it can hold recipes, macro values, or a whole guest-language program.
+
+Bananas are simple and subtle at the same time, and turn out to be the foundational layer for lots of other metaprogramming.  As *the primary lazy multi-liner*, they are less structured than anything with a real AST, but also more structured than a templated string.  Bananas *do* actually get a [string algebra]({{_}}/cmk/quickref/#string-algebra) that allows for templating, but also an [ambient algebra]({{_}}/cmk/concepts/#ambient-algebra), and [their own algebra]({{_}}/cmk/concepts/#callform-algebra).  See also [these demos]({{_}}/cmk/banana).
+
+To get a feel for how much you can actually build with something like this, see also the [object-oriented programming demos]({{_}}/cmk/banana/#banana-cooked), which show how this is enough to build inheritance, mixins, classes, and metaclasses.  
+
+{{ macros.section(3, "DSLs", id="dsls") }}
+
+!!! terminology "DSL"
+    A **DSL** [creates a sub-language]({{_}}/cmk/concepts/#dsls): an instance's banana body is written in a guest language (`jq`, `awk`, ...) rather than `make`, folded back into the same compile-time machinery as the rest of this layer.
+
+`dsl` is a member of the `cmk` prelude (`from cmk import dsl`): the built-in kinds live under `dsl.*`, used qualified (`dsl.jqlang`, `dsl.awklang`), and two guest languages ship in the box.  `dsl` is not itself an openable module.
+
+{{ macros.see_also([
+    ['DSLs', '@/cmk/dsls', 'the `dsl` prelude member, jqlang / awklang, and the fragment algebra, with demos'],
+], mkdocs) }}
+
+{{ macros.section(3, "Sugar", id="about-sugar") }}
+
+!!! terminology "Sugar"
+    Sugar is the block-structured cousin of [dialects](#about-dialects).  Whereas a dialect is a flat token rewrite, a sugar rule matches a whole block and **gives it additional semantics**.  Whereas [bananas](#bananas) are the language-native version of this, exposing custom sugars at the file level allows for things like *user-defined syntax* or module-specific syntax.
+
+**Sugar is an array of triples: a start marker, an end marker, and a template.**  It's not magic.. the default values are bundled with the compiler as flat data you can view (see below, and see also [the appendix](#appendix-default-sugar)).  If you dump the data, you'll notice that the default sugar actually shows part of how banana-blocks are implemented:
+
+```bash {.cli_example}
+$ ./compose.mk mk.def.read/lang.comp.sugar
+```
+```bash {.cli_output}
+[
+	["(|", "|)", "__GENERIC__"]
+]
+```
+
+{# Sugar **gives matched blocks additional semantics**.  Since each rewritten block has a name, every sugar also requires a name. #}
+
+For the `sugar_template` element of the triple, we render it and add it after the block.  See the table below for an explanation of the variables that may appear inside this template.
+
+{% include "includes/sugar-template-vars.md" %}
+
+**Sugar markers are regexes.** Unlike [dialect patterns](#about-dialects), which match literally, the start and end delimiters are matched as regular expressions against each line. That is by design: it makes sugar a small block-grammar rather than a fixed-token matcher, so a single rule can open a whole *family* of blocks and anchor them to a position on the line. The [regex sugar demo below](#user-defined-sugar) puts this to work. The trade-off is that regex metacharacters keep their special meaning inside a marker, so (as with dialects) unicode glyphs make the safest delimiters whenever you do not want regex behavior.
+
+{{ macros.section(3, "Dialects", id="about-dialects") }}
+<a name=dialects></a>
+
+!!! terminology "Dialect"
+    A dialect is an array of paired substitution rules, and during compilation these rules take effect everywhere, *except* inside [banana](#bananas) block bodies (and anything that behaves like one).
+
+Using the [reflection capabilities]({{_}}/standard-lib#reflection-support), we can show the compiler's default dialect table (definitional data under `lang.comp.*`, like sugar above) like this:
+
+```bash {.cli_example}
+$ ./compose.mk mk.def.read/lang.comp.dialect
+[
+  ["ᐉ", ".dispatch/"],
+  ["🡆", "${stream.stdin} | ${jq} -r"],
+  ["🡄", "${jb}"],
+  ["__target_name__", "${@}"],
+  ["__target__", "this.__target_name__"],
+  ["this.", "${make} "],
+]
+```
+
+**Dialect substitution is literal.** Each pattern is matched as plain text, never a regex, so a `.` is just a dot and a keyword can never accidentally match more than it spells. Preferring unicode symbols is still a good habit, since it guarantees a new keyword won't collide with anything else in your source. (Sugar markers, [covered above](#about-sugar), are the deliberate exception: those *are* regexes.)
+
+**Isolation Property:**  Since substitution does not apply inside block bodies, a new keyword like `this` cannot affect [polyglots]({{_}}/demos/polyglots) even if they also use the same keyword.  You only need to think carefully about collision with shell-commands and their arguments that appear inside normal targets.  If you want to use [CMK Modules]({{_}}/cmk/modules) you can even avoid that.
+
+#### Default Dialect
+<hr class="section-rule lvl-4">
+
+Two more conveniences in the default dialect above are a related pair, both referring to the recipe's own target:
+
+* **`__target_name__`** is the bare target *name*.  It lets a recipe refer to the running target without the `$`-noise (and reads naturally in [CMK call-forms]({{_}}/cmk/concepts/#callforms)), which is handy for per-target naming, e.g. using the target name as a [stage]({{_}}/stages/#stage-idioms) name.
+* **`__target__`** is the running target as a *callable*: a recursive self-send.  It composes with the [stream call-form]({{_}}/cmk/concepts/#callforms), so piping a command into it runs that command against a fresh invocation of the current target, while a bare reference re-invokes it.
+
+Full dialect details are available in the [appendix of this page](#appendix-default-dialect), but the rules shown above are the ones used in the [basic example]({{_}}/cmk/compiler/#basic-example).  All we've done so far is introduce new syntax for `jq`, `jb`, the current target name, and recursive self-invocation.
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+It might not be obvious how useful and powerful simple substitution actually is here, so let's take a brief detour to peel back the layers.  Above is the dialect literal that only does a find/replace on your behalf, **but** it's stacked on top of other templating and macros.  Below you can see a first approximation of variable expansion.
+
+As discussed in [structured IO docs]({{_}}/standard-lib/#structured-io-basics), we try to use local tools if available, and fall back to docker.  Expansion shows that working:
+
+```bash {.cli_example}
+$ ./compose.mk mk.get/lang.comp.dialect
+[
+  [
+    "🡆",
+    "cat /dev/stdin | /usr/bin/jq -r"
+  ],
+  [
+    "🡄",
+    "docker container run --rm ghcr.io/h4l/json.bash/jb:${JB_CLI_VERSION:-0.2.2}",
+  ],
+  ...
+]
+```
+
+One layer of expansion reveals that fallback works as advertised; in this case `compose.mk` knows that a local copy of `jq` is available already, but `jb` is missing and will have to use docker.
+
+It also reveals that there is actually yet another layer of expansion, where `JB_CLI_VERSION` has a default value for tool versions that supports user-override.  Therefore *besides* being visually easy to parse and clarifying intent, the **usage of the arrow operators results in portable code with no extra tool installation.**
+
+{{ macros.section(3, "Pragma", id="pragma") }}
+
+!!! terminology "Pragma"
+    A **pragma** is a leading-comment JSON hint that sets *per-program settings* in-source.  Where [dialects](#about-dialects) and [sugar](#about-sugar) change how source is *rewritten*, a pragma changes how the compiler is *configured* for this file.
+
+The third member of that family covers the [recipe-join]({{_}}/cmk/compiler/#recipe-body-joining) connector, extra compile stages, boot/lifecycle handlers, and even the program's execution mode.  The full reference (the `cmk_pragma :::` marker, the `__pragma__` resolvers, two-pass plugin stacking, and the boot/`repl` settings) lives on its own page.
+
+{{ macros.see_also([
+    ['Compiler Pragmas', '@/cmk/pragmas', 'the marker, resolution rules (pragma &gt; env &gt; default), and the settings catalog'],
+], mkdocs) }}
+
+This completes the **dialect + sugar + pragma** triad: three in-source ways to bend the compiler to a single file.
+
+### User-Defined Extensions
+<hr class="section-rule lvl-3">
+
+Both dialects and sugar can be defined at runtime on a per-file basis, basically allowing the code itself to describe aspects of the compiler that will be used on it.
+
+!!! warning "Overwrites, not appends"
+    File hints must occur after the shebang, before the first non-comment line, and must be legal JSON that specifies the full dialect/sugar to use.  This *overwrites* the default dialect/sugar, and does not append it!
+
+Minified JSON is optional, and everything between the first and second `:::` will be used, so multi-line JSON is allowed, but must remain comment-prefixed.
+
+#### User-Defined Dialects
+<hr class="section-rule lvl-4">
+
+User-defined dialects require a hint at the top of the file.  Building on the [basic example]({{_}}/cmk/compiler/#basic-example), here's an example that changes the default jq/jb JSON operators to use different characters.
+
+{{site.embed_twin('demos/structured-io.mk', 'demos/cmk/user-dialect.cmk', github=github, default='cmk', see_also=_+'/standard-lib/#structured-io-basics', see_also_text='Standard Library: Structured IO')}}
+
+To get the full current default dialect in a minified form that's ready for your own modifications:
+
+```bash {.cli_example}
+$ ./compose.mk mk.def.read/lang.comp.dialect | jq -c
+```
+
+#### User-Defined Sugar
+<hr class="section-rule lvl-4">
+
+User-defined sugar requires a hint at the top of the file.  Building on the [compose file example]({{_}}/cmk/compiler/#compose-file-example), here's an example that changes that default syntax to use different characters.
+
+{{site.embed_twin('demos/inlined-composefile.mk', 'demos/cmk/user-sugar.cmk', github=github, default='cmk', see_also=_+'/demos/matrioshka', see_also_text='Matrioshka: inlined compose files')}}
+
+The markers above are glyphs, but because sugar delimiters are regexes you can also build a *fenced* syntax that opens a whole family of blocks and anchors them to the start of a line.  The example below adds exactly that: a line-anchored python-block fence where a single rule serves every block name, and the anchor keeps a stray opener inside a recipe inert:
+
+{{site.embed_demo(
+  'demos/cmk/user-sugar-regex.cmk',
+  github=github)}}
+
+To get the full current default sugar in a minified form that's ready for your own modifications:
+
+```bash {.cli_example}
+$ ./compose.mk mk.def.read/lang.comp.sugar | jq -c
+```
+
+### Appendix
+<hr class="section-rule lvl-3">
+
+*Data below is rendered from the latest source code.*
+
+#### Appendix: Default Dialect
+<hr class="section-rule lvl-4">
+
+```bash {.cli_example}
+$ ./compose.mk mk.def.read/lang.comp.dialect
+```
+```json {.cli_output}
+{{bash('./compose.mk mk.def.read/lang.comp.dialect')}}
+```
+
+#### Appendix: Default Sugar
+<hr class="section-rule lvl-4">
+
+```bash {.cli_example}
+$ ./compose.mk mk.def.read/lang.comp.sugar
+```
+```json {.cli_output}
+{{bash('./compose.mk mk.def.read/lang.comp.sugar')}}
+```
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Banana Blocks]({{_}}/cmk/banana): the {{ cmkmath.imath("(|..|)") }} block family, the through-line here.
+* [Modules]({{_}}/cmk/modules): `import.module` namespacing and imports.
+* [Compiler Tutorial]({{_}}/cmk/compiler): the concrete syntax.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^meta]: {{ tufte.wiki('Metaprogramming')|trim }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+{{macros.header_images([
+      ['bananas','implementation'],
+      ['about sugar','implementation'],
+      ['about dialects','implementation'],
+      ['pragma','implementation'],
+      ['user defined extensions','user'],
+      ['appendix','implementation'],
+    ], mkdocs)}}
+}, 100);});
+</script>

@@ -1,0 +1,65 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# extension-2.cmk: extend the embedded TUI with browser / logo / chooser widgets.
+#
+# USAGE: ./demos/cmk/tui/extension-2.cmk
+
+'''
+Continues the extension-1 tour -- a yazi
+file-browser widget over an inlined nixos image (re-declared here so the demo runs
+standalone) -- and adds three more widgets, then tiles them with tux.open:
+
+  1. widget.browser -- a live web page,
+  2. widget.logo    -- an animated gif, named just by its location,
+  3. widget.chooser -- a gum-based task picker (via the io.selector idiom) that loops
+     over the fake task.* targets.
+
+See the Advanced TUIs page for the fuller story.
+'''
+
+# A nixos container with yazi (carried over from extension-1).
+# https://yazi-rs.github.io/docs/installation/#nix
+open cmk
+Dockerfile yazi(|
+    FROM nixos/nix
+    RUN nix-channel --update && nix-env -iA nixpkgs.yazi
+    ENTRYPOINT ["yazi"]
+|)
+
+widget.yazi:
+    '''Maps the yazi container invocation onto a target; works with or without the TUI.'''
+    cmd="demos/" tty=1 this.docker.image.run/compose.mk:yazi
+
+widget.browser:
+    '''Starts a web browser as a widget.'''
+    url='http://www.wikipedia.com' this.tux.browser
+
+widget.logo: .tux.widget.img/demos/data/neo2.gif
+    '''An animated gif as a widget, named just by its location.'''
+
+widget.choice:
+    '''
+    A chooser widget using `gum choose` that works with or without gum.  Getting the
+    choice back from a fake tty is hard when dockerized, but the io.selector idiom makes
+    it simple: the choices are exactly the task.* targets below, so we run the chosen
+    target, pause, and exit.
+    '''
+    header="Choose a task to run:" this.io.selector/self.tasks.list,flux.apply
+
+widget.chooser: flux.loopf/widget.choice
+    '''Loops the simple choice widget forever.'''
+
+self.tasks.list: mk.targets.filter/task.
+    '''Returns the targets matching the task.* pattern (feeds the chooser).'''
+
+# Fake tasks to populate the chooser -- placeholders that just print a banner.
+task.1st:; label=${@} this.io.draw.banner
+task.2nd:; label=${@} this.io.draw.banner
+task.3rd:; label=${@} this.io.draw.banner
+task.4th:; label=${@} this.io.draw.banner
+task.5th:; label=${@} this.io.draw.banner
+task.6th:; label=${@} this.io.draw.banner
+
+widgets:=widget.yazi,widget.browser,widget.chooser,widget.logo
+__main__: yazi.build tux.open.spiral/${widgets}
+    '''Public entrypoint: tile all the widgets into a spiral tux.open layout.'''

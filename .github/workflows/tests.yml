@@ -1,15 +1,12 @@
 # See also: https://docs.github.com/en/actions
+# The full project demo suite (`make actions.demos`) is heavy (builds/pulls many
+# images), so it runs ON-DEMAND ONLY (workflow_dispatch / workflow_call) -- not on
+# push/PR. The focused suites (unit/compiler/docker/integration) give PR signal.
 name: Project Demos
 on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch: {}
   workflow_call: {}
-  push:
-    branches: [ "main" ]
-    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg', '.cmk']
-  pull_request:
-    branches: [ "main" ]
-    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg', '.cmk']
 permissions:
   contents: read
 jobs:

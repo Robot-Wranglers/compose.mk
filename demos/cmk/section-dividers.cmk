@@ -1,0 +1,33 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# section-dividers.cmk:
+#   Section dividers / banners via the io.print.banner family, in CMK-lang.
+#   Ported from demos/section-dividers.mk.
+#
+# USAGE: ./demos/cmk/section-dividers.cmk clean build test
+
+import io
+
+__main__: clean build test
+
+clean: io.print.banner
+    '''Use `io.print.banner` implicitly as a prereq => timestamped divider.'''
+    echo Cleaning stuff
+
+build:
+    '''Call `io.print.banner` explicitly => full control over the divider label.'''
+    label="Build Stage" this.io.print.banner
+    echo Building stuff
+
+test:
+    '''
+    Use `io.print.banner` as a macro => label defaults to the current
+    target's name.
+    '''
+    ${io.print.banner}
+    echo Testing stuff
+    label="divider-using-gum" this.io.draw.banner
+    label=test1 this.io.figlet
+    label=test2 io.with.color/dim,io.figlet
+    label=test3 io.with.color/cyan,io.figlet
+    label=test4 io.with.color/red,io.figlet

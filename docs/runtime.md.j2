@@ -1,0 +1,216 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+## Runtime
+<hr class="section-rule lvl-2">
+
+!!! danger "Advanced topic"
+    New users can safely skip this.  The runtime layer is built on the [supervisor]({{_}}/signals), so it only applies to interpreter-style (supervised) invocations.
+
+This page covers the **core** runtime model: how a [supervised program]({{_}}/signals) treats the work it has *left to do* as a steerable **continuation**, plus the plugin-independent primitives `compose.mk` ships for transferring control over it.  The full, structured control-stack / CEK virtual machine[^1] built on top of these is the [`__vm__` module]({{_}}/modules/virtual-machine).
+
+### Continuations
+<hr class="section-rule lvl-3">
+
+!!! terminology "Continuation"
+    The goals *after* the current target on the command line are the **continuation**[^2]: what's left to do.  `compose.mk` exposes that command line as `MAKE_CLI`, so a recipe can read, and re-shape, its own remaining goals.  This is the substrate everything else here is built on: a control transfer is just *"replace the continuation and re-enter."*
+
+### Trampoline
+<hr class="section-rule lvl-3">
+<a name=flat-dispatch></a>
+
+`mk.super.tramp` is the core transfer primitive: it re-dispatches the next continuation at **top level**, through the [supervisor]({{_}}/signals)'s trampoline loop (one of its [inlined bootloaders](#bootloader)).  It lives in the `mk.super.*` family because it needs that loop.
+
+!!! info "Jumps are flat"
+    Because every transfer re-enters at top level, iterative control flow runs at **constant process depth**; an unbounded loop never stacks up make processes.
+
+Two related core primitives round out the picture; both are documented with the supervisor on the [Signals]({{_}}/signals) page:
+
+* `mk.yield`: a process-oriented escape: it runs its target inline and then interrupts the make stack (so repeated use *nests*).  A general-purpose escape continuation.
+* `mk.exit.code`: record-and-continue exit: stash an exact exit code out-of-band, then unwind *normally* so cleanup arms still run.
+
+The trampoline's own state is a small **reflection surface**: seven read-only value-dunders exported on every dispatch hop.  They default empty, so an unsupervised read is safe, and the [`__vm__` snapshot]({{_}}/modules/virtual-machine) reads them as its always-on layer.
+
+* `__ip__`: the instruction pointer, the goal being run
+* `__step__` / `__step_budget__`: the scheduler tick and its runaway guard
+* `__alt__` / `__yielded__`: how the hop was reached (a backtrack alternative, or a transferred goal)
+* `__posix_code__` / `__exit_code__`: raw wait status vs resolved exit code
+
+All of these require an interpreter-style (supervised) invocation; `cmk run`, or an `mk.interpret` shebang, provides one.
+
+### Root traceback handler
+<hr class="section-rule lvl-3">
+
+When a program fails **for real** (a genuinely unrouted nonzero exit, *not* an intentional control transfer), `compose.mk` presents the failure as a **typed fault** with a themed header, instead of leaking make's raw internal error.  So a bare missing goal reads like an interpreted program's error.  (Routing always wins; this handler is only the fallthrough.)
+
+The built-in fault types cover the static, reproducible failures a program can hit:
+
+| Fault | Raised when |
+| --- | --- |
+| **`RuleMissing`** | a goal names a target that does not exist (make's `No rule to make target`) |
+| **`SyntaxError`** | the program is not legal make: e.g. a `missing separator`, or content that `commences before first target` |
+
+The handler is *[faults-module]({{_}}/plugins/faults) compliant without depending on it*: with that plugin loaded it re-raises through `fault.throw`, so your own `fault/<Type>:` handlers can catch and route the fault; otherwise core just prints the themed default.  Only static (make-legal) faults are typed; a genuine runtime recipe failure is left untouched.
+
+The same taxonomy backs [`cmk lint`]({{_}}/cmk/lint): its legality pass reports these types *before* you run a program, so a `SyntaxError` you would hit at runtime surfaces at lint-time too.
+
+### Bootloader
+<hr class="section-rule lvl-3">
+<a name=bootloader></a>
+
+The supervisor doesn't only *wrap* `make`; just before it runs your program it executes a small **bootloader**, and this is the single, header-free extension point for supervisor behavior.  Like the rest of this runtime layer the bootloader is a property of the [supervisor]({{_}}/signals), so it exists only for interpreter-style (supervised) invocations and never for `make -f compose.mk`.  It `source`s two kinds of script:
+
+* **Inlined loaders, from `compose.mk` itself.**  Each builtin piece of supervisor behavior is a `define _mk.super.<name>` block in the source; the bootloader lifts that block's body out of the file and `source`s it in the supervisor's shell.  The core one is the trampoline dispatch loop ([flat dispatch](#flat-dispatch)) that powers the [virtual machine]({{_}}/modules/virtual-machine).  Adding supervisor behavior is just another `define` plus one load line; no edit to the polyglot header.
+
+* **A user-defined script, via `CMK_BOOTLOADER`.**  Point `CMK_BOOTLOADER` at exactly one file and the supervisor `source`s it **first**, at boot, before the trampoline runs the program.  Because it runs in the supervisor's own shell (not a subshell) it sees the pre-run state (the invocation's goals, the run id) and can **set up** the run (for example, install a TUI overlay), then reach the **end** of the run, where the resolved exit code is final, by registering an `EXIT` trap.  That makes it a clean place to bracket a whole run with setup/teardown.
+
+!!! warning "A few rules for user bootloaders"
+    * It must **not** trap `INT`/`TERM`; that would clobber the supervisor's own SIGINT handling.
+    * If `CMK_BOOTLOADER` is set the file must exist (a missing file is fatal, and fails fast *before* any target runs).
+    * Keep it **portable**: POSIX shell and tools that exist on Linux / OSX / Alpine-busybox.
+
+Set `CMK_BOOTLOADER_DISABLED=1` to skip the bootloader entirely and run targets directly.
+
+```bash {.cli_example}
+$ CMK_BOOTLOADER=demos/user-bootloader.sh CMK_SUPERVISOR=1 ./compose.mk flux.ok
+```
+```bash {.cli_output}
+user-bootloader: boot (goals=[flux.pre/flux.ok flux.ok flux.post/flux.ok])
+Φ flux.ok // succeeding as requested!
+user-bootloader: exit (code=0)
+```
+
+See the {{macros.repo_link('demos/user-bootloader.sh', name='user-bootloader demo', github=github)}} for a minimal example that proves it loaded at both ends of the run.
+
+### Lifecycle & Boot Settings
+<hr class="section-rule lvl-3">
+<a name=lifecycle-boot-settings></a>
+
+The [bootloader](#bootloader) above is the *mechanism*; the **boot settings** are its declarative surface, set in-source with the [`cmk_pragma` hints]({{_}}/cmk/pragmas) (or the matching environment).  A program's lifecycle is a set of list settings, **before -> main -> after**:
+
+- `bootloaders` run *before* make, **in the supervisor's bash** (sourced, so they can register an `EXIT` trap or set up early state).  A bootloader is an inline named `define`: pure bash, single `$` (it is `source`d, not run by make), distinct from a make target.
+- `cmk_pre` runs *before* the main pipeline too, but each substage is a **make target** (the "boot stage").  The framework runs them safely as a direct, unsupervised sub-make: the declarative equivalent of hand-writing a recursive `make` call in a bootloader.  A failing `cmk_pre` target aborts before main (the `cmk_post` handlers still run).
+- `cmk_post` runs *after* the main pipeline (success **or** failure), each substage a **make target**.
+
+`cmk_pre` and `cmk_post` are each one setting exposed across three surfaces with the same name, all accumulating:
+
+* the pragma: `cmk_pre` / `cmk_post`
+* the environment: `CMK_PRE` / `CMK_POST`
+* a parse-time handle: `__cmk_pre__` / `__cmk_post__` (with `.append(<target>)`)
+
+Two scalar toggles round out the boot settings: `hooks` (`off` disables the [pre/post target-rewriting](#pre-post-hooks)) and `bootloader_disabled`.
+
+{{site.embed_demo('demos/cmk/pragma-boot.cmk', github=github)}}
+
+These boot settings only take effect via `cmk run` (the path that owns both the source and the program's re-exec), and they are threaded into the canonical boot env (*not* the pragma namespace) because the bash header reads them before make exists.  The scalars are pragma-wins with a loud notice; the `bootloaders` list *appends* to any invoker-set `CMK_BOOTLOADER`.
+
+!!! warning "`bootloaders` source code"
+    A bootloader is sourced as shell at boot: powerful, and the same surface the shebang already exposes, but less visible.  An invoker can always block it with `CMK_BOOTLOADER_DISABLED=1`.  The **supervisor** itself (`CMK_SUPERVISOR`) is the one boot setting a pragma can never set, since it must come up before anything can be read.
+
+### Virtual machine (module)
+<hr class="section-rule lvl-3">
+<a name=virtual-machine></a>
+<a name=control-stack></a>
+
+!!! warning "Non-core"
+    The virtual machine is the opt-in [`virtual-machine.cmk` module]({{_}}/modules/virtual-machine), not part of always-loaded core; the core runtime primitives above are enough for normal operation.  Load it via the [plugin system]({{_}}/plugins/overview) for the structured control stack.
+
+The ergonomic, structured API over this substrate is a small CEK Machine[^1], roughly a "control stack" with:
+
+* `peek`/`goto`/`call`
+* `return`/`yield`/`fork`, 
+* a reflective environment, 
+* backtraces, reusable coroutines 
+
+{% include "includes/cek-anim.md" %}
+
+
+See also the [VM module docs]({{_}}/modules/virtual-machine) for the operator table and worked push / goto / call-return / coroutine / generator examples.
+
+### Pre & Post Hooks
+<hr class="section-rule lvl-3">
+<a name=pre-post-hooks></a>
+
+When you run a program through an interpreter-style invocation (`cmk run`, or an `mk.interpret` shebang), you also **automatically get pre and post hooks for every target that runs via the command line.**  Here's a simple example to illustrate:
+
+{{site.embed_demo('demos/hooking-targets.mk', github=github)}}
+
+Running the code above works the way you'd expect, and we get pre and post effects with no explicit plumbing.  This is name-based with post-fixes as seen above, and **extensions can also add hooks for compose.mk builtins**.
+
+Here's the output:
+
+```bash {.cli_example}
+$ ./demos/hooking-targets.mk main_target
+```
+```bash {.cli_output}
+hello pre-hook
+hello main
+hello post-hook
+```
+
+Beyond readability, this enables a useful kind of code reuse: many targets can share the *same* pre/post-conditions.  A hook needs no explicit body, so declaring a target's `.pre` with a prerequisite reads as an annotation, like a python decorator, or lightweight "aspect-oriented" programming.
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+!!! warning "Hooks fire only from the command line"
+    What does it mean that hooks work for "*every target used via command line*"?  **Hooks are only fired when the interpreter is used directly**; recursive `make` calls or similar will NOT execute them.  This makes the feature useful for standalone tools and for augmenting standard entrypoints like *clean/build/test*, and much less useful for libraries.
+
+Hooks are enabled by default since they don't affect performance much, but it's possible they might conflict with existing naming conventions or similar.  To override this, you can set `CMK_DISABLE_HOOKS=1` in your environment, or in the shebang lines at the top of your script.  Always use `CMK_DISABLE_HOOKS=1` if you are making proxy-wrappers, as with the [`ls` clone]({{_}}/signals/#positional-arguments-yield) on the supervisor page.
+
+### Related Config
+<hr class="section-rule lvl-3">
+
+The runtime layer is driven by a few supervisor/interpreter env-vars and reserved dunder names.  The canonical reference for both is the [Configuration]({{_}}/config) page.
+
+> **Environment variables** ( [details]({{_}}/config#general-environment-variables) )
+> {: .cmk-card }
+>
+> | Variable | Role |
+> | --- | --- |
+> | `CMK_SUPERVISOR` | Gate the [supervisor]({{_}}/signals) (interpreter-style invocations set it). |
+> | `CMK_BOOTLOADER` / `CMK_BOOTLOADER_DISABLED` | The [bootloader](#bootloader) extension point (and the kill-switch). |
+> | `CMK_DISABLE_HOOKS` | Disable the [pre/post hooks](#pre-post-hooks). |
+> | `MAKE_CLI` | The live command line: the [continuation](#continuations) substrate. |
+> | `MAKE_SUPER` | The supervisor's per-run id (scratch-file keying). |
+
+<!-- separate adjacent card blockquotes (python-markdown merges them otherwise) -->
+
+> **Dunder names** ( [details]({{_}}/config#dunder-names-__name__) )
+> {: .cmk-card }
+>
+> | Name | Role |
+> | --- | --- |
+> | `__main__` | The default goal / entrypoint.  Runs on direct execution; demoted to a `<name>:` target on import ([Executable Modules]({{_}}/cmk/modules#executable-modules)). |
+> | `__vm__` | The [virtual-machine](#virtual-machine) control stack (module). |
+> | `__ip__` / `__step__` / `__posix_code__` / … | The scheduler's seven registers, exported on each dispatch hop as a read-only reflection surface (see [Flat dispatch](#flat-dispatch)). |
+> | `__interpreter__` / `__interpreting__` | Invocation paths used for recursive `make` and forks. |
+
+<!-- separate adjacent card blockquotes (python-markdown merges them otherwise) -->
+
+> **Pragmas**: a program can also set compile-time settings in its `# cmk_pragma ::: {…} :::` header ( [details]({{_}}/cmk/pragmas) ); the few that shape the runtime:
+> {: .cmk-card }
+>
+> | Pragma | Role |
+> | --- | --- |
+> | `repl` | Make the file a [REPL]({{_}}/embedded-tui) runtime execution mode (no import/boilerplate). |
+> | `vm_hydrate` | Auto-receive the reflective [`__vm__`](#virtual-machine) env at every recipe entry (the recommended form). |
+> | `vm_trace` | Inject live frame-tracing so the [virtual machine](#virtual-machine)'s frame-tree reflects the real recursive `make` call stack. |
+> | `compiler_pre` / `compiler_post` | Append custom compile stages (an array, so it *accumulates*, e.g. a plugin lifting its own `vm_hydrate` stage). |
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+Layers below and above this runtime:
+
+* [Signals]({{_}}/signals): the supervisor this runtime model sits on.
+* [Virtual Machine]({{_}}/modules/virtual-machine): the structured CEK control stack over these primitives.
+
+### References
+<hr class="section-rule lvl-3">
+
+[^1]: {{ tufte.wiki('CEK_Machine')|trim }}
+[^2]: {{ tufte.wiki('Continuation')|trim }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+    addImageToHeader('runtime','/{{mkdocs.config.site_name}}/img/makefile.png',style="height:2.2em;")
+}, 100);});
+</script>

@@ -1,0 +1,39 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# callforms.cmk:
+#   The CMK-lang forms of the calling conventions.  Nullary macro expansion
+#   is the same as plain Makefile; parametric calls use the `cmk.fn(args)`
+#   callform (= $(call fn,args)); and the macro-vs-target pair becomes the
+#   `${macro}` expansion vs the `this.x[stream]` callform (= stream |
+#   ${make} x).  Ported from demos/callforms.mk.
+#
+#   See the Call Forms section of the compiler docs:
+#   https://robot-wranglers.github.io/compose.mk/cmk/compiler/#call-forms
+#
+# USAGE: ./demos/cmk/callforms.cmk
+
+import stream, log
+
+__main__: nullary parametric macro_form target_form
+
+nullary:
+    '''Nullary expansion (no arguments): just reference the macro.'''
+    printf '{"a":1}\n' | ${stream.peek} | ${jq} .
+
+parametric:
+    '''Parametric helpers, via the `cmk.fn(args)` callform.'''
+    log(starting up)
+
+macro_form:
+    '''
+    Macro form: expands inline (one fewer process, no recursive
+    re-parse).
+    '''
+    printf 'a\nb\n' | ${stream.nl.to.space}
+
+target_form:
+    '''
+    Target form: equivalent, via the `this.x[stream]` callform (a
+    recursive make call).
+    '''
+    stream.nl.to.space[printf 'a\nb\n']

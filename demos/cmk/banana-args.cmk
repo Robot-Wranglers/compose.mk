@@ -1,0 +1,50 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-args.cmk: the (args) trailer applies a block as a make macro.
+#
+# USAGE: ./demos/cmk/banana-args.cmk
+
+'''
+The (args) trailer applies a block as a make macro (a call-form).  It is the
+dual of [S] (which runs the block as a shell filter): where [S] makes text
+by shelling out at compile time, (args) stays in pure make, using make's
+own foreach/call builtins to stamp rule-families from parameters -- hermetic,
+newlines kept.
+
+Position picks codegen vs capture:
+  statement:
+    NAME(|..|)(a,b) lowers to an eval'd call of NAME on a,b
+  value:
+    X = NAME(|..|)(a,b) binds X to a call of NAME on a,b
+
+Below: a reusable rule-family template, a foreach matrix, and a
+value-position capture.
+'''
+
+import log
+
+# rule-family templating: ( statement position; codegen once per param )
+#   The trailer stamps the template for auth, and leaves NAME behind as
+#   an ordinary make macro: re-calling it stamps the same three rules for
+#   a second component, with no body repeated.
+component(|
+    $(1).build:; echo ">> build $(1)"
+    $(1).test:;  echo ">> test  $(1)"
+    $(1).clean:; echo ">> clean $(1)"
+|)(auth)
+$(eval $(call component,billing))
+
+# matrix: ( one statement stamps a whole family via $(foreach) )
+matrix(|
+    $(foreach e,$(1),$(eval deploy.$(e):; echo ">> deploy $(e)"))
+|)(dev stage prod)
+
+# value capture: ( value position, resolved at comptime )
+GREETING = greeter(| hello $(1) and $(2) |)(world,moon)
+
+__main__:
+    log(captured ${sep} $(GREETING))
+    @# run the rule-families the templates stamped out at parse time
+    ${make} auth.build auth.test auth.clean
+    ${make} billing.build billing.test billing.clean
+    ${make} deploy.dev deploy.stage deploy.prod

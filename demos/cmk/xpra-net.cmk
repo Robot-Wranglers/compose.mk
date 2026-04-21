@@ -1,14 +1,15 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
-# Demonstrating GUI capabilities with XPra and carbonyl, served via HTML5.
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# xpra-net.cmk: GUI capabilities with XPra and carbonyl, served via HTML5.
 #
 # USAGE: ./demos/cmk/xpra-net.cmk gui
 
-export CMK_AT_EXIT_TARGETS=xscreensaver.stop
+export CMK_POST=xscreensaver.stop
 export XPRA_PORT_INTERNAL?=14500
 export XPRA_ARGS?=--mdns=no --printing=no --speaker=no --sharing=yes --audio=no --pulseaudio=no --webcam=no --microphone=off --html=on --daemon=no --window-close=disconnect --file-transfer=no --tray=no --system-tray=no --exit-with-children=yes --terminate-children=yes
 export XPRA_SOURCES=https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra-lts.sources
 
-⋘ gui.services
+compose.import.string gui.services(|
 services:
   xscreensaver:
     build:
@@ -36,24 +37,25 @@ services:
 networks:
   app_network:
     name: app_network
-⋙
+|)
 
 gui: xscreensaver.stop xscreensaver.build \
   xscreensaver.up.detach flux.timeout/4/xscreensaver.logs \
   app.open 
 
 app.open:
-	@# Opens the carbonyl browser in docker.
-	@# This uses the `app_network` as defined in 
-	@# the compose file above, and the service-name is the host name.
-	url="http://xscreensaver:${XPRA_PORT_INTERNAL}" \
-		net=app_network this.tux.browser
+    '''
+    Opens the carbonyl browser in docker.
+    This uses the `app_network` as defined in
+    the compose file above, and the service-name is the host name.
+    '''
+    url="http://xscreensaver:${XPRA_PORT_INTERNAL}" \
+        net=app_network this.tux.browser
 
 __main__:
-	@# Print usage info and exit.
-	@# Main entrypoint does not actually start the GUI
-	@# because we don't want this running from main test-suite
-	cmk.log(${red}USAGE: ${__file__} gui)
-
-test: flux.timeout/2/.test
-.test:; echo zonk; sleep 10; echo bonk
+    '''
+    Print usage info and exit.
+    Main entrypoint does not actually start the GUI
+    because we don't want this running from main test-suite
+    '''
+    cmk.log(${red}USAGE: ${__file__} gui)

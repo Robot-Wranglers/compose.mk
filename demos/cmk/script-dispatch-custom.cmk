@@ -1,23 +1,26 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
-# CMK-lang equivalent of demos/script-dispatch-custom.mk.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/compiler
+#!/usr/bin/env -S ./compose.mk cmk run
 #
-# USAGE: ./demos/script-dispatch-custom.mk
+# script-dispatch-custom.cmk:
+#   Dispatch a shell script inside a local, embedded container built from an
+#   inline Dockerfile.  A recipe body `(| .. |) in <container>` runs in that
+#   locally-built image; an env var rides in via the `{env=..}` channel.
+#   Ported from demos/script-dispatch-custom.mk.
+#
+# USAGE: ./demos/cmk/script-dispatch-custom.cmk
 
-⫻ Dockerfile.my_container
-FROM debian/buildd:bookworm
-# .. other customization here ..
-⫻
+from cmk import Dockerfile
 
-⨖ example-1.sh
-echo hello `hostname` at `uname -a` 
-⨖ with my_container as local_context
+Dockerfile my_container(entrypoint=bash)(|
+    FROM debian/buildd:bookworm
+    # .. other customization here ..
+|)
+
+example-1.sh:
+  (| echo hello `hostname` at `uname -a` |) in my_container
 
 export var1=hello-world
 
-⨖ example-2.sh
-echo variable exported: ${var1:-not set}
-⨖ with img=my_container env='var1' quiet=1 as local_context
+example-2.sh:
+  (| echo variable exported: ${var1:-not set} |) in my_container {env=var1}
 
 __main__: example-1.sh example-2.sh

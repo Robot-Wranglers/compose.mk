@@ -1,0 +1,43 @@
+{# Citation-link macros, adapted from heredoc's docs/macros/tufte.j2 (the wiki/
+   github/gist subset).  Each turns a bare slug (or a full URL, or a `Page#Topic` form)
+   into a styled `<scheme>:// <cite>link</cite>` reference; handy for footnotes:
+
+       [^1]: {{ tufte.wiki('Tacit_programming')|trim }}
+       [^2]: {{ tufte.wiki('Smalltalk#Image-based_persistence')|trim }}
+
+   These are self-contained (string ops only, no other-macro deps).  `|trim` the call
+   inside a footnote so the macro's leading newline doesn't break the `[^n]:` block. #}
+
+{% macro wiki(link,lang='en',label='',topic='', style="border-bottom:unset;") -%}
+{%if link.startswith('http')%}{%set label=label or link.split('/')[-1]%}{%else%}{%set label=label or link%}{%set link='https://'+lang+'.wikipedia.org/wiki/'+label%}{%endif%}
+{% if '#' in label and not topic %}{%set topic=label.split('#')[-1]%}{%set label=label.split('#')[0]%}{%else%}{%set topic=''%}{%endif%}<small><strong>wiki://</strong>&nbsp;</small><cite><a href="{{link}}" style="{{style}}">{{label.replace('_',' ').replace('-',' ').replace('%28','(').replace('%E2%80%93','-').replace('%29',')').title()}}{{', <cite class=topic>on '+topic.replace('_', ' ')+'</cite>' if topic else ''}}</a> </cite>
+{%- endmacro -%}
+
+{% macro github(link,label='',topic='', style="border-bottom:unset;") -%}
+{%set label=label or '/'.join(link.split('/')[-2:])%}{%if link.startswith('http')%}{%else%}{%set link='https://github.com/'+link%}{%endif%}
+{% if '#' in label and not topic %}{%set topic=label.split('#')[-1]%}{%set label=label.split('#')[0]%}{%else%}{%set topic=''%}{%endif%}<small><strong>github://</strong>&nbsp;</small><cite><a href="{{link}}" style="{{style}}">{{label.replace('_',' ').replace('-',' ').title()}}{{', <cite class=topic>on '+topic.replace('_', ' ')+'</cite>' if topic else ''}}</a> </cite>
+{%- endmacro -%}
+
+{% macro gist(link='',label='', topic='', style="border-bottom:unset;") -%}
+{%if link.startswith('http')%}{%set label=label or link.split('/')[-1]%}{%else%}{%set label=label or link%}{%set link='https://gist.github.com/'%}{%endif%}
+<small><strong>gist://</strong>&nbsp;</small><cite><a href="{{link}}" style="{{style}}">{{label.replace('_',' ').title()}}{{', <cite class=topic>on '+topic.replace('_', ' ')+'</cite>' if topic else ''}}</a> </cite>
+{%- endmacro -%}
+
+{# two_col: a Tufte-style two-column row.  The `{% call %}` body (any HTML: an
+   animation, figure, aside) becomes a floated column of `width` on `side`
+   ('left'|'right'); the Markdown prose that FOLLOWS in the document flows into
+   the other column.  (Markdown is not parsed inside raw HTML here, so the prose
+   stays in the document, not the macro.)  Close the row with `two_col_clear()`
+   before the next full-width block.  Usage:
+
+       {% call tufte.two_col('32%') %}{% include "includes/thing.md" %}{% endcall %}
+       Opening prose that flows beside it ...
+       {{ tufte.two_col_clear() }} #}
+{% macro two_col(width='32%', side='left') -%}
+<div class="tufte-two-col tufte-two-col-{{side}}" style="width:{{width}};">
+{{ caller() }}
+</div>
+{%- endmacro -%}
+{% macro two_col_clear() -%}
+<div class="tufte-two-col-clear"></div>
+{%- endmacro -%}

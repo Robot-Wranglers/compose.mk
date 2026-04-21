@@ -1,14 +1,14 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
+#!/usr/bin/env -S ./compose.mk cmk run
 #
-# CMK-lang equivalent of demos/bind-script.mk.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/compiler
+# bind-file.cmk:
+#   Bind an external script file to a container and run it as a target.
+#   A code-object sources its body from `file=`, binds to a python container,
+#   and becomes a prerequisite of `__main__`, so running the demo runs the
+#   file inside the image.
+#   Ported from demos/bind-file.mk.
 #
 # USAGE: ./demos/cmk/bind-file.cmk
 
-kwargs=\
-	file=demos/data/test-file.py \
-	img=python:3.11-slim-bookworm \
-	entrypoint=python
+code script(file=demos/data/test-file.py img=python:3.11-slim-bookworm entrypoint=python)(| |)
 
-__main__: ᝏpolyglot.bind.file(${kwargs})
+__main__: script

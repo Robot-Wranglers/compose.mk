@@ -18,6 +18,6 @@
     </tr>
     <tr>
         <td><code>__REST__</code></td>
-        <td>Everything that comes after `sugar_end` up to newline [^4]</td>
+        <td>Everything that comes after <code>sugar_end</code> up to newline</td>
     </tr>
 </table>

@@ -1,3 +1,15 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 
 {% include "overview.md.j2" %}
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+Where to go from here[^make]:
+
+* [Quickstart]({{_}}/quickstart): get running in a few minutes.
+* [Overview]({{_}}/overview): the wider tour of what `compose.mk` is.
+* [CMK: Introduction]({{_}}/cmk/intro): the language behind the tooling.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^make]: {{ tufte.wiki('Make_(software)')|trim }}

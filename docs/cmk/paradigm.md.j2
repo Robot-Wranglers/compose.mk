@@ -1,0 +1,124 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+
+
+{{ macros.section(2, "Paradigm/Lineage", id="paradigm-lineage") }}
+
+{{ macros.escape_hatch([
+    'Concrete examples: [Basic](@/cmk/compiler/#basic-example), [Compose-file](@/cmk/compiler/#compose-file-example), and [Dockerfile](@/cmk/compiler/#dockerfile-example).',
+    ['Matrioshka Automata', '@/matrioshka', 'a patterns-focused discussion of program-packing'],
+    ['Compiler &amp; Dialects', '@/cmk/compiler', 'the compiler behind the cmk-lang syntax'],
+], mkdocs) }}
+
+You might already be aware that `compose.mk` offers a [standard library for working with `make`]({{_}}/standard-lib), a sort of stand-alone [tool mode]({{_}}/tool-overview), and [a TUI framework]({{_}}/embedded-tui), but now you've reached the page that will finally reveal the shocking secret truth: **compose.mk is actually a programming language!** 😮  More specifically..
+
+`compose.mk` is a [matrioshka language]({{_}}/matrioshka), and maybe the first one that's *actually intended to be useful*.
+
+{%include "cmk/tldr.md.j2"%}
+
+The rest of this page focuses on other high-level language-related features and serves as an alternate to the [main landing page]({{_}}/overview). If you prefer overviews to focus less on applications and more on **theory, architecture, and patterns**, you've come to the right place.
+
+{{ macros.section(3, "Language Properties", id="language-properties") }}
+
+!!! goals "<strong>Multi-paradigm, with the following properties:</strong>"
+	1. Inherits macros, declarative style, incremental computing[^1], and basic DAGs[^2] from `make`
+	1. Inherits tacit programming[^3] and a preference for [pipes & streams]({{_}}/standard-lib#structured-io-stream-types-pipes) from the unix shell
+	1. Mostly untyped, but support for [structured data]({{_}}/standard-lib#structured-io), [file and stream kinds]({{_}}/standard-lib/#structured-io-stream-types-pipes), and [callform-channels]({{_}}/cmk/concepts/#callforms).
+	1. Supports extensible programming[^5]
+	    * via [container support]({{_}}/container-dispatch) generally, but also
+	    * via [first-class polyglots]({{_}}/demos/polyglots) and [dynamic scaffolding]({{_}}/container-dispatch/#namespace-style-dispatch) as well as [user-defined syntax]({{_}}/cmk/metaprogramming/#user-defined-extensions)
+	1. Supports functional programming[^6] and data flow programming[^7]
+	    * via [flux]({{_}}/standard-lib/#workflow-rationale) generally, especially via [flux workflows]({{_}}/demos/workflows), [etc]({{_}}/demos/platform)
+	    * and also via [other helpers]({{_}}/standard-lib/#functional-style)
+	1. Supports reflective programming[^4] and lightweight aspect-oriented programming[^10]
+	    * via e.g. [mk.*]({{_}}/standard-lib/#reflection-support) and [pre/post hooks]({{_}}/runtime/#pre-post-hooks)
+	1. Inclines towards concatenative style[^8] and stack-oriented programming[^9]
+	    * partly via default `make` target execution semantics
+	    * partly via [compose.mk stage-stacks]({{_}}/stages)
+	1. Supports more or less object-oriented style at multiple layers, including:
+	    * via [classes, constructors, and banana-syntax]({{_}}/cmk/metaprogramming)
+	    * via [container layers]({{_}}/cmk/banana/#banana-multibody), or via yaml inheritance in composefiles
+	    * via make-includes, via target-chaining, via namespacing conventions for targets, etc
+
+
+{# 
+> 1. Supports a whole [zoo of concurrency models]({{_}}/concurrency) via [optional modules]({{_}}/cmk/modules), including 
+>     * coroutines, backtracking, swarms
+>     * actors, agents, channels, fibers.
+#}
+
+Incredibly, cmk-lang not only [compiles to Makefile]({{_}}/cmk/compiler), but can also act as both a cmk-lang interpreter and a Makefile interpreter.  You could say that the [runtime]({{_}}/runtime) is not written *in* make, but it runs *on* `make`, hijacking it for a weird and interesting gadget[^gadget].  
+
+Also related but harder to categorize, the [packaging support]({{_}}/demos/packaging) is *almost* a language feature in that it effectively allow us to **release frozen artifacts**.  For a simpler approach to packaging that doesn't require archives, see instead the documentation for [guests and payloads]({{_}}/standard-lib#forks-guests-and-payloads).  These capabilities are inspired by the idea of image-based persistence[^11].
+
+{{ macros.section(3, "Homoiconic?", id="homoiconic") }}
+
+Let's introduce a somewhat surprising fact: `compose.mk` is designed to be homoiconic[^homoiconic] on `make` targets, at the same time as it generalizes what targets can *be*.
+
+By default, `make` targets can execute directly, or group other tasks into DAGs.
+
+!!! goals "<strong>A <code>compose.mk</code> target can additionally:</strong>"
+	1. Serve as a *handle* for a container's default entrypoint (via [`compose.import`]({{_}}/bridge))
+	1. Execute inside of containers (via [container dispatch]({{_}}/container-dispatch))
+	1. Execute later, conditionally, or repeatedly etc (via [flux]({{_}}/standard-lib#workflow-support))
+	1. Describe data-flow and/or control-flow across other tasks (again via [flux]({{_}}/standard-lib#workflow-support))
+	1. Execute arbitrary tasks in foreign languages (via [polyglots]({{_}}/demos/polyglots))
+
+In the [workflow docs]({{_}}/standard-lib/#workflow-support), the `flux.*` module is introduced as a **target algebra** and compared to more familiar process-algebra from shell.  But as a simple example of "targets all the way down" consider this:
+
+* {{site.api_link('flux.wrap',mkdocs,arg='targets')}} is a n-ary target that accepts nullary targets as arguments.
+* Meanwhile.. {{site.api_link('flux.ok',mkdocs)}} and {{site.api_link('flux.fail',mkdocs)}} are examples of nullary targets.
+* But invocation, like say `flux.or/flux.ok,flux.fail` is itself also a (nullary) target.
+
+Of course, no matter how easily you can incorporate foreign tools.. at some point, you might also need to write **task implementations** rather than just glue, *i.e. actual target bodies in shell, or [polyglots in foreign languages]({{_}}/demos/polyglots/)*.  Still.. you'll be surprised by how infrequently that's actually necessary, and when it is, how small the task-implementations you need actually are.  For a quick example of how much you can accomplish with no target bodies at all, see the docs for [low config TUIs]({{_}}/low-config-tuis/).
+
+{{ macros.section(3, "Interpreters & Transpilation", id="interpreters-transpilation") }}
+
+By the way, since the claim is that something like `flux.wrap/flux.ok,flux.fail` is actually *a program* in a "language" though, it's worth pointing out that there are many ways to execute it beyond just mentioning it in a Makefile as a target-prerequisite.  The following are all equivalent, but the last example demonstrates what you can think of as the `compose.mk` interpreter.
+
+```bash {.cli_example}
+# program as target
+$ make -f compose.mk flux.or/flux.ok,flux.fail
+
+# program as subcommand
+$ ./compose.mk flux.or/flux.ok,flux.fail
+
+# program as code
+$ echo flux.or/flux.ok,flux.fail | ./compose.mk mk.kernel
+```
+
+This example is simplistic, but there are other ways that `compose.mk` can [act as an interpreter]({{_}}/signals/#inheritance-interpreters), and even support transpilation for a *syntactically different* language that transforms to classical Makefile.  For more details, see the [Compiler & Dialects docs]({{_}}/cmk/compiler).
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Introduction & Classification]({{_}}/cmk/intro): what CMK is and where it sits.
+* [Compiler Tutorial]({{_}}/cmk/compiler): the concrete syntax and lowering.
+* [Metaprogramming]({{_}}/cmk/metaprogramming): dialects, sugar, and pragmas.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^1]: {{ tufte.wiki('Incremental_computing')|trim }}
+[^2]:  {{ tufte.wiki('Directed_acyclic_graph')|trim }}
+[^3]:  {{ tufte.wiki('Tacit_programming')|trim }}
+[^4]:  {{ tufte.wiki('Reflective_programming')|trim }}
+[^5]:  {{ tufte.wiki('Extensible_programming')|trim }}
+[^6]:  {{ tufte.wiki('Functional_programming')|trim }}
+[^7]:  {{ tufte.wiki('Dataflow_programming')|trim }}
+[^8]:  {{ tufte.wiki('Concatenative_programming_language')|trim }}
+[^9]:  {{ tufte.wiki('Stack-oriented_programming')|trim }}
+[^10]: {{ tufte.wiki('Aspect-oriented_programming')|trim }}
+[^11]: {{ tufte.wiki('Smalltalk#Image-based_persistence')|trim }}
+[^gadget]: {{ tufte.wiki('Gadget_(computer_science)')|trim }}
+[^homoiconic]: {{ tufte.wiki('Homoiconicity')|trim }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+{{macros.header_images([
+	['language overview', 'overview'],
+	['Interpreters', 'code-asterisk'],
+	['Homoiconic', 'code-asterisk'],
+	['language properties', 'code-asterisk'],
+	['references','list-details'],
+], mkdocs)}}
+}, 100);});
+</script>

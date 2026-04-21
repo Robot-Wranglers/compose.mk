@@ -1,39 +1,83 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 
-## Stacks & Stages 
-<hr style="width:100%;border-bottom:3px solid black;">
+{{ macros.section(2, "Stacks & Stages", id="stacks-stages") }}
 
-Stages **add support for persistent data via a named stack**, plus basic *`push/pop/peek`* operators.
+`compose.mk` ships a small family of **persistent, file-backed data structures** that build on one another; each layer adds capability while reusing the one below:
 
-Any task associated with `compose.mk` is able to use a stack just by mentioning it, regardless of whether it is inside or outside of a container.
+* **Stacks**: a bare named JSON array with `push`/`pop`/`peek` (the primitive everything else rests on).
+* **Stages**: a stack with a *lifecycle*: entry banners, time-stamped enter/exit events, automatic cleanup, and a name-by-target convention.
+* **Channels** & **Agents**: event buses and stateful actors built on the very same stacks ([further down](#channels-agents)).
+
+**The point is to have something small, fast, and light** that you use out of the box or build on top of: a project-local datastructure that feels native, is basically dependency free, and is actually kind of scalable.  After all.. `jq` will happily chug through a very large pile of JSON, and if file IO becomes a bottleneck, switching to [shared memory is straightforward](https://datawookie.dev/blog/2021/11/shared-memory-docker/).  We start at the bottom and work up.
 
 {{macros.img_link("escher-babel.png", mkdocs, "58%",align='center', class=" ")}}
 
-Stacks live on the filesystem usually at the project root, and are JSON-backed.  Ultimately the *push/pop/etc* operators are implemented with `jq` and `jb`, using local tools if available but falling back to docker for a portable implementation.  *(For more background, see the docs on [structured IO ]({{mkdocs.site_relative_url}}/standard-lib#structured-io) and [proxy wrappers]({{mkdocs.site_relative_url}}/tool-overview#tool-wrappers).)*
+### Stacks
+<hr class="section-rule lvl-3">
 
-Other than the datastructure itself, there are few restrictions or isolation guarantees about how that data is used, or where it's used from.  By default, **there are no isolation guarantees at the level of PIDs, parent PIDs, or container.**  However, isolation per `compose.mk` managed project is usually implicit, because **stages are uniquely determined by the stage name and the working directory when the stage is used.**
+A **stack** is the base primitive: a named, JSON-backed array that lives on the filesystem, usually at the project root.  Any task can use one just by *mentioning it* (the backing file is created on first write), regardless of whether the task runs inside or outside of a container.
 
-Since access to the stage-stack should "just work" from the docker host or a container, and works inside or outside the particular subshell for any existing make-target, this adds a lot of missing flexibility for "crosswise" communication that task-DAGs and pipelining would usually struggle with.
+#### Backing Store
+<hr class="section-rule lvl-4">
 
-**The point of stacks and stages is to have something small, fast, and light** that you use out of the box or build on top of.  Stage-stacks in `compose.mk` are a project-local datastructure that feels native, is basically dependency free, and is actually kind of scalable.  After all.. `jq` will be happy to chug through a very large pile of JSON indeed, and file IO is a bottleneck, switching to [shared memory is straightforward](https://datawookie.dev/blog/2021/11/shared-memory-docker/).
+Ultimately the *push/pop/etc* operators are implemented with `jq` and `jb`, using local tools if available but falling back to docker for a portable implementation.  *(For more background, see the docs on [structured IO ]({{_}}/standard-lib#structured-io) and [proxy wrappers]({{_}}/tool-overview#tool-wrappers).)*
 
-### Stage Basics
-<hr style="width:100%;border-bottom:3px solid black;">
+Other than the datastructure itself, there are few restrictions or isolation guarantees about how that data is used, or where it's used from.  By default, **there are no isolation guarantees at the level of PIDs, parent PIDs, or container.**  Since access should "just work" from the docker host or a container, and works inside or outside the particular subshell for any existing make-target, this adds a lot of missing flexibility for "crosswise" communication that task-DAGs and pipelining would usually struggle with.
 
-At a high level, these are the rules for stages:
+#### Operations
+<hr class="section-rule lvl-4">
 
-* Once entered, a stage lives forever unless explicitly exited, 
-* The lifetime of a stage-stack is just the lifetime of the stage  
-* Stages may be re-entered from anywhere without an exit, and 
-* Entering and exiting stages leaves time-stamped events inside the stack
-* Any reference to a non-existent stage *enters the stage implicitly, creating the stage-stack*
+On the command-line, raw stack ops are just `io.stack.<op>/<name>`.  **Pushing** JSON works with pipes (the backing file is created on first write):
+
+```bash {.cli_example}
+$ echo '{"data":789}' | ./compose.mk io.stack.push/.myStack
+```
+```bash {.cli_output}
+⇄ io.stack.push // stack@.myStack ⋘⋘⋘
+  {"data":789}
+```
+
+The builtin `jb` wrapper is a handy way to build the JSON in the first place:
+
+```bash {.cli_example}
+$ ./compose.mk jb foo=bar | ./compose.mk io.stack.push/.myStack
+```
+
+**Counting and popping** round out the basics.  A stack is LIFO, so `pop` returns the most recent push: pipe-safe JSON on stdout, with human annotations on stderr:
+
+```bash {.cli_example}
+$ ./compose.mk io.stack.count/.myStack
+```
+```bash {.cli_output}
+2
+```
+```bash {.cli_example}
+$ ./compose.mk io.stack.pop/.myStack
+```
+```bash {.cli_output}
+{
+  "foo": "bar"
+}
+⇄ io.stack.pop // stack@.myStack ⋙⋙⋙
+```
+
+### Stages
+<hr class="section-rule lvl-3">
+
+A **stage** is a stack with a *lifecycle* wrapped around it.  Underneath it is just a lazy stack, so it has every operator above (`push`/`pop`/`count`/...), but `enter`/`exit` additionally draw a banner, drop a time-stamped entry-record, and remove the backing file automatically when the stage exits.  Stages are also addressed by a human-friendly *name* (by convention, the current target name) rather than a raw file path, and **a stage is uniquely determined by that name plus the working directory**, which gives you implicit per-project isolation for free.
+
+!!! contract "The rules for stages"
+    * **lifetime**: Once entered, a stage lives forever unless explicitly exited; the lifetime of a stage-stack is just the lifetime of the stage.
+    * **re-entry**: Stages may be re-entered from anywhere without an exit.
+    * **events**: Entering and exiting a stage leaves time-stamped events inside the backing stack.
+    * **implicit create**: Any reference to a non-existent stage **enters it implicitly**, creating the stage-stack.
 
 Stack-operations are logged by default to stderr, so it's easy for users or devs to keep track of the stack state.  Stages also automatically get a banner / visual divider on entry, helpful for making automation output more readable.
 
 **You can use stages via stand-alone mode or programmatically from script,** and either way it looks pretty similar.
 
-### Stages in Stand Alone Mode
-<hr style="width:100%;border-bottom:3px solid black;">
+#### Stand-Alone Mode
+<hr class="section-rule lvl-4">
 
 **Creating a stack** is just mentioning it.
 
@@ -105,78 +149,120 @@ $ ./compose.mk flux.stage.exit/BUILD
 Φ flux.stage.clean // BUILD //  removing stack file @  .flux.stage.BUILD
 ```
 
-### Stage Idioms
-<hr style="width:100%;border-bottom:3px solid black;">
+#### Stage Idioms
+<hr class="section-rule lvl-4">
 
-If you're scripting with stages, the main difference is that `flux.stage.enter` and `flux.stage.exit` can be used like function decorators:
+If you're scripting with stages, the main difference is that `flux.stage.enter` and `flux.stage.exit` can be used like function decorators.  Each example below is shown as **twins**: a plain `Makefile` and its [cmk-lang]({{_}}/cmk/compiler) equivalent (toggle the tabs); the CMK side pushes JSON with the square-bracket [stream] call-form applied to the stage-push receiver.
 
-{{site.embed_demo('demos/stages-idiom.mk', github=github)}}
+{{site.embed_mirror('demos/stages-idiom.mk', 'demos/cmk/stages-idiom.cmk', github=github, default='left')}}
 
-In this case when `validate` succeeds the stage file is cleaned like we'd expect, and if there's a crash then partial results can be inspected.  There are various ways to write this, like replacing calls to `./compose.mk` with `${make}` expansions, or using macros instead of targets, but the idea is the same.  
+In this case when `validate` succeeds the stage file is cleaned like we'd expect, and if there's a crash then partial results can be inspected.  Inside a recipe body, each operator also has a `flux.stage.<op>` variable shorthand (for example the stage-push variable followed by a stage name) that's terser than spelling out the recursive `make` call; on the command-line the same operators are just `./compose.mk flux.stage.<op>/<stage>`.
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 **Using an implicit context manager** with {{site.api_link('flux.stage.wrap',mkdocs,arg='target')}} is an alternative style.  The example below shows that, plus overriding the banner-printing mechanism to use the (dockerized) `figlet` tool instead of using `gum`. 
 
-{{site.embed_demo('demos/stage-wrapper.mk', github=github)}}
+{{site.embed_mirror('demos/stage-wrapper.mk', 'demos/cmk/stage-wrapper.cmk', github=github, default='left')}}
 
-----------------------------------------------
+<hr style="width:95%;border-bottom:1px dashed black;">
 
-Another source of usage hints about stages is the test-suite, so it's included below for reference.
+For the lower-level operations, pushing and popping structured data by hand, here is a small worked example that names a stage, pushes a couple of JSON objects, reads the stack back, pops the top value, and exits to clean up.
 
-If you are scripting, note that using `${@}` as shorthand for "current target name" is a good thing to organize around, since it reduces typing and typos.  Another idea is to parse out a *prefix* from the current target name, thus ensuring that related targets all use the same stack.
+When scripting, using make's automatic current-target-name variable as the stage name is a good convention to organize around: it cuts down on typing and typos, and parsing a shared *prefix* out of the target name lets a family of related targets reuse one stack.
 
-{{site.embed_demo('demos/stages.mk', github=github)}}
+{{site.embed_mirror('demos/stages.mk', 'demos/cmk/stages.cmk', github=github, default='left')}}
 
-See the the implementation details below for quick links to the full API.
+See the implementation details below for quick links to the full API.
 
-### Support for Non-JSON Artifacts?
-<hr style="width:100%;border-bottom:3px solid black;">
+#### Support for Non-JSON Artifacts?
+<hr class="section-rule lvl-4">
 
-For non-JSON artifacts, output typically doesn't need to be *input* somewhere else in the same pipeline, and you can just dump the content on the filesystem anywhere you like as usual because [tool containers share the project directory]({{mkdocs.site_relative_url}}/raw-docker/#tool-container-defaults).  
+For non-JSON artifacts, output typically doesn't need to be *input* somewhere else in the same pipeline, and you can just dump the content on the filesystem anywhere you like as usual because [tool containers share the project directory]({{_}}/raw-docker/#tool-container-defaults).  
 
-So.. unless you want [build pipelines]({{mkdocs.site_relative_url}}/demos/workflows/) then there's little advantage if `compose.mk` gets in the middle.  Plus, while jamming base64 binary data directly into the JSON isn't really recommended.. ipynb's do it all the time! :) 
+So.. unless you want [build pipelines]({{_}}/demos/workflows/) then there's little advantage if `compose.mk` gets in the middle.  Plus, while jamming base64 binary data directly into the JSON isn't really recommended.. ipynb's do it all the time! :) 
 
-If you think you *do* have a use-case for something like this you might want to [look at the packaging docs]({{mkdocs.site_relative_url}}/demos/packaging/), which can at least help with creating archives.
+If you think you *do* have a use-case for something like this you might want to [look at the packaging docs]({{_}}/demos/packaging/), which can at least help with creating archives.
 
-### Stage API
-<hr style="width:100%;border-bottom:3px solid black;">
+#### Stage API
+<hr class="section-rule lvl-4">
 
 Stages are implemented using the `flux.stage.*` family of targets, and the lower level `io.stack` helpers.
 
 {{site.api_link_many(['flux.stage','io.stack'], mkdocs)}}
 
-### Why Stacks, though?
-<hr style="width:100%;border-bottom:3px solid black;">
+### Stacks as Shared State
+<hr class="section-rule lvl-3">
 
-Nothing prevents further downstream slicing with `jq`, so stacks as presented thus far can be easily changed or extended to do LIFO/FIFO, express KV stores, etc.  Any changes along these lines can usually be completely expressed in jqlang, and should be fairly fast/atomic. [^1]
+What makes a stack useful is *where* it can be reached from.  Since the backing store is just a JSON file keyed by name and working directory, one stack is visible to **any** task that mentions it: across separate `make` targets, across processes and subshells, [between polyglots]({{_}}/demos/polyglots), inside or outside of [tool containers]({{_}}/raw-docker/#tool-container-defaults), and [across matrioshka layers]({{_}}/matrioshka/#advanced-matrioshka-idioms).  Pure pipelining makes that kind of "crosswise" sharing awkward (tracking temp files, re-deriving values), but a named stack just *persists*.
 
-{#
-Eventually, the basic stack-operators might expand to include lightweight pattern matching and/or a simple tuple-space flavored interface. In the meantime though, you already got some new superpowers that might not be obvious:
-#}
+So there are two ways to think about a stack:
 
-Practically speaking, tools ike `terraform`, `helm`, `kubectl` and `ansible` all spit JSON, and you'll frequently need the output for one tool as the input for another.  Without stages, `compose.mk` makes that easy, but pure pipelining means it's hard to reuse values, or you need to track a temp file, etc.
+* **Durable global variables.**  Tools like `terraform`, `helm`, `kubectl`, and `ansible` all spit JSON, and you often need one tool's output as another's input.  Push it onto a named stack once and any later target can read it back: a project-local value-store (LIFO/FIFO or a KV map, a `jq` slice away) that outlives the subshell that wrote it.
+* **A blackboard / tuple space.**  Independent producers and consumers post facts to a shared stack and select the ones they care about (`io.stack.get` is a `jq` query away[^1]).  That is the classic blackboard[^6] / tuple-space[^7] coordination style, the substrate you want when work is *concurrent* rather than a linear pipeline.
 
-More philosophically.. native support for stacks gives `compose.mk` a new capability, in terms of stuff like programming[^2] paradigms[^3].  The stack is also a convenient way to communicate [between polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [across matrioshka layers]({{mkdocs.site_relative_url}}/matrioshka/#advanced-matrioshka-idioms).  And, for what it's worth, now you can pretty directly architect your automation in terms of pushdown automata[^4] or queue machines[^5] :)
+Multiple writers means **concurrency**, and that is where the higher layers come in.  A bare stack is passive: it holds whatever you post but never *reacts*.  Channels turn a stack into an event bus (post a typed event, route it to a handler); agents turn it into a stateful actor with a lifecycle.  This is what lets you architect automation as pushdown automata[^4] or queue machines[^5], in tacit[^2] or stack-oriented[^3] paradigms.  The next section takes that to its conclusion.
 
+### Channels & Agents
+<hr class="section-rule lvl-3">
+
+!!! info "Layered on stacks"
+    Channels and agents are higher-level constructs built directly on the stack primitives above.  Both are core: the `channel` event bus and the base `Actor` transport ship in core, and an **agent** is assembled from them (a mailbox and store plus an Elixir-style lifecycle), as the self-contained `jqd.cmk` demo below shows.  No plugin needed here -- unlike the typed-exceptions example, which reaches for the opt-in [`fault.cmk`]({{_}}/plugins/faults) module.
+
+The same backing store grows new capabilities as you climb the ladder:
+
+* **Stacks** are passive *data*: a named JSON array with `push`/`pop`/`peek` (everything above).
+* **Channels** add an *event bus*: `emit` typed events, then `dispatch` them by `.type` to `<chan>/<type>` handlers.  A channel is synchronous by default (route as you go: the `zahn` multi-exit search loop), or you opt into *deferred* dispatch with `at_exit=` so the whole stack is drained and routed at process exit (the `exceptions` demo's typed faults).
+* **Agents** add an *actor* lifecycle on top of that: seeded state (`start`), fire-and-forget `cast`, teardown (`stop`), plus a run-loop step.  Where a channel is a passive pipe, an agent is a live, stateful thing you query (`filter`/`count`), transform (`update`), and `drain`.
+
+Rule of thumb: reach for a **channel** to route events between targets, and an **agent** when you also need *durable state* and a lifecycle around it.
+
+An agent's *actor tick* and its `<ns>.pool/<size>` op (N concurrent drainers over one inbox) build directly on the [concurrency primitives]({{_}}/standard-lib/#concurrency): `flux.after`/`flux.delay` drive the loop's timing, and `flux.pool` runs the pool. *(Concurrent draining of one inbox is lossy until per-stack locking lands; it warns at runtime.)*
+
+#### Channels
+<hr class="section-rule lvl-4">
+
+A **channel** is the passive layer: a named event-stack with `emit`/`dispatch`/handlers.  The demo below seeds an `inbox`, then filters it for logins.
+
+{{site.embed_demo('demos/cmk/channel.cmk', type='cmk', github=github)}}
+
+#### Agents
+<hr class="section-rule lvl-4">
+
+An **agent** is the active layer: a channel plus an Elixir-flavored lifecycle (`start`/`cast`/`stop`), state, and a run-loop, built on the core actor/channel layer.  The self-contained demo below (`jqd.cmk`) assembles the actor transport, an agent (mailbox plus store), and a socketed leaf, then starts an agent, queries/transforms its state, casts events, and drains them to handlers.
+
+{{site.embed_demo('demos/cmk/jqd.cmk', type='cmk', github=github)}}
+
+The full operator reference for both:
+
+{{site.block_docs('Events')}}
+
+### See Also
+<hr class="section-rule lvl-3">
+
+Stacks and stages sit on the structured-IO layer and feed the concurrency primitives.
+
+* [Structured IO]({{_}}/structured-io): the JSON tooling the backing store is built on.
+* [Standard Library]({{_}}/standard-lib): `flux.*` concurrency and the wider library.
+* [Full API]({{_}}/api): the reflected `flux.stage`/`io.stack` reference.
 
 ### References
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-[^1]: Nope, this isn't perfectly thread safe.. but *(famous last words)* YAGNI
-[^2]: [wiki://tacit-programming](https://en.wikipedia.org/wiki/Tacit_programming) 
-[^3]: [wiki://stack-oriented-programming](https://en.wikipedia.org/wiki/Stack-oriented_programming)
-[^4]: [wiki://pushdown-automaton](https://en.wikipedia.org/wiki/Pushdown_automaton)
-[^5]: [wiki://queue-automaton](https://en.wikipedia.org/wiki/Queue_automaton)
+[^1]: Writes swap in atomically (temp file plus rename), so a reader never sees a half-written stack and the file can't corrupt.  The read-modify-write isn't locked, though, so concurrent writers can still drop each other's updates: lossy, but not corrupting.  Fine for synchronous use, and a deliberate tradeoff once you go async.
+[^2]: {{ tufte.wiki('Tacit_programming')|trim }}
+[^3]: {{ tufte.wiki('Stack-oriented_programming')|trim }}
+[^4]: {{ tufte.wiki('Pushdown_automaton')|trim }}
+[^5]: {{ tufte.wiki('Queue_automaton')|trim }}
+[^6]: {{ tufte.wiki('Blackboard_system')|trim }}
+[^7]: {{ tufte.wiki('Tuple_space')|trim }}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
 addImageToHeader('references','/{{mkdocs.config.site_name}}/img/list-details')
 addImageToHeader('stacks-stages','/{{mkdocs.config.site_name}}/img/stack-push')
-addImageToHeader('stage-idioms','/{{mkdocs.config.site_name}}/img/idiom')
-addImageToHeader('support-for-non-json-artifacts','/{{mkdocs.config.site_name}}/img/question')
-addImageToHeader('stage-api','/{{mkdocs.config.site_name}}/img/api')
-addImageToHeader('stage-basics','/{{mkdocs.config.site_name}}/img/basics')
-addImageToHeader('why-stacks-though','/{{mkdocs.config.site_name}}/img/question');
+addImageToHeader('stacks','/{{mkdocs.config.site_name}}/img/stack-push')
+addImageToHeader('stages','/{{mkdocs.config.site_name}}/img/basics')
+addImageToHeader('stacks-as-shared-state','/{{mkdocs.config.site_name}}/img/question')
+addImageToHeader('channels-agents','/{{mkdocs.config.site_name}}/img/idiom');
 }, 100);});
 </script>

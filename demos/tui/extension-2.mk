@@ -1,10 +1,7 @@
 #!/usr/bin/env -S make -f
-# Building on demos/tui/extension.mk. This keeps the yazi file-browser 
-# from the first version, and adds a target-selector and a web browser.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.
-#
-# See the docs for more discussion: 
-#  https://robot-wranglers.github.io/compose.mk/advanced-tuis
+# extension-2.mk: extend the embedded TUI, building on extension-1's yazi widget --
+# adds a web-browser widget, a logo widget, and a `gum`-based task chooser.  See the
+# docs for more discussion.  Part of the `compose.mk` repo; runs in the test-suite.
 #
 # USAGE: ./demos/tui/extension-2.mk
 
@@ -49,4 +46,4 @@ task.6th:; label=${@} ${make} io.draw.banner
 # including basic information about the backend `tmux` session.
 # We opt for horizontal layout, and reference the widgets so far.
 widgets:=widget.yazi,widget.browser,widget.chooser,widget.logo
-__main__: docker.from.def/yazi tux.open.spiral/${widgets}
+__main__: Dockerfile.build/yazi tux.open.spiral/${widgets}

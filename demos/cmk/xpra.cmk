@@ -1,11 +1,14 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
-# Demonstrating GUI capabilities with XPra and i3, served via HTML5.
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# xpra.cmk: GUI capabilities with XPra and i3, served via HTML5.
 #
 # USAGE: ./demos/cmk/xpra.cmk serve
 
+import io
+
 export APP_DIMS?=1024x500
 export APP_DISPLAY?=:23
-export CMK_AT_EXIT_TARGETS=xpra.stop
+export CMK_POST=xpra.stop
 
 export XPRA_ARGS?=--mdns=no --printing=no --speaker=no --sharing=yes --audio=no --pulseaudio=no --webcam=no --microphone=off --html=on --exit-with-children=yes --terminate-children=yes --daemon=no --window-close=disconnect --file-transfer=no --tray=no --system-tray=no --resize-display="1200x768"
 export XPRA_PORT_INTERNAL?=14500
@@ -13,7 +16,7 @@ export XPRA_SOURCES=https://raw.githubusercontent.com/Xpra-org/xpra/master/packa
 export XPRA_PORT_EXTERNAL=9090
 
 # Begin containerized version of i3 window manager and support files.
-⋘ gui.services
+compose.import.string gui.services(|
 configs:
   # See https://i3wm.org/docs/userguide.html for a complete reference
   i3conf:
@@ -51,7 +54,7 @@ services:
         FROM ubuntu:24.04
         ENV DEBIAN_FRONTEND=noninteractive
         RUN apt-get update -qq 
-        RUN apt-get install -y make procps
+        RUN apt-get install -y make
         RUN apt-get install -y wget apt-transport-https \
           software-properties-common ca-certificates
         RUN wget -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc
@@ -79,25 +82,31 @@ services:
     configs:
       - source: i3conf
         target: /root/.config/i3/config
-⋙
+|)
 
 serve: xpra.stop xpra.build xpra.up.detach xpra.exec.detach/i3.start_apps flux.timeout/5/xpra.logs
-	@# Starts an XOrg server, rebuilding the xpra container if necessary.
-	@# Then start/detach i3 WM, and start a few apps inside.  
-	@# Tail the logs for a while, wait for user-input, exit cleanly.
-	cmk.io.user_exit(Serving: http://localhost:${XPRA_PORT_EXTERNAL}\nPress any key to exit.)
+    '''
+    Starts an XOrg server, rebuilding the xpra container if necessary.
+    Then start/detach i3 WM, and start a few apps inside.
+    Tail the logs for a while, wait for user-input, exit cleanly.
+    '''
+    io.user_exit(Serving: http://localhost:${XPRA_PORT_EXTERNAL}\nPress any key to exit.)
 
 i3.start_apps: io.wait/5
-	@# Use I3's RPC tool to drive the display.  
-	@# Runs in the container, so using tools unavailable to host is ok.
-	i3-msg exec 'glxgears 2>&1 > /dev/null'
-	i3-msg exec 'glxgears 2>&1 > /dev/null'
-	i3-msg exec 'glxgears 2>&1 > /dev/null'
-	i3-msg exec 'glxgears 2>&1 > /dev/null'
-	i3l spiral
+    '''
+    Use I3's RPC tool to drive the display.
+    Runs in the container, so using tools unavailable to host is ok.
+    '''
+    i3-msg exec 'glxgears 2>&1 > /dev/null'
+    i3-msg exec 'glxgears 2>&1 > /dev/null'
+    i3-msg exec 'glxgears 2>&1 > /dev/null'
+    i3-msg exec 'glxgears 2>&1 > /dev/null'
+    i3l spiral
 
 __main__:
-	@# Print usage info and exit.
-	@# Main entrypoint does not actually start the GUI
-	@# because we don't want this running from tests.  
-	cmk.log(${red}USAGE: ${__file__} serve)
+    '''
+    Print usage info and exit.
+    Main entrypoint does not actually start the GUI
+    because we don't want this running from main test-suite
+    '''
+    cmk.log(${red}USAGE: ${__file__} serve)

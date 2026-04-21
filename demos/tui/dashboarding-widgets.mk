@@ -1,7 +1,6 @@
 #!/usr/bin/env -S make -f
-# demos/tui/dashboarding-wdgets.mk: 
-#   Expanding thedashboarding.mk TUI demo to include containers-as-widgets.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# demos/tui/dashboarding-widgets.mk:
+#   Expanding the dashboarding.mk TUI demo to include containers-as-widgets.
 #
 # USAGE: ./demos/tui/dashboarding-widgets.mk demo.ui
 

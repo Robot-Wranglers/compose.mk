@@ -1,0 +1,20 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+### Footnotes
+<hr class="section-rule lvl-3">
+
+Footnotes are plain Markdown (`pymdownx` / `footnotes` extension): drop a `[^ref]`
+marker in the prose and define it anywhere on the page.  They collect at the
+bottom and back-link automatically.
+
+A reference marker renders as a superscript link[^demo], and several markers can
+share a page[^second]; ordering of the *definitions* does not matter.
+
+```markdown
+A reference marker renders as a superscript link[^demo].
+
+[^demo]: The definition can live anywhere on the page.
+```
+
+[^demo]: The definition can live anywhere on the page; python-markdown gathers them into the footnote list and wires the back-link.
+[^second]: A second footnote, to show the numbering and back-links stack.

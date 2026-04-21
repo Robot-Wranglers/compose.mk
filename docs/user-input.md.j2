@@ -1,18 +1,18 @@
 {% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ### User Input / Interactivity
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-The stand-alone tool docs discuss usage of {{site.api_link('mk.select',mkdocs,arg='path_to_makefile')}} and {{site.api_link('compose.select',mkdocs,arg='path_to_compose_file')}} for [interactively choosing targets or containers to run]({{mkdocs.site_relative_url}}/selector).  
+The stand-alone tool docs discuss usage of {{site.api_link('mk.select',mkdocs,arg='path_to_makefile')}} and {{site.api_link('compose.select',mkdocs,arg='path_to_compose_file')}} for [interactively choosing targets or containers to run]({{_}}/selector).  
 
-This section covers lower-level usage of the API and some idioms for capturing user data.  See also the [Advanced TUI docs]({{mkdocs.site_relative_url}}/advanced-tui), where we build an interface that's composing these primitives.
+This section covers lower-level usage of the API and some idioms for capturing user data.  See also the [Advanced TUI docs]({{_}}/advanced-tui), where we build an interface that's composing these primitives.
 
 **Note:** Making user-input primitives for `compose.mk` in a way that is portable (i.e. *using `gum` directly if available and falling back to docker otherwise*) and is correctly using ttys/subshells is **hard**.  It gets even more complicated because we want primitives to work reliably from the docker host, inside other docker containers, *and* is also compatible with things like `tmux`.  Another wrinkle is that official gum images are distroless, so there are edge-cases where `gum spin` cannot use `sleep`, etc.  
 
 Despite all the challenges, related functionality in `compose.mk` works pretty well, but you can probably find ways to break it, especially if your IDE has a wonky terminal emulator.  Anyway, another consideration is that blocking on user-input from automation is usually rude!  So if you're building workflows around this, choose wisely, and please report bugs.
 
 #### User Input Basics 
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 One of the simplest ways you can get started scripting with user-input is to use a target from the `flux.select.*` group.  Consider the example below:
 
@@ -36,7 +36,7 @@ Quick links to the related API are found below.
 {{site.api_link_many(['io.select','flux.select'],mkdocs)}}
 
 #### User Input Idioms 
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 If you want to select something besides a file, a make target, etc, it is usually best to use {{site.api_link('io.selector', mkdocs,arg='choice_generator>,<choice_handler')}}, then define your own simple targets for the generator and handler.
 
@@ -44,7 +44,7 @@ Using a dispatch'y approach like the ones mentioned above is tidy and usually go
 
 {{site.embed_demo('demos/tui/user-input-2.mk', github=github)}}
 
-Above, `${io.get.choice}` expects `choices` and optionally `header` as set, and emits `chosen` for later use.  In the middle is `gum choose`, running with or without the local tool available.
+Above, the `io.get.choice` macro expects `choices` and optionally `header` as set, and emits `chosen` for later use.  In the middle is `gum choose`, running with or without the local tool available.
 
 
 <script>

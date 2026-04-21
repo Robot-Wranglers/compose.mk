@@ -1,0 +1,35 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-user-defined.cmk: 
+#   assigning the a treatment via the block_brackets pragma.
+#
+# cmk_pragma ::: { "block_brackets": ["{}=stream.strip"] } :::
+#
+# USAGE: ./demos/cmk/banana-user-defined.cmk
+
+'''
+Banana blocks come in three brackets that differ only in how the body is treated:
+
+  (| body |)   raw: kept verbatim, inert data
+  [| body |]   deep-cook: lowered as live cmk-lang
+  {| body |}   open slot: no built-in meaning until you assign one
+
+The block_brackets pragma assigns the brace slot a treatment.
+Here we're using the built-in `stream.strip` target so that 
+the body is piped through that stdlib target at compile time,
+i.e. any tabs and newlines are dropped, runs of spaces collapsed.  
+
+Any stdlib or plugin target that reads stdin and writes stdout will serve;
+a same-file target will not, since treatments run before the file's own 
+targets load.  Change the pragma value and the brace-bracket can mean 
+something else!
+'''
+
+import log
+
+cleaned{|  make   your   robots   behave   |}
+verbatim{| make   your   robots   behave   |}
+
+__main__:
+  printf '  tagline  brace = [%s]\n' '${tagline}'
+  printf '  verbatim paren = [%s]\n' '${verbatim}'

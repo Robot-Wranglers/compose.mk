@@ -1,0 +1,40 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# channel.cmk: filter a generic channel from the Events stdlib (find the logins).
+#
+# USAGE: ./demos/cmk/channel.cmk
+
+'''
+Demonstrates the generic channel core from the Events stdlib (channel):
+seed an inbox channel with events, then filter for the logins.  Once inbox is
+declared a channel it becomes a first-class receiver -- its methods are called
+anchorless (inbox.emit[...], inbox.filter.field_equal/...), no this. anchor
+needed -- while plain stdlib targets like stream.as.log still take one.
+
+Other customers of the same core:
+  - demos/cmk/zahn.cmk       -- a multi-exit search loop
+  - demos/cmk/exceptions.cmk -- typed exceptions (deferred dispatch)
+'''
+
+import stream
+
+# a channel is a special stack: declared + seeded + queried in one shot.
+#   The banana body threads a JSON array through io.stack.initialize
+#   (errors unless it is a JSON array).  match= registers the login query.
+channel inbox(match='key=type value=login')(|
+  [ {"type":"login","user":"carol"},
+    {"type":"suspend","user":"danny"} ]
+|)
+
+inbox.seed:
+    '''Pushes a couple more events on top of the initialized stack (newest last).'''
+    inbox.emit["""type=login user=alice"""]
+    inbox.emit["""type=logout user=bob"""]
+
+inbox.match/login:
+    stream.as.log[${stream.stdin}]
+
+# initialize first (it overwrites the stack), then seed appends, then run the
+# queries.  A channel is a passive bus -- no run-loop; the actor loop is an
+# agent feature.
+__main__: inbox.initialize inbox.seed inbox.match

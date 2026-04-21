@@ -1,0 +1,30 @@
+# Packaging shim (kept OUT of the repo root): ships the repo-root compose.mk as
+# an on-PATH executable, so
+#   pip install "git+https://github.com/<user>/<repo>.git@<ref>#subdirectory=via/pip"
+# provides a global `compose.mk` for tool-mode and `include $(shell which
+# compose.mk)` library use. `compose.mk` here is a symlink to ../../compose.mk
+# (the single source of truth -- no duplicated copy in git). `cmk` is a short
+# alias installed alongside (e.g. `cmk flux.ok`, `cmk mk.interpret! app.cmk`); it
+# is a tiny wrapper that execs the sibling `compose.mk` by its real name -- the
+# CMK compiler derives CMK_SRC from the literal "compose.mk" on the command line,
+# so the compile path must run under that name.
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compose-mk"
+# Version is computed at build time by setup.py (`_version()`): the `VERSION` env var if
+# set, else the current git tag (`git describe`), else `0.0.0`.  So `pip install
+# "git+...@v1.2.3#subdirectory=via/pip"` and `VERSION=1.2.3 python -m build` both stamp 1.2.3.
+dynamic = ["version"]
+description = "compose.mk: polyglot Make/bash automation lib + CMK language, installed on PATH"
+requires-python = ">=3.8"
+
+[tool.setuptools]
+# Executable scripts, no python packages/modules. `script-files` installs each
+# file verbatim into the env's bin/ (polyglot shebang preserved). `compose.mk` is
+# a symlink to the source; `cmk` is a small wrapper that execs it (short alias).
+script-files = ["compose.mk", "cmk"]
+packages = []
+py-modules = []

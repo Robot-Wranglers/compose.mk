@@ -1,0 +1,32 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# io.pushd.cmk:
+#   Combine `@io.pushd(dir)` with `@compose.bind.target(svc)`: dispatch a
+#   target into a tool-container and (via io.pushd on its in-container
+#   body) run every command there from `dir`, then `popd` back.
+#
+# USAGE: ./demos/cmk/io.pushd.cmk
+
+# Scaffolding for the `debian` tool-container (ships make + bash).
+compose.import(file=demos/data/docker-compose.yml)
+
+setup:
+    '''Stage a file in a subdir of the (host-shared) workspace.'''
+    mkdir -p .tmp.pushd.demo
+    printf 'in-the-subdir\n' > .tmp.pushd.demo/marker.txt
+
+# `show` is dispatched into the debian container (compose.bind.target); its
+# in-container body `self.show` then runs from .tmp.pushd.demo (io.pushd):
+# the hostname is the container's, `pwd` is the subdir, the relative
+# `marker.txt` resolves there, and `popd` returns to the container's
+# working dir.
+@compose.bind.target(debian)
+show: setup
+
+@io.pushd(.tmp.pushd.demo)
+self.show:
+    printf 'container=%s cwd=%s\n' "`hostname`" "$$(basename $$(pwd))"
+    cat marker.txt
+    popd >/dev/null && printf 'after popd, cwd=%s\n' "$$(basename $$(pwd))"
+
+__main__: show

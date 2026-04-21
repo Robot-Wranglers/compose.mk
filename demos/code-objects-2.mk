@@ -1,37 +1,33 @@
 #!/usr/bin/env -S make -f
-# Demonstrating first-class support for foreign code-blocks in `compose.mk`.
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# USAGE: ./demos/code-objects.mk
+# code-objects-2.mk: a python code-object created by one container, namespaced, with selected host env proxied in.
+#
+# USAGE: ./demos/code-objects-2.mk
 
 include compose.mk
 
-# Look, it's a python script 
-define hello_world.py
-import os 
-print(f'hello {os.environ["planet"]} {os.environ["index"]}')
-endef
-
-# Pick an image and interpreter for the language kernel.
-# Uses a stock-image but modifies the default invocation.
-python.img=python:3.11-slim-bookworm
-my_interpreter/%:
-	cmd="python -O -B ${*}" \
-		${make} docker.image.run/${python.img}
-
-# Constants we can share with subprocesses or polyglots
+# Constants to share with the polyglot subprocess.
 export planet=earth
 export index=616
 
-# Import the code-block to a specific namespace, 
-# creating scaffolding for `run` and `preview`, while 
-# passing through certain parts of this environment
-$(call polyglot.import, \
-	def=hello_world.py bind=my_interpreter \
-		namespace=WORLD env='planet index')
+# py311: a pinned python container (entrypoint=python).
+define py311
+img=python:3.11-slim-bookworm entrypoint=python
+endef
+$(call cmk.container, def=py311)
 
-# With the new target-scaffolding in place, now we can use it.
-# First we preview the code with syntax highlighting, 
-# then run the code inside the bound interpreter.
+# optimized: run a file with python -O -B in py311 (the customized interpreter invocation) -- the
+# code-object binds to THIS target (not py311 directly), so it never re-enters py311's dispatch.
+optimized/%:; $(call py311.__call__,-O -B ${*})
+
+define hello_world.py
+import os
+print(f'hello {os.environ["planet"]} {os.environ["index"]}')
+endef
+
+# py311 creates the code-object (currying its img/runner); namespace= imports it as WORLD (so
+# WORLD / WORLD.preview), and env= proxies just planet+index into the container.
+$(call py311.polyglot, def=hello_world.py namespace=WORLD env='planet index')
+
+# Preview the code (syntax-highlighted), then run it in the bound interpreter.
 __main__: WORLD.preview WORLD
-

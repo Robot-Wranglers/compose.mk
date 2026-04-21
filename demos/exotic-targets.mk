@@ -1,6 +1,8 @@
 #!/usr/bin/env -S make -f
-# Demos make-targets in foreign languages and shows them working with pipes.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+#
+# exotic-targets.mk:
+#   Make-targets in foreign languages and shows them working with pipes.
+#
 # USAGE: ./demos/exotic-targets.mk
 
 include compose.mk
@@ -17,8 +19,8 @@ for x in [1, 2, 3]:
   print(msg, file=sys.stderr)
 endef
 
-# Generates JSON with `jb`, passes data with a pipe, 
-# then parses JSON again on the python side.
 __main__:
+	@# Generates JSON with `jb`, passes data with a pipe, 
+	@# then parses JSON again on the python side.
 	${jb} hello=bash \
-		| ${make} polyglot.dispatch/python3,script.py
+		| ${make} host.dispatch/python3,script.py

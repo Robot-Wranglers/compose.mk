@@ -1,3 +1,6 @@
 [submodule ".cmk"]
 	path = .cmk
 	url = git@github.com:robot-wranglers/.cmk.git
+[submodule ".claude/csop"]
+	path = .claude/csop
+	url = https://github.com/mattvonrocketstein/claude-SOP

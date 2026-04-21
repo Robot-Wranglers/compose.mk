@@ -1,0 +1,96 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# bash-if.cmk:
+#   Inline bash control-flow written in a recipe with the dot operator, on the dsl metaclass.
+#   The builders live in an inlined `bashlang` module and are called by fully-qualified name;
+#   each derives a shared base (the __dot__ operand fold) and adds only its own __call__, which
+#   assembles real bash and sources it in the caller's own shell:
+#     bashlang.if(| cond |).then(| body |).else(| body |)  -> if/then/else
+#     bashlang.if_empty(| VAR |).then(..).else(..)         -> if [ -z "${VAR:-}" ] (an if subclass)
+#     bashlang.for(| var |).over(| list |).do(| body |)    -> for var in list; do ..; done
+#
+# USAGE: ./demos/cmk/bash-if.cmk
+
+'''
+This is the dot-operator (see demos/cmk/banana-fluent.cmk) put to work on the dsl metaclass
+(see demos/cmk/dsl-bclang.cmk).  The dot between two banana constructions is a binary operator
+dispatched through __dot__; the shared compound base copies each operand into a named
+member of the head fragment, and each builder adds only its own __call__, which prints the
+construct's skeleton around the operands and sources it (. <(..)) in the caller own shell -- so a
+loop side effect, a then-branch var, a cd, are all visible to the rest of the recipe.  Every
+operand is a fragment carrying its clause body as .shape, and each is streamed by its blockref
+glyph: the head as ⬦self, a clause by name as ⬦self.then / ⬦self.over / ..
+
+The family lives in one inlined module.  Naming the builders under bashlang.* lets them keep
+shell keywords for names (if / for) without colliding, and lets callers use them by
+fully-qualified name.  The module is loaded by dispatching its __open__ dunder directly, which
+evals the module body -- creating the bashlang.* kinds -- since the `open` keyword resolves
+plugins/files, not an inline def.
+'''
+
+from cmk import dsl
+
+# bashlang: an inlined module holding the dsl builder family.  A cooked [| .. |] block whose body
+# is CMK-lang; loading it (below) evals that body, creating the kinds.
+bashlang[|
+  # operand kinds: thin fragment capturers -- an instance value IS its clause body.  Left bare so
+  # a chain step reads `.then(| .. |)`, not `.bashlang.then(| .. |)`.
+  dsl then[||]
+  dsl else[||]
+  dsl over[||]
+  dsl do[||]
+
+  # compound: the shared base -- __dot__ copies each right operand's body into
+  # ${self}.<operand-kind> (a define, so shell $ survives verbatim) and returns self so the fold
+  # chains.  A builder then blockrefs each clause by name: ⬦${self}.then, ⬦${self}.over, ..
+  dsl bashlang.compound[|
+    ${self}.__dot__ = $(eval define ${self}.$(lastword $(subst ., ,$($(strip ${__args__}).__class__)))$(nl)$(value $(strip ${__args__}))$(nl)endef)${self}
+  |]
+
+  # if: if/then/[else]/fi -- the head fragment is the condition, .then / .else the clauses.  Every
+  # clause is streamed by its blockref glyph (⬦), no operand read reaches for a lower-level seam.
+  dsl bashlang.if(bases=bashlang.compound)[|
+    ${self}.__call__ = . <({ printf 'if '; cat ⬦${self}; printf '\nthen\n'; cat ⬦${self}.then; $(if $(filter-out undefined,$(origin ${self}.else)),printf '\nelse\n'; cat ⬦${self}.else;) printf '\nfi\n'; })
+  |]
+
+  # if_empty: a subclass of bashlang.if -- the head fragment is a variable NAME (read as .shape, a
+  # single word) and the test is emptiness; the .then / .else clauses are blockref'd as in if.
+  dsl bashlang.if_empty(bases=bashlang.if)[|
+    ${self}.__call__ = . <({ printf 'if [ -z "$${%s:-}" ]\nthen\n' '$(${self}.shape)'; cat ⬦${self}.then; $(if $(filter-out undefined,$(origin ${self}.else)),printf '\nelse\n'; cat ⬦${self}.else;) printf '\nfi\n'; })
+  |]
+
+  # for: for VAR in LIST; do BODY; done -- head = the loop var, .over = the list, .do = the body.
+  dsl bashlang.for(bases=bashlang.compound)[|
+    ${self}.__call__ = . <({ printf 'for '; cat ⬦${self}; printf ' in '; cat ⬦${self}.over; printf '\ndo\n'; cat ⬦${self}.do; printf '\ndone\n'; })
+  |]
+|]
+
+# load the module by dispatching its __open__ dunder directly: __open__ evals the module body,
+# creating the bashlang.* kinds into this file.
+bashlang.__open__ = $(eval $(value bashlang))
+$(call bashlang.__open__)
+
+__main__: demo.simple demo.stateful
+
+demo.simple:
+  '''one-shot constructs, each a single-line dot-chain (no cross-statement shell state).'''
+  bashlang.if_empty(| USER |).then(| echo "  USER is empty or unset" |).else(| echo "  hello, ${USER}" |)
+  bashlang.for(| svc |).over(| web db cache |).do(| echo "  for: checking $svc" |)
+
+demo.stateful:
+  '''
+  shared shell state -- sourcing (. <(..)) runs each construct in the caller's own shell,
+  so state flows in and out.  A background job the condition waits on:
+  '''
+  sleep 0.05 & p=$$!
+  @# a short condition may close inline; the chain resumes on the next line with a leading dot.
+  @# The then-branch sets os inside the sourced block, and the caller sees it afterwards.
+  bashlang.if(| wait "$p" |)
+  .then(|
+    os=0
+    echo "  then: job succeeded (multiline block, inline)"
+  |).else(|
+    os=$?
+    echo "  else: job failed"
+  |)
+  echo "  caller sees os=$$os (side effect from the then-branch)"

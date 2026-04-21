@@ -49,11 +49,13 @@ services:
       context: .
       dockerfile_inline: |
         FROM eloengineering/alloy-cli:4.2
-        RUN apt-get update && apt-get install -y make procps g++ openjdk-17-jdk-headless 
+        RUN apt-get update && apt-get install -y make g++ openjdk-17-jdk-headless 
     entrypoint: alloy-run
     command: /dev/stdin
   
-  # Reuse the lean container we built in `demos/lean.mk`
+  # A self-contained lean4 container, along the lines of the standalone
+  # `demos/lean.mk` demo (which also ships mathlib).  Here the notebooks only
+  # exercise core Lean4, so we keep the image small and skip mathlib.
   lean4: &lean4
     <<: *abstract
     hostname: lean4 
@@ -62,20 +64,18 @@ services:
     build:
       context: .
       dockerfile_inline: |
-        FROM debian:bookworm
-        SHELL ["/bin/bash", "-x", "-c"] 
-        RUN apt-get update -qq && apt-get install -qq -y git make procps curl sudo
+        FROM debian:bookworm-slim
+        SHELL ["/bin/bash", "-x", "-c"]
+        RUN apt-get update -qq && apt-get install -qq -y curl
         RUN curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf \
           > /usr/local/bin/elan-init.sh
-        RUN bash /usr/local/bin/elan-init.sh -y 
-        RUN cp /root/.elan/bin/lean /usr/local/bin 
-        RUN cp /root/.elan/bin/lake /usr/local/bin 
+        # Pin the toolchain (matches demos/lean.mk) so image size is frozen
+        # against upstream growth.  The demo notebooks only need core Lean4,
+        # so we skip the (~10gb) mathlib build entirely.
+        RUN bash /usr/local/bin/elan-init.sh -y \
+          --default-toolchain leanprover/lean4:v4.17.0
+        RUN cp /root/.elan/bin/lean /root/.elan/bin/lake /usr/local/bin
         ENV PATH="$PATH:/root/.elan/bin/"
-        RUN lean --help
-        RUN lake new default
-        RUN cd default && \
-          printf '[[require]]\nname = "mathlib"\nscope = "leanprover-community"' >> lakefile.toml
-        RUN cd default && lake update && lake build
         RUN lean --version
   
   lean4_script:

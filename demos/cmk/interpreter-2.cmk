@@ -1,0 +1,30 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# interpreter-2.cmk: compose.mk as an alternate make interpreter (inherits signals/supervisors).
+#
+# USAGE:
+#   ./demos/cmk/interpreter-2.cmk
+
+'''
+compose.mk as an alternate interpreter for make,
+mostly useful for inheriting signals/supervisors.
+
+  The default goal just prints usage and exits; the `ls` target uses mk.yield to hand its
+  extra argv to the system `ls`, replacing the process.
+
+Main docs: https://robot-wranglers.github.io/compose.mk/signals/
+'''
+
+__main__:
+    '''
+    Prints usage info and exits
+    (the real work is in the `ls` target).
+    '''
+    cmk.log(${red}USAGE: ${__file__} ls)
+
+ls:
+    '''
+    Yields its extra argv to the system `ls`;
+    mk.yield replaces the process here.
+    '''
+    cmk.mk.yield(ls $${MAKE_CLI_EXTRA})

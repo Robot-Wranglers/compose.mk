@@ -1,0 +1,108 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# zahn.cmk: a multi-exit search loop whose named exits drive control flow.
+#
+# USAGE:
+#   ./demos/cmk/zahn.cmk   # found -> recover, then exhausted -> commit
+
+'''
+Zahn's construct as a customer of compose.mk's event system (the channel KIND
+from the Events stdlib).  zahn.scan seeds candidate events onto the zahn channel, takes
+the first matching a (field,value), emits the typed outcome (found/exhausted),
+and dispatches -- the exit selects the continuation (recover vs commit).
+demos/cmk/exceptions.cmk generalizes the same named-exit dispatch to a deferred
+form.
+'''
+
+import log
+
+# construct the zahn channel: ( the channel KIND ships in compose.mk's stdlib )
+#   See the Events doc-block there for the operators it generates.
+channel zahn(| |)
+
+zahn.seed:
+    '''A few candidate request events (newest last).'''
+    log.trace(__target__)
+    cmk.zahn.emit(type=req id=a status=ok)
+    cmk.zahn.emit(type=req id=b status=error)
+    cmk.zahn.emit(type=req id=c status=error)
+
+zahn.scan/%:
+    '''
+    The loop: find the first seeded event matching <field>,<value>, emit
+    found{id} (else exhausted), then dispatch -- routing to the matching named
+    exit below.  Candidates are purged first, so the drain sees only the outcome.
+    USAGE: this.zahn.seed && this.zahn.scan/status,error
+    '''
+    log.trace(__target__)
+    log(${bold}scan ${sep} ${*})
+    m=`this.zahn.first.match.field_equal/${*}` \
+    && this.zahn.purge \
+    && if [ -n "$${m}" ]; then \
+        printf 'id=%s' "`echo "$${m}" | ${jq.run} -r .id`" | this.zahn.emit.type/found ; \
+    else \
+        this.zahn.emit.type/exhausted </dev/null ; \
+    fi
+    this.zahn.dispatch.by_type
+
+# the named exits: ( each routes to a different continuation )
+
+zahn/found:
+    '''The found exit -> the recovery continuation, carrying the matched id.'''
+    log.trace(__target__)
+    v=`echo "$${CMK_EVENT}" | ${jq.run} -r .id` \
+    && this.zahn.recover/$${v}
+
+zahn/exhausted:
+    '''The exhausted exit -> the all-clear continuation (a different path).'''
+    log.trace(__target__)
+    this.zahn.commit
+
+zahn/%:; log.trace(__target__) ; log(${red}zahn: unhandled exit ${*})
+
+# continuations: ( reached only via their corresponding exit )
+
+zahn.recover/%:
+    '''The found path: act on the failing request <id>.'''
+    log.trace(__target__)
+    log(${yellow}recover ${sep} retrying failed request ${bold}${*})
+    printf 'recovered=%s\n' "${*}"
+
+zahn.commit:
+    '''The exhausted path: nothing to recover -- proceed.'''
+    log.trace(__target__)
+    log(${green}commit ${sep} no failures detected)
+    printf 'committed\n'
+
+# synchronous exceptions on the same primitives: ( inline try/catch )
+#   Where demos/cmk/exceptions.cmk defers dispatch to at-exit, zahn dispatches
+#   synchronously, so the same channel gives inline try/catch: zahn.raise/<Type>
+#   emits a typed exception and drains it immediately, so the matching zahn/<Type>
+#   catch (or the % fallback, for an uncaught type) runs before control returns.
+
+# throw <Type>, then catch it inline: emit onto the channel and dispatch now.
+zahn.raise/%:; log.trace(__target__) ; this.zahn.emit.type/${*} </dev/null && this.zahn.dispatch.by_type
+
+zahn.divide/%:
+    '''A guarded computation: 42/<divisor>, raising DivByZero inline on a 0 divisor.'''
+    log.trace(__target__)
+    if [ "${*}" -eq 0 ]; then this.zahn.raise/DivByZero ; else printf 'divide: 42/%s = %s\n' "${*}" "$$(( 42 / ${*} ))" ; fi
+
+zahn/DivByZero:
+    '''The catch: a synchronous handler for DivByZero (uncaught types hit zahn/%).'''
+    log.trace(__target__)
+    log(${yellow}caught DivByZero ${sep} recovered inline)
+
+__main__:
+    '''
+    The tour: each scan takes a different named exit --
+    status=error -> found -> recover; status=pending -> exhausted -> commit.
+    '''
+    this.zahn.seed
+    this.zahn.scan/status,error
+    this.zahn.seed
+    this.zahn.scan/status,pending
+    log(cmk.bold()── synchronous exceptions on the same primitives ──)
+    this.zahn.divide/7
+    this.zahn.divide/0
+    this.zahn.raise/Boom

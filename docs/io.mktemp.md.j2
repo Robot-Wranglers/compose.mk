@@ -1,10 +1,8 @@
 {% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
-### Temporary Files & Directories
-<hr style="width:100%;border-bottom:3px solid black;"> 
+### Temporary Files / Dirs
+<hr class="section-rule lvl-3">
 
-Temporary files and temporary directories are handled by a few helpers in the `io.mktemp` namespace.  See the tests below for a few examples.
+Temporary files and temporary directories are handled by a few helpers in the `io.mktemp` namespace.  The tour below shows the file, directory, and custom-variable forms (toggle the tabs for the plain `Makefile` or the [cmk-lang]({{_}}/cmk/compiler) twin):
 
-{{site.embed_demo('demos/io.mktemp.mk', 
-    bottom_right='',
-    github=github)}}
+{{site.embed_mirror('demos/io.mktemp.mk', 'demos/cmk/io.mktemp.cmk', github=github, default='left')}}

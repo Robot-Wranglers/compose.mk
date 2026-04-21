@@ -1,0 +1,102 @@
+{# cmk_math: build-time native-MathML for cmk notation, replacing hand-pasted MathJax/MathML.
+   Backed by the in-process `cmk_algebra()` global that the docs.cmk render driver exposes
+   (native MathML via latex2mathml; one interpreter for the whole page, not a subprocess per
+   expression).
+
+   Two forms:
+     algebra(rows) -- a block table.  `rows` = list of [lhs, rhs] cells written in the author
+                      mini-syntax below.  Emits a <div class="cmk-algebra"> card of native,
+                      SELECTABLE / copyable MathML (no MathJax, no CDN, no client JS).
+     imath(expr)   -- an inline snippet that rides in running prose (a <span class="cmk-imath">).
+
+   Cell mini-syntax:  plain text = a symbol run (LM Roman) ; @name = a metavar (italic <mi>) ;
+   #name = a sans keyword (in / out / bash / sh / container / ...).  All visual styling
+   (fonts, per-role weights, the frosted card, the arrow) lives in compose.mk.css.
+
+   The spec is handed to the driver as a JSON string; render.py parses it and builds the
+   MathML in-process, returning the markup. #}
+{%- macro _run(payload) -%}
+{{- cmk_algebra(payload) -}}
+{%- endmacro -%}
+{# Emit the whole grid on ONE line: a multi-line raw <div> gets split into spurious <p> wrappers
+   by Markdown (inconsistently, per section), which is what made section margins non-uniform.  A
+   single-line block is treated as one clean raw-HTML block. #}
+{% macro algebra(rows, arrow='\\rightarrow', class='') -%}
+<div class="cmk-algebra{% if class %} {{ class }}{% endif %}">{{ _run({"mode": "block", "rows": rows, "arrow": arrow} | tojson) | trim }}</div>
+{%- endmacro -%}
+{% macro imath(expr) -%}
+<span class="cmk-imath">{{ _run({"mode": "inline", "expr": expr} | tojson) }}</span>
+{%- endmacro -%}
+{# display(expr, class=''): a single expression as a display block (a <div class="cmk-algebra">
+   card, like `algebra` but one expression, no arrow/table).  `class='centered'` centers the
+   card's expression (default is left-aligned, matching the algebra grids).  Emitted on ONE line
+   for the same reason as `algebra` (a multi-line raw <div> gets split into spurious <p> wrappers
+   by Markdown, giving non-uniform section margins). #}
+{% macro display(expr, class='') -%}
+<div class="cmk-algebra{% if class %} {{ class }}{% endif %}">{{ _run({"mode": "display", "expr": expr} | tojson) | trim }}</div>
+{%- endmacro -%}
+{# algebra_card: the STANDARD reusable card for presenting ONE cmk "algebra" (callforms,
+   ambients, dsl folds, banana operators, ...) as a frosted `algebra` admonition (styled in
+   compose.mk.css).  Every algebra shares the same shape, so each slot has a fixed place and
+   the cards all read alike.  Slots (all optional except `rows`; the order is fixed):
+     - subject=     the algebra's name (the card title)
+     - toggle=      render collapsible + open (collapsed= starts it closed)
+     - form=        the canonical signature -> "Abstract Grammar" (one cell-mini-syntax expr)
+     - example_pre= inline preamble after the "Concrete Example:" label (markdown)
+     - example=     a worked example, shown INDENTED under that label (raw notation/HTML)
+     - operands=    one line naming what the operators act on (markdown)
+     - inherits=    the parent algebras this one is built on ([label, url] grid, rounded buttons);
+                    distinct from the header's "Used with:" badges (those are related concepts)
+     - rows         the operator grid: [lhs, rhs] pairs (REQUIRED; same cell mini-syntax)
+     - library_calls= stdlib function-calls that ride the algebra but are not operators
+                    ([call, gloss] grid under a "Library Calls:" label; keep the operator grid pure)
+     - properties=  the algebra's laws (order-invariance, closure, duality, ...) -- a list
+                    renders as bullets, a string inline (markdown)
+     - used_with=   related constructs it composes with / rides on -- list or string (markdown)
+     - laws / link= optional freeform footer + trailing cross-link (a {% call %} body maps to
+                    `laws`); reach for the structured `properties=` first
+   USAGE:
+     {{ cmkmath.algebra_card(ROWS, subject='Callform Algebra',
+            form='@anchor.@name(@args)[@stream]{@env}',
+            operands='a target (`this.`), a macro (`cmk.`), or a receiver',
+            properties=['**Order-invariant:** ...', '**Duals:** ...']) }}                   #}
+{# _section: ONE renderer for every labeled card section -- a bold label then its body indented a
+   uniform 4 spaces (the CSS `--algebra-indent` governs the visual step, so all sections line up
+   regardless of body type: a grid, a list, or a paragraph).  Centralizing this is what keeps the
+   sections predictable instead of each re-deriving its own spacing. #}
+{% macro _section(label, body) %}
+    **{{ label }}:**
+
+{{ body | indent(4, first=true) }}
+{% endmacro -%}
+{% macro _proplist(properties) -%}
+{% if properties is string %}{{ properties }}{% else %}{% for item in properties %}* {{ item }}
+{% endfor %}{% endif %}
+{%- endmacro %}
+{# _inherits: the parent-algebra links as rounded buttons (a [label, url] grid), emitted on ONE
+   line so Markdown keeps them in a single inline-HTML block.  Distinct from the header's
+   "Used with:" badges: those are related concepts, these are the algebras this one is built on. #}
+{% macro _inherits(items) -%}
+<span class="algebra-inherits">{% for it in items %}<a class="algebra-inherit" href="{{ it[1] }}">{{ it[0] }}</a>{% endfor %}</span>
+{%- endmacro %}
+{% macro algebra_card(rows, subject='', operands='', form='', example='', example_pre='', properties='', badges='', inherits=[], laws='', used_with='', link='', toggle=false, collapsed=false, title='', arrow='\\rightarrow', library_calls=[]) -%}
+{{ ('???' if collapsed else '???+') if (toggle or collapsed) else '!!!' }} algebra "{{ subject or title }}{% if badges %} <span class='algebra-badges'><span class='algebra-badges-label'>Used with:</span>{% for b in badges %}<a class='algebra-badge' href='{{ b[1] }}' onclick='event.stopPropagation()'>{{ b[0] }}</a>{% endfor %}</span>{% endif %}"
+{% if form %}    **Abstract Grammar:** {{ imath(form) }}
+{% endif %}
+{%- if example or example_pre %}{{ _section('Concrete Example', example_pre ~ ('<br>' if example_pre and example else '') ~ example) }}{% endif %}
+{%- if operands %}{{ _section('Operands', operands) }}{% endif %}
+{%- if inherits %}{{ _section('Inherits', _inherits(inherits)) }}{% endif %}
+{{- _section('Operators', algebra(rows, arrow=arrow)) }}
+{%- if library_calls %}{{ _section('Library Calls', algebra(library_calls, arrow=arrow)) }}{% endif %}
+{%- if properties %}{{ _section('Properties', _proplist(properties)) }}{% endif %}
+{%- if link %}
+
+    {{ link }}
+{% endif %}{% if caller is defined and caller %}
+
+{{ caller() | trim | indent(4, first=true) }}
+{% elif laws %}
+
+    **Laws:** {{ laws }}
+{% endif %}
+{%- endmacro -%}

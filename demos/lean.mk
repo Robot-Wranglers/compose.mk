@@ -1,10 +1,10 @@
 #!/usr/bin/env -S make -f
-# Demonstrates an embedded container with a lean+mathlib container, 
-# plus enough glue code for dispatch so that container usage is abstracted away.
-# Included is a script and a theorem that we'll test with, but of course external files 
-# are supported as well.
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# lean.mk:
+#   An embedded container with a lean+mathlib container, plus enough glue
+#   code for dispatch so that container usage is abstracted away.  Included
+#   is a script and a theorem that we'll test with, but of course external
+#   files are supported as well.
 #
 # USAGE: ./demos/lean.mk
 # DOCS: http://robot-wranglers.github.io/compose.mk/demos/lean
@@ -12,11 +12,10 @@
 include compose.mk
 
 # Look, it's a minimal Dockerfile for running lean4 
-# See also: https://leanprover-community.github.io/install/debian.html
 define Dockerfile.Lean
 FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
 SHELL ["/bin/bash", "-x", "-c"]
-RUN apt-get -qq update && apt-get install -qq -y git make curl sudo procps
+RUN apt-get -qq update && apt-get install -qq -y git make curl sudo
 RUN curl -sSf \
   https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
     > /usr/local/bin/elan-init.sh
@@ -73,6 +72,6 @@ __main__: \
 lean.run.script/%:; lean_args="--run" ${make} lean.run.generic/${*}
 
 lean.run.generic/% lean.run.theorem/%:
-	${io.mktemp} && ${make} mk.def.to.file/${*}/$${tmpf} \
+	${io.mktemp} && ${make} mk.def.to.file/${*},$${tmpf} \
 	&& img=Lean cmd="$${lean_args:-} $${tmpf}" \
 		${make} mk.docker

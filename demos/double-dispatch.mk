@@ -1,9 +1,9 @@
 #!/usr/bin/env -S make -f
-# demos/double-dispatch.mk: 
-#   Demonstrates the container dispatch idiom using "namespace" style invocation.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 #
-#   USAGE: ./demos/double-dispatch.mk 
+# double-dispatch.mk:
+#   The container dispatch idiom using "namespace" style invocation.
+#
+# USAGE: ./demos/double-dispatch.mk 
 
 
 include compose.mk
@@ -13,9 +13,9 @@ $(call compose.import,file=demos/data/docker-compose.yml namespace=▰)
 # User-facing top-level default target, with two dependencies
 __main__: ▰/debian/self.demo ▰/alpine/self.demo
 
-# Displays platform info to show where target is running.
-# Since this target is intended to be private, we will 
-# prefix "self" to indicate it should not run on host.
 self.demo:
+	@# Displays platform info to show where target is running.
+	@# Since this target is intended to be private, we will 
+	@# prefix "self" to indicate it should not run on host.
 	source /etc/os-release && printf "$${PRETTY_NAME}\n"
 	uname -n -v

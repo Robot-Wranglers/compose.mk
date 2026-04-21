@@ -1,0 +1,63 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+{{ macros.section(2, "The CMK Language", id="cmk-language") }}
+
+{{ macros.escape_hatch([
+    'Landed in the wrong place, or just want the map?  Jump straight out:',
+    ['Introduction &amp; Classification', '@/cmk/intro', 'what CMK is and where it sits'],
+    ['Paradigm / Lineage', '@/cmk/paradigm', 'the multi-paradigm classification, in full'],
+    ['Compiler Tutorial', '@/cmk/compiler', 'the concrete syntax, hands-on'],
+    ['Quick Reference', '@/cmk/quickref', 'a one-page syntax cheat-sheet'],
+    ['All Demos (Index)', '@/cmk/demos', 'every featured demo, next to its plain-Makefile twin'],
+    ['Banana Blocks', '@/cmk/banana', 'the `(| .. |)` block family'],
+    ['Metaprogramming', '@/cmk/metaprogramming', 'dialects, sugar, and compiler pragmas'],
+    ['Modules', '@/cmk/modules', '`import.module` namespacing and imports'],
+    ['Matrioshka Automata', '@/matrioshka', 'packing programs inside programs'],
+    ['Tool Overview', '@/tool-overview', '`compose.mk` as a tool, aside from the language'],
+    ['CLI Overview', '@/cli-overview', 'the command-line surface'],
+    ['Plugin Overview', '@/plugins/overview', 'extending `compose.mk` with plugins'],
+], mkdocs) }}
+
+{# {% call tufte.two_col('32%', side='right') %}{% include "includes/cek-anim.md" %}{% endcall %} #}
+
+The `compose.mk` language is called **CMK**, a.k.a **cmk-lang**, or simply 'cmk'.
+
+Before the elevator pitch; first the superlatives.  Things about CMK that are, as far as I know, completely unique:
+
+1. First and only actually useful [matrioshka language]({{_}}/matrioshka).
+1. The only non-research language built on [mobile ambients]({{_}}/cmk/banana#banana-ambient).
+1. The one and only language that compiles to `Makefile`, and hijacks `make` as a gadget[^weird-machine].
+
+The simplest way to tell the rest of the story is a great deal for you on elevator pitches, 3 for the price of 1.
+
+{{ tufte.two_col_clear() }}
+
+> **Tier-1: The Pragmatic Roots.**  CMK is a *strict superset* of Makefile[^cmk-make], which is itself basically a superset of bash.  It's rough and ready for the everyday dirty work of adhoc-automation, with zero friction in the middle.  DAGs and goals, plain and foundational, but you can start structured and stay structured by "promoting" shell gradually to RealCode(tm) in a way that helps to manage complexity.  "Pragmatic" doesn't mean "dumb" though, and "simple" doesn't mean "cliche".  Everything in the [standard lib]({{_}}/standard-lib) becomes first-class, from the functional-leaning flux[^flux] to the container support and polyglots[^polyglots], all with improved syntax and better reflection.
+> {: .cmk-card .cmk-overview }
+>
+{{ ('> ' ~ site.embed_demo('demos/cmk/tier-1.cmk', github=github, collapsed=True)) | replace('\n', '\n> ') }}
+
+<!-- card-break: prevents python-markdown from merging adjacent blockquotes -->
+
+> **Tier-2: A High-level Language & Other Crowd Pleasers.** As a high-level language, CMK is *almost* a python[^python] in many ways and is *definitely* a lisp[^lisp].  What does that mean?  Well, you probably **already speak cmk-lang** per the last section, but it's also **much bigger** than you think.  Freely mix in things like docstrings, [callforms]({{_}}/cmk/concepts/#callforms) and namespacing if you want it, but when you outgrow "organized scripting", you can reach for more structured programming, including things like *classes, metaclasses, and actors*.  The result: less technical friction crossing data/runtime boundaries, *and* less cognitive friction crossing task-complexity boundaries.  Slightly further downstream: a practical work bench for tool-wrappers and first-class DSLs.
+> {: .cmk-card .cmk-overview }
+>
+{{ ('> ' ~ site.embed_demo('demos/cmk/tier-2.cmk', github=github, collapsed=True)) | replace('\n', '\n> ') }}
+
+<!-- card-break: prevents python-markdown from merging adjacent blockquotes -->
+
+> **Tier-3: Nerd-Sniping the Big-Brains.**  This isn't about first-class support for polyglots[^polyglots] (which are actually practical), or even about hitting you up for fun with theorems and quines.[^theorems]  There are several powerful *algebras* that you might be interested in, which operate over language primitives like targets, ambients, callform-channels, and banana-brackets.  CMK is practical, but also the **weirdest thing you'll see today**, and there's a fractal quality to that.  It has a [certain diverse pedigree]({{_}}/cmk/paradigm) of influences, and richly expressive [technical foundations]({{_}}/cmk/paradigm#language-properties) that are carefully designed.  But on the other hand, and at first glance.. things like the *compiler, runtime, and concurrency story* might seem [barking mad]({{_}}/runtime) in many respects.  Nevertheless, CMK is bootstrapped, self-hosted, and even self-modifying in most of the ways you can probably think of, and *it's got all that metacircular goodness that you crave!*  Including a multistage compiler, an interpreter, a repl and frame-level debugger, and a very strange VM.  Besides bringing support for things like coroutines and swarms, there are weirder consequences.  Goal-resolution itself becomes *just another protocol* which extensions can modify, and since this first-classes the DAG flow, it enables things like backtracking.
+> {: .cmk-card .cmk-overview }
+>
+{{ ('> ' ~ site.embed_demo('demos/cmk/nerd-snipe.cmk', github=github, collapsed=True)) | replace('\n', '\n> ') }}
+
+
+{{ macros.section(3, "References", id="references") }}
+
+[^cmk-make]: {{ tufte.wiki('GNU_Make')|trim }}
+[^weird-machine]: {{ tufte.wiki('Weird_machine')|trim }}
+[^flux]: The functional-leaning [flux library]({{_}}/functional): pipelines, stages, and control-flow combinators.
+[^polyglots]: [Polyglot Index]({{_}}/demos/polyglots): running foreign interpreters and containers inline.
+[^python]: Python-flavored ergonomics: docstrings, indentation-sensitivity, and namespacing; see [Paradigm / Lineage]({{_}}/cmk/paradigm).
+[^lisp]: Lisp-flavored homoiconicity: quasiquotation and compile-twice "cooking" via [banana blocks]({{_}}/cmk/banana).
+[^theorems]: [Theorem proving]({{_}}/demos/lean) and [quines / esolangs]({{_}}/demos/underload).

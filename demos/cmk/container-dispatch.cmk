@@ -1,0 +1,17 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# container-dispatch.cmk:
+#   The container-dispatch idiom via "namespace" invocation.
+#
+# USAGE: ./demos/cmk/container-dispatch.cmk
+
+# Import the whole compose file (including "debian" container)
+compose.import(file=demos/data/docker-compose.yml namespace=▰)
+
+run: ▰/debian/self.run
+
+self.run:
+    source /etc/os-release && printf "$${PRETTY_NAME}\n"
+    uname -n -v
+
+__main__: run 

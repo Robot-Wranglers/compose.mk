@@ -1,0 +1,35 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# dsl-bclang.cmk: 
+#   A tiny DSL where bclang(| expr |) wraps the bc calculator.
+#
+# USAGE: ./demos/cmk/dsl-bclang.cmk
+
+'''
+The smallest kind of DSL: name the dsl metaclass and hand it an
+interpreter.  Here bclang(| expr |) is a bc program you call to
+compute.  Because the base call is just an entrypoint, the kind is
+created with entrypoint=bc: no hand-written body, its machine runs each
+instance's shape.  A named instance is callable by name; an anonymous
+one runs inline via .__call__().
+'''
+
+import log
+from cmk import dsl
+
+# the facade: a machine-backed dsl.  entrypoint=bc creates a bc machine
+# for the kind, and every instance runs its shape through it.
+dsl bclang(entrypoint=bc feed=stdin)(| |)
+
+# a named instance: area() computes its expression.
+bclang area(| 3.14159 * 5 ^ 2 |)
+
+demo.named:
+  log(runs a module-level bc polyglot)
+  area()
+
+demo.anon:
+  log(run an inlined/anonymous bc polyglot)
+  bclang(| 5 ^ 3 |)()
+
+__main__: demo.named demo.anon

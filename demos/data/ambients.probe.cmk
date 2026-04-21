@@ -1,0 +1,11 @@
+# demos/data/ambients.probe.cmk: a "sensor" fixture (data, not demo).
+
+# Opened/imported by demos/cmk/ambients-open.cmk (module boundaries).
+
+# Plain make recipes on purpose: the boundary is the point.
+
+probe.temp:
+  @echo "probe.temp    -> 21.4C"
+
+probe.status:
+  @echo "probe.status  -> nominal"

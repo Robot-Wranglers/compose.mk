@@ -1,0 +1,46 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-env.cmk: the {env} callform channel -- a trailer that prefixes
+# the lowered command with (quote-aware) environment bindings.
+#
+# USAGE: ./demos/cmk/banana-env.cmk
+
+'''
+The {env} trailer env-prefixes whatever a callform lowers to.  It is the
+dual of the [stream] pipe-prefix: one supplies an environment, the other
+pipes stdin.  Both work for targets ({make}) and macros (a call-form); at
+module scope {env} warns, reserved for later.
+'''
+
+import stream
+
+env.probe:
+  '''
+  env.probe: ( report two env vars ) Callers set WHO and GREETING through
+  the {env} trailer; the recipe just echoes what it sees.
+  '''
+  stream.as.log["""WHO=[$${WHO:-unset}] GREETING=[$${GREETING:-unset}]"""]
+
+stdin.probe:
+  '''
+  stdin.probe: ( {env} and [stream] composing ) The stream supplies stdin
+  while the trailer supplies the environment.
+  '''
+  stream.as.log["""$${GREETING:-hi} $$(cat)"""]
+
+# say.macro: ( a macro whose command reads its env at runtime )
+#   A plain echo "$WHO" would expand before the transient prefix applies,
+#   so defer to sh -c and let the shell read WHO when it runs.
+say.macro = sh -c 'echo "macro sees WHO=$$WHO"'
+
+demo.env:
+    @# 1) {env} on a target -> the sub-make recipe inherits WHO
+    @# 2) several vars at once
+    @# 3) {env} + [stream], order-free: [S] = stdin, {e=v} = environment
+    @# 4) {env} on a macro -> env-prefixes what the macro expands to
+    this.env.probe{WHO=world}
+    this.env.probe{WHO=all GREETING=yo}
+    this.stdin.probe{GREETING=hello}[echo world]
+    cmk.say.macro{WHO=macroland}
+
+__main__: demo.env
