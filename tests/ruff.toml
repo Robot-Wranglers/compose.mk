@@ -1,0 +1,13 @@
+# Style config for the compose.mk python test-suite.
+# Preference: 2-space indentation, 79-col lines. Enforced via `ruff format`
+# (formatting + 2-space indent) and `ruff check` (E501 line-length + pyflakes).
+line-length = 79
+indent-width = 2
+
+[format]
+indent-style = "space"
+
+[lint]
+# E = pycodestyle (incl. E501 line-too-long), F = pyflakes, W = warnings,
+# I = import sorting.
+select = ["E", "F", "W", "I"]

@@ -445,7 +445,7 @@ compose.build/%:
 		""|0) force='';; \
 		*) force='--no-cache' ;; \
 	esac \
-	&& case $${quiet:0} in \
+	&& case $${quiet:-0} in \
 		""|0) quiet='';; \
 		*) quiet='--quiet' ;; \
 	esac \
@@ -509,7 +509,7 @@ compose.loadf: tux.require
 	&& header="loadf ${sep} ${dim_green}${underline}$${fname}${no_ansi} ${sep}" \
 	&& $(call log.io, $${header} $${cmd_disp}) \
 	&& ls $${fname} > ${devnull} || (printf "No such file"; exit 1) \
-	&& tmpf=./.tmp.mk \
+	&& $(call io.mktemp) \
 	&& stem=`${make} compose.get.stem/$${fname}` \
 	&& eval "$${LOADF}" > $${tmpf} \
 	&& chmod ugo+x $${tmpf} \
@@ -763,10 +763,10 @@ docker.context/%:
 	&& case "$(*)" in \
 		current) \
 			${make} docker.context \
-			|  ${jq.run} ".[]|select(.Name=\"$${ctx}\")" -r; ;; \
+			|  ${jq.run} ".[]|select(.Name==\"$${ctx}\")" -r; ;; \
 		*) \
 			${make} docker.context \
-			| ${jq.run} ".[]|select(.Name=\"${*}\")" -r; ;; \
+			| ${jq.run} ".[]|select(.Name==\"${*}\")" -r; ;; \
 	esac
 
 docker.def.is.cached/%:
@@ -1014,7 +1014,7 @@ docker.run.def:
 	@#
 	true \
 	&& $(call log.docker, docker.run.def ${no_ansi}${sep} ${dim_cyan}${ital}$${def}${no_ansi} ${sep} ${bold}${underline}$${img}) \
-	&& case $${docker_args:-}} in \
+	&& case $${docker_args:-} in \
 		"") true;; \
 		*) quiet=$${quiet:-0};; \
 	esac \
@@ -3270,12 +3270,15 @@ flux.retry/%:
 	&& target=`printf ${*}|cut -d/ -f2-` \
 	&& header="flux.retry ${sep} ${dim_cyan}${underline}$${target}${no_ansi} (${yellow}$${times}x${no_ansi}) ${sep}" \
 	&& $(call log.flux, $${header}  ${dim_green}starting..) \
-	&& ( r=$${times};\
-		 while ! (\
-			${make} $${target} \
-			|| ( $(call log.flux, $${header} (${no_ansi}${yellow}failed.${no_ansi_dim} waiting ${dim_green}${FLUX_POLL_DELTA}s${no_ansi_dim})) \
-				; exit 1) \
-		); do ((--r)) || exit; sleep $${interval:-${FLUX_POLL_DELTA}}; done)
+	&& ( r=$${times}; rc=0; \
+		 while [ $$r -gt 0 ]; do \
+			${make} $${target}; rc=$$?; \
+			[ $$rc -eq 0 ] && break; \
+			r=$$((r-1)); \
+			[ $$r -le 0 ] && break; \
+			$(call log.flux, $${header} (${no_ansi}${yellow}failed.${no_ansi_dim} waiting ${dim_green}${FLUX_POLL_DELTA}s${no_ansi_dim})) \
+			; sleep $${interval:-${FLUX_POLL_DELTA}}; \
+		 done; exit $$rc )
 
 .flux.eval.symbol/%:
 	@# This is a very dirty trick and mainly for internal use.
@@ -3502,7 +3505,7 @@ flux.timeout/%: mk.require.tool/timeout
 	; stat=$$? \
 	&& case $${stat} in \
 		124) $(call log.io, ${@} ${sep} timed out as requested);; \
-		*) cat $${tmpf}; $(call log.io, ${@} ${sep} finished with no timeout); exit $${stat};; \
+		*) $(call log.io, ${@} ${sep} finished with no timeout); exit $${stat};; \
 	esac
 
 flux.timeout.sh:
@@ -3510,13 +3513,12 @@ flux.timeout.sh:
 	@#
 	@# USAGE: (tails docker logs for up to 10s, then stops)
 	@#   cmd='docker logs -f xxxx' timeout=10 ./compose.mk flux.timeout.sh 
-	timeout=`printf ${*} | cut -d/ -f1` \
-	&& $(call log.io, flux.timeout ${sep} running target ${bold}$${target} ${no_ansi_dim} for ${yellow} $${timeout} seconds) \
-	&& timeout $${timeout}s ${make} $${cmd} \
+	$(call log.io, flux.timeout ${sep} running command ${bold}$${cmd} ${no_ansi_dim} for ${yellow} $${timeout} seconds) \
+	&& timeout $${timeout}s bash -c "$${cmd}" \
 	; stat=$$? \
 	&& case $${stat} in \
 		124) $(call log.io, ${@} ${sep} timed out as requested);; \
-		*) cat $${tmpf}; $(call log.io, ${@} ${sep} finished with no timeout); exit $${stat};; \
+		*) $(call log.io, ${@} ${sep} finished with no timeout); exit $${stat};; \
 	esac
 
 flux.with.ctx/% flux.context_manager/%:
@@ -5684,7 +5686,7 @@ kwargs_delim=$(strip $(if $(filter undefined,$(origin 1)),${comma},$(1))) \
 && _2nd="`echo ${*} | cut -d$${kwargs_delim} -f 2`" \
 && _3rd="`echo ${*} | cut -d$${kwargs_delim} -f 3`" \
 && _4th="`echo ${*} | cut -d$${kwargs_delim} -f 4`" \
-&& _5th="`echo ${*} | cut -d$${kwargs_delim} -f 4`" \
+&& _5th="`echo ${*} | cut -d$${kwargs_delim} -f 5`" \
 && _head="`echo ${*} | cut -d$${kwargs_delim} -f 1`" \
 && _tail="`echo ${*} | cut -d$${kwargs_delim} -f2-`"
 endef

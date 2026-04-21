@@ -34,8 +34,6 @@
 
 * [container-dispatch-3.mk](./container-dispatch-3.mk) (23 lines)
 
-* [container-dispatch-body.mk](./container-dispatch-body.mk) (1 lines)
-
 * [container-dispatch-min.mk](./container-dispatch-min.mk) (12 lines)
 
 * [container-dispatch.mk](./container-dispatch.mk) (22 lines)
@@ -62,7 +60,7 @@
 
 * [import-file.mk](./import-file.mk) (21 lines)
 
-* [import-image.mk](./import-image.mk) (25 lines)
+* [docker.import.mk](./docker.import.mk) (25 lines)
 
 * [inlined-composefile.mk](./inlined-composefile.mk) (59 lines)
 
@@ -75,6 +73,8 @@
 * [interpreter-4.mk](./interpreter-4.mk) (15 lines)
 
 * [interpreter.mk](./interpreter.mk) (19 lines)
+
+* [io.mktemp.mk](./io.mktemp.mk) (32 lines)
 
 * [itest.mk](./itest.mk) (217 lines)
 

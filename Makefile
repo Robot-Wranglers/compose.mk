@@ -69,8 +69,12 @@ normalize: # NOP
 pygments.nord: pygments.css/nord-darker
 pygments.css/%:; pygmentize -S ${*} -f html 
 
-test: validate integration-test demos smoke-test 
+test: validate unit-test integration-test demos smoke-test
 	@#
+
+utest unit-test:
+	@# Runs the integration-test suite.
+	pushd tests && make init unit-test
 
 itest integration-test:
 	@# Runs the integration-test suite.

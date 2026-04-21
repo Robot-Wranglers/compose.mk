@@ -1,11 +1,11 @@
 #!/usr/bin/env -S make -f
 # Demonstrates importing a docker image, then using scaffolded targets
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.
-# USAGE: demos/import-image.mk
+# USAGE: demos/docker.import.mk
 
 include compose.mk
 
-# Import a stack image 
+# Import a stock image 
 $(call docker.import, namespace=debian img=debian/buildd:bookworm)
 
 # Import an image described by a local Dockerfile

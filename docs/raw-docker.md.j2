@@ -38,7 +38,7 @@ $ img=debian/buildd:bookworm ./compose.mk docker.dispatch/flux.ok
 
 If you're doing something like the above frequently, then you can also use `docker.import` to generate scaffolded targets that do the same thing:
 
-{{site.embed_demo('demos/import-image.mk', github=github)}}
+{{site.embed_demo('demos/docker.import.mk', github=github)}}
 
 Besides the `namespace.dispatch/..` helper and the main `namespace` target that are created and demonstrated above, this also creates a `namespace.shell` target that can be used to drop you into an interactive debugging shell for the container, and creates `${namespace.img}` that holds data for the image name.  
 

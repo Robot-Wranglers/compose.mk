@@ -27,6 +27,9 @@ docs/tool-overview.md
 typescript
 demos/data/jupyter/kernels/kernel.*
 *.pyc
+__pycache__/
+.tox/
+.pytest_cache/
 justfile
 img/
 demos/data/jupyter/notebooks/*.ipynb
