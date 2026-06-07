@@ -874,12 +874,12 @@ docker.lambda/%:
 	@#
 	entrypoint=`if [ -z "$${entrypoint:-}" ]; then echo ""; else echo "--entrypoint $${entrypoint:-}"; fi` \
 	&& cmd=`if [ -z "$${cmd:-}" ]; then echo ""; else echo "$${cmd:-true}"; fi` \
-	&& sha=`docker build -q - <<< $$(${make} mk.def.read/Dockerfile.${*})` \
+	&& sha=`docker build -q $${docker_args:-} - <<< $$(${make} mk.def.read/Dockerfile.${*})` \
 	&& docker run -i $${entrypoint} \
 		${docker.env.standard} \
 		-v $${workspace:-$${PWD}}:/workspace \
 		-v $${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock \
-		-w /workspace --rm $${sha} $${cmd}
+		-w /workspace --rm $${docker_args:-} $${sha} $${cmd}
 
 docker.logs/%:
 	@# Tails logs for the given container ID.
@@ -1569,7 +1569,7 @@ io.log=$(call log.io,${1})
 io.log.part1=$(call log.part1,${GLYPH_IO} $(strip ${1}))
 io.log.part2=$(call log.part2, $(strip ${1}))
 
-io.quiet.stderr/%:; cmd="${make} ${*}" make io.quiet.stderr.sh
+io.quiet.stderr/%:; cmd="${make} ${*}" ${make} io.quiet.stderr.sh
 	@# Runs the given target, surpressing stderr output, except in case of error.
 	@#
 	@# USAGE:
@@ -3232,7 +3232,7 @@ flux.ok:
 
 flux.split/%:
 	@# Alias for flux.split, but accepts arguments directly
-	export targets="${*}" && make flux.split
+	export targets="${*}" && ${make} flux.split
 
 flux.sh.tee:
 	@# Helper for constructing a parallel process pipeline with `tee` and command substitution.
@@ -3479,11 +3479,11 @@ flux.starmap/%:
 	&& ${make} $${iterable} | ${make} flux.each/$${target}
 
 define _flux.timer
-${trace_maybe} && start_time=$$(date +%s) \
+${trace_maybe} && start_time=$$(date +%s%N) \
 	&& ${make} ${1} \
-	&& end_time=$$(date +%s) \
+	&& end_time=$$(date +%s%N) \
 	&& time_diff_ns=$$((end_time - start_time)) \
-	&& delta=$$(awk -v ns="$$time_diff_ns" 'BEGIN {printf "%.9f", ns }') \
+	&& delta=$$(awk -v ns="$$time_diff_ns" 'BEGIN {printf "%.9f", ns / 1000000000}') \
 	&& $(call log.flux, flux.timer ${sep} `echo ${1}|cut -d/ -f2-` ${sep} ${dim}$${label:-done in} ${yellow}$${delta}s)
 endef
 flux.timer/%:; $(call _flux.timer,${*})

@@ -69,19 +69,32 @@ normalize: # NOP
 pygments.nord: pygments.css/nord-darker
 pygments.css/%:; pygmentize -S ${*} -f html 
 
-test: validate unit-test integration-test demos smoke-test
+test: validate unit-test compiler-test docker-test integration-test demos smoke-test
 	@#
 
 utest unit-test:
 	@# Runs the integration-test suite.
 	pushd tests && make init unit-test
 
+ctest compiler-test:
+	@# Runs the CMK compiler suite (pure; delegates to tests/).
+	pushd tests && make init compiler-test
+
+dtest docker-test:
+	@# Runs the docker.* target suite (delegates to tests/).
+	pushd tests && make init docker-test
+
+cov coverage:
+	@# Target-level coverage report (report-only; delegates to tests/).
+	pushd tests && make init coverage
+
 itest integration-test:
-	@# Runs the integration-test suite.
+	@# Runs the integration-test suite (delegates to tests/).
+	pushd tests && make init integration-test
 
 stest smoke-test:
-	@# Runs the smoke-test suite
-	ls tests/*.sh | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
+	@# Runs the smoke-test suite (delegates to tests/).
+	pushd tests && make init smoke-test
 
 demos demos.test demo-test:
 	@# 

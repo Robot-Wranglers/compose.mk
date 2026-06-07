@@ -10,6 +10,8 @@ finding: the suite stays green, the bug stays pinned, and the case flips
 to XPASS once the target is fixed.
 """
 
+import json
+
 import pytest
 
 pytestmark = pytest.mark.unit
@@ -49,6 +51,11 @@ CASES = [
   ("stream.comma.to.json", "a,b", '["a","b"]\n'),
   ("stream.comma.to.json", "1,2,3", '["1","2","3"]\n'),
   ("stream.nl.to.json.array", "a\nb", '["a","b"]\n'),
+  # grep.safe drops lines mentioning secrets (password/passwd/key/cert)
+  ("stream.grep.safe", "safe\nkey=secret", "safe\n"),
+  # dim/dim.indent are passthrough under NO_COLOR (ansi vars empty)
+  ("stream.dim", "hello", "hello"),
+  ("stream.dim.indent", "di", "  di"),
 ]
 
 
@@ -61,6 +68,46 @@ def test_stream_transform(cmk, target, stdin, expected):
   r = cmk(target, stdin=stdin)
   assert r.ok, f"{target} exited {r.returncode}; stderr:\n{r.stderr}"
   assert r.stdout == expected
+
+
+def test_stream_fold_wraps_to_width(cmk):
+  r = cmk("stream.fold", stdin="aaa bbb ccc", env={"width": "5"})
+  assert r.ok, r.stderr
+  assert len(r.stdout.splitlines()) == 3
+
+
+@pytest.mark.parametrize(
+  "target",
+  [
+    "stream.to.stderr",
+    "stream.preview",
+    "stream.as.log",
+    "stream.indent.to.stderr",
+  ],
+)
+def test_stream_stderr_only_targets(cmk, target):
+  # These write to stderr by design; stdout stays empty.
+  r = cmk(target, stdin="data")
+  assert r.ok, r.stderr
+  assert r.stdout == ""
+
+
+def test_stream_csv_pygmentize(cmk):
+  # Despite the name this is a pure awk colorizer (no pygments/docker).
+  r = cmk("stream.csv.pygmentize", stdin="a,b,c")
+  assert r.ok, r.stderr
+  for tok in ("a", "b", "c"):
+    assert tok in r.stdout
+
+
+def test_stream_json_object_append(cmk):
+  r = cmk(
+    "stream.json.object.append",
+    stdin="{}",
+    env={"key": "foo", "val": "bar"},
+  )
+  assert r.ok, r.stderr
+  assert json.loads(r.stdout) == {"foo": "bar"}
 
 
 def test_json_array_append(cmk):
@@ -147,3 +194,20 @@ def test_strip_tab_preserves_separation(cmk):
   r = cmk("stream.strip", stdin="a\tb")
   assert r.ok, r.stderr
   assert r.stdout == "a b"
+
+
+# --- preview/peek (pure: log to stderr, passthrough on stdout) --------------
+
+
+def test_stream_peek_passthrough(cmk):
+  # stream.peek dims the input to stderr but passes it through on stdout.
+  r = cmk("stream.peek", stdin="MARKER-XYZ")
+  assert r.ok, r.stderr
+  assert "MARKER-XYZ" in r.stdout
+
+
+def test_stream_code(cmk):
+  # stream.code = io.preview.file//dev/stdin (cat | stream.as.log) -> stderr.
+  r = cmk("stream.code", stdin="MARKER-XYZ")
+  assert r.ok, r.stderr
+  assert "MARKER-XYZ" in r.stdout + r.stderr

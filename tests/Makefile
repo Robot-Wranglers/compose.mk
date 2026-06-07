@@ -24,3 +24,24 @@ normalize:
 units unit-test:
 	@# Fast, no-docker unit tests (stream.* and friends).
 	tox -e unit
+
+smoke smoke-test:
+	@# Smoke tests — wrap tests/scripts/*.sh and assert clean exit (needs docker).
+	tox -e smoke
+
+compiler-test:
+	@# CMK compiler/transpiler tests (pure; no docker).
+	tox -e compiler
+
+docker-test:
+	@# docker.* target suite (needs a daemon; cleanup is label-scoped).
+	tox -e docker
+
+integration-test:
+	@# Integration suite — scaffolds a mini-project (needs a daemon).
+	tox -e integration
+
+coverage:
+	@# Target-level coverage report (report-only; unit+docker+integration+compiler,
+	@# no smoke -- it adds no targets the other suites don't already cover).
+	tox -e coverage
