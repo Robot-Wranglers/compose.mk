@@ -10,7 +10,7 @@ include compose.mk
 # Look, it's a container that has Ansible.
 define Dockerfile.Ansible
 FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
-RUN apt-get update -qq && apt-get install -qq -y ansible make procps
+RUN apt-get update -qq && apt-get install -qq -y ansible make
 endef
 
 # Look, it's a simple Ansible playbook 

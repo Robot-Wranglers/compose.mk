@@ -17,7 +17,7 @@ services:
       context: .
       dockerfile_inline: |
         FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
-        RUN apt-get update -qq && apt-get install -qq -y make procps
+        RUN apt-get update -qq && apt-get install -qq -y make
     entrypoint: bash
     working_dir: /workspace
     volumes:
@@ -30,7 +30,7 @@ services:
       context: .
       dockerfile_inline: |
         FROM ${IMG_ALPINE_BASE:-alpine:3.22}
-        RUN apk add -q --update --no-cache coreutils build-base bash procps-ng wget
+        RUN apk add -q --update --no-cache coreutils build-base bash wget
         # Download and compile make 4.3
         RUN wget http://ftp.gnu.org/gnu/make/make-4.3.tar.gz
         RUN tar -xzf make-4.3.tar.gz

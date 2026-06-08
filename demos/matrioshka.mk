@@ -27,7 +27,7 @@ services:
       dockerfile_inline: |
         FROM docker:dind
         RUN apk add -q --update --update --no-cache \
-          coreutils build-base bash procps-ng
+          coreutils build-base bash
         COPY . /app
         RUN cd /app && make -f ${MAKEFILE} ${BUILD_TARGET}
     working_dir: /workspace

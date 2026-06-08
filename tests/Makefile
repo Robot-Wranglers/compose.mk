@@ -52,3 +52,7 @@ installers-test:
 	tox -e pip-installer
 	tox -e npm-installer
 	tox -e basher-installer
+
+perf perf-test:
+	@# Cold-start perf benchmark (report-only; opt-in, not wired to CI).
+	tox -e perf-test

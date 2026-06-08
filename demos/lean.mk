@@ -16,7 +16,7 @@ include compose.mk
 define Dockerfile.Lean
 FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
 SHELL ["/bin/bash", "-x", "-c"]
-RUN apt-get -qq update && apt-get install -qq -y git make curl sudo procps
+RUN apt-get -qq update && apt-get install -qq -y git make curl sudo
 RUN curl -sSf \
   https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
     > /usr/local/bin/elan-init.sh

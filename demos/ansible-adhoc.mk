@@ -17,7 +17,7 @@ export ANSIBLE_STDOUT_CALLBACK=json
 # but for simplicity it's embedded.
 define Dockerfile.Ansible
 FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
-RUN apt-get update -qq && apt-get install -qq -y jq make bash procps
+RUN apt-get update -qq && apt-get install -qq -y jq make bash
 RUN apt-get install -qq -y ansible python3-pip
 RUN pip3 install -q docker --break-system-packages
 endef

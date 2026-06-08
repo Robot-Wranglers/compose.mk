@@ -18,7 +18,7 @@ services:
         FROM ${IMG_UBUNTU_BASE:-ubuntu:22.04}
         ENV DEBIAN_FRONTEND=noninteractive
         RUN apt-get update -qq 
-        RUN apt-get install -qq -y make procps
+        RUN apt-get install -qq -y make
         RUN apt-get install -qq -y i3 i3status x11-apps xterm feh mesa-utils
     entrypoint: i3
     working_dir: /workspace

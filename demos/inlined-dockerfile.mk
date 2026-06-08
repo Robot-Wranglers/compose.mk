@@ -13,7 +13,7 @@ include compose.mk
 # have the minimal stuff that's required for using target dispatch.
 define Dockerfile.demo_dockerfile
 FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
-RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
+RUN apk add -q --update --no-cache coreutils build-base bash
 endef
 
 # After build, image is always at 'compose.mk:<def_name>'.

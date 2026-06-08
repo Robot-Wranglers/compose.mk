@@ -10,7 +10,7 @@ services:
       context: .
       dockerfile_inline: |
         FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
-        RUN apt-get update -qq && apt-get install -qq -y make procps
+        RUN apt-get update -qq && apt-get install -qq -y make
     entrypoint: bash
     working_dir: /workspace
     volumes:
@@ -24,7 +24,7 @@ services:
       dockerfile_inline: |
         FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
         RUN apk add -q --update --no-cache \
-          coreutils build-base bash procps-ng
+          coreutils build-base bash
 ⋙
 
 # A private target, intended to run inside containers 

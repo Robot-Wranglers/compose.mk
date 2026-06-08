@@ -4,7 +4,7 @@
 
 ⫻ Dockerfile.my_container
 FROM alpine:3.21.2
-RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
+RUN apk add -q --update --no-cache coreutils build-base bash
 ⫻
 
 __main__: test.scaffold test.runner test.raw

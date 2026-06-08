@@ -143,7 +143,7 @@ export DOCKER_UID:=$(shell id -u)
 export DOCKER_GID:=$(shell getent group docker 2> /dev/null | cut -d: -f3 || id -g)
 export DOCKER_UGNAME:=user
 export MAKE_CLI:=$(shell \
-	( cat /proc/$(strip $(shell ps -o ppid= -p $$$$ 2> /dev/null))/cmdline 2>/dev/null \
+	( cat /proc/$${PPID}/cmdline 2>/dev/null \
 		| tr '\0' ' ' ) ||echo '?')
 endif
 
@@ -2558,7 +2558,12 @@ mk.supervisor.pid:
 				Darwin) \
 					ps auxo ppid|grep $${MAKE_SUPER}$$|awk '{print $$2}'; ;; \
 				*) \
-					ps --ppid $${MAKE_SUPER} -o pid= ; ;; \
+					for d in /proc/[0-9]*; do \
+						pid=$${d#/proc/}; \
+						[ "$${pid}" = "$$$$" ] && continue; \
+						awk -v me="$${MAKE_SUPER}" -v pid="$${pid}" \
+							'/^PPid:/{if($$2==me) print pid}' "$${d}/status" 2>/dev/null; \
+					done; ;; \
 			esac \
 	esac
 

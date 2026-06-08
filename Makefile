@@ -104,6 +104,10 @@ installers-test:
 	@# Build+install the via/pip shim; verify a global on-PATH compose.mk.
 	pushd tests && make init installers-test
 
+ptest perf-test:
+	@# Cold-start perf benchmark (report-only; opt-in; delegates to tests/).
+	pushd tests && make init perf-test
+
 demos demos.test demo-test:
 	@# 
 	set -x && ls demos/*.mk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"

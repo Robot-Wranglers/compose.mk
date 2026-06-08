@@ -51,7 +51,7 @@ services:
         FROM ubuntu:24.04
         ENV DEBIAN_FRONTEND=noninteractive
         RUN apt-get update -qq 
-        RUN apt-get install -y make procps
+        RUN apt-get install -y make
         RUN apt-get install -y wget apt-transport-https \
           software-properties-common ca-certificates
         RUN wget -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc

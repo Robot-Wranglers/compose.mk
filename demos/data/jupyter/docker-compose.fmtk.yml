@@ -49,7 +49,7 @@ services:
       context: .
       dockerfile_inline: |
         FROM eloengineering/alloy-cli:4.2
-        RUN apt-get update && apt-get install -y make procps g++ openjdk-17-jdk-headless 
+        RUN apt-get update && apt-get install -y make g++ openjdk-17-jdk-headless 
     entrypoint: alloy-run
     command: /dev/stdin
   
@@ -64,7 +64,7 @@ services:
       dockerfile_inline: |
         FROM debian:bookworm
         SHELL ["/bin/bash", "-x", "-c"] 
-        RUN apt-get update -qq && apt-get install -qq -y git make procps curl sudo
+        RUN apt-get update -qq && apt-get install -qq -y git make curl sudo
         RUN curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf \
           > /usr/local/bin/elan-init.sh
         RUN bash /usr/local/bin/elan-init.sh -y 

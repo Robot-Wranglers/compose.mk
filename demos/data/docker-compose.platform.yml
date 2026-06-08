@@ -9,7 +9,7 @@ services:
       context: .
       dockerfile_inline: |
         FROM debian
-        RUN apt-get update -qq && apt-get install -qq -y make procps curl
+        RUN apt-get update -qq && apt-get install -qq -y make curl
         RUN curl -fsSL https://get.docker.com | sh
     entrypoint: bash
     working_dir: /workspace
