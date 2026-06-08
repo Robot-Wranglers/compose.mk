@@ -37,6 +37,29 @@ def test_mk_get_reads_variable(cmk):
   assert r.stdout.strip() == "hello42"
 
 
+# --- `makefile_list` invariant (the -f args derived from MAKE_CLI) ----------
+# `makefile_list` backs the `${make}` recursion macro; it must reflect the `-f`
+# files of the *current* invocation. These pin the value in both invocation
+# modes so the recursion machinery stays correct.
+
+
+def test_makefile_list_standalone(cmk):
+  # Tool mode (`./compose.mk ...`): the -f file is compose.mk itself.
+  r = cmk("mk.get/makefile_list")
+  assert r.ok, r.stderr
+  assert "-f" in r.stdout and "compose.mk" in r.stdout
+
+
+def test_makefile_list_library(cmk, tmp_path):
+  # Library mode (`make -f wrap.mk`, which `include`s compose.mk): the -f file is
+  # the user makefile (compose.mk is included, not on the CLI), so `${make}`
+  # recurses into the user's makefile.
+  mk = _wrapper(tmp_path, "noop:; @true")
+  r = cmk("mk.get/makefile_list", makefile=mk)
+  assert r.ok, r.stderr
+  assert "-f" in r.stdout and "wrap.mk" in r.stdout
+
+
 def test_mk_def_read(cmk, tmp_path):
   mk = _wrapper(tmp_path, "define greeting\nhello world\nendef")
   r = cmk("mk.def.read/greeting", makefile=mk)

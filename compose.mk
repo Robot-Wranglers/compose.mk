@@ -158,9 +158,9 @@ define mk.cli.continuation
 $${MAKE_CLI#*${@}}
 endef
 
-# IMPORTANT: this is the way to safely call `make` recursively. 
+# IMPORTANT: this is the way to safely call `make` recursively.
 # It determines better-than-default values for MAKE and MAKEFILE_LIST,
-# and uses the lowercase.  Defaults are not reliable! 
+# and uses the lowercase.  Defaults are not reliable!
 makefile_list=$(addprefix -f,$(shell echo "${MAKE_CLI}"|awk '{for(i=1;i<=NF;i++)if($$i=="-f"&&i+1<=NF){print$$(++i)}else if($$i~/^-f./){print substr($$i,3)}}' | xargs))
 make=make ${MAKE_FLAGS} ${makefile_list}
 
