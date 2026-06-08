@@ -87,7 +87,8 @@ nav:
     # - 'Justfile Interoperability': demos/just.md
     # - 'Makeception': demos/makeception.md
   - Misc:
-    - 'Design Philosophy': but-why.md 
+    - 'Design Philosophy': but-why.md
+    - 'Performance': performance.md
     # - 'Configuration / Env Vars': config.md
     # - limitations.md
     # - contributing.md

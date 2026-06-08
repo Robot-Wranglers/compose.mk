@@ -36,7 +36,9 @@ case ${CMK_SUPERVISOR:-1} in \
 		[ "${trace}" == 1 ] && set -x || true;  \
 		trap "CMK_DISABLE_HOOKS=1 CMK_INTERNAL=1 ${_make_} mk.supervisor.trap/SIGINT; " SIGINT; \
 		case ${CMK_DISABLE_HOOKS:-0} in \
-			0) _targets="`echo ${@:-mk.__main__} | CMK_INTERNAL=1 quiet=1 ${_make_} io.awk/.awk.rewrite.targets.maybe`";; \
+			0) [ $# -eq 0 ] \
+				&& _targets="mk.__main__" \
+				|| _targets="$(echo ${@} | awk -f <(sed -n '/^define .awk.rewrite.targets.maybe/,/^endef/{/^define/d;/^endef/d;p}' ${0}))";; \
 			1) _targets="${@:-mk.__main__}";; \
 		esac; \
 		${_make_} mk.supervisor.enter/${MAKE_SUPER} ${_targets} \
@@ -62,10 +64,22 @@ MAKEFLAGS:=-s -S --warn-undefined-variables --no-builtin-rules
 .SUFFIXES:
 .INTERMEDIATE: .tmp.* .flux.*
 export TERM?=xterm-256color
-OS_NAME:=$(shell uname -s)
+# Host-invariant within a run: export + `?=` so recursive sub-makes inherit the
+# parent's value (env-origin) and skip re-forking `uname` on every re-parse.
+export OS_NAME ?= $(shell uname -s)
+
+# Pre-declared (?= empty) so native `$(VAR)` reads are safe under
+# --warn-undefined-variables -- this lets us replace per-parse
+# `$(shell echo $${VAR:-default})` subshell forks with native `$(or $(VAR),default)`.
+quiet ?=
+trace ?=
+NO_COLOR ?=
+# NB: CMK_DIND is declared+exported later (`export CMK_DIND?=0`); do NOT
+# pre-declare it here -- that would make the later `?=` skip and leave CMK_DIND
+# empty+unexported, breaking docker-in-docker propagation.
 
 # Color constants and other stuff for formatting user-messages
-ifeq ($(shell echo $${NO_COLOR:-}),1) # https://no-color.org/
+ifeq ($(NO_COLOR),1) # https://no-color.org/
 no_ansi=
 green=
 yellow=
@@ -118,16 +132,20 @@ _GLYPH_TUI=${bold}⏣${no_ansi}
 GLYPH_TUI=${green}${_GLYPH_TUI}${dim_green}
 _GLYPH_FLUX=${bold}Φ${no_ansi}
 GLYPH_FLUX=${green}${_GLYPH_FLUX}${dim_green}
-GLYPH_DEBUG=${dim}(debug=${no_ansi}${verbose}${dim})${no_ansi}${dim}(quiet=${no_ansi}$(shell echo $${quiet:-})${dim})${no_ansi}${dim}(trace=${no_ansi}$(shell echo $${trace:-})${dim})
+GLYPH_DEBUG=${dim}(debug=${no_ansi}${verbose}${dim})${no_ansi}${dim}(quiet=${no_ansi}$(quiet)${dim})${no_ansi}${dim}(trace=${no_ansi}$(trace)${dim})
 GLYPH_SPARKLE=✨
 GLYPH_CHECK=✔
 GLYPH_XXX=${red}✗
 GLYPH_SUPER=${green}ᐂ${dim_green}
 GLYPH_NUMS=① ② ③ ④ ⑤ ⑥ ⑦ ⑧ ⑨ ⑩
-GLYPH.NUM=${dim_green}$(word $(shell echo $$((${1} + 1))),${GLYPH_NUMS})${no_ansi}
-# GLYPH_ARRS=🡨 🡩 🡪 🡫 🡬 🡭 🡮 🡯 🡒 🡑 
-GLYPH_ARRS=▋ ▊ ▉ █ █ █ █ █ ▏ ▎ ▍ 
-GLYPH.ARRS=${dim_green}$(word $(shell echo $$((${1} + 1))),${GLYPH_ARRS})${no_ansi}
+# NB: native `${1}+1` without a subshell -- `$(words $(wordlist 1,N,LIST) +)` counts
+# the first N words plus one extra token, i.e. N+1 (and N=0 -> empty wordlist -> 1).
+# Reusing the glyph list as the counting source matches the old subshell arithmetic
+# byte-for-byte, including out-of-range (-> empty `$(word)`). Hot path: every log line.
+GLYPH.NUM=${dim_green}$(word $(words $(wordlist 1,${1},${GLYPH_NUMS}) +),${GLYPH_NUMS})${no_ansi}
+# GLYPH_ARRS=🡨 🡩 🡪 🡫 🡬 🡭 🡮 🡯 🡒 🡑
+GLYPH_ARRS=▋ ▊ ▉ █ █ █ █ █ ▏ ▎ ▍
+GLYPH.ARRS=${dim_green}$(word $(words $(wordlist 1,${1},${GLYPH_ARRS}) +),${GLYPH_ARRS})${no_ansi}
 GLYPH.tree_item:=├┈
 
 # FIXME: docs 
@@ -139,8 +157,8 @@ export DOCKER_GID:=0
 export DOCKER_UGNAME:=root
 export MAKE_CLI:=$(shell echo `which make` `ps -o args -p $${PPID} | tail -1 | cut -d' ' -f2-`)
 else
-export DOCKER_UID:=$(shell id -u)
-export DOCKER_GID:=$(shell getent group docker 2> /dev/null | cut -d: -f3 || id -g)
+export DOCKER_UID ?= $(shell id -u)
+export DOCKER_GID ?= $(shell getent group docker 2> /dev/null | cut -d: -f3 || id -g)
 export DOCKER_UGNAME:=user
 export MAKE_CLI:=$(shell \
 	( cat /proc/$${PPID}/cmdline 2>/dev/null \
@@ -151,7 +169,7 @@ export MAKE_CLI_EXTRA:=$(shell printf "${MAKE_CLI}"|awk -F' -- ' '{print $$2}')
 export MAKEFILE_LIST:=$(call strip,${MAKEFILE_LIST})
 export MAKE_FLAGS:=$(shell [ `echo ${MAKEFLAGS} | cut -c1` = - ] && echo "${MAKEFLAGS}" || echo "-${MAKEFLAGS}")
 export MAKEFILE?=$(firstword $(MAKEFILE_LIST))
-export TRACE?=$(shell echo "$${TRACE:-$${trace:-0}}")
+export TRACE?=$(or $(trace),0)
 # Returns everything on the CLI *after* the current target.
 # WARNING: do not refactor as VAR=val !
 define mk.cli.continuation
@@ -207,7 +225,7 @@ log.prefix.makelevel.indent=
 log.prefix.makelevel=${log.prefix.makelevel.glyph} ${log.prefix.makelevel.indent}
 log.prefix.loop.inner=${log.prefix.makelevel}${bold}${dim_green}${GLYPH.tree_item}${no_ansi}
 log.stdout=printf "${log.prefix.makelevel} $(strip $(if $(filter undefined,$(origin 1)),...,$(1))) ${no_ansi}\n"
-log=([ "$(shell echo $${quiet:-0})" == "1" ] || ( ${log.stdout} >${stderr} ))
+log=([ "$(or $(quiet),0)" == "1" ] || ( ${log.stdout} >${stderr} ))
 log.noindent=(printf "${log.prefix.makelevel.glyph} `echo "$(or $(1),)"| ${stream.lstrip}`${no_ansi}\n" >${stderr})
 log.fmt=( ${log} && (printf "${2}" | fmt -w 55 | ${stream.indent} | ${stream.indent} | ${stream.indent.to.stderr} ) )
 log.json=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.docker} ${1} | ${jq.run} . | ${stream.as.log}
@@ -237,7 +255,7 @@ log.mk=$(call log, ${GLYPH_MK} ${1})
 log.tux=$(call log,${GLYPH_TUI} $(1))
 
 # Loggers used at module level.
-export CMK_LOG_IMPORTS?=$(shell echo "$${CMK_LOG_IMPORTS:-0}")
+export CMK_LOG_IMPORTS?=0
 log.import=$$(shell [ $${CMK_LOG_IMPORTS} == 0 ] || $$(call \
 	log.mk, ${GLYPH_MK} ${dim}__import__ $${sep}$${dim} ${1}))
 log.import.part1=$$(shell [ $${CMK_LOG_IMPORTS} == 0 ] || $$(call \
@@ -330,7 +348,7 @@ export CMK_COMPOSE_FILE?=.tmp.compose.mk.yml
 export CMK_DIND?=0
 export verbose:=$(shell [ "$${quiet:-0}" == "1" ] && echo 0 || echo $${verbose:-1})
 _docker_quiet_flag=-q
-ifeq ($(shell echo $${quiet:-}), 0)
+ifeq ($(quiet), 0)
 _docker_quiet_flag=
 endif
 
@@ -338,10 +356,12 @@ export CMK_INTERNAL?=0
 #export CMK_SRC:=$(filter %compose.mk,${MAKEFILE_LIST})
 export CMK_SRC:=$(or $(filter %compose.mk,${MAKEFILE_LIST}),${MAKEFILE})
 export CMK_BIN?=${CMK_SRC}
-export __interpreter__:=$(shell \
-	 ([ -z "$${__interpreter__:-}" ] \
-		&& echo `dirname ${CMK_SRC} || echo .`/`basename ${CMK_SRC}||echo compose.mk` \
-		||  echo $${__interpreter__:-} ))
+# `__interpreter__` is the invocation path (== CMK_BIN == ${0}); the old shell form
+# rebuilt it as dirname/basename of CMK_SRC (relative in the top parse) and then
+# rode the env-override through sub-makes. `?= ${CMK_BIN}` yields the identical
+# value with no sh/dirname/basename fork per re-parse, and still honors a
+# caller-supplied __interpreter__ (env wins) + inherits into sub-makes.
+export __interpreter__ ?= ${CMK_BIN}
 export CMK_SUPERVISOR?=1
 export CMK_EXTRA_REPO?=.
 export GITHUB_ACTIONS?=false
@@ -393,7 +413,7 @@ IMG_MONCHO_DRY=moncho/dry@sha256:6fb450454318e9cdc227e2709ee3458c252d5bd3072af22
 
 # Used internally.  If this is container-dispatch and DIND,
 # then DOCKER_HOST_WORKSPACE should be treated carefully
-ifeq ($(shell echo $${CMK_DIND:-0}), 1)
+ifeq ($(or $(CMK_DIND),0), 1)
 export workspace?=$(shell echo ${DOCKER_HOST_WORKSPACE})
 export CMK_INTERNAL=0
 endif
@@ -1445,16 +1465,22 @@ ${kwargs_ns}: ${kwargs_prereqs}
 endef
 
 
-ifeq ($(shell which gum >/dev/null 2> /dev/null && echo 1 || echo 0),1) 
-io.gum.run:=`which gum`
-io.get.choice=chosen=$$(${io.gum.run} choose --header="$${header:-Choose:}" $${choices})
-else 
-io.gum.run:=${io.gum.docker}
-io.get.choice=$(call io.script.tmpf, ${io.gum.run} choose --header=\"$${header:-Choose:}\" _ $${choices}) \
+# gum-presence probe, memoized to once-per-process (replaces a parse-time
+# `ifeq ($(shell which gum ...))` that forked a `which` on EVERY re-parse).
+# `io.gum.run`/`io.get.choice` then branch at call-time via `.$(_gum.present)`
+# indirection ("1" -> on PATH, "0" -> dockerized) -- byte-identical to the old
+# ifeq selection (verified against both branches), but no probe unless used.
+_gum.present.cached :=
+_gum.present = $(or ${_gum.present.cached},$(eval _gum.present.cached := $(shell which gum >/dev/null 2>/dev/null && echo 1 || echo 0))${_gum.present.cached})
+io.gum.run=${io.gum.run.$(_gum.present)}
+io.gum.run.1=`which gum`
+io.gum.run.0=${io.gum.docker}
+io.get.choice=${io.get.choice.$(_gum.present)}
+io.get.choice.1=chosen=$$(${io.gum.run} choose --header="$${header:-Choose:}" $${choices})
+io.get.choice.0=$(call io.script.tmpf, ${io.gum.run} choose --header=\"$${header:-Choose:}\" _ $${choices}) \
 	&& filter="`echo $${choices}|sed 's/ /|/g'`" \
 	&& cat $${tmpf} | ${col_b} | grep -E "$${filter}" | tail -n-3 | tail -n-1 | awk -F"006l" '{print $$2}' | head -1 > $${tmpf}.selected \
 	&& mv $${tmpf}.selected $${tmpf} && chosen="`cat $${tmpf}`"
-endif
 io.gum=(which gum >/dev/null && ( ${1} ) \
 	|| (entrypoint=gum cmd="${1}" quiet=0 \
 		img=charmcli/${IMG_GUM} ${make} docker.run.sh)) > /dev/stderr
@@ -1814,12 +1840,12 @@ mk.__main__:
 				compose.mk) (\
 					$(call log.trace,empty invocation for compose.mk-- returning help) \
 					&& ${make} help);; \
-				*) ${make} `CMK_INTERNAL=1 ${make} mk.get/.DEFAULT_GOAL`;; \
+				*) ${make} $(.DEFAULT_GOAL);; \
 			esac ;; \
 		0) $(call log, ${red}error: library list is empty);; \
 		*) (\
 			$(call log.trace, multiple library files; looking for a default goal..) \
-			&& ${make} `${make} mk.get/.DEFAULT_GOAL`);; \
+			&& ${make} $(.DEFAULT_GOAL));; \
 	esac
 
 mk.def.dispatch/% polyglot.dispatch/%:
@@ -1983,7 +2009,7 @@ $(call log.trace, __file__=$${__file__} \
 	*) runner=flux.pipeline;; \
 	0) runner=flux.pipeline;; \
 esac \
-&& ${io.mktemp} && export inputf=`echo $${tmpf}` \
+&& ${io.mktemp} && export inputf=$${tmpf} \
 && ${stream.stdin} > $${inputf} \
 && export CMK_INTERNAL=1 \
 && printf "#!/usr/bin/env -S __interpreting__=$${__interpreting__:-stdin} ${__interpreter__} mk.interpret\nMAKEFILE_LIST+=${CMK_SRC}\n" \
@@ -2077,10 +2103,10 @@ mk.preprocess: flux.timer/.mk.preprocess
 	@# their macros -- no make-per-stage). CMK_COMPILER_STEPWISE=1 keeps the
 	@# step-wise flux.pipeline of the stage *targets* (per-stage previews) for
 	@# debugging. Both compose the same stage logic, so output is identical.
-	$(call io.mktemp) && export inputf=`echo $${tmpf}` \
+	$(call io.mktemp) && export inputf=$${tmpf} \
 	&& ${stream.stdin} > $${inputf} \
-	&& export cmk_dialect=`cat $${inputf} | ${make} .mk.parse.dialect.hint` \
-	&& export cmk_sugar=`cat $${inputf} | ${make} .mk.parse.sugar.hint` \
+	&& export cmk_dialect=$$(cat $${inputf} | ${.cmk.parse.dialect.hint}) \
+	&& export cmk_sugar=$$(cat $${inputf} | ${.cmk.parse.sugar.hint}) \
 	&& case $${CMK_COMPILER_STEPWISE:-0} in \
 		1) cat $${inputf} \
 			| ${make} flux.pipeline/mk.preprocess.minify,mk.preprocess.decorators,mk.preprocess.dialect,mk.preprocess.sugar ;; \
@@ -2152,24 +2178,19 @@ mk.preprocess.sugar:
 	@# Part of the CMK->Makefile transpilation process.
 	@# (body lives in the `.cmk.sugar` macro, shared with the fused fast path.)
 	${.cmk.sugar}
+# Header-hint parsers as single-source macros: extract the `:::`-delimited JSON
+# from a `# cmk_dialect/sugar ::: ... :::` header comment. The targets below wrap
+# these (kept standalone/debug-invocable + tested); `.mk.preprocess` expands them
+# INLINE (no make-per-hint re-parse). NB: a literal `#` in a make *variable*
+# starts a comment, hence the `\#` throughout (cf. `.cmk.minify`).
+.cmk.parse.sugar.hint=( tmp=`${stream.stdin} | awk 'NR==1 && /^\#!/{next} /^\#/{print} !/\#/{exit}'` && tmp="$${tmp\#*cmk_sugar :::}" && echo "$${tmp//:::*}" | sed 's/^\#//g' | ${jq} -c) 2>/dev/null || true
+.cmk.parse.dialect.hint=( $(call io.mktemp) && ${stream.stdin} | awk 'NR==1 && /^\#!/{next} /^\#/{print} !/\#/{exit}' | tr -d '\#\n' | awk -F':::' '{print $$2}' > $${tmpf} && if [ -s $${tmpf} ]; then ( cat $${tmpf} | ${jq} -c . || ($(call log.target, ${red}failed parsing dialect hint!); exit 79)) ; else $(call log.trace, no dialect hint in file) ; fi )
 .mk.parse.sugar.hint:
-	$(call log.trace, ${@} ${sep} parsing sugar hint..) 
-	(   tmp=`${stream.stdin} | awk 'NR==1 && /^#!/{next} /^#/{print} !/#/{exit}'` \
-		&& tmp="$${tmp#*cmk_sugar :::}" \
-		&& echo "$${tmp//:::*}" \
-		| sed 's/^#//g' \
-		| ${jq} -c) 2>/dev/null || true
+	$(call log.trace, ${@} ${sep} parsing sugar hint..)
+	${.cmk.parse.sugar.hint}
 .mk.parse.dialect.hint:
-	$(call log.trace, ${@} ${sep} parsing dialect hint..) 
-	$(call io.mktemp) \
-	&& ${stream.stdin} \
-	| awk 'NR==1 && /^#!/{next} /^#/{print} !/#/{exit}' \
-	| tr -d  '#\n' | awk -F':::' '{print $$2}' > $${tmpf} \
-	&& if [ -s $${tmpf} ]; \
-	then ( \
-		cat $${tmpf} | ${jq} -c . \
-		|| ($(call log.target, ${red}failed parsing dialect hint!); exit 79)) \
-	else $(call log.trace, ${@} ${sep} ${yellow}no dialect hint in file) fi
+	$(call log.trace, ${@} ${sep} parsing dialect hint..)
+	${.cmk.parse.dialect.hint}
 
 mk.include/%:
 	@# Dynamic includes. Experimental stuff for reflection support.
@@ -2548,7 +2569,12 @@ mk.supervisor.interrupt/% mk.interrupt/%:
 mk.supervisor.pid/%: #; $(call log ${GLYPH_COMPOSE} ${@} ${sep} ${dim}Supervisor is disabled.)
 	@# CMK_SUPERVISOR is 0; signals are disabled.
 	@#
-else 
+else
+# Single source for supervisor-pid detection: the child make whose PPid is
+# MAKE_SUPER (returns empty when MAKE_SUPER is unset/has no child). Inlined by
+# BOTH `mk.supervisor.pid` and `mk.interrupt` so the hot interrupt path computes
+# it in-process instead of paying a full `${make} mk.supervisor.pid` re-parse.
+mk.supervisor.pid.find=case "${OS_NAME}" in Darwin) ps auxo ppid|grep $${MAKE_SUPER}$$|awk '{print $$2}';; *) awk -v me="$${MAKE_SUPER}" 'FNR==1{n=split(FILENAME,a,"/"); p=a[n-1]} /^PPid:/{if($$2==me) print p}' /proc/[0-9]*/status 2>/dev/null || true;; esac
 mk.supervisor.pid:
 	@# Returns the pid for the supervisor process which is responsible for trapping signals.
 	@# See 'mk.interrupt' docs for more details.
@@ -2562,15 +2588,7 @@ mk.supervisor.pid:
 				&& $(call log, $${header} ${dim}Signal-handling is only supported for stand-alone mode.) \
 				&& $(call log, $${header} ${dim}Use 'compose.mk' instead of using 'make' directly?) \
 			); exit 0; ;; \
-		*) \
-			case "${OS_NAME}" in \
-				Darwin) \
-					ps auxo ppid|grep $${MAKE_SUPER}$$|awk '{print $$2}'; ;; \
-				*) \
-					awk -v me="$${MAKE_SUPER}" \
-						'FNR==1{n=split(FILENAME,a,"/"); p=a[n-1]} /^PPid:/{if($$2==me) print p}' \
-						/proc/[0-9]*/status 2>/dev/null || true; ;; \
-			esac \
+		*) ${mk.supervisor.pid.find} ;; \
 	esac
 
 mk.supervisor.interrupt/% mk.interrupt/%:
@@ -2592,7 +2610,7 @@ mk.supervisor.interrupt/% mk.interrupt/%:
 		0) $(call log.trace, ${red}Supervisor disabled!); exit 0; ;; \
 		*) \
 			header="${GLYPH_MK} mk.interrupt ${sep}" \
-			&& super=`CMK_INTERNAL=1 ${make} mk.supervisor.pid||true` \
+			&& super=`${mk.supervisor.pid.find} || true` \
 			&& case "$${super:-}" in \
 				"") $(call log.trace, ${red}Could not find supervisor!); ;; \
 				*) (\
@@ -2620,7 +2638,10 @@ mk.supervisor.exit/%:
 	header="${GLYPH_MK} mk.supervisor.exit ${sep}" \
 	&& $(call log.trace, $${header} ${red} status=${*} ${sep} ${bold}pid=$${MAKE_SUPER}) \
 	&& $(call log.trace, $${header} ${red} calling exit handlers: ${CMK_AT_EXIT_TARGETS}) \
-	&& CMK_DISABLE_HOOKS=1 CMK_INTERNAL=0 ${make} ${CMK_AT_EXIT_TARGETS} \
+	&& case "${CMK_AT_EXIT_TARGETS}" in \
+		flux.noop) : ;; \
+		*) CMK_DISABLE_HOOKS=1 CMK_INTERNAL=0 ${make} ${CMK_AT_EXIT_TARGETS} ;; \
+	esac \
 	&& if [ -f .tmp.mk.super.${MAKE_SUPER} ]; then \
 		( $(call log.trace, ${GLYPH_MK} ${yellow}WARNING: ${no_ansi_dim}execution was yielded from ${no_ansi}${MAKE_SUPER}${no_ansi_dim} (pidfile=${no_ansi}.tmp.mk.super.${MAKE_SUPER}${no_ansi_dim})) \
 			; trap "rm -f .tmp.mk.super.${MAKE_SUPER}" EXIT \
@@ -6038,7 +6059,7 @@ flux.post/%:
 define .awk.rewrite.targets.maybe 
 { if ($0 ~ /help/ || $0 ~ /jb/ || $0 ~ /yq/ || $0 ~ /jq/ || $0 ~ /mk.include/ || $0 ~ /loadf/) {
     print $0; next }
-  if ($0 ~ /mk.interpret/ ) { print $0; next }
+  if ($0 ~ /mk.interpret/ || $0 ~ /mk.compile/ || $0 ~ /mk.preprocess/) { print $0; next }
   result = ""
   for (i=1; i<=NF; i++) {
     if ($i ~ /^\./ || $i ~ /\//) {result = result " " $i; continue}

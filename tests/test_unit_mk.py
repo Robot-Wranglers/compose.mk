@@ -37,6 +37,28 @@ def test_mk_get_reads_variable(cmk):
   assert r.stdout.strip() == "hello42"
 
 
+# --- hook-rewrite skip-list (.awk.rewrite.targets.maybe) --------------------
+# The supervisor wrapper rewrites each CLI goal `X` -> `flux.pre/X X flux.post/X`
+# to inject pre/post hooks. Internal machinery (the interpreter + the compiler)
+# is excluded from that rewrite -- hooking the compiler isn't a use-case, and
+# the rewrite's per-goal `-q` existence checks are pure overhead there. These pin
+# that skip-list (pure stdin->stdout awk; no wrapper/docker needed).
+
+
+def test_hook_rewrite_wraps_normal_target(cmk):
+  r = cmk("io.awk/.awk.rewrite.targets.maybe", stdin="build")
+  assert r.ok, r.stderr
+  assert r.stdout.strip() == "flux.pre/build build flux.post/build"
+
+
+def test_hook_rewrite_skips_compiler_and_interpreter(cmk):
+  # mk.compile / mk.preprocess / mk.interpret pass through UNwrapped (no hooks).
+  for target in ("mk.compile", "mk.preprocess", "mk.interpret"):
+    r = cmk("io.awk/.awk.rewrite.targets.maybe", stdin=target)
+    assert r.ok, r.stderr
+    assert r.stdout.strip() == target, f"{target} should not be hook-wrapped"
+
+
 # --- `makefile_list` invariant (the -f args derived from MAKE_CLI) ----------
 # `makefile_list` backs the `${make}` recursion macro; it must reflect the `-f`
 # files of the *current* invocation. These pin the value in both invocation
