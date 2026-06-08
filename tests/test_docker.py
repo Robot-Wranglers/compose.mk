@@ -3,7 +3,7 @@
 Driven through the ``docker_cmk`` fixture, which forces ``CMK_INTERNAL=0`` (so
 dispatch really runs containers) and labels every container/image with this
 session's ``cmktest=<RUNID>`` so the conftest teardown can remove exactly what
-these tests created — and nothing else. Base (pulled) images are kept.
+these tests created - and nothing else. Base (pulled) images are kept.
 
 Coverage here is local: info targets, one alpine run, the dispatch chain, a
 tiny build, and docker.lambda. Network builds (docker.from.url/github) are

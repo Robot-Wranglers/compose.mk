@@ -89,7 +89,41 @@ $ echo msg=HelloWorld | module=debug ./ansible.adhoc
 }
 ```
 
-### Makeself Reference 
+### Example: CMK App to Executable
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The same `mk.pkg/<..>` shortcut also freezes a [CMK-lang]({{mkdocs.site_relative_url}}/compiler) program: pass a file ending in `.cmk` instead of a target-name, and you get a portable executable in one step (no `archive=` juggling, no manual `mk.interpret!`).  Take this small structured-IO app, which emits a key/value and consumes it back:
+
+```Makefile {.snippet .language-Makefile}
+emit:
+	🡄 key=val
+
+consume:
+	🡆 .key
+
+__main__:
+	this.emit | this.consume
+	cmk.log.target(hello world!)
+```
+
+```bash {.cli_example}
+# freeze the .cmk (bin defaults to the file's basename)
+$ ./compose.mk mk.pkg/demos/cmk/structured-io.cmk
+
+# now portable -- runs anywhere, with no compose.mk / source on disk:
+$ ./structured-io
+```
+```bash {.cli_output}
+val
+⇄ __main__ // hello world!
+```
+
+Under the hood this bundles `compose.mk` plus your `.cmk` and sets the entrypoint to re-interpret the bundled source, so the freed binary **transpiles the CMK on each run** (you'll see the compiler's progress before your output).  Passing a `.mk` file instead works the same way, with the makefile's default goal as the entrypoint.
+
+!!! note "Bundling dependencies"
+    A self-contained `.cmk`/`.mk` needs nothing extra.  If yours pulls in sibling files (a relative `include`, or `mk.import.*` of another file), add them to the archive with `archive=`, e.g. `archive=demos ./compose.mk mk.pkg/demos/cmk/underload.cmk`.
+
+### Makeself Reference
 <hr style="width:100%;border-bottom:3px solid black;">
 
 Direct access to `makeself` is via {{site.api_link('mk.self',mkdocs)}}.  For those unfamiliar with `makeself`, this section is a quick tutorial, but you can use this to package up anything.  

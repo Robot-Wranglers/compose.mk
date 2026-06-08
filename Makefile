@@ -13,7 +13,7 @@ THIS_MAKEFILE:=$(abspath $(firstword $(MAKEFILE_LIST)))
 
 export SRC_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 export PROJECT_ROOT := $(shell dirname ${THIS_MAKEFILE})
-
+export MKDOCS_LISTEN_PORT=8005
 include compose.mk
 $(call mk.import.plugins, actions.mk docs.mk)
 $(call mk.import.plugin.maybe, local.mk)
@@ -95,6 +95,10 @@ cov coverage:
 itest integration-test:
 	@# Runs the integration-test suite (delegates to tests/).
 	pushd tests && make init integration-test
+
+tui-test:
+	@# Runs the headless embedded-TUI suite (heavy/opt-in; delegates to tests/).
+	pushd tests && make init tui-test
 
 stest smoke-test:
 	@# Runs the smoke-test suite (delegates to tests/).

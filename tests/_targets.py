@@ -2,7 +2,7 @@
 
 compose.mk is Make/bash, so there's no line/branch coverage; instead we track
 which of its *public targets* the suite exercises. The denominator comes from
-an independent static parse of the source (this module) — NOT from the tool's
+an independent static parse of the source (this module) - NOT from the tool's
 own `mk.parse`, which is itself under test and is used only as a cross-check.
 
 Underscore-prefixed so pytest never collects it as a test module.
@@ -87,7 +87,7 @@ def alias_map(compose_mk: Path) -> dict:
 def targets_in_script(path: Path) -> set:
   """Base target names invoked via ``*.mk <target>`` in a shell script.
 
-  Liberal — the caller intersects with the denominator, which filters out demo
+  Liberal - the caller intersects with the denominator, which filters out demo
   / user targets and stray args.
   """
   text = Path(path).read_text()
@@ -97,7 +97,7 @@ def targets_in_script(path: Path) -> set:
 def mk_parse_targets(compose_mk: Path):
   """Public bases per the tool's own ``mk.parse`` (informational cross-check).
 
-  Returns None on any failure — mk.parse is part of what's under test, so it
+  Returns None on any failure - mk.parse is part of what's under test, so it
   must never define or break the metric.
   """
   try:

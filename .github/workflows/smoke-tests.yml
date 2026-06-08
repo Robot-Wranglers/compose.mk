@@ -16,9 +16,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Initialize
+        run: make clean init
       - name: Run smoke-tests
         run: make smoke-test

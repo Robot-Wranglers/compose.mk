@@ -3,7 +3,7 @@
 mk.parse / mk.namespace.filter / *.help all route through `mkparse`, which runs
 in a container and parses the *current* makefile from the mounted cwd. They
 work only from a project dir whose Makefile includes compose.mk (so the file is
-in the mount and ${MAKEFILE} is relative) — i.e. the `project` scaffold. Hence
+in the mount and ${MAKEFILE} is relative) - i.e. the `project` scaffold. Hence
 integration + needs_docker, not unit (the unit attempts failed because an
 absolute makefile path isn't inside the mkparse container mount).
 """
@@ -37,7 +37,7 @@ def test_mk_namespace_filter(project):
   ],
 )
 def test_namespace_help(project, target, needle):
-  # *.help == mk.namespace.filter/<ns>. — lists the compose.mk targets the
+  # *.help == mk.namespace.filter/<ns>. - lists the compose.mk targets the
   # scaffolded project inherits via `include compose.mk`.
   project.makefile(DEMO)
   r = project.run(target)
@@ -71,7 +71,7 @@ def test_flux_star_runs_matching_targets(project):
 
 @pytest.mark.parametrize("target", ["mk.targets", "mk.targets.simple"])
 def test_mk_targets_lists_standalone(project, target):
-  # mk.targets uses `mkparse --shallow`, which EXCLUDES included targets — so
+  # mk.targets uses `mkparse --shallow`, which EXCLUDES included targets - so
   # point it at a standalone makefile (a driver Makefile provides the target).
   project.makefile("")
   project.write("plain.mk", "build:; @true\ntest:; @true\nclean:; @true\n")

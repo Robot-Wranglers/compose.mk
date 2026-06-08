@@ -42,6 +42,11 @@ integration-test:
 	@# Integration suite — scaffolds a mini-project (needs a daemon).
 	tox -e integration
 
+tui tui-test:
+	@# Headless embedded-TUI suite (heavy; builds compose.mk:tux; needs a daemon).
+	@# Opt-in/on-demand; CMK_TEST_TUI=1 is set by the tox env.
+	tox -e tui
+
 coverage:
 	@# Target-level coverage report (report-only; unit+docker+integration+compiler,
 	@# no smoke -- it adds no targets the other suites don't already cover).

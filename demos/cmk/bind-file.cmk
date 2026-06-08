@@ -11,4 +11,5 @@ kwargs=\
 	img=python:3.11-slim-bookworm \
 	entrypoint=python
 
-__main__: ᝏpolyglot.bind.file(${kwargs})
+ᝏpolyglot.bind.file(${kwargs})
+__main__:

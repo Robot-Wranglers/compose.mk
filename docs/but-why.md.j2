@@ -135,6 +135,8 @@ For that matter, we have to use things like `cut`, `sed` and `awk` too, plus you
 
 In the end, **the main differentiator for `compose.mk` is that it's designed first and foremost *to be extended***.  It moonlights as a tool, but in many ways is much closer to an [extensible scripting language]({{mkdocs.site_relative_url}}/compiler).
 
+What about *speed*?  A "make + bash polyglot" sounds like it ought to be slow, but it isn't really: a full invocation costs about what an interpreted language pays just to import one popular library, and the process-native model scales across cores without a GIL.  See the [Performance]({{mkdocs.site_relative_url}}/performance) page for the startup / compilation / parallelism compare-and-contrast (mostly against Python).
+
 ## The Top of the Stack
 <hr style="width:100%;border-bottom:3px solid black;">
 

@@ -1,0 +1,172 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+## Macros &amp; Functions
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Targets have a complete, auto-generated [API reference]({{mkdocs.site_relative_url}}/api).  But `compose.mk` also ships a large collection of GNU-make **macros / functions** that are **not** part of the reflected API reference.  This page collects that side of the library.
+
+!!! tip "Targets vs. Macros, in one line"
+    A **target** is a rule you *run* (`./compose.mk io.bash`, or `${make} io.bash`
+    recursively).  A **macro** is text you *expand* in place: `${name}` (nullary)
+    or `$(call name, arg1, arg2)` (parametric).  Many things exist as **both**.
+
+### Why macros exist
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+As covered in [Style & Idioms]({{mkdocs.site_relative_url}}/style), the project *prefers* targets (they compose and reflect better), but reaches for a macro in three situations:
+
+* **Readability:** `${stream.stdin}` reads better than `cat /dev/stdin`, and `$(call log.target)` better than the equivalent `printf`/`cut` incantation.
+* **Performance:** a macro expands in the current shell, avoiding the cost of a recursive `${make}` for hot, inner-loop helpers.
+* **Scaffolding:** some macros emit *whole or partial makefiles* at parse-time (most the "import" macros).
+
+### Calling conventions
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+```Makefile {.language-makefile}
+# Nullary expansion (no arguments). Just reference it:
+demo:; cat input.json | ${stream.peek} | ${jq} .
+
+# Parametric ones use $(call ..)
+demo:; $(call log.target, starting up)
+
+# Many targets ALSO publish a macro of the same name, 
+# which saves a process and prevents recursive re-parse.
+
+# Macro form
+demo:; printf 'a\nb\n' | ${stream.nl.to.space}        
+
+# Target form (equivalent)
+demo:; printf 'a\nb\n' | ${make} stream.nl.to.space   
+```
+
+In [CMK-lang]({{mkdocs.site_relative_url}}/compiler) the call syntax is sugared:
+`cmk.fn(args)` compiles to `$(call fn, args)`, and `this.foo` compiles to
+`${make} foo` (see the [Quick Reference]({{mkdocs.site_relative_url}}/cmk-quick-ref)).
+
+### Discovering &amp; reflecting on macros
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Two reflection helpers (each is *itself* available as both a target and a macro --
+see [Reflection]({{mkdocs.site_relative_url}}/reflection)) let you inspect any
+macro or define at runtime:
+
+```bash {.cli_example}
+# Show the raw, unexpanded value of a macro/variable:
+$ ./compose.mk mk.get/stream.nl.to.space
+xargs
+
+# Dump a `define ... endef` block verbatim
+$ ./compose.mk mk.def.read/mk.unpack.kwargs
+```
+
+{{site.api_link('mk.get', mkdocs)}} expands a name; {{site.api_link('mk.def.read', mkdocs)}} reads a define block.  Both are the reflection primitives that the importer macros (`mk.import.def` / `mk.import.target`) build on.
+
+### Families
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+A map of the macro/function families.  Most members mirror a same-named target. The **More** column links to the page where that area is covered in depth.
+
+<table> 
+  <thead>
+    <tr><th>Representative macros</th><th>More</th></tr>
+  </thead>
+  <tbody>
+    <tr><td colspan="2"><strong><code>log.*</code>:</strong> Structured logging to stderr (glyph-prefixed, color-aware).</td></tr>
+    <tr>
+      <td><code>log.target</code>, <code>log</code>, <code>log.json</code>, <code>log.trace</code>, <code>log.io</code>/<code>log.mk</code>/<code>log.docker</code></td>
+      <td><a href="{{mkdocs.site_relative_url}}/logging">Logging</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>stream.*</code>:</strong> Composable stdin/stdout text transforms.</td></tr>
+    <tr>
+      <td><code>stream.stdin</code>, <code>stream.peek</code>, <code>stream.nl.to.space</code>, <code>stream.comma.to.nl</code>, <code>stream.indent</code>, <code>stream.dim</code></td>
+      <td><a href="{{mkdocs.site_relative_url}}/standard-lib">Standard Library</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>io.*</code>:</strong> Files, tempfiles, HTTP, and user-input helpers.</td></tr>
+    <tr>
+      <td><code>io.mktemp</code>, <code>io.mktempd</code>, <code>io.curl</code>, <code>io.gum.run</code>, <code>io.get.choice</code></td>
+      <td><a href="{{mkdocs.site_relative_url}}/io.mktemp">io.mktemp</a>, <a href="{{mkdocs.site_relative_url}}/user-input">User Input</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>bind.*</code>:</strong> Decorators that bind args/containers to a target.</td></tr>
+    <tr>
+      <td><code>bind.args.from_json</code>, <code>bind.args.from_env</code>, <code>bind.posargs</code>, <code>bind.log.target</code></td>
+      <td><a href="{{mkdocs.site_relative_url}}/argument-parsing">Argument Parsing</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>mk.*</code>:</strong> Meta-tooling: reflection, kwargs, importing, assertions.</td></tr>
+    <tr>
+      <td><code>mk.get</code>, <code>mk.def.read</code>, <code>mk.unpack.kwargs</code>, <code>mk.import.def</code>, <code>mk.import.target</code>, <code>mk.assert.env</code></td>
+      <td><a href="{{mkdocs.site_relative_url}}/reflection">Reflection</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>flux.*</code>:</strong> Workflow / functional operators (pipelines, map/fold, retries).</td></tr>
+    <tr>
+      <td><code>flux.pipeline</code>, <code>flux.map</code>, <code>flux.apply</code>, <code>flux.each</code></td>
+      <td><a href="{{mkdocs.site_relative_url}}/functional">Functional</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>docker.*</code>:</strong> Container plumbing (run bases, mounts, image/tag queries).</td></tr>
+    <tr>
+      <td><code>docker.run.base</code>, <code>docker.compose</code>, <code>docker.images.filter</code>, <code>docker.curry.command</code></td>
+      <td><a href="{{mkdocs.site_relative_url}}/raw-docker">Raw Docker</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>compose.*</code>:</strong> Parse-time scaffolding from docker-compose files.</td></tr>
+    <tr>
+      <td><code>compose.import</code>, <code>compose.import.string</code>, <code>compose.bind.target</code>, <code>compose.bind.script</code></td>
+      <td><a href="{{mkdocs.site_relative_url}}/bridge">Compose Bridge</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><code>polyglot.*</code>:</strong> Parse-time scaffolding for embedded foreign code.</td></tr>
+    <tr>
+      <td><code>polyglot.import</code>, <code>polyglot.import.file</code>, <code>polyglot.bind.file</code></td>
+      <td><a href="{{mkdocs.site_relative_url}}/demos/polyglots">Polyglots</a></td>
+    </tr>
+    <tr><td colspan="2"><strong><i>colors / glyphs</i>:</strong> ANSI color &amp; brand-glyph constants for log/output formatting.</td></tr>
+    <tr>
+      <td><code>${red}</code>, <code>${dim}</code>, <code>${green}</code>, <code>${no_ansi}</code>, <code>${sep}</code>, <code>${GLYPH_MK}</code></td>
+      <td><a href="{{mkdocs.site_relative_url}}/style">Style &amp; Idioms</a></td>
+    </tr>
+  </tbody>
+</table>
+
+### Worked examples
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+**Stream composition:** macros chain like any shell command:
+
+```Makefile {.language-makefile}
+pretty: ; cat data.json | ${jq} . | ${stream.dim} | ${stream.indent}
+```
+
+**Logging with an argument:** `$(call ..)` passes positional args:
+
+```Makefile {.language-makefile}
+build:
+	$(call log.target, building ${app_name})
+	@# ... real work ...
+```
+
+**Keyword arguments:** `mk.unpack.kwargs` powers the `key=value` idiom used by `mk.import.def`, `compose.bind.*`, and friends (full treatment in
+[Argument Parsing]({{mkdocs.site_relative_url}}/argument-parsing)):
+
+```Makefile {.language-makefile}
+greet:
+	$(call mk.unpack.kwargs, ${MAKEFLAGS}, name, world)
+	@printf 'hello, %s\n' "${kwargs_name}"
+```
+
+**Tempfiles with auto-cleanup:** `io.mktemp` exports `tmpf` and traps its
+removal on exit ([details]({{mkdocs.site_relative_url}}/io.mktemp)):
+
+```Makefile {.language-makefile}
+work: ; ${io.mktemp} && echo hi > ${tmpf} && cat ${tmpf}
+```
+
+### See also
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+The macro/function story is spread across several pages; this one is the index.
+
+* [Argument Parsing:]({{mkdocs.site_relative_url}}/argument-parsing) `bind.args.*`, `mk.unpack.kwargs`, positional helpers.
+* [Logging:]({{mkdocs.site_relative_url}}/logging) the `log.*` family.
+* [io.mktemp:]({{mkdocs.site_relative_url}}/io.mktemp) tempfile/tempdir macros.
+* [Reflection:]({{mkdocs.site_relative_url}}/reflection) `mk.get`, `mk.def.read`, inspecting symbols.
+* [Functional:]({{mkdocs.site_relative_url}}/functional) `flux.*` operators.
+* [Style &amp; Idioms:]({{mkdocs.site_relative_url}}/style) how to *write* macros (public/private, currying, when to prefer a target).
+* [Compiler &amp; Dialects:]({{mkdocs.site_relative_url}}/compiler) the `cmk.fn(args)` shorthand for calling macros from CMK-lang.
+* [Full API:]({{mkdocs.site_relative_url}}/api) the reflected reference for *targets* (the other half of the library).

@@ -12,7 +12,8 @@
 compose.import(file=demos/data/docker-compose.yml)
 
 # Decorator Idiom: Target-in-container
-target_dispatch: ᝏcompose.bind.target(debian)
+ᝏcompose.bind.target(debian)
+target_dispatch:
 self.target_dispatch:
 	echo hello container `hostname`
 

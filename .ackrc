@@ -7,6 +7,9 @@
 --ignore-dir=__pycache__
 --ignore-file=match:/[.]ipynb$/
 --ignore-file=match:/^[.]?coverage.*[.](json|md)$/
+# Rendered markdown is generated from `.md.j2` sources -- search only the source.
+# (`.md.j2` ends in `.j2`, so this `[.]md$` rule skips the rendered `.md` only.)
+--ignore-file=match:/[.]md$/
 --ignore-file=match:/^[.]tmp[.]/
 --ignore-file=is:typescript
 --ignore-file=ext:pyc

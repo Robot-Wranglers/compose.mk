@@ -1,0 +1,47 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+## Implementing an Esolang
+<hr style="width:100%;border-bottom:3px solid black;">
+
+!!! tip "Tip"
+    This demo builds on a few others: an awk [polyglot]({{mkdocs.site_relative_url}}/demos/polyglots) for the lexer, the [`io.stack.*` structured stack]({{mkdocs.site_relative_url}}/standard-lib) for state, and the idea that [everything is a target]({{mkdocs.site_relative_url}}/language/#homoiconic) -- so a decoded program is just a stream of `make` goals.
+
+[Underload](https://esolangs.org/wiki/Underload)[^1] is a small, stack-based, concatenative esoteric language: a program is a string of single-character commands operating on a stack of strings.  `(`...`)` pushes a literal, `~` swaps the top two, `:` duplicates, `!` discards, `*` concatenates, `a` wraps the top in parentheses, `S` prints it, and `^` pops the top and *runs it as Underload*.  That last one is what makes it Turing-complete -- and makes quines delightfully easy.
+
+This demo implements a complete Underload interpreter with `compose.mk`, and the pieces map cleanly onto the standard library.  The **lexer** is an awk define that rewrites program text into one dispatchable goal per line; the **stack** is `io.stack.*`; each **operator** (`~`, `:`, `*`, ...) is its own `make` target; and the decoded program is run by `mk.kernel.each`, which dispatches each line as an instruction (order and repetition preserved).  The bundled programs include a quine, a palindromic quine, and an (abstracted) factorial.
+
+```bash {.cli_example}
+# Run the bundled demo programs:
+$ ./demos/underload.mk
+
+# Evaluate a program from stdin:
+$ printf '(Hello, world!)S' | ./demos/underload.mk ul.eval
+
+# A quine -- prints its own source:
+$ printf '(a(:^)*S):^' | ./demos/underload.mk ul.eval
+```
+
+### Underload Demo
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The first flavor uses `compose.mk` as a **library** (pure Makefile).
+
+{{site.embed_demo('demos/underload.mk',
+    bottom_right=site.link_mirror(
+        "demos/cmk/underload.cmk", link="#underload-demo-cmk"),
+    github=github)}}
+
+### Underload Demo (CMK)
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The second flavor uses `compose.mk` as an **interpreter**, written in [CMK-lang]({{mkdocs.site_relative_url}}/compiler).  Besides the cleaner syntax, it shows off single-sourcing: rather than copy the shared pieces, it pulls the lexer in with [`mk.import.def`]({{mkdocs.site_relative_url}}/macros), the operator/stack targets with [`mk.import.target`]({{mkdocs.site_relative_url}}/macros), and the sample-program literals with `mk.import.def` -- all imported from the Makefile twin above, so the two stay in lock-step.
+
+{{site.embed_demo('demos/cmk/underload.cmk',
+    bottom_right=site.link_mirror(
+        "demos/underload.mk", link="#underload-demo"),
+    github=github)}}
+
+### References
+<hr style="width:100%;border-bottom:3px solid black;">
+
+[^1]: [Underload on the esolangs wiki](https://esolangs.org/wiki/Underload)

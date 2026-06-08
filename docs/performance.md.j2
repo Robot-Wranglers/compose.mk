@@ -1,0 +1,61 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+## Performance
+<hr style="width:100%;border-bottom:3px solid black;">
+
+`compose.mk` is simultaneously a Makefile, a Makefile library, and a bash script, so a fair question is.. *isn't a make + bash polyglot slow?*  The short answer is **no, not really**: a complete invocation costs about what a popular interpreted language pays just to load a single library.  This page compares `compose.mk`'s startup, compilation, and parallelism characteristics against Python, a useful reference point since it's widely used for exactly the kind of glue/automation/infra work `compose.mk` targets.  (For *why* it's built as a polyglot in the first place, see the [Design Philosophy]({{mkdocs.site_relative_url}}/but-why) page.)
+
+!!! note "About the numbers"
+    Everything below is **cold-start** wall-time (a fresh process per sample, `min`/`median` of N), measured on one ordinary 8-core Linux box.  Absolute figures are machine and load-dependent so the ratios are what matters.
+
+### Cold-start: about the cost of one `import`
+<hr style="width:100%;border-bottom:3px solid black;">
+
+A full `compose.mk` invocation costs roughly the same as `python -c "import docker"`.  That single invocation parses the entire [standard library]({{mkdocs.site_relative_url}}/standard-lib), installs a process-tree [signal supervisor]({{mkdocs.site_relative_url}}/signals), wires up [pre/post hooks]({{mkdocs.site_relative_url}}/signals/#pre-post-hooks), and runs a target, still landing dead-even with Python importing one popular SDK.
+
+<table class=docutils-wrap align=center width=95%>
+<tr>
+<th><small>Invocation</small></th>
+<th><small>Cold-start</small></th>
+</tr>
+<tr><td><code>bash -c :</code></td><td>~1ms</td></tr>
+<tr><td><code>python -c pass</code></td><td>~12ms</td></tr>
+<tr><td><code>python -c "import requests"</code></td><td>~155ms</td></tr>
+<tr><td><code>python -c "import docker"</code></td><td>~165ms</td></tr>
+<tr><td><b><code>./compose.mk flux.ok</code></b> <em>(full supervisor + hooks + run)</em></td><td><b>~1+65ms</b></td></tr>
+<tr><td><code>./compose.mk mk.compile</code> <em>(transpile a CMK file)</em></td><td>~500ms</td></tr>
+<tr><td><code>./compose.mk mk.interpret!</code> <em>(compile <b>and</b> run)</em></td><td>~750ms</td><tr>
+</table>
+
+A bare interpreter (`bash`, `python -c pass`) is of course far cheaper, but that's not a realistic baseline for work: any Python automation script immediately pays ~150ms+ to import its first non-trivial dependency (`requests`, `docker`, `boto3`, ..).  Measured against the cost of actually being useful `compose.mk` is competitive.
+
+### Compilation & caching
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The [CMK compiler]({{mkdocs.site_relative_url}}/compiler) (`mk.compile` / `mk.interpret!`) is heavier than a bare invocation because transpilation fans out into several sub-passes.  Here the contrast with Python is **architectural, and not in `compose.mk`'s favor**:
+
+* **Python caches bytecode.**  The first run of a module compiles it to a `.pyc`; subsequent runs skip compilation entirely.
+* **`compose.mk` re-parses every time.**  There is no on-disk compilation cache and each run re-parses the standard library and (for `mk.interpret!`) re-runs the transpile pipeline.
+
+This is a deliberate trade for `compose.mk`'s defining feature: it is **a single, dependency-free, drop-in file**.  A persistent bytecode/`.pyc`-style cache is awkward to reconcile with "copy one file into any repo and it just works," so the cost is paid up front on each run instead of amortized across runs.  For the short-lived CLI/automation invocations `compose.mk` is built for, this is usually the right trade but it's worth understanding if you're calling the compiler in a tight loop.
+
+### Parallelism & Multicore
+<hr style="width:100%;border-bottom:3px solid black;">
+
+This is where the polyglot model *wins*, and it's sort of the mirror-image of Python's trade-off.
+
+Python is cheap to start a thread, but the GIL prevents threads from running Python bytecode on multiple cores simultaneously; real CPU parallelism requires the `multiprocessing` module, which spawns separate interpreters and moves data between them by pickling, i.e. it pays roughly the per-process cost `compose.mk` already pays.
+
+`compose.mk` has no such barrier, because **every unit of work is already a process**: a recursive `make`, a shell pipeline, or a [dispatched container]({{mkdocs.site_relative_url}}/container-dispatch).  There is no GIL to contend with, so work spreads across all cores *by default*, with `make --jobs` or the native {{site.api_link('flux.parallel', mkdocs)}} primitive, and no special library or serialization.
+
+```bash {.cli_example}
+# 8 independent CPU-bound tasks, serial vs. across 8 cores:
+# serial:  ~7.2s
+make all          
+# parallel: ~2.0s  (~3.6x here; approaches Nx-cores when idle)
+make -j8 all      
+```
+
+The per-process spawn overhead that makes a single invocation cost "one import" is the *price* of this model; trivial, library-free multicore scaling is what you get in return.  Put differently: `compose.mk` trades a higher fixed cost per call for **(1)** zero-dependency portability and **(2)** parallelism as the default substrate rather than an opt-in afterthought.
+
+See also: the performance-tests section of the [test-suite docs]({{mkdocs.site_relative_url}}/testing)

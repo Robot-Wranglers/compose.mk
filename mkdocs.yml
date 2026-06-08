@@ -50,9 +50,10 @@ nav:
     - 'Import Services from Compose': bridge.md 
     - 'Dispatch Tasks in Containers': container-dispatch.md
     - 'Raw Docker Support': 'raw-docker.md'
-  - Standard Library: 
+  - Standard Library:
     - 'Library Overview': standard-lib.md
     - 'Style & Idioms': style.md
+    - 'Macros & Functions': macros.md
     - 'Full API': api.md
   - Stand Alone Mode:
     - 'Tool Overview': tool-overview.md
@@ -74,6 +75,7 @@ nav:
     - 'Notebooks, Project-as-Tool': demos/notebooking.md
     - 'Obligatory AI Things': demos/ai.md
     - 'Theorem Proving': demos/lean.md
+    - 'Underload Esolang': demos/underload.md
   - Misc Features:
       - 'CLI Help': cli-help.md
       - 'Stacks & Stages': stages.md
@@ -82,12 +84,14 @@ nav:
   - CMK Language:
       - 'Language Overview': language.md
       - 'Compiler & Dialects': compiler.md
+      - 'Quick Reference': cmk-quick-ref.md
       - 'Matrioshka Automata': matrioshka.md
     # - 'Theorem Proving': demos/lean.md
     # - 'Justfile Interoperability': demos/just.md
     # - 'Makeception': demos/makeception.md
   - Misc:
-    - 'Design Philosophy': but-why.md 
+    - 'Design Philosophy': but-why.md
+    - 'Performance': performance.md
     # - 'Configuration / Env Vars': config.md
     # - limitations.md
     # - contributing.md

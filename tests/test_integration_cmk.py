@@ -85,6 +85,16 @@ def test_demo_script_dispatch_host(run_demo):
   assert "Iteration 2" in r.stdout
 
 
+def test_demo_underload(run_demo):
+  # mk.import.def: the CMK port imports its lexer (`ul.lexer`) from the
+  # demos/underload.mk twin, then runs the esolang host-side (jq/awk/io.stack).
+  r = run_demo("demos/cmk/underload.cmk")
+  assert r.ok, r.stderr
+  assert "Hello, world!" in r.stdout  # push + print
+  assert "BA" in r.stdout  # swap + cat
+  assert "(a(:^)*S):^" in r.stdout  # quine: byte-exact self-output
+
+
 # --- sugar-block family: functional runs (alpine / sh interpreter) -----------
 # The CMK sugar blocks transpile to import macros that normally need heavy
 # interpreters (elixir/lean/python) to *run*. Here we exercise them end-to-end

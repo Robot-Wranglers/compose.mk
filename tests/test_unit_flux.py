@@ -11,13 +11,16 @@ make's exit code 2 (not 1), so failure is asserted with ``not r.ok``.
 """
 
 import json
+from pathlib import Path
 
 import pytest
 
 pytestmark = pytest.mark.unit
 
+COMPOSE_MK = Path(__file__).resolve().parent.parent / "compose.mk"
 
-# (target, stdin, expected_stdout) — identity/map helpers with clean stdout.
+
+# (target, stdin, expected_stdout) - identity/map helpers with clean stdout.
 STDOUT_CASES = [
   ("flux.echo/hello", "", "hello\n"),
   ("flux.echo/a,b,c", "", "a,b,c\n"),  # echoes the whole arg verbatim
@@ -111,7 +114,7 @@ def test_flux_fails(cmk, target):
 
 
 def test_flux_timeout_sh_runs_command(cmk):
-  # The shell-command variant (env cmd=, timeout=) — exercises the fix that
+  # The shell-command variant (env cmd=, timeout=) - exercises the fix that
   # made it run `bash -c "$cmd"` and honor the env timeout.
   r = cmk("flux.timeout.sh", env={"cmd": "echo TOUT", "timeout": "3"})
   assert r.ok, r.stderr
@@ -205,3 +208,65 @@ def test_if_then_else_does_not_leak_condition_output(cmk):
   r = cmk("flux.if.then.else/flux.ok,flux.echo/T,flux.echo/E")
   assert r.ok, r.stderr
   assert r.stdout == "T\n"
+
+
+# --- flux.fold / flux.reduce (left-fold + reduce over stdin lines) ----------
+# The accumulator threads through the reducer target's STDIN; the current line
+# is passed as the `val` env-var; the reducer prints the new accumulator. So a
+# stdlib stream reducer (stream.json.array.append reads stdin + `val`) drops in
+# directly, while scalar reducers read the accumulator via `${stream.stdin}`.
+
+
+def _reducers(tmp_path):
+  """Wrapper makefile defining scalar fold/reduce reducers."""
+  mk = tmp_path / "reducers.mk"
+  mk.write_text(
+    f"include {COMPOSE_MK}\n"
+    "add:; @echo $$(( `${stream.stdin}` + $${val} ))\n"
+    'max:; @a=`${stream.stdin}`; [ "$${a}" -gt "$${val}" ]'
+    ' && echo "$${a}" || echo "$${val}"\n'
+  )
+  return mk
+
+
+def test_flux_fold_into_json_array(cmk):
+  # A stdlib stream reducer drops in as the fold reducer with no adapter.
+  r = cmk("flux.fold/stream.json.array.append,[]", stdin="a\nb\nc\n")
+  assert r.ok, r.stderr
+  assert json.loads(r.stdout) == ["a", "b", "c"]
+
+
+def test_flux_fold_scalar_with_init(cmk, tmp_path):
+  r = cmk(
+    "flux.fold/add,0", stdin="1\n2\n3\n4\n", makefile=_reducers(tmp_path)
+  )
+  assert r.ok, r.stderr
+  assert r.stdout.strip() == "10"
+
+
+def test_flux_fold_empty_returns_init(cmk):
+  # No input -> the accumulator is just the (init) seed.
+  r = cmk("flux.fold/stream.json.array.append,[]", stdin="")
+  assert r.ok, r.stderr
+  assert json.loads(r.stdout) == []
+
+
+def test_flux_reduce_seeded_by_head(cmk, tmp_path):
+  # reduce = fold seeded by the first line (no init): max of the list.
+  r = cmk(
+    "flux.reduce/max", stdin="3\n1\n4\n1\n5\n", makefile=_reducers(tmp_path)
+  )
+  assert r.ok, r.stderr
+  assert r.stdout.strip() == "5"
+
+
+def test_flux_reduce_single_line_is_identity(cmk, tmp_path):
+  # A single element folds to itself (the reducer never runs).
+  r = cmk("flux.reduce/max", stdin="42\n", makefile=_reducers(tmp_path))
+  assert r.ok, r.stderr
+  assert r.stdout.strip() == "42"
+
+
+def test_flux_reduce_empty_input_fails(cmk, tmp_path):
+  r = cmk("flux.reduce/max", stdin="", makefile=_reducers(tmp_path))
+  assert not r.ok

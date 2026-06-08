@@ -7,9 +7,9 @@ export color=green
 emit: 
 	🡄 shape=square
 
-consume: \
-  ᝏargs.from_json(shape=default1) \
-  ᝏargs.from_env(color=default2 name=Bob)
+ᝏargs.from_json(shape=default1)
+ᝏargs.from_env(color=default2 name=Bob)
+consume:
 	@# Comments in the middle are ok.
 	printf "shape=$${shape} color=$${color} name=$${name}\n"
 

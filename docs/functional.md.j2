@@ -47,6 +47,29 @@ $ ./compose.mk flux.pipeline/flux.echo/hello,stream.echo
 hello
 ```
 
+#### Fold & Reduce
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+A **left-fold** over a stream is available with {{site.api_link('flux.fold', mkdocs, arg='reducer,init')}}.  It reads one line per item from stdin, threading an *accumulator* through the `<reducer>` target: the accumulator is passed on the reducer's **stdin**, the current line is passed as the `val` env-var, and the reducer prints the new accumulator.  The accumulator starts as `<init>` (or the `acc` env-var), defaulting to empty.
+
+This is the exact shape that the [`stream.*` reducers]({{mkdocs.site_relative_url}}/standard-lib) already have, so they drop in as reducers with no glue.  For example, {{site.api_link('stream.json.array.append', mkdocs)}} (which reads an array on stdin plus a `val`) folds a stream straight into a JSON array:
+
+```bash {.cli_example .language-bash}
+# fold a stream into a JSON array, reusing a stdlib reducer as-is
+$ printf 'a\nb\nc\n' | ./compose.mk flux.fold/stream.json.array.append,[]
+```
+```json {.cli_output}
+[
+  "a",
+  "b",
+  "c"
+]
+```
+
+A *scalar* reducer just reads the accumulator from stdin instead (via `${stream.stdin}`), with the current element in `val`; for instance an integer-summing reducer used as `flux.fold/add,0` over a column of numbers.
+
+The {{site.api_link('flux.reduce', mkdocs, arg='reducer')}} variant is the same thing seeded by the **first** line instead of an explicit init (and it errors on empty input), so `reduce` is just `fold` with the head as the starting accumulator.
+
 #### Partial Functions
 <hr style="width:95%;border-bottom:1px dashed black;">
 

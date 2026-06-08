@@ -1,0 +1,89 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+# An implementation of Underload: a stack-based concatenative esolang
+# See also: https://esolangs.org/wiki/Underload
+# CMK-lang port of demos/underload.mk; imports its lexer via mk.import.def.
+#
+# USAGE: ( run from the repo root )
+#   ./demos/cmk/underload.cmk                                  # run the demo
+#   printf '(Hello, world!)S' | ./demos/cmk/underload.cmk ul.eval
+#   printf '(a(:^)*S):^'      | ./demos/cmk/underload.cmk ul.eval   # quine
+
+# A lexer for underload lang, in awk.  
+# Rewrites source text into the command vocabulary.
+# Imported verbatim from the makefile twin for DRYness
+mk.import.def(file=demos/underload.mk def=ul.lexer)
+
+# Underload push/pop helpers.
+# Just a thin layer on top of native compose.mk support.
+# See also: the docs for `io.stack.*`
+ul.pop  = ${io.stack.pop.word}
+ul.push = ${jq} -n 'env.q' | ${io.stack.push}
+
+# the `ul.push/...` targets are single-sourced from the makefile twin
+# mk.import.targets(file=demos/underload.mk targets='ul.push/*')
+mk.import.targets(file=demos/underload.mk targets='ul.* underload')
+mk.import.def(file=demos/underload.mk defs='underload_*')
+
+ul.swap:
+	@# Swap operator:  "~"
+	@#   (x)(y) -> (y)(x)
+	y ⇐ ${ul.pop}
+	x ⇐ ${ul.pop}
+	q="$${y}" ${ul.push}
+	q="$${x}" ${ul.push}
+
+ul.dup:
+	@# Duplicate operator: ":"
+	@#   (x) -> (x)(x)
+	x ⇐ ${ul.pop}
+	q="$${x}" ${ul.push}
+	q="$${x}" ${ul.push}
+
+ul.cat:
+	@# Concat operator: "*"
+	@#   (x)(y) -> (xy)
+	y ⇐ ${ul.pop}
+	x ⇐ ${ul.pop}
+	q="$${x}$${y}" ${ul.push}
+
+ul.enclose:
+	@# Enclose operator: "a"
+	@#   (x) -> ((x))
+	q="(`${ul.pop}`)" ${ul.push}
+
+ul.print:
+	@# Pop/print operator.  "S"
+	@#  (x) -> ; pop x and output it
+	printf '%s' "`${ul.pop}`"
+ul.eval: flux.pipeline/ul.lex,mk.kernel.each
+	@# Parse / run Underload program text.
+	@# The decoded program is a stream of goals in the form of
+	@# operators + `ul.push/<literal>`.  We pipe this to
+	@# `mk.kernel.each` is the engine to dispatches each
+
+ᝏlog.target
+hello.world: io.stack.reset
+	'''(Hello, world!)S''' | this.underload
+
+ᝏlog.target(input=AB)
+swapper: io.stack.reset
+	'''(A)(B)~*S''' | this.underload
+
+quine: io.stack.reset
+	printf '${underload_quine}' | this.underload
+
+ᝏlog.target
+quine.palindromic:
+	printf '${underload_quine_palindromic}' | this.underload
+
+# Generic access to the factorial function.  Underload's factorial only accepts
+# and returns *unary* arguments, so we encode the input (`yes`/`head`) and decode
+# the output (`wc`) around the raw function.
+ᝏlog.target(calculating ${*}! ..)
+factorial/%:
+	arg ⇐ yes ':' | head -n${*} | tr -d '\n'
+	prog="($${arg}):${underload_factorial_fxn}"
+	printf "$${prog}" | this.ul.eval | tail -1 | ${stream.peek} | wc -c
+factorial: factorial/4
+
+__main__: hello.world swapper quine quine.palindromic #factorial

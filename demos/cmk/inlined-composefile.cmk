@@ -28,7 +28,8 @@ services:
 ⋙
 
 # A private target, intended to run inside containers 
-self.internal_task:; cmk.log(Running inside ${red}`hostname`)
+self.internal_task:
+	cmk.log(Running inside ${red}`hostname`)
 
 # Dispatch demo:
 # Runs the private target inside containers, 

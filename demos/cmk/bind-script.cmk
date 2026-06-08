@@ -14,7 +14,8 @@ echo hello container `hostname`
 ⨖ with alpine as compose_context
 
 # Script-in-container using Decorator-Idiom
-script2.sh: ᝏcompose.bind.script(svc=debian)
+ᝏcompose.bind.script(svc=debian)
+script2.sh:
 define script2.sh
 	echo hello container `hostname`
 endef

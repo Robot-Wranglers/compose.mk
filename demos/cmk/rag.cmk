@@ -27,33 +27,38 @@ corpus_count=$${glob} (${yellow}`ls $${glob} \
 	| ${stream.count.lines}`${no_ansi_dim} files total)
 
 # Tools demo.
-tools.js: ᝏcompose.bind.target(ollama_node, env=query)
+ᝏcompose.bind.target(ollama_node, env=query)
+tools.js:
 self.tools.js:
 	cp /workspace/${llm_tools} /app
 	cd /app && node llm_tools.mjs
 
 # Ensure given model is available to ollama, downloading if needed.
 # Implied by `ingest`, `ask`, and `chat`.
-init: ᝏcompose.bind.target(ollama_python)
+ᝏcompose.bind.target(ollama_python)
+init:
 self.init:
 	cmk.log.target(Initializing model: $${LLM_MODEL_NAME})
 	${llm_rag} init
 
 # Slurp any files matching the pattern.  
 # This is implied by `ask` or `chat`, and no-op if content already indexed.
-ingest: ᝏcompose.bind.target(ollama_python, env=glob)
+ᝏcompose.bind.target(ollama_python, env=glob)
+ingest:
 self.ingest:
 	cmk.log.target(Ingesting corpus: ${corpus_count})
 	${llm_rag} ingest "$${glob}"
 
 # Ask a question about files that match the given pattern.
-ask: ᝏcompose.bind.target(ollama_python, env='glob query')
+ᝏcompose.bind.target(ollama_python, env='glob query')
+ask:
 self.ask:
 	cmk.log.target(Answering query with corpus: ${corpus_count})
 	${llm_rag} query "$${glob}" "$${query:-describe it}"
  
 # Interactive chat about files that match the given pattern.
-chat: ᝏcompose.bind.target(ollama_python, env=glob)
+ᝏcompose.bind.target(ollama_python, env=glob)
+chat:
 self.chat:
 	cmk.log.target(Chatting with corpus: ${corpus_count})
 	${llm_rag} chat "$${glob}"
