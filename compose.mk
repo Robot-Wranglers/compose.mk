@@ -411,10 +411,25 @@ mkparse=$(trace_maybe) && ${docker.run.base} ${MKPARSE_IMG} $${subcommand:-targe
 # Macros for use with jq/yq/jb, using local tools if available and falling back to dockerized versions
 jq.docker=${docker.run.base} -e key=$${key:-} ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}
 yq.docker=${docker.run.base} -e key=$${key:-} mikefarah/yq:$${YQ_VERSION:-4.43.1}
-yq.run:=$(shell which yq 2>/dev/null || echo "${yq.docker}")
-jq.run:=$(shell which jq 2>/dev/null || echo "${jq.docker}")
-jq.run.pipe:=$(shell which jq 2>/dev/null || echo "${docker.run.base} -i -e key=$${key:-} ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}")
-yq.run.pipe:=$(shell which yq 2>/dev/null || echo "${docker.run.base} -i -e key=$${key:-} mikefarah/yq:$${YQ_VERSION:-4.43.1}")
+# Memoized-lazy (was `:=`, which ran `which jq` + `which yq` on EVERY parse -- 4
+# probes per parse, paid by all ~20 compile re-parses that never use jq/yq). Each
+# resolves at most once per process, only when actually expanded. On any host with
+# jq/yq on PATH (all CI/test envs) the cached value is byte-identical to the old
+# `:=` result; the only difference is on docker-fallback hosts, where the fallback
+# string's `$${key:-}`/version interpolate at first-use rather than parse (key was
+# already baked empty at parse, and is never set before a jq/yq use in-tree).
+_yq.run.detect=$(shell which yq 2>/dev/null || echo "${yq.docker}")
+_jq.run.detect=$(shell which jq 2>/dev/null || echo "${jq.docker}")
+_jq.run.pipe.detect=$(shell which jq 2>/dev/null || echo "${docker.run.base} -i -e key=$${key:-} ghcr.io/jqlang/jq:$${JQ_VERSION:-1.7.1}")
+_yq.run.pipe.detect=$(shell which yq 2>/dev/null || echo "${docker.run.base} -i -e key=$${key:-} mikefarah/yq:$${YQ_VERSION:-4.43.1}")
+_yq.run.cached:=
+_jq.run.cached:=
+_jq.run.pipe.cached:=
+_yq.run.pipe.cached:=
+yq.run=$(or ${_yq.run.cached},$(eval _yq.run.cached:=${_yq.run.detect})${_yq.run.cached})
+jq.run=$(or ${_jq.run.cached},$(eval _jq.run.cached:=${_jq.run.detect})${_jq.run.cached})
+jq.run.pipe=$(or ${_jq.run.pipe.cached},$(eval _jq.run.pipe.cached:=${_jq.run.pipe.detect})${_jq.run.pipe.cached})
+yq.run.pipe=$(or ${_yq.run.pipe.cached},$(eval _yq.run.pipe.cached:=${_yq.run.pipe.detect})${_yq.run.pipe.cached})
 jb.docker:=docker container run $${docker_extra:-} --rm  ghcr.io/h4l/json.bash/jb:$${JB_CLI_VERSION:-0.2.2}
 jb.array=docker_extra="$${docker_extra:-} --entrypoint jb-array"; ${jb.docker} 
 jb=${jb.docker}
@@ -643,7 +658,16 @@ jq.column.zipper=${jq} -R 'split(" ")' \
 	| ${jq} -s 'reduce .[] as $$item ({}; . + $$item)' \
 	| ${jq} 'to_entries | sort_by(.value) | from_entries' 
 
-docker.compose:=$(shell docker compose >/dev/null 2>/dev/null && echo docker compose || echo echo DOCKER-COMPOSE-MISSING;) 
+# Memoized-lazy: the `docker compose` availability probe runs at most once per
+# process, and only when `${docker.compose}` is actually expanded (a docker /
+# compose / TUI target) -- never on the compile/interpret/flux hot path, which
+# re-parses this file ~20x and used to pay this probe on every parse. The cached
+# value is byte-identical to the old `:=` result (availability is process-stable).
+_docker.compose.detect=$(shell docker compose >/dev/null 2>/dev/null && echo docker compose || echo echo DOCKER-COMPOSE-MISSING)
+# Pre-declared empty so the first `$(or ...)` read is of a *defined* var (keeps
+# `--warn-undefined-variables` quiet); the eval below rewrites it on first use.
+_docker.compose.cached:=
+docker.compose=$(or ${_docker.compose.cached},$(eval _docker.compose.cached:=${_docker.compose.detect})${_docker.compose.cached})
 
 docker.containers.all:=docker ps --format json
 
@@ -4883,22 +4907,18 @@ compose.with_profile/%:
 #
 # WARNING: tempting to add --no-env-resolution --no-path-resolution --no-consistency
 # here, but note that these opts are not available for some versions of compose.
-ifeq ($(shell docker compose --help 2>/dev/null||true),)
-COMPOSE_MISSING:=1
-else
-COMPOSE_MISSING:=0
-endif
+# Lazy + derived from the memoized `docker.compose` probe (no separate per-parse
+# `docker compose --help` spawn). 1 iff compose is unavailable. Only expanded by
+# the compose.import code paths below (call time), not at parse.
+COMPOSE_MISSING=$(if $(filter docker,$(firstword ${docker.compose})),0,1)
 
-ifeq (${COMPOSE_MISSING},1)
+# Single define; the missing-compose guard is checked at call time (COMPOSE_MISSING
+# is lazy) so it no longer needs a parse-time `ifeq` (which probed docker).
 define compose.get_services
-endef
-else
-define compose.get_services
-	$(shell if [ "${CMK_INTERNAL}" = "0" ]; then \
+$(if $(filter 1,${COMPOSE_MISSING}),,$(shell if [ "${CMK_INTERNAL}" = "0" ]; then \
 		(${trace_maybe} && ([ "$(strip ${1})" = "" ] && echo -n "" || COMPOSE_PROFILES=${COMPOSE_PROFILES} ${docker.compose} -f ${1} config --services||echo -n ""))  ; \
-	else echo -n ""; fi)
+	else echo -n ""; fi))
 endef
-endif
 
 # Macro to create all the targets for a given compose-service.
 # See docs @ https://robot-wranglers.github.io/compose.mk/bridge
@@ -5287,11 +5307,11 @@ $(call mk.unpack.kwargs, ${1}, file)
 $(call compose.import.generic, ${kwargs_namespace}, FALSE, ${kwargs_file}))
 endef
 
-ifeq (${COMPOSE_MISSING},1)
-define compose.import.generic
-endef
-else
-define compose.import.generic
+# Lazy dispatcher: decide the missing-compose no-op at call time (COMPOSE_MISSING
+# is lazy) instead of via a parse-time `ifeq` that probed docker. The real body
+# (renamed `.real`) is unchanged.
+compose.import.generic=$(if $(filter 1,${COMPOSE_MISSING}),,$(call compose.import.generic.real,$(1),$(2),$(3)))
+define compose.import.generic.real
 $(eval target_namespace:=$(strip $(1)))
 $(eval compose_file:=$(strip $(3)))
 $(eval cached:=$(call io.string.hash,$(target_namespace)$(2)$(3)))
@@ -5504,7 +5524,6 @@ $(call log.import.part2,${GLYPH_CHECK} cached)
 $(call log.import,double-import${no_ansi_dim}.. skipping)
 endif
 endef
-endif
 
 polyglot.import.file=$(eval $(call _polyglot.import.file,${1}))
 define _polyglot.import.file

@@ -48,7 +48,9 @@ PERF_ENV = {
 }
 
 
-def _bench(label, argv, cwd, env=None, stdin=None, samples=SAMPLES, timeout=120):
+def _bench(
+  label, argv, cwd, env=None, stdin=None, samples=SAMPLES, timeout=120
+):
   """Run ``argv`` ``samples`` times from ``cwd``, timing each cold start."""
   merged = {**PERF_ENV, **(env or {})}
   times = []

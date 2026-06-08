@@ -475,6 +475,39 @@ def run_demo(request, docker_cmk, tmp_path_factory):
   return run
 
 
+@pytest.fixture
+def run_plain_demo(docker_cmk):
+  """Run a plain ``demos/*.mk`` Makefile directly -- NOT via ``mk.interpret!``
+  (that path is only for ``demos/cmk/*.cmk``). Executes ``make -f
+  demos/<name>.mk <target>`` from the repo root (so ``include compose.mk`` and
+  ``demos/data/*`` resolve), via docker_cmk so any container a demo dispatches is
+  label-scoped and swept. Default target is ``__main__`` (the demo entrypoint
+  convention). Runs under the deterministic BASE_ENV (CMK_SUPERVISOR=0 + hooks
+  off) -- the same plain ``make -f`` path the demos' shebang uses. Not
+  parametrized vendored/global: these demos use a literal ``include compose.mk``,
+  so only the vendored path applies.
+
+  The makefile is passed as a repo-relative path (cwd is the repo root) so demos
+  that reflect/dispatch -- which re-run ``make -f ${MAKEFILE}`` inside the
+  workspace mount -- see a path valid in-container (cf. the Project fixture).
+  """
+
+  def run(relpath, *targets, timeout=300, **env):
+    before = set(REPO.glob(".tmp.*"))
+    try:
+      return docker_cmk(
+        *(targets or ("__main__",)),
+        makefile=relpath,
+        cwd=REPO,
+        env=env or None,
+        timeout=timeout,
+      )
+    finally:
+      _sweep_repo_tmp(before)
+
+  return run
+
+
 # --- Gating + reporting hooks ----------------------------------------------
 
 
