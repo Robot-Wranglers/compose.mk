@@ -2567,12 +2567,9 @@ mk.supervisor.pid:
 				Darwin) \
 					ps auxo ppid|grep $${MAKE_SUPER}$$|awk '{print $$2}'; ;; \
 				*) \
-					for d in /proc/[0-9]*; do \
-						pid=$${d#/proc/}; \
-						[ "$${pid}" = "$$$$" ] && continue; \
-						awk -v me="$${MAKE_SUPER}" -v pid="$${pid}" \
-							'/^PPid:/{if($$2==me) print pid}' "$${d}/status" 2>/dev/null; \
-					done; ;; \
+					awk -v me="$${MAKE_SUPER}" \
+						'FNR==1{n=split(FILENAME,a,"/"); p=a[n-1]} /^PPid:/{if($$2==me) print p}' \
+						/proc/[0-9]*/status 2>/dev/null || true; ;; \
 			esac \
 	esac
 
