@@ -1989,9 +1989,10 @@ esac \
 && printf "#!/usr/bin/env -S __interpreting__=$${__interpreting__:-stdin} ${__interpreter__} mk.interpret\nMAKEFILE_LIST+=${CMK_SRC}\n" \
 && __interpreting__=$${__interpreting__:-stdin} \
 	${make} mk.src \
-&& cat $${inputf} | \
-	style=monokai lexer=makefile \
-	${make} $${runner}/mk.preprocess,io.awk/.awk.main.preprocess,io.awk/.awk.dispatch
+&& case $${CMK_COMPILER_STEPWISE:-0} in \
+	1) cat $${inputf} | style=monokai lexer=makefile ${make} $${runner}/mk.preprocess,io.awk/.awk.main.preprocess,io.awk/.awk.dispatch ;; \
+	*) cat $${inputf} | ${make} mk.preprocess | awk "$${_cmk_blk_mainpre}" | awk "$${_cmk_blk_dispatch}" ;; \
+	esac
 endef
 
 mk.compile! mk.compiler!:
@@ -2072,22 +2073,40 @@ endef
 mk.preprocess: flux.timer/.mk.preprocess
 .mk.preprocess:
 	@# Runs the CMK input preprocessor on stdin.
+	@# Default: a fused single-process pipeline (the four stages composed via
+	@# their macros -- no make-per-stage). CMK_COMPILER_STEPWISE=1 keeps the
+	@# step-wise flux.pipeline of the stage *targets* (per-stage previews) for
+	@# debugging. Both compose the same stage logic, so output is identical.
 	$(call io.mktemp) && export inputf=`echo $${tmpf}` \
 	&& ${stream.stdin} > $${inputf} \
 	&& export cmk_dialect=`cat $${inputf} | ${make} .mk.parse.dialect.hint` \
 	&& export cmk_sugar=`cat $${inputf} | ${make} .mk.parse.sugar.hint` \
-	&& case ${CMK_COMPILER_VERBOSE} in \
-		1) runner=flux.pipeline;; \
-		*) runner=flux.pipeline.quiet;; \
+	&& case $${CMK_COMPILER_STEPWISE:-0} in \
+		1) cat $${inputf} \
+			| ${make} flux.pipeline/mk.preprocess.minify,mk.preprocess.decorators,mk.preprocess.dialect,mk.preprocess.sugar ;; \
+		*) cat $${inputf} \
+			| ${.cmk.minify} | ${.cmk.decorators} \
+			| ${.cmk.dialect} | ${.cmk.sugar} ;; \
 	esac \
-	&& cat $${inputf} \
-	| ${make} $${runner}/mk.preprocess.minify,mk.preprocess.decorators,mk.preprocess.dialect,mk.preprocess.sugar \
 	| ${stream.nl.compress} \
 	&& printf '\n'
 
+# Stage transforms as composable macros (single source of truth): the stage
+# targets below wrap these for standalone/debug use, and the fused fast path in
+# `.mk.preprocess` chains them in one process (no make-per-stage). Each is a
+# stdin->stdout pipe fragment.
+.cmk.minify=grep -a -v '^\#' | sed '/^[ \t]*@\#.*$$/d' | awk "$${_cmk_blk_zip}"
+.cmk.decorators=awk "$${_cmk_blk_dec}"
+# Dialect/sugar as pipe-stage macros (verbatim transcription of the target bodies
+# below; only `${@}` -> literal name and `#` -> `\#` for the make-variable comment
+# trap). Wrapped in (...) so they compose in the fused pipeline; each reads stdin
+# at its eval and writes stdout. NB: literal `#` inside a make *variable* starts a
+# comment, hence the `\#`.
+.cmk.dialect=( $(call io.mktemp) && hint_file=$${tmpf} && case $${cmk_dialect} in "") ( dialect=$${dialect:-cmk.default.dialect} && $(call log.compiler, mk.preprocess.dialect ${sep}${dim} using ${ital}$${dialect}) && if [ "$${dialect}" = cmk.default.dialect ]; then printf '%s' "$${_cmk_blk_dialect}" > $${hint_file}; else ${mk.def.read}/$${dialect} > $${hint_file}; fi );; *) ( $(call log.compiler, mk.preprocess.dialect ${sep}${dim} using dialect from file) && printf "$${cmk_dialect}" > $${hint_file} && printf "\# cmk_dialect ::: $${cmk_dialect} :::\n" );; esac && $(call io.mktemp) && parser_file=$${tmpf} && cat $${hint_file} | ${jq} -r ".[] | \" | awk -v old='\(.[0])' -v new='\(.[1])' '${.awk.preprocess.dialect}'\"" > $${parser_file} && printf '\n' && ${stream.stdin} | eval ${stream.stdin} `cat $${parser_file}` && printf "\# finished mk.preprocess.dialect $${cmk_dialect}" )
+.cmk.sugar=( $(call io.mktemp) && hint_file=$${tmpf} && case $${cmk_sugar} in "") ( sugar=$${sugar:-cmk.default.sugar} && $(call log.compiler, mk.preprocess.sugar ${sep}${dim} using ${ital}$${sugar}) && if [ "$${sugar}" = cmk.default.sugar ]; then printf '%s' "$${_cmk_blk_sugar}" > $${hint_file}; else ${mk.def.read}/$${sugar} > $${hint_file}; fi );; *) ( $(call log.compiler, mk.preprocess.sugar ${sep}${dim} using sugar from file) && printf "$${cmk_sugar}" > $${hint_file} && printf "\# cmk_sugar ::: $${cmk_sugar} :::\n" );; esac && $(call io.mktemp) && parser_file=$${tmpf} && $(call io.mktemp) && sugar_awk=$${tmpf} && printf '%s' "$${_cmk_blk_sugarawk}" > $${sugar_awk} && cat $${hint_file} | ${jq} -r ".[] | \" | awk -f $${sugar_awk} '\(.[0])' '\(.[1])' '\(.[2])' \"" > $${parser_file} && eval cat /dev/stdin `cat $${parser_file}` && printf "\# finished mk.preprocess.sugar $${cmk_sugar}" )
 mk.preprocess.minify:
 	@# Assuming stdin is makefile source, minifies it and outputs to stdout
-	${stream.stdin} | grep -a -v '^#' | sed '/^[ \t]*@#.*$$/d' | ${io.awk}/.awk.zip.linefeeds
+	${stream.stdin} | ${.cmk.minify}
 mk.preprocess/%:
 	@# A version of `mk.preprocess` that accepts a file-arg.
 	@#
@@ -2095,9 +2114,10 @@ mk.preprocess/%:
 	@#
 	fname=${*} && case ${*} in -) fname=/dev/stdin;; esac \
 	&& cat $${fname} | ${make} mk.preprocess
-mk.preprocess.decorators: io.awk/mk.preprocess.decorators
+mk.preprocess.decorators:
 	@# Runs the decorator-preprocessor on stdin.
 	@# NB: This must come before sugar/dialects.
+	${stream.stdin} | ${.cmk.decorators}
 define mk.preprocess.decorators
 {   current_line = $0
     if (current_line ~ /ᝏ/) {
@@ -2122,51 +2142,16 @@ endef
 mk.preprocess.dialect:
 	@# Runs dialect preprocessor on stdin.
 	@# Part of the CMK->Makefile transpilation process.
-	$(call io.mktemp) && export hint_file=$${tmpf} \
-	&& $(call log.compiler.part1, ${@}) \
-	&& case $${cmk_dialect} in \
-		"") ( \
-			dialect=$${dialect:-cmk.default.dialect} \
-			&& $(call log.compiler.part2, ${dim}using ${ital}$${dialect}) \
-			&& ${mk.def.read}/$${dialect} > $${hint_file} \
-			);; \
-		*) ( $(call log.compiler.part2, ${dim}using dialect from file) \
-			&& printf "$${cmk_dialect}" > $${hint_file} \
-			&& printf "# cmk_dialect ::: $${cmk_dialect} :::\n" );; \
-	esac \
-	&& $(call io.mktemp) && parser_file=$${tmpf} \
-	&& cat $${hint_file} \
-		| ${jq} -r ".[] | \" \
-		| awk -v old='\(.[0])' -v new='\(.[1])' '${.awk.preprocess.dialect}'\"" \
-		> $${parser_file} \
-	&& printf '\n' \
-	&& ${stream.stdin} \
-		| eval ${stream.stdin} `cat $${parser_file}` \
-	&& printf "# finished ${@} $${cmk_dialect}"
+	@# (body lives in the `.cmk.dialect` macro, shared with the fused fast path.)
+	${.cmk.dialect}
 .awk.preprocess.dialect=\
 	BEGIN{block=0} /^define/{block=1} /^endef/{block=0} !block{gsub(old,new)} 1
 
 mk.preprocess.sugar:
 	@# Runs sugar-preprocessor on stdin.
 	@# Part of the CMK->Makefile transpilation process.
-	$(call io.mktemp) && export hint_file=$${tmpf} \
-	&& $(call log.compiler.part1, ${@}) \
-	&& case $${cmk_sugar} in \
-		"") ( \
-			sugar=$${sugar:-cmk.default.sugar} \
-			&& $(call log.compiler.part2, ${dim}using ${ital}$${sugar}) \
-			&& ${mk.def.read}/$${sugar} > $${hint_file} \
-			);; \
-		*) ( $(call log.compiler.part2, ${dim}using sugar from file) \
-			&& printf "$${cmk_sugar}" > $${hint_file} \
-			&& printf "# cmk_sugar ::: $${cmk_sugar} :::\n" );; \
-	esac \
-	&& $(call io.mktemp) && parser_file=$${tmpf} \
-	&& cat $${hint_file} \
-		| ${jq} -r ".[] | \" | awk -f <(${mk.def.read}/.awk.sugar) '\(.[0])' '\(.[1])' '\(.[2])' \"" \
-	> $${parser_file} \
-	&& eval cat /dev/stdin `cat $${parser_file}` \
-	&& printf "# finished ${@} $${cmk_sugar}"
+	@# (body lives in the `.cmk.sugar` macro, shared with the fused fast path.)
+	${.cmk.sugar}
 .mk.parse.sugar.hint:
 	$(call log.trace, ${@} ${sep} parsing sugar hint..) 
 	(   tmp=`${stream.stdin} | awk 'NR==1 && /^#!/{next} /^#/{print} !/#/{exit}'` \
@@ -6020,6 +6005,19 @@ $0 ~ close_pattern && block_mode == 1 {
 block_mode == 1 { print $0 }
 block_mode == 0 { print $0 }
 endef
+
+# Compile-stage def-blocks captured literally (via `$(value)`, like mk.def.read)
+# and exported so the `.cmk.*` stage macros can read them straight from the
+# environment -- no per-block `mk.def.read` sub-make and no temp files. `:=` here
+# (after all the define blocks above) freezes the unexpanded body; export ships it
+# verbatim. `awk "$_zip"`/`printf '%s' "$_dialect_dict"|jq` consume them in-shell.
+export _cmk_blk_zip := $(value .awk.zip.linefeeds)
+export _cmk_blk_dec := $(value mk.preprocess.decorators)
+export _cmk_blk_dialect := $(value cmk.default.dialect)
+export _cmk_blk_sugar := $(value cmk.default.sugar)
+export _cmk_blk_sugarawk := $(value .awk.sugar)
+export _cmk_blk_mainpre := $(value .awk.main.preprocess)
+export _cmk_blk_dispatch := $(value .awk.dispatch)
 
 flux.pre/%:
 	@# Dispatch pre-hook if one is available

@@ -41,6 +41,109 @@ def test_mk_preprocess_decorators_passthrough(cmk):
   assert "foo:" in r.stdout
 
 
+# --- piecewise stage transforms (Stage 5-PRE regression net) -----------------
+# The compile pipeline is a chain of independent stages (minify -> decorators ->
+# dialect -> sugar -> .awk.main.preprocess -> .awk.dispatch). The tests above +
+# below pin each *stage's* transform in isolation via its target, so the planned
+# pipeline refactor (Stage 5: macros + fused fast path / flux.pipeline debug
+# path) is provably behavior-preserving stage-by-stage -- not just end-to-end.
+# All pure stdin->stdout (no docker). Stage boundaries are non-obvious: e.g. `⧐`
+# and `this.` are *dialect* rules; the block glyphs (⋘⫻⟦🞹⨖) are *sugar*.
+
+
+def test_stage_minify_zips_continuations(cmk):
+  # `.awk.zip.linefeeds`: a `\`-continued recipe line is joined into one.
+  r = cmk("mk.preprocess.minify", stdin="a:\n\tfoo \\\n\tbar\n")
+  assert r.ok, r.stderr
+  assert "foo bar" in r.stdout
+
+
+def test_stage_minify_strips_docstrings(cmk):
+  # `@#` docstring lines are dropped; the real recipe survives.
+  r = cmk("mk.preprocess.minify", stdin="x:\n\t@# doc here\n\techo hi\n")
+  assert r.ok, r.stderr
+  assert "doc here" not in r.stdout
+  assert "echo hi" in r.stdout
+
+
+def test_stage_minify_preserves_define_block(cmk):
+  # Inside define...endef, line-continuations are NOT zipped (raw block).
+  r = cmk(
+    "mk.preprocess.minify",
+    stdin="define blk\nfoo \\\nbar\nendef\nx:\n\t@true\n",
+  )
+  assert r.ok, r.stderr
+  assert "foo \\\nbar" in r.stdout  # continuation preserved in the block
+
+
+def test_stage_decorators_folds_onto_recipe(cmk):
+  # A `ᝏ` decorator line is folded onto its following recipe with `; `.
+  r = cmk(
+    "mk.preprocess.decorators",
+    stdin="t: ᝏcompose.bind.target(debian)\n\techo hi\n",
+  )
+  assert r.ok, r.stderr
+  assert "compose.bind.target(debian); " in r.stdout
+
+
+def test_stage_dialect_glyph_substitutions(cmk):
+  # Default dialect maps the inline glyphs (⧐ -> .dispatch/, 🡄 -> ${jb}).
+  r = cmk("mk.preprocess.dialect", stdin="r: svc⧐t\ne:\n\t🡄 k=v\n")
+  assert r.ok, r.stderr
+  assert "svc.dispatch/t" in r.stdout
+  assert "${jb} k=v" in r.stdout
+
+
+def test_stage_dialect_custom_hint(cmk):
+  # A custom dialect (as would come from a `# cmk_dialect ::: … :::` header,
+  # surfaced via the cmk_dialect env) replaces tokens outside define blocks.
+  r = cmk(
+    "mk.preprocess.dialect",
+    stdin="x:\n\tfoo\n",
+    env={"cmk_dialect": '[["foo","BAZ"]]'},
+  )
+  assert r.ok, r.stderr
+  assert "BAZ" in r.stdout
+
+
+def test_stage_dialect_preserves_define_block(cmk):
+  # Glyphs inside define...endef are NOT rewritten; only outside.
+  r = cmk(
+    "mk.preprocess.dialect",
+    stdin="define blk\nthis.literal\nendef\nx:\n\tthis.y\n",
+  )
+  assert r.ok, r.stderr
+  assert "this.literal" in r.stdout  # inside: preserved
+  assert "${make} y" in r.stdout  # outside: expanded
+
+
+def test_stage_sugar_block_lowering(cmk):
+  # Sugar handles the block glyphs: ⋘ NAME … ⋙ -> compose.import.string.
+  r = cmk("mk.preprocess.sugar", stdin="⋘ mylib\nservices: {}\n⋙\n")
+  assert r.ok, r.stderr
+  assert "compose.import.string" in r.stdout and "def=mylib" in r.stdout
+
+
+def test_stage_parse_dialect_hint(cmk):
+  # The dialect-hint parser extracts the `:::`-delimited JSON from the header.
+  r = cmk(
+    ".mk.parse.dialect.hint",
+    stdin='# cmk_dialect ::: [["a","b"]] :::\nx:\n',
+  )
+  assert r.ok, r.stderr
+  assert '[["a","b"]]' in r.stdout
+
+
+def test_stage_parse_sugar_hint(cmk):
+  # The sugar-hint parser extracts its `:::`-delimited JSON triples.
+  r = cmk(
+    ".mk.parse.sugar.hint",
+    stdin='# cmk_sugar ::: [["a","b","c"]] :::\nx:\n',
+  )
+  assert r.ok, r.stderr
+  assert '[["a","b","c"]]' in r.stdout
+
+
 # --- interpreter -------------------------------------------------------------
 # `mk.interpret!` ends with mk.yield -> mk.interrupt, a SIGINT-based control
 # transfer to the supervisor the standalone shebang installs. Works headless
