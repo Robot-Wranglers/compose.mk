@@ -1,5 +1,5 @@
 
-&nbsp;<a href="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/tests.yml"><img src="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/tests.yml/badge.svg"></a><a href="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/cmk-transpiler.yml"><img src="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/cmk-transpiler.yml/badge.svg"></a><a href="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/docs.yml"><img src="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/docs.yml/badge.svg"></a><a href="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/notebook-pipeline.yml"><img src="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/notebook-pipeline.yml/badge.svg"></a>&nbsp; 
+&nbsp;<a href="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/tests.yml"><img src="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/tests.yml/badge.svg"></a><a href="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/cmk-transpiler.yml"><img src="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/cmk-transpiler.yml/badge.svg"></a><a href="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/docker-tests.yml"><img src="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/docker-tests.yml/badge.svg"></a><a href="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/integration-tests.yml"><img src="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/integration-tests.yml/badge.svg"></a><a href="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/smoke-tests.yml"><img src="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/smoke-tests.yml/badge.svg"></a><a href="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/docs.yml"><img src="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/docs.yml/badge.svg"></a><a href="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/notebook-pipeline.yml"><img src="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/notebook-pipeline.yml/badge.svg"></a><a href="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/compiler-tests.yml"><img src="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/compiler-tests.yml/badge.svg"></a><a href="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/unit-tests.yml"><img src="https://github.com/Robot-Wranglers/compose.mk/actions/workflows/unit-tests.yml/badge.svg"></a>&nbsp; 
 
 Main documentation: [https://robot-wranglers.github.io/compose.mk](https://robot-wranglers.github.io/compose.mk)
 
@@ -14,3 +14,34 @@ Typical use-cases include **general project automation**, especially decoupling 
 <img alt=demo src=https://robot-wranglers.github.io/compose.mk/img/docker.commander.gif>
 
 ------------------------------
+
+## Installation
+
+### Fork and Forget
+
+Just drop the single `compose.mk` file into your project and use it directly.  No global install, and no dependencies beyond `make` + `bash` (plus `docker` for the container features).
+
+```bash
+# Download into your project and make it executable
+$ curl -sL \
+    https://raw.githubusercontent.com/Robot-Wranglers/compose.mk/master/compose.mk \
+    > compose.mk
+$ chmod +x compose.mk
+ 
+# Stand-alone "tool mode"
+# Or, from your project Makefile:  `include compose.mk`
+$ ./compose.mk <target>     
+```
+
+### Global Install
+
+Prefer it **globally, on your `PATH`**?  That's supported with several different installer shims.  Pick your package manager:
+
+| Via | Install |
+| --- | --- |
+| <a href="https://github.com/Robot-Wranglers/compose.mk/tree/master/via/basher" style="text-decoration-line:none;">basher</a> | `basher install Robot-Wranglers/compose.mk` |
+| <a href="https://github.com/Robot-Wranglers/compose.mk/tree/master/via/pip" style="text-decoration-line:none;">pip</a> | `pip install "git+https://github.com/Robot-Wranglers/compose.mk.git#subdirectory=via/pip"` |
+| <a href="https://github.com/Robot-Wranglers/compose.mk/tree/master/via/npm" style="text-decoration-line:none;">npm</a> | `npm install -g ./via/npm` *(from a checkout)* |
+
+See the [Quickstart](https://robot-wranglers.github.io/compose.mk/quickstart) for tighter project integration and the [compatibility notes](https://robot-wranglers.github.io/compose.mk/quickstart/#compatibility-notes).
+

@@ -125,10 +125,10 @@ def _namespace(base: str) -> str:
 
 # --- generated (dynamically-imported) target templates ----------------------
 # compose.import / docker.import / polyglot.import synthesize whole target
-# *families* at eval-time, parameterized by the imported file's stem, the chosen
-# namespace, and each service. The instance names depend on the user's YAML, but
-# the *templates* are written statically inside these generator `define` blocks
-# -- which public_targets() deliberately skips. We parse those blocks, normalize
+# *families* at eval-time, parameterized by the imported file's stem, the
+# chosen namespace, and each service. The instance names depend on the YAML,
+# but the *templates* are written statically inside these generator `define`
+# blocks -- which public_targets() skips. We parse those blocks, normalize
 # the make placeholders to canonical tokens, and report generated coverage as
 # its OWN bucket (never folded into the library %).
 

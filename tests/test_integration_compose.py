@@ -121,7 +121,7 @@ def test_compose_import_generated_lifecycle(project):
   # Running-container family: up.detach -> assert_running -> exec -> restart ->
   # stop -> down -> clean, across <stem>.* and <namespace>.* aliases. The
   # service runs `sleep`, so it stays up for exec. A mid-run failure leaks only
-  # to the session's scoped cleanup (label/project-scoped), never the dev's box.
+  # to the session's scoped cleanup (label/project-scoped), not the dev's box.
   project.load("compose-import-app")
   assert project.run("dc.up.detach").ok
   assert project.run("services.up.detach").ok
@@ -159,7 +159,7 @@ def test_compose_import_generated_run(project):
 
 
 def test_compose_import_code_generated(project):
-  # `compose.import.code` synthesizes targets over a named define-block (pure --
+  # `compose.import.code` synthesizes targets over a named define-block (pure;
   # no container): write-to-file, read/run, preview. Covers the <ns>.to.file /
   # .run / .preview / .with.file generated templates.
   project.load("code-import")

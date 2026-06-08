@@ -164,6 +164,20 @@ endef
 makefile_list=$(addprefix -f,$(shell echo "${MAKE_CLI}"|awk '{for(i=1;i<=NF;i++)if($$i=="-f"&&i+1<=NF){print$$(++i)}else if($$i~/^-f./){print substr($$i,3)}}' | xargs))
 make=make ${MAKE_FLAGS} ${makefile_list}
 
+# compose.mk's own absolute path. Resolved by NAME from MAKEFILE_LIST (robust to
+# position/order across multiple `-f`/includes; not the naive positional
+# `lastword`). Used only to make compose.mk reachable inside dispatch containers
+# when it lives OUTSIDE the mounted workspace (i.e. a global / on-PATH install).
+cmk.self := $(abspath $(firstword $(filter %compose.mk,$(MAKEFILE_LIST))))
+# Additive dispatch mount: bind the host compose.mk at a canonical on-PATH
+# location inside the container, so a project's `include $(shell which
+# compose.mk)` resolves there to the identical file/version. Emitted ONLY when
+# compose.mk is OUTSIDE ${DOCKER_HOST_WORKSPACE:-${PWD}} (i.e. not already inside
+# the workspace mount) -- so vendored/drop-in dispatch is byte-for-byte
+# unchanged (the var expands to empty). Recursive (=) so it honors the
+# workspace at dispatch time.
+docker.cmk.mount=$(shell s='${cmk.self}'; ws="$${DOCKER_HOST_WORKSPACE:-$$PWD}"; [ -n "$$s" ] && [ "$${s#$$ws/}" = "$$s" ] && echo "-v $$s:/usr/local/bin/compose.mk:ro" || true)
+
 # Stream constants
 stderr:=/dev/stderr
 stdin:=/dev/stdin
@@ -340,7 +354,11 @@ export __script__?=None
 ifneq ($(findstring compose.mk, ${MAKE_CLI}),)
 export CMK_LIB=0
 export CMK_STANDALONE=1
-export CMK_SRC=$(findstring compose.mk, ${MAKE_CLI})
+# Resolve to the REAL invoked path (absolute), not the bare `findstring` which
+# loses it -- so mk.interpret's `cat ${CMK_SRC}` works under a global/on-PATH
+# install (run from a dir with no local copy). cmk.self is the name-resolved
+# abspath; fall back to the old findstring if it's somehow empty.
+export CMK_SRC=$(or ${cmk.self},$(findstring compose.mk, ${MAKE_CLI}))
 
 else
 
@@ -481,6 +499,7 @@ compose.dispatch.sh/%:
 	&& ${trace_maybe} \
 	&& ${docker.compose} $${COMPOSE_EXTRA_ARGS} -f ${*} run \
 		--rm --remove-orphans \
+		${docker.cmk.mount} \
 		--entrypoint $${entrypoint:-bash} $${svc} ${dash_x_maybe} \
 		-c "$${cmd:-true}" $(_compose_quiet)
 
@@ -1067,6 +1086,7 @@ docker.run.sh:
 		${docker.env.standard} \
 		-v $${workspace:-$${PWD}}:/workspace \
 		-v $${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock \
+		${docker.cmk.mount} \
 		-w /workspace \
 		$${entry} \
 		$${docker_args:-}" \
@@ -2265,7 +2285,7 @@ mk.interpret/%:
 			| sed -e '$$d' | grep -a -v '^# ' \
 		&& printf '\n\n\n' \
 		&& cat $${fname} \
-		    | grep -a -v "^include ${CMK_SRC}" \
+		    | grep -a -vE "^include ([^ ]*/)?$(notdir ${CMK_SRC})" \
 		    | grep -a -v "^include ${__script__}" \
 		 && case "${__script__}" in \
 		    ""|None) $(call log.trace,${yellow}script not set);; \
@@ -5430,6 +5450,7 @@ ${compose_file_stem}/%:
 		if [ -z "$${env:-}" ]; then echo "-e _=_"; else \
 		printf "$${env:-}" | sed 's/,/\n/g' | xargs -I% bash -c "[[ -v % ]] && printf '%\n' || true" | xargs -I% echo --env %='☂$$$${%}☂'; fi))
 	@$$(eval export base:=docker compose -f $(compose_file) run $${tty} --rm --remove-orphans --quiet-pull \
+		${docker.cmk.mount} \
 		$$(subst ☂,\",$${extra_env}) \
 		--env CMK_INTERNAL=1 \
 		-e TERM="$${TERM}" -e GITHUB_ACTIONS=${GITHUB_ACTIONS} -e TRACE=$${TRACE} \

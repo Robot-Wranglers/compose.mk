@@ -1,0 +1,10 @@
+{
+  "name": "compose-mk",
+  "version": "0.0.0",
+  "description": "compose.mk: polyglot Make/bash automation lib + CMK language, installed on PATH",
+  "license": "MIT",
+  "bin": { "compose.mk": "compose.mk" },
+  "files": ["compose.mk"],
+  "os": ["linux", "darwin"],
+  "engines": { "node": ">=14" }
+}

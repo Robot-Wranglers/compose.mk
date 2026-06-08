@@ -1,4 +1,3 @@
-#!/usr/bin/env -S make -s -S -f 
 ##
 # Project Automation
 #
@@ -25,8 +24,13 @@ __main__: init clean build test docs
 init: mk.stat docker.stat 
 	@# Show status and initialize some containers
 
-validate: validate.makefiles validate.markdown
-	@# Validate all demos and docs
+validate: validate.makefiles validate.tests
+	@# Validate all demos (syntax) and the test-suite (style/lint).
+
+validate.tests:
+	@# Auto-fix + lint the Python test-suite (ruff via tox; combined fix+check).
+	@# Only needed when you change files under tests/.
+	pushd tests && make init normalize
 
 docs: flux.stage/documentation docs.pynchon.build docs.README.static docs.jinja docs.pynchon.dispatch/.docs.build
 	@# Build all documentation
@@ -95,6 +99,10 @@ itest integration-test:
 stest smoke-test:
 	@# Runs the smoke-test suite (delegates to tests/).
 	pushd tests && make init smoke-test
+
+installers-test:
+	@# Build+install the via/pip shim; verify a global on-PATH compose.mk.
+	pushd tests && make init installers-test
 
 demos demos.test demo-test:
 	@# 

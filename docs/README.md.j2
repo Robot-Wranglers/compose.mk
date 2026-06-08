@@ -15,3 +15,34 @@ Typical use-cases include **general project automation**, especially decoupling 
 <img alt=demo src={{mkdocs.config.site_url}}/img/docker.commander.gif>
 
 ------------------------------
+
+## Installation
+
+### Fork and Forget
+
+Just drop the single `compose.mk` file into your project and use it directly.  No global install, and no dependencies beyond `make` + `bash` (plus `docker` for the container features).
+
+```bash
+# Download into your project and make it executable
+$ curl -sL \
+    https://raw.githubusercontent.com/Robot-Wranglers/compose.mk/master/compose.mk \
+    > compose.mk
+$ chmod +x compose.mk
+ 
+# Stand-alone "tool mode"
+# Or, from your project Makefile:  `include compose.mk`
+$ ./compose.mk <target>     
+```
+
+### Global Install
+
+Prefer it **globally, on your `PATH`**?  That's supported with several different installer shims.  Pick your package manager:
+
+| Via | Install |
+| --- | --- |
+| {{macros.repo_link('via/basher', name='basher', github=github)}} | `basher install Robot-Wranglers/compose.mk` |
+| {{macros.repo_link('via/pip', name='pip', github=github)}} | `pip install "git+https://github.com/Robot-Wranglers/compose.mk.git#subdirectory=via/pip"` |
+| {{macros.repo_link('via/npm', name='npm', github=github)}} | `npm install -g ./via/npm` *(from a checkout)* |
+
+See the [Quickstart]({{mkdocs.config.site_url}}/quickstart) for tighter project integration and the [compatibility notes]({{mkdocs.config.site_url}}/quickstart/#compatibility-notes).
+

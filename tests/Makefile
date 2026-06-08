@@ -19,6 +19,7 @@ init:
 
 normalize:
 	@# Auto-apply ruff formatting + lint fixes, then verify (ruff via tox).
+	@# Combined fix+check; also what root `validate.tests` runs.
 	tox -e fix,normalize
 
 units unit-test:
@@ -45,3 +46,9 @@ coverage:
 	@# Target-level coverage report (report-only; unit+docker+integration+compiler,
 	@# no smoke -- it adds no targets the other suites don't already cover).
 	tox -e coverage
+
+installers-test:
+	@# Build+install via each packaging path; verify a global on-PATH compose.mk.
+	tox -e pip-installer
+	tox -e npm-installer
+	tox -e basher-installer

@@ -1,6 +1,6 @@
 # See also: https://docs.github.com/en/actions
-# Fast, no-docker unit tests (pytest via tox). Independent of the heavier
-# demos / cmk-transpiler workflows so it gives quick PR signal.
+# Fast, no-docker unit tests (pytest via tox). One pytest suite per workflow;
+# the compiler suite has its own (compiler-tests.yml). Gives quick PR signal.
 name: Unit Tests
 on:
   workflow_dispatch: {}
@@ -26,5 +26,3 @@ jobs:
           python-version: '3.11'
       - name: Run unit-tests (requires python)
         run: make unit-test
-      - name: Run compiler-tests (pure, no docker)
-        run: make compiler-test

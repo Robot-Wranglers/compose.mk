@@ -387,6 +387,94 @@ def project(tmp_path, docker_cmk):
   return Project(tmp_path, docker_cmk)
 
 
+def _sweep_repo_tmp(before):
+  # mk.interpret! runs from the repo, so io.mktemp drops `.tmp.*` in the repo
+  # root. Remove the ones a run created (gitignored, but clutter otherwise).
+  for p in set(REPO.glob(".tmp.*")) - before:
+    try:
+      p.unlink()
+    except OSError:
+      pass
+
+
+@pytest.fixture(params=["vendored", "global"])
+def run_demo(request, docker_cmk, tmp_path_factory):
+  """Run any ``demos/cmk/*.cmk`` end-to-end, PARAMETRIZED over install mode, so
+  every test using it yields two cases: ``...[vendored]`` and ``...[global]``.
+
+  * ``vendored`` -- execute the repo's own ``./compose.mk`` (the default
+    drop-in usage), via docker_cmk.
+  * ``global``   -- stage a copy of compose.mk on a temp bin OUTSIDE the repo
+    and execute THAT by absolute path, so CMK_SRC / dispatch exercise the
+    global-install code paths. Scoped with the same docker label / compose
+    project docker_cmk uses, so the session teardown sweeps anything it makes.
+
+  Both run from the repo root (so a demo's ``demos/data/...`` + ``${PWD}``
+  mounts resolve) with ``CMK_SUPERVISOR=1`` (the yield/interrupt epilogue needs
+  it headless).
+  """
+  if request.param == "vendored":
+
+    def run(relpath, timeout=600, **env):
+      before = set(REPO.glob(".tmp.*"))
+      try:
+        return docker_cmk(
+          "mk.interpret!",
+          relpath,
+          env={"CMK_SUPERVISOR": "1", **env},
+          cwd=REPO,
+          timeout=timeout,
+        )
+      finally:
+        _sweep_repo_tmp(before)
+
+    return run
+
+  # global: a compose.mk on its own bin dir, OUTSIDE the repo workspace.
+  prog = tmp_path_factory.mktemp("cmkbin") / "compose.mk"
+  shutil.copy(COMPOSE_MK, prog)
+  prog.chmod(0o755)
+
+  def run(relpath, timeout=600, **env):
+    merged = {
+      **os.environ,
+      **BASE_ENV,
+      "CMK_SUPERVISOR": "1",
+      "CMK_INTERNAL": "0",
+      "docker_args": f"--label {CMKTEST_LABEL}",
+      "DOCKER_HOST_WORKSPACE": str(REPO),
+      "COMPOSE_PROJECT_NAME": COMPOSE_PROJECT,
+      **env,
+    }
+    before = set(REPO.glob(".tmp.*"))
+    proc = subprocess.Popen(
+      [str(prog), "mk.interpret!", relpath],
+      stdin=subprocess.PIPE,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.PIPE,
+      text=True,
+      cwd=str(REPO),
+      env=merged,
+      start_new_session=True,
+    )
+    _LIVE_PROCS.add(proc)
+    try:
+      out, err = proc.communicate(input="", timeout=timeout)
+    except subprocess.TimeoutExpired:
+      _kill_proc_group(proc)
+      out, err = proc.communicate()
+      scoped_cleanup()
+      raise
+    finally:
+      _LIVE_PROCS.discard(proc)
+      _sweep_repo_tmp(before)
+    return Result(out, err, proc.returncode)
+
+  return run
+
+  return run
+
+
 # --- Gating + reporting hooks ----------------------------------------------
 
 

@@ -1,0 +1,22 @@
+# Packaging shim (kept OUT of the repo root): ships the repo-root compose.mk as
+# an on-PATH executable, so
+#   pip install "git+https://github.com/<user>/<repo>.git@<ref>#subdirectory=via/pip"
+# provides a global `compose.mk` for tool-mode and `include $(shell which
+# compose.mk)` library use. `compose.mk` here is a symlink to ../../compose.mk
+# (the single source of truth -- no duplicated copy in git).
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compose-mk"
+version = "0.0.0"
+description = "compose.mk: polyglot Make/bash automation lib + CMK language, installed on PATH"
+requires-python = ">=3.8"
+
+[tool.setuptools]
+# A single executable script, no python packages/modules. `script-files`
+# installs the file verbatim into the env's bin/ (polyglot shebang preserved).
+script-files = ["compose.mk"]
+packages = []
+py-modules = []

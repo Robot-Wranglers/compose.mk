@@ -1,8 +1,8 @@
 # See also: https://docs.github.com/en/actions
-# The docker.* pytest suite (via tox). Needs a docker daemon, which
-# ubuntu-latest provides. One suite per workflow; integration has its own
-# (integration-tests.yml). Network builds stay off unless CMK_TEST_NETWORK=1.
-name: Docker Tests
+# The CMK compiler/transpiler pytest suite (via tox). Pure transforms, no
+# docker required (a single needs_docker case auto-runs since ubuntu-latest
+# has a daemon). One pytest suite per workflow; runnable on demand.
+name: Compiler Tests
 on:
   workflow_dispatch: {}
   workflow_call: {}
@@ -15,8 +15,8 @@ on:
 permissions:
   contents: read
 jobs:
-  docker:
-    name: docker.* suite (pytest via tox)
+  compiler:
+    name: Compiler (pytest via tox)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -25,5 +25,5 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Docker tests
-        run: make docker-test
+      - name: Run compiler-tests
+        run: make compiler-test
