@@ -174,6 +174,62 @@ def test_mk_include_def_positional_shim(cmk, tmp_path):
   assert r.stdout == "hi X\n"
 
 
+# --- mk.kernel / mk.kernel.each : run a target-stream as an instruction set --
+# mk.kernel BATCHES the stream into one `make a b c` invocation; mk.kernel.each
+# re-enters make PER line. The contrast (dedup + whitespace vs. repeat + intact)
+# is the whole reason both exist, so the tests pin exactly that.
+
+
+def test_mk_kernel_runs_instructions(cmk):
+  assert cmk("mk.kernel", stdin="flux.ok").ok
+  assert not cmk("mk.kernel", stdin="flux.fail").ok
+
+
+def test_mk_kernel_runs_composed_instruction(cmk):
+  # a single parametric/composed instruction (no whitespace) batches fine.
+  assert cmk("mk.kernel", stdin="flux.and/flux.ok,flux.ok").ok
+
+
+def test_mk_kernel_dedups_repeats(cmk, tmp_path):
+  # batch form -> `make tick tick tick` -> make builds the goal once -> 1 run.
+  mk = _wrapper(tmp_path, "tick:; @echo TICK")
+  r = cmk("mk.kernel", stdin="tick\ntick\ntick", makefile=mk)
+  assert r.ok, r.stderr
+  assert r.stdout.count("TICK") == 1
+
+
+def test_mk_kernel_each_reruns_repeats(cmk, tmp_path):
+  # iterative form -> a separate `make tick` per line -> repeats actually re-run.
+  mk = _wrapper(tmp_path, "tick:; @echo TICK")
+  r = cmk("mk.kernel.each", stdin="tick\ntick\ntick", makefile=mk)
+  assert r.ok, r.stderr
+  assert r.stdout.count("TICK") == 3
+
+
+def test_mk_kernel_each_preserves_line_args(cmk, tmp_path):
+  # a line carrying an argument (with spaces) stays intact -- the whitespace-
+  # collapsing batch kernel would split it into separate goals.
+  mk = _wrapper(tmp_path, 'say/%:; @echo "GOT=$*"')
+  r = cmk("mk.kernel.each", stdin="say/a b", makefile=mk)
+  assert r.ok, r.stderr
+  assert r.stdout.strip() == "GOT=a b"
+
+
+def test_mk_kernel_each_skips_blank_lines(cmk, tmp_path):
+  mk = _wrapper(tmp_path, "tick:; @echo TICK")
+  r = cmk("mk.kernel.each", stdin="tick\n\ntick", makefile=mk)
+  assert r.ok, r.stderr
+  assert r.stdout.count("TICK") == 2
+
+
+def test_mk_kernel_each_fails_fast(cmk, tmp_path):
+  # a failing instruction aborts the stream; later instructions don't run.
+  mk = _wrapper(tmp_path, "tick:; @echo TICK")
+  r = cmk("mk.kernel.each", stdin="tick\nflux.fail\ntick", makefile=mk)
+  assert not r.ok
+  assert r.stdout.count("TICK") == 1
+
+
 # --- namespace / var introspection -----------------------------------------
 
 

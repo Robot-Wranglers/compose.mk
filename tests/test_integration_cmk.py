@@ -86,7 +86,7 @@ def test_demo_script_dispatch_host(run_demo):
 
 
 def test_demo_underload(run_demo):
-  # mk.import.def: the CMK port imports its lexer (`ul.decode.awk`) from the
+  # mk.import.def: the CMK port imports its lexer (`ul.lexer`) from the
   # demos/underload.mk twin, then runs the esolang host-side (jq/awk/io.stack).
   r = run_demo("demos/cmk/underload.cmk")
   assert r.ok, r.stderr

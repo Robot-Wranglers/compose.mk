@@ -1,7 +1,8 @@
 """Cold-start performance benchmark for compose.mk (report-only).
 
-Opt-in and **not wired to CI**. Run via ``tox -e perf-test`` (or ``make
-perf-test``). Measures wall-clock *cold-start* (a fresh process per sample) over
+Opt-in: **not gated on push/PR**. Runs on-demand via the Perf Tests workflow
+(``.github/workflows/perf-tests.yml``); locally via ``tox -e perf-test``
+(or ``make perf-test``). Measures wall-clock *cold-start* (a fresh process per sample) over
 N samples (default 10, override with ``CMK_PERF_SAMPLES``) for a few
 representative usages:
 
@@ -15,8 +16,8 @@ representative usages:
 Unlike the rest of the suite, these run with compose.mk's *real* defaults
 (supervisor + hooks ON) -- that's the latency a user actually pays on a cold
 invocation. Each sample asserts a clean exit (rc==0); we print
-min/median/mean/max but assert no latency threshold (machine-dependent, and this
-never runs in CI anyway).
+min/median/mean/max but assert no latency threshold (machine-dependent, so this
+is a report, not a PR gate).
 """
 
 import os

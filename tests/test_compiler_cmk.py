@@ -390,3 +390,101 @@ def test_compile_dialect_preserves_define_block(cmk):
   assert r.ok, r.stderr
   assert "${make} y" in r.stdout  # outside the block: expanded
   assert "this.literal" in r.stdout  # inside the block: preserved
+
+
+# --- the `⇐` assignment operator --------------------------------------------
+# `LHS ⇐ RHS` -> ``LHS=`RHS` ``, capturing RHS up to the next shell separator.
+# Runs after the dialect pass, so `this.y` is already `${make} y` here.
+
+
+def test_compile_assign_basic(cmk):
+  r = cmk("mk.compile", stdin="x ⇐ this.y\n")
+  assert r.ok, r.stderr
+  assert "x=`${make} y`" in r.stdout
+
+
+def test_compile_assign_leaves_tail_intact(cmk):
+  # capture stops at the `;`; the rest of the line is preserved.
+  r = cmk("mk.compile", stdin="x ⇐ this.y ; echo done\n")
+  assert r.ok, r.stderr
+  assert "x=`${make} y" in r.stdout and "`; echo done" in r.stdout
+
+
+def test_compile_assign_multiple_per_line(cmk):
+  r = cmk("mk.compile", stdin="y ⇐ this.a; x ⇐ this.b\n")
+  assert r.ok, r.stderr
+  assert "y=`${make} a`; x=`${make} b`" in r.stdout
+
+
+def test_compile_assign_stops_at_logical_and(cmk):
+  # `&&` terminates the captured command (the common `x=`cmd` && more` shape).
+  r = cmk("mk.compile", stdin="body ⇐ ${jq} . && more\n")
+  assert r.ok, r.stderr
+  assert "body=`${jq} ." in r.stdout and "`&& more" in r.stdout
+
+
+def test_compile_assign_captures_pipeline(cmk):
+  # A single `|` is NOT a separator (only `;`/`&&`/`||` are), so a whole pipeline
+  # is captured: `x ⇐ this.one | this.two` -> ``x=`${make} one | ${make} two` ``.
+  r = cmk("mk.compile", stdin="x ⇐ this.one | this.two\n")
+  assert r.ok, r.stderr
+  assert "x=`${make} one | ${make} two`" in r.stdout
+
+
+def test_compile_assign_skips_define_block(cmk):
+  # `⇐` inside define...endef is left verbatim.
+  r = cmk("mk.compile", stdin="define blk\nx ⇐ this.y\nendef\n")
+  assert r.ok, r.stderr
+  assert "x ⇐ this.y" in r.stdout
+
+
+def test_compile_assign_triplequote(cmk):
+  # assignment + triple-quote compose: the triple-quote lowers to a `printf`
+  # first, then `⇐` captures it -> a shell var holding the literal text.
+  r = cmk("mk.compile", stdin="x ⇐ '''foo bar'''\n")
+  assert r.ok, r.stderr
+  assert "x=`printf '%s' 'foo bar'`" in r.stdout
+
+
+# --- triple-quote literals ('''…''' / """…""") ------------------------------
+# Lower to a literal, %-safe `printf '%s' '…'` (multi-line: '%s\n%s…').
+
+
+def test_compile_triplequote_basic_pipe(cmk):
+  r = cmk("mk.compile", stdin="'''foo bar''' | this.t\n")
+  assert r.ok, r.stderr
+  assert "printf '%s' 'foo bar' | ${make} t" in r.stdout
+
+
+def test_compile_triplequote_internal_double_quote(cmk):
+  r = cmk("mk.compile", stdin="'''say \"hi\"'''\n")
+  assert r.ok, r.stderr
+  assert "printf '%s' 'say \"hi\"'" in r.stdout
+
+
+def test_compile_triplequote_internal_single_quote(cmk):
+  # `"""…"""` delimiter lets the content hold a single quote; it's escaped '\''.
+  r = cmk("mk.compile", stdin='"""it\'s"""\n')
+  assert r.ok, r.stderr
+  assert "printf '%s' 'it'\\''s'" in r.stdout
+
+
+def test_compile_triplequote_percent_is_literal(cmk):
+  # `%` is an ARG to `%s`, so it stays literal (a win over raw `printf 'TEXT'`).
+  r = cmk("mk.compile", stdin="'''100%done'''\n")
+  assert r.ok, r.stderr
+  assert "printf '%s' '100%done'" in r.stdout
+
+
+def test_compile_triplequote_multiline(cmk):
+  # spans lines -> one printf with '%s\n%s' and per-line args.
+  r = cmk("mk.compile", stdin="x:\n\t'''L1\nL2''' | this.t\n")
+  assert r.ok, r.stderr
+  assert "printf '%s\\n%s' 'L1' 'L2' | ${make} t" in r.stdout
+
+
+def test_compile_triplequote_skips_define_block(cmk):
+  # python-style '''docstrings''' inside define...endef pass through verbatim.
+  r = cmk("mk.compile", stdin="define blk\nx = '''doc'''\nendef\n")
+  assert r.ok, r.stderr
+  assert "x = '''doc'''" in r.stdout
