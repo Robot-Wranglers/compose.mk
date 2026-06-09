@@ -13,7 +13,7 @@ THIS_MAKEFILE:=$(abspath $(firstword $(MAKEFILE_LIST)))
 
 export SRC_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 export PROJECT_ROOT := $(shell dirname ${THIS_MAKEFILE})
-
+export MKDOCS_LISTEN_PORT=8005
 include compose.mk
 $(call mk.import.plugins, actions.mk docs.mk)
 $(call mk.import.plugin.maybe, local.mk)

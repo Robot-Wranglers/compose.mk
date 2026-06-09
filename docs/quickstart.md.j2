@@ -30,6 +30,9 @@ Note that since [various containers]({{mkdocs.site_relative_url}}/tool-overview/
 
 If you want to keep `compose.mk` out of your project root, you could use a `.cmk/` folder, and while it's not really necessary or recommended.. you could also track upstream with a git submodule. *(See the [Plugins, Forks, and Versioning section](#forks-versioning) for more details.)*
 
+<a name=global-install></a>
+**Prefer a global install?**  In addition to the drop-in above, `compose.mk` ships package-manager shims under {{macros.repo_link('via', name='via/', github=github)}} that put it on your `PATH`: {{macros.repo_link('via/basher', name='basher', github=github)}}, {{macros.repo_link('via/npm', name='npm', github=github)}}, or {{macros.repo_link('via/pip', name='pip', github=github)}}.  After a global install you can `include $(shell which compose.mk)` from any Makefile, anywhere.
+
 Read on for details about tighter integration with projects, and see the [compatibility notes](#compatibility-notes) for details about docker versions / possible gotchas in OSX.
 
 ### Project Integration
@@ -141,7 +144,7 @@ $ make demos/cmk
 <hr style="width:100%;border-bottom:3px solid black;">
 <a name=forks-version></a><a name=forks-versioning></a>
 
-Given the advice above to simply embed `compose.mk` directly into your project repositories, some people might be reading this and thinking **what if compose.mk changes upstream?**  Eventually `compose.mk` might get a pypi installer option[^2], but for now the main things you can do are:
+Given the advice above to simply embed `compose.mk` directly into your project repositories, some people might be reading this and thinking **what if compose.mk changes upstream?**  *(If you'd rather not vendor a copy at all, `compose.mk` now ships [global-install shims](#global-install) for basher / npm / pip.)*  For a vendored copy, the main things you can do are:
 
 **Fork-and-Forget:**
 :   The [standard library]({{mkdocs.site_relative_url}}/standard-lib) for `compose.mk` is approaching *frozen*, so especially if you're not using [CMK-lang]({{mkdocs.site_relative_url}}/compiler), this is a pretty reasonable option.
@@ -181,7 +184,6 @@ $ ./compose.mk docker.stat
 <hr style="width:100%;border-bottom:3px solid black;">
 
 [^1]: For example, remote controlling the TUI relies on docker-sockets.  Also [tool wrappers]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) fall back to docker, so using them with [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) means docker-in-docker.
-[^2]: If you're interested in a pypi installer, see [this issue]({{git.repo_url}}/issues/17).
 [^3]: Linuxifing for macos with gnu utilities: [gist://skyzyx](https://gist.github.com/skyzyx/3438280b18e4f7c490db8a2a2ca0b9da) [github://pkill37/linuxify](https://github.com/pkill37/linuxify)
 
 <script>

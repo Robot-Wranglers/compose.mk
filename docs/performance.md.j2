@@ -44,9 +44,9 @@ This is a deliberate trade for `compose.mk`'s defining feature: it is **a single
 
 This is where the polyglot model *wins*, and it's sort of the mirror-image of Python's trade-off.
 
-Python is cheap to start a thread, but the GIL prevents threads from running Python bytecode on multiple cores simultaneously; real CPU parallelism requires the `multiprocessing` module, which spawns separate interpreters and moves data between them by pickling &mdash; i.e. it pays roughly the per-process cost `compose.mk` already pays.
+Python is cheap to start a thread, but the GIL prevents threads from running Python bytecode on multiple cores simultaneously; real CPU parallelism requires the `multiprocessing` module, which spawns separate interpreters and moves data between them by pickling, i.e. it pays roughly the per-process cost `compose.mk` already pays.
 
-`compose.mk` has no such barrier, because **every unit of work is already a process**: a recursive `make`, a shell pipeline, or a [dispatched container]({{mkdocs.site_relative_url}}/container-dispatch).  There is no GIL to contend with, so work spreads across all cores *by default* &mdash; with `make --jobs` or the native {{site.api_link('flux.parallel', mkdocs)}} primitive, and no special library or serialization.
+`compose.mk` has no such barrier, because **every unit of work is already a process**: a recursive `make`, a shell pipeline, or a [dispatched container]({{mkdocs.site_relative_url}}/container-dispatch).  There is no GIL to contend with, so work spreads across all cores *by default*, with `make --jobs` or the native {{site.api_link('flux.parallel', mkdocs)}} primitive, and no special library or serialization.
 
 ```bash {.cli_example}
 # 8 independent CPU-bound tasks, serial vs. across 8 cores:

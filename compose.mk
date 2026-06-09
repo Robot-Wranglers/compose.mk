@@ -3131,6 +3131,41 @@ flux.map/% flux.for.each/%:
 	> $${tmpf} \
 	&& bash ${dash_x_maybe} $${tmpf}
 
+flux.fold/%:
+	@# Left-fold over stdin lines (i.e. reduce WITH an explicit initial value).
+	@# The accumulator is threaded through the <reducer> target's STDIN; the
+	@# current line is passed as the `val` env-var; the reducer prints the new
+	@# accumulator.  The accumulator is seeded by the `acc` env-var, or else the
+	@# <init> arg (default empty).  This is the same shape the `stream.*` reducers
+	@# already have, so they can be dropped in as reducers directly.
+	@#
+	@# USAGE: ( bundle a stream into a JSON array, reusing a stdlib reducer )
+	@#   printf 'a\nb\nc\n' | ./compose.mk flux.fold/stream.json.array.append,[]
+	@#   ["a","b","c"]
+	@#
+	@# USAGE: ( a scalar reducer reads the accumulator from stdin )
+	@#   add:; @echo $$(( `$${stream.stdin}` + $${val} ))
+	@#   printf '1\n2\n3\n4\n' | ./compose.mk flux.fold/add,0   # -> 10
+	@#
+	reducer="`printf '${*}' | cut -d, -f1`" \
+	&& acc="$${acc:-`printf '${*}' | cut -s -d, -f2-`}" \
+	&& while IFS= read -r val; do \
+		acc="`printf '%s' "$${acc}" | val="$${val}" ${make} $${reducer}`" \
+	; done \
+	&& printf '%s\n' "$${acc}"
+
+flux.reduce/%:
+	@# Reduce over stdin lines, seeded by the FIRST line (no initial value).
+	@# Implemented via `flux.fold`: seed `acc` from the head, fold the tail.
+	@# Fails on empty input.  See `flux.fold` for the reducer contract.
+	@#
+	@# USAGE:
+	@#   printf '3\n1\n4\n1\n5\n' | ./compose.mk flux.reduce/<reducer>
+	@#
+	${io.mktemp} && ${stream.stdin} > $${tmpf} \
+	&& ([ -s $${tmpf} ] || ($(call log.target, ${red}flux.reduce: empty input); exit 1)) \
+	&& tail -n +2 $${tmpf} | acc="`head -n1 $${tmpf}`" ${make} flux.fold/${*}
+
 flux.NIY:
 	@# Shorthand for "not implemented yet".  Exits immediately as failure.
 	$(call log.target, ${red}Target Not Implemented Yet); exit 1
@@ -5834,10 +5869,14 @@ ifeq ($(CMK_STANDALONE),1)
 export LOADF = $(value _loadf)
 loadf: compose.loadf
 
-endif
+# NB: the yq/jq/jb CLI proxy-wrappers below are gated to stand-alone (tool) mode
+# on purpose. In library mode (`include compose.mk`, e.g. the `loadf`-generated
+# file) a loaded compose-file may legitimately define a service named `yq`/`jq`,
+# and defining these here too would trigger make's "overriding recipe" warning.
+# Only the bare TARGETS are gated; the `${yq}`/`${jq}`/`${jb}` macros stay global.
 
 yq:
-	@# A wrapper for yq.  
+	@# A wrapper for yq.
 	after=`echo -e "$${MAKE_CLI#*yq}"` \
 	&& cmd=$${cmd:-$${after:-.}} && dcmd="${yq.run.pipe} $${cmd}" \
 	&& ([ -p ${stdin} ] && dcmd="${stream.stdin} | $${dcmd}" || true) \
@@ -5874,6 +5913,7 @@ jb jb.pipe:
 		pipe) sh ${dash_x_maybe} -c "${jb.docker} `${stream.stdin}`"; ;; \
 		*) sh ${dash_x_maybe} -c "${jb.docker} `echo "$${MAKE_CLI#*jb}"`"; ;; \
 	esac
+endif
 
 define .awk.main.preprocess
 BEGIN {
