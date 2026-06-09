@@ -9,9 +9,21 @@
 
 include compose.mk
 
-# pop the top stack element as a raw string, via the stdlib io.stack.pop *macro*
-# (the argless default-stack form -- inline, no `${make}` sub-make per pop).
-ul.pop = `${io.stack.pop} | ${jq} -r .`
+# pop the top element as a raw word, and push the literal in env `q`: both are
+# stdlib io.stack.* *macros* (argless default-stack forms), composed inline so a
+# program runs without spawning a `${make}` for any stack op. `q="..."` is read
+# by the leading jq, so the env-prefix form `q="x" ${ul.push}` works directly.
+ul.pop  = `${io.stack.pop.word}`
+ul.push = ${jq} -n 'env.q' | ${io.stack.push}
+
+# `ul.push/<literal>` is the dispatch form the decoder emits for a quotation, so
+# the whole decoded program is just goals (run by mk.kernel.each). It feeds the
+# literal to the push macro; the operators below use ${ul.push} inline instead,
+# for computed values, so they never pay a sub-make. The empty quotation `()`
+# decodes to a bare `ul.push/` (empty stem, which `%` can't match), so it gets
+# its own literal target.
+ul.push/%:; q="${*}" ${ul.push}
+ul.push/:;  q="" ${ul.push}
 
 # the eight commands, as concatenative stack-targets
 # Single-pop/single-use commands consume ${ul.pop} inline (it already emits the
@@ -21,46 +33,41 @@ ul.swap:
 	@# Swap operator:  "~"     
 	@#   (x)(y) -> (y)(x)
 	y=${ul.pop} ; x=${ul.pop} \
-	; q="$${y}" ${make} ul.push \
-	; q="$${x}" ${make} ul.push
+	; q="$${y}" ${ul.push} \
+	; q="$${x}" ${ul.push}
 
 ul.dup:
 	@# Duplicate operator: ":" 
 	@#   (x) -> (x)(x)
-	x=${ul.pop} ; q="$${x}" ${make} ul.push ; q="$${x}" ${make} ul.push
+	x=${ul.pop} ; q="$${x}" ${ul.push} ; q="$${x}" ${ul.push}
 
-ul.discard:
-	@# Discard operator: "!" 
+ul.discard: io.stack.discard
+	@# Discard operator: "!"
 	@#   (x) -> nil
-	${io.stack.pop}
 
 ul.cat:
 	@# Concat operator: "*" 
 	@#   (x)(y) -> (xy)
 	y=${ul.pop} \
 	; x=${ul.pop} \
-	; q="$${x}$${y}" ${make} ul.push
+	; q="$${x}$${y}" ${ul.push}
 
 ul.enclose:
 	@# Enclose operator: "a" 
 	@#   (x) -> ((x))
-	q="(${ul.pop})" ${make} ul.push
+	q="(${ul.pop})" ${ul.push}
 
 ul.print:
 	@# Pop/print operator.  "S" 
 	@#  (x) -> ; pop x and output it
 	printf '%s' "${ul.pop}"
 
-ul.push:
-	@# Push operator (takes an argument `q`)
-	@${jq} -n --arg q "$${q}" '$$q' | $(call io.stack.push)
-
-ul.apply:; ${flux.pipeline}/ul.print,ul.eval
+ul.apply: flux.pipeline/ul.print,ul.eval
 	@# Apply Operator:  "^" 
 	@#	(x) ->         pop x and run it as Underload
 
 # the reader: rewrite program text into the command vocabulary
-define ul.decode.awk
+define ul.lexer
 {
   n = length($0)
   for (i = 1; i <= n; i++) {
@@ -73,7 +80,7 @@ define ul.decode.awk
         else if (d == ")") { if (--depth == 0) break }
         body = body d
       }
-      print "push " body
+      print "ul.push/" body
     }
     else if (c == "~")  print "ul.swap"
     else if (c == ":")  print "ul.dup"
@@ -87,22 +94,14 @@ define ul.decode.awk
 }
 endef
 
-ul.decode:
-	@# stdin: Underload program -> stdout: one command per line (via io.awk)
-	${io.awk}/ul.decode.awk
+ul.decode: io.awk/ul.lexer
+	@# stdin: Underload program -> stdout: one dispatchable goal per line (io.awk)
 
-ul.run:
-	@# stdin: decoded commands -> execute each against the default stack
-	@while IFS= read -r op; do \
-		case "$${op}" in \
-			"")      : ;; \
-			push\ *) q="$${op#push }" ${make} ul.push ;; \
-			*)  ${make} "$${op}" ;; \
-		esac ; \
-	done
-
-ul.eval:; ${flux.pipeline}/ul.decode,ul.run
-	@# Parse and run Underload program text
+ul.eval: flux.pipeline/ul.decode,mk.kernel.each
+	@# Parse and run Underload program text.  The decoded program is a stream of
+	@# goals (operators + `ul.push/<literal>`); `mk.kernel.each` is the engine that
+	@# dispatches each, in order, re-running repeats (cf. `mk.kernel`, which would
+	@# dedup them).
 
 hello.world: io.stack.reset
 	$(call log.target)
@@ -116,7 +115,7 @@ quine: io.stack.reset
 	$(call log.target)
 	printf '(a(:^)*S):^' | ${make} ul.eval && echo
 
-pquine:
+quine.palindrome:
 	$(call log.target)
 	printf '(:aS(:^S^:)Sa:):^S^:(:aS(:^S^:)Sa:)' | ${make} ul.eval && echo
 
@@ -125,4 +124,4 @@ factorial:
 	printf '(:::::):(:((^:()~((:)*~^)a~*^!!()~^))~*()~^^)~(^a(*~^)*a~*()~^!()~^)a~**^!!^S' \
 	| ${make} ul.eval | tail -1 | ${stream.peek} | wc -c
 
-__main__: hello.world swapper quine pquine
+__main__: hello.world swapper quine quine.palindrome

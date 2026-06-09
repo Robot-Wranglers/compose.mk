@@ -1,0 +1,27 @@
+# See also: https://docs.github.com/en/actions
+# Cold-start performance benchmark (pytest -m perf, via tox). Report-only: it
+# asserts only a clean exit and prints min/median/mean/max timings to the log --
+# there is NO latency threshold (machine-dependent). It is therefore NOT wired to
+# push/PR (timings would be noisy gates); instead it runs on demand and is
+# reusable from other workflows (workflow_call). No docker required.
+name: Perf Tests
+on:
+  workflow_dispatch: {}
+  workflow_call: {}
+permissions:
+  contents: read
+jobs:
+  perf:
+    name: Perf (cold-start benchmark via tox)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run perf-test (report-only)
+        env:
+          CMK_PERF_SAMPLES: '5'
+        run: make perf-test
