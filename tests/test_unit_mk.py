@@ -89,6 +89,91 @@ def test_mk_def_read(cmk, tmp_path):
   assert r.stdout == "hello world\n"
 
 
+# --- mk.import.def : import a define-block from another file ----------------
+# A source block with the gotchas that broke the old mk.get-based importer: an
+# awk `$0`, an indented body, a blank line, and embedded double-quotes. These
+# round-trip only because the importer reads via mk.def.read ($(value), which
+# preserves `$`) and re-establishes the block inside a `define` wrapper.
+_AWK_BLOCK = 'define greet.awk\n{\n  print "hi " $0\n\n  x = 1 + 2\n}\nendef'
+
+
+def _import_pair(tmp_path, source_body, consumer_body):
+  """Write a source file (with a define-block) and a consumer file that imports
+  from it; `SRCPATH` in the consumer body is replaced with the source path."""
+  src = tmp_path / "src.mk"
+  src.write_text(f"include {COMPOSE_MK}\n{source_body}\n")
+  con = tmp_path / "consumer.mk"
+  con.write_text(
+    f"include {COMPOSE_MK}\n{consumer_body.replace('SRCPATH', str(src))}\n"
+  )
+  return src, con
+
+
+def test_mk_import_def_fidelity(cmk, tmp_path):
+  # the imported block is byte-identical to the source's own definition.
+  src, con = _import_pair(
+    tmp_path, _AWK_BLOCK, "$(call mk.import.def, file=SRCPATH def=greet.awk)"
+  )
+  want = cmk("mk.def.read/greet.awk", makefile=src)
+  got = cmk("mk.def.read/greet.awk", makefile=con)
+  assert got.ok, got.stderr
+  assert got.stdout == want.stdout
+  assert (
+    "$0" in got.stdout
+  )  # the dollar survived (the old mk.get-based one ate it)
+
+
+def test_mk_import_def_usable_via_io_awk(cmk, tmp_path):
+  # the imported awk block actually runs as awk against stdin.
+  _, con = _import_pair(
+    tmp_path,
+    _AWK_BLOCK,
+    "$(call mk.import.def, file=SRCPATH def=greet.awk)\n"
+    "use:; @printf 'world\\nthere\\n' | ${io.awk}/greet.awk",
+  )
+  r = cmk("use", makefile=con)
+  assert r.ok, r.stderr
+  assert r.stdout == "hi world\nhi there\n"
+
+
+def test_mk_import_def_as_rename(cmk, tmp_path):
+  # `as=` imports the block under a different local name.
+  src, con = _import_pair(
+    tmp_path,
+    _AWK_BLOCK,
+    "$(call mk.import.def, file=SRCPATH def=greet.awk as=greet.local)",
+  )
+  want = cmk("mk.def.read/greet.awk", makefile=src)
+  got = cmk("mk.def.read/greet.local", makefile=con)
+  assert got.ok, got.stderr
+  assert got.stdout == want.stdout
+
+
+def test_mk_import_def_preserves_double_dollar(cmk, tmp_path):
+  # a shell block's escaped `$$` round-trips, so `${VAR}`-style refs survive.
+  _, con = _import_pair(
+    tmp_path,
+    'define shouty\necho "home=$${HOME:-none}"\nendef',
+    "$(call mk.import.def, file=SRCPATH def=shouty)\ngo:; @${shouty}",
+  )
+  r = cmk("go", makefile=con, env={"HOME": "/x/y"})
+  assert r.ok, r.stderr
+  assert r.stdout.strip() == "home=/x/y"
+
+
+def test_mk_include_def_positional_shim(cmk, tmp_path):
+  # the back-compat positional form: `mk.include.def, <name>, <file>`.
+  _, con = _import_pair(
+    tmp_path,
+    _AWK_BLOCK,
+    "$(call mk.include.def, greet.awk, SRCPATH)\n"
+    "use:; @printf 'X\\n' | ${io.awk}/greet.awk",
+  )
+  r = cmk("use", makefile=con)
+  assert r.ok, r.stderr
+  assert r.stdout == "hi X\n"
+
+
 # --- namespace / var introspection -----------------------------------------
 
 

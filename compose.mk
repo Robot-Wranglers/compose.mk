@@ -1848,17 +1848,37 @@ io.xargs.verbose=xargs -I% sh -x -c
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-# A macro to include a single define-block from another file in this file.
-# (NB: for this to work, both files involved need to use `include compose.mk`)
+# Import a single `define`-block from another file into THIS file's namespace,
+# re-establishing it verbatim so every mk.def.*/io.awk consumer works on it
+# locally.  Parse-time only (it creates a `define`).  The source file must
+# `include compose.mk` (so it provides `mk.def.read`, the reader that preserves
+# `$`/indentation/newlines -- plain `mk.get` would expand the body and eat an
+# awk block's `$0`).  Self-evaling, so call it directly (no outer `$(eval ..)`).
 #
-# USAGE: $(eval $(call mk.include.def, def_name, path_to_makefile))
+# Three load-bearing tricks: (1) the generated `define <as> .. endef` wrapper
+# makes `$(eval ..)` store the body VERBATIM (so `$`/`$$` survive); (2) a
+# tmpfile + `$(file <)` is used instead of `$(shell ..)` directly, because make's
+# `$(shell)` flattens newlines (so multi-line blocks would collapse); (3) the
+# fetch/read/cleanup `$(shell)`/`$(file)` run in textual order during expansion.
 #
-define mk.include.def
-define ${1}
-$(shell make -f ${2} mk.get/$(strip ${1}) > .tmp.$(strip ${1}))
-$(file < .tmp.$(strip ${1})) $(shell rm .tmp.$(strip ${1}))
+# USAGE:
+#   $(call mk.import.def, file=<path> def=<name>)
+#   $(call mk.import.def, file=<path> def=<name> as=<local_name>)
+mk.import.def=$(eval $(call _mk.import.def, ${1}))
+define _mk.import.def
+$(call mk.unpack.kwargs, ${1}, file)
+$(call mk.unpack.kwargs, ${1}, def)
+$(call mk.unpack.kwargs, ${1}, as, ${kwargs_def})
+$(shell make -f ${kwargs_file} mk.def.read/${kwargs_def} > .tmp.mk.import.${kwargs_as} 2>/dev/null)
+define ${kwargs_as}
+$(file < .tmp.mk.import.${kwargs_as})
 endef
+$(shell rm -f .tmp.mk.import.${kwargs_as})
 endef
+
+# Positional convenience over `mk.import.def` (kept for the old `mk.include.def`
+# call-shape; note it now self-evals -- no outer `$(eval ..)` needed).
+mk.include.def=$(call mk.import.def, file=$(strip ${2}) def=$(strip ${1}))
 
 mk.assert.env/%:
 	@# Asserts that the (comma-delimited) environment variables are set and non-empty.
