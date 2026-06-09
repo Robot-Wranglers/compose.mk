@@ -2225,10 +2225,10 @@ mk.preprocess: flux.timer/.mk.preprocess
 	&& export cmk_sugar=$$(cat $${inputf} | ${.cmk.parse.sugar.hint}) \
 	&& case $${CMK_COMPILER_STEPWISE:-0} in \
 		1) cat $${inputf} \
-			| ${make} flux.pipeline/mk.preprocess.minify,mk.preprocess.decorators,mk.preprocess.dialect,mk.preprocess.sugar ;; \
+			| ${make} flux.pipeline/mk.preprocess.minify,mk.preprocess.decorators,mk.preprocess.dialect,mk.preprocess.sugar,mk.preprocess.triplequote ;; \
 		*) cat $${inputf} \
 			| ${.cmk.minify} | ${.cmk.decorators} \
-			| ${.cmk.dialect} | ${.cmk.sugar} ;; \
+			| ${.cmk.dialect} | ${.cmk.sugar} | ${.cmk.triplequote} ;; \
 	esac \
 	| ${stream.nl.compress} \
 	&& printf '\n'
@@ -2246,6 +2246,7 @@ mk.preprocess: flux.timer/.mk.preprocess
 # comment, hence the `\#`.
 .cmk.dialect=( $(call io.mktemp) && hint_file=$${tmpf} && case $${cmk_dialect} in "") ( dialect=$${dialect:-cmk.default.dialect} && $(call log.compiler, mk.preprocess.dialect ${sep}${dim} using ${ital}$${dialect}) && if [ "$${dialect}" = cmk.default.dialect ]; then printf '%s' "$${_cmk_blk_dialect}" > $${hint_file}; else ${mk.def.read}/$${dialect} > $${hint_file}; fi );; *) ( $(call log.compiler, mk.preprocess.dialect ${sep}${dim} using dialect from file) && printf "$${cmk_dialect}" > $${hint_file} && printf "\# cmk_dialect ::: $${cmk_dialect} :::\n" );; esac && $(call io.mktemp) && parser_file=$${tmpf} && cat $${hint_file} | ${jq} -r ".[] | \" | awk -v old='\(.[0])' -v new='\(.[1])' '${.awk.preprocess.dialect}'\"" > $${parser_file} && printf '\n' && ${stream.stdin} | eval ${stream.stdin} `cat $${parser_file}` && printf "\# finished mk.preprocess.dialect $${cmk_dialect}" )
 .cmk.sugar=( $(call io.mktemp) && hint_file=$${tmpf} && case $${cmk_sugar} in "") ( sugar=$${sugar:-cmk.default.sugar} && $(call log.compiler, mk.preprocess.sugar ${sep}${dim} using ${ital}$${sugar}) && if [ "$${sugar}" = cmk.default.sugar ]; then printf '%s' "$${_cmk_blk_sugar}" > $${hint_file}; else ${mk.def.read}/$${sugar} > $${hint_file}; fi );; *) ( $(call log.compiler, mk.preprocess.sugar ${sep}${dim} using sugar from file) && printf "$${cmk_sugar}" > $${hint_file} && printf "\# cmk_sugar ::: $${cmk_sugar} :::\n" );; esac && $(call io.mktemp) && parser_file=$${tmpf} && $(call io.mktemp) && sugar_awk=$${tmpf} && printf '%s' "$${_cmk_blk_sugarawk}" > $${sugar_awk} && cat $${hint_file} | ${jq} -r ".[] | \" | awk -f $${sugar_awk} '\(.[0])' '\(.[1])' '\(.[2])' \"" > $${parser_file} && eval cat /dev/stdin `cat $${parser_file}` && printf "\# finished mk.preprocess.sugar $${cmk_sugar}" )
+.cmk.triplequote=awk "$${_cmk_blk_triplequote}"
 mk.preprocess.minify:
 	@# Assuming stdin is makefile source, minifies it and outputs to stdout
 	${stream.stdin} | ${.cmk.minify}
@@ -2294,6 +2295,12 @@ mk.preprocess.sugar:
 	@# Part of the CMK->Makefile transpilation process.
 	@# (body lives in the `.cmk.sugar` macro, shared with the fused fast path.)
 	${.cmk.sugar}
+
+mk.preprocess.triplequote:
+	@# Lowers `'''..'''`/`"""..."""` literals to `printf` on stdin.
+	@# Part of the CMK->Makefile transpilation process.
+	@# (body lives in the `.cmk.triplequote` macro, shared with the fused fast path.)
+	${.cmk.triplequote}
 # Header-hint parsers as single-source macros: extract the `:::`-delimited JSON
 # from a `# cmk_dialect/sugar ::: ... :::` header comment. The targets below wrap
 # these (kept standalone/debug-invocable + tested); `.mk.preprocess` expands them
@@ -6119,7 +6126,7 @@ function process_text(text, result, pos, method_start, method_name, args_start, 
 # leaving the rest of the line intact; handles several per line.  Runs after
 # process_text, so a RHS using this./cmk.() is already lowered.  index/substr (awk
 # gsub has no capture-group backrefs); length(" ⇐ ") is byte/char agnostic.
-function entail(s,   out, cont, p, rest, ce, k, i, term) {
+function assign(s,   out, cont, p, rest, ce, k, i, term) {
     out = ""; cont = ""
     if (s ~ /[ \t]*\\$/) { sub(/[ \t]*\\$/, "", s); cont = " \\" }
     term[1]=";"; term[2]="&&"; term[3]="||"
@@ -6132,11 +6139,11 @@ function entail(s,   out, cont, p, rest, ce, k, i, term) {
         s = substr(rest, ce) }
     return out s cont }
 # Ensure header is printed first; outside define-blocks apply string
-# substitutions, then cmk.() lowering, then the `⇐` command-substitution
-# operator; inside a define-block print the line verbatim.
+# substitutions, then cmk.() lowering, then the `⇐` assignment operator;
+# inside a define-block print the line verbatim.
 { ensure_header(); line = string_substitute($0)
   if (in_define_block) { print $0 }
-  else { line = process_text(line); if (index(line, " ⇐ ")) line = entail(line); print line } }
+  else { line = process_text(line); if (index(line, " ⇐ ")) line = assign(line); print line } }
 endef
 define .awk.dispatch
 { while (match($$0, /([[:alnum:]_.]+)\.dispatch\(([^)]+)\)/, arr)) {
@@ -6197,6 +6204,45 @@ $0 ~ close_pattern && block_mode == 1 {
 block_mode == 1 { print $0 }
 block_mode == 0 { print $0 }
 endef
+define .awk.triplequote
+# Lower CMK triple-quote literals to a literal, %-safe printf:
+#   '''TEXT''' or """TEXT"""  ->  printf '%s' 'TEXT'  (multi-line: '%s\n%s..')
+# Content is single-quote-escaped (' -> '\'') so internal single/double quotes
+# and `%` survive verbatim.  Skipped inside define..endef, so polyglot blocks
+# (e.g. python '''docstrings''') pass through untouched.  Multi-line spans are
+# accumulated via getline until the matching same-delimiter closer.
+function sq(s,   n,p,i,r) {
+    n = split(s, p, "'"); r = p[1]
+    for (i = 2; i <= n; i++) r = r "'\\''" p[i]
+    return "'" r "'" }
+function emit(content,   n,p,i,fmt,args) {
+    n = split(content, p, "\n"); fmt = "%s"; args = sq(p[1])
+    for (i = 2; i <= n; i++) { fmt = fmt "\\n%s"; args = args " " sq(p[i]) }
+    return "printf '" fmt "' " args }
+BEGIN { in_def = 0; SQ = "'''"; DQ = "\"\"\"" }
+/^define / { in_def = 1; print; next }
+/^endef[ \t]*$/ { in_def = 0; print; next }
+in_def { print; next }
+{
+    rest = $0; out = ""
+    while (1) {
+        a = index(rest, SQ); b = index(rest, DQ)
+        if (a == 0 && b == 0) { out = out rest; break }
+        if (b == 0 || (a != 0 && a < b)) { p = a; delim = SQ } else { p = b; delim = DQ }
+        out = out substr(rest, 1, p - 1)
+        after = substr(rest, p + 3)
+        c = index(after, delim)
+        if (c > 0) { out = out emit(substr(after, 1, c - 1)); rest = substr(after, c + 3) }
+        else {
+            content = after; closed = 0
+            while ((getline nl) > 0) {
+                c = index(nl, delim)
+                if (c > 0) { content = content "\n" substr(nl, 1, c - 1); rest = substr(nl, c + 3); closed = 1; break }
+                content = content "\n" nl }
+            out = out emit(content)
+            if (!closed) rest = "" } }
+    print out }
+endef
 
 # Compile-stage def-blocks captured literally (via `$(value)`, like mk.def.read)
 # and exported so the `.cmk.*` stage macros can read them straight from the
@@ -6210,6 +6256,7 @@ export _cmk_blk_sugar := $(value cmk.default.sugar)
 export _cmk_blk_sugarawk := $(value .awk.sugar)
 export _cmk_blk_mainpre := $(value .awk.main.preprocess)
 export _cmk_blk_dispatch := $(value .awk.dispatch)
+export _cmk_blk_triplequote := $(value .awk.triplequote)
 
 flux.pre/%:
 	@# Dispatch pre-hook if one is available
