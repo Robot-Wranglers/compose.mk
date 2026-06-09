@@ -122,21 +122,15 @@ def test_io_stack_push_and_read(cmk):
 
 
 @pytest.mark.unit
-@pytest.mark.xfail(
-  reason=(
-    "io.stack.pop returns the last element (.[-1]) but removes the "
-    "FIRST (.[1:]) from the file - inconsistent LIFO "
-    "(compose.mk:1647)"
-  ),
-  strict=False,
-)
 def test_io_stack_pop_is_lifo(cmk):
+  # io.stack.push appends (top == last); io.stack.pop returns and removes the
+  # last element (proper LIFO).
   cmk("io.stack.push/st", stdin='{"a":1}')
   cmk("io.stack.push/st", stdin='{"b":2}')
   popped = cmk("io.stack.pop/st")
-  assert json.loads(popped.stdout) == {"b": 2}  # returned value is correct
+  assert json.loads(popped.stdout) == {"b": 2}  # returned value
   remaining = cmk("io.stack/st")
-  assert json.loads(remaining.stdout) == [{"a": 1}]  # but the wrong end is cut
+  assert json.loads(remaining.stdout) == [{"a": 1}]  # the top was removed
 
 
 # Docker-gated io.* targets (e.g. io.figlet) live in test_docker_io.py.

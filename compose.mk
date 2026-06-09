@@ -367,6 +367,21 @@ export CMK_EXTRA_REPO?=.
 export GITHUB_ACTIONS?=false
 export __interpreting__?=
 
+# The default backing-file for the argless `io.stack`/`io.stack.push`/
+# `io.stack.pop`. Suffixed so one invocation's whole process tree shares a stack
+# while separate invocations stay isolated. The suffix is the supervisor pid
+# (MAKE_SUPER) when there is one -- chosen natively via `$(origin)` (no fork) --
+# else a uuid, else a timestamp. We only compute it (and `export`) when nothing
+# upstream already set it: a recursive sub-make inherits the parent's value from
+# the environment (origin != undefined -> the `ifeq` is skipped, no recompute),
+# and a command-line override is respected the same way. `:=` (not `?=`) is
+# deliberate -- it freezes the value once per top-level process, so the fallback
+# `$(shell)` runs at most once and every expansion is byte-stable (a recursive
+# `?=` would re-fork the uuid on every reference).
+ifeq ($(origin CMK_IO_STACK),undefined)
+export CMK_IO_STACK := .tmp.cmk.stack.$(if $(filter-out undefined,$(origin MAKE_SUPER)),${MAKE_SUPER},$(shell uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || date +%s%N))
+endif
+
 ##
 export __script__?=None
 .DEFAULT_GOAL:=__main__
@@ -1696,16 +1711,23 @@ io.selector=choices=`${make} ${1} | ${stream.nl.to.space}` && ${io.get.choice} &
 io.shell.isolated=env -i TERM=$${TERM} COLORTERM=$${COLORTERM} PATH=$${PATH} HOME=$${HOME}
 io.shell.iso=${io.shell.isolated}
 
+# Every io.stack.* macro resolves its stack-file the same way: the ${1} argument
+# when one is given, else the default ${CMK_IO_STACK}. The $(origin) guard keeps
+# this warning-clean (and the ${1} reference absent) when called argument-free, so
+# `$(call io.stack.pop)` works inline with no `${make}` sub-make. The argless
+# *targets* below are thin wrappers over the same macros.
+io.stack.cur = $(if $(filter-out undefined,$(origin 1)),${1},${CMK_IO_STACK})
+
 io.stack/%:; $(call io.stack, ${*})
-	@# Returns all the data in the named stack-file 
+	@# Returns all the data in the named stack-file
 	@#
 	@# USAGE:
 	@#  ./compose.mk io.stack/<fname>
 	@#  [ {.. data ..}, .. ]
-io.stack=(${io.stack.require} && cat ${1} | ${jq.run} .)
+io.stack=(${io.stack.require} && cat ${io.stack.cur} | ${jq.run} .)
 
 io.stack.pop/%:
-	@# Pops first item off the given stack file.  
+	@# Pops first item off the given stack file.
 	@# Not strict: popping an empty stack is allowed.
 	@#
 	@# USAGE:
@@ -1714,9 +1736,11 @@ io.stack.pop/%:
 	@#
 	$(call log.io,  io.stack.pop ${sep} ${dim}stack@${no_ansi}${*} ${cyan_flow_right})
 	$(call io.stack.pop, ${*})
-io.stack.pop=(${io.stack} | ${jq.run} '.[-1]'; ${io.stack} | ${jq.run} '.[1:]' > ${1}.tmp && mv ${1}.tmp ${1})
+io.stack.pop=(${io.stack} | ${jq.run} '.[-1]'; ${io.stack} | ${jq.run} '.[:-1]' > ${io.stack.cur}.tmp && mv ${io.stack.cur}.tmp ${io.stack.cur})
 
-io.stack.require=( ls ${1} >/dev/null 2>/dev/null || echo '[]' > ${1})
+io.stack.require=( ls ${io.stack.cur} >/dev/null 2>/dev/null || echo '[]' > ${io.stack.cur})
+io.stack.push=(${io.stack.require} && obj=`${stream.stdin} | ${jq.run} -c .` && ${jq} --argjson obj "$${obj}" '. + [$$obj]' ${io.stack.cur} > ${io.stack.cur}.tmp && mv ${io.stack.cur}.tmp ${io.stack.cur})
+io.stack.reset=echo '[]' > ${io.stack.cur}
 io.stack.push/%:
 	@# Pushes new JSON data onto the named stack-file
 	@#
@@ -1724,11 +1748,22 @@ io.stack.push/%:
 	@#   echo '<json>' | ./compose.mk io.stack.push/<fname>
 	@#
 	${trace_maybe} \
-	&& $(call io.stack.require, ${*}) && $(call io.mktemp) \
 	&& ([ "$${quiet:-0}" == "1" ] || $(call log.io,  io.stack.push ${sep} ${dim}stack@${no_ansi}${*} ${cyan_flow_left})) \
-	&& ${stream.peek} | ${jq.run} -c . > $${tmpf} \
-	&& ${jq} -n --slurpfile obj $${tmpf} --slurpfile stack ${*} '$$stack[0]+$$obj' > ${*}.tmp
-	mv -f ${*}.tmp ${*}
+	&& ${stream.peek} | $(call io.stack.push, ${*})
+io.stack.reset/%:; @$(call io.stack.reset, ${*})
+	@# (Re)initialize the named stack-file to empty.
+
+# Argless aliases over the default stack (${CMK_IO_STACK}), so you can use a
+# stack without naming a file. The whole invocation's process tree shares it.
+# Each is the no-arg form of the like-named macro (no `${make}` sub-make).
+io.stack:;       @$(call io.stack)
+	@# Show the default stack (${CMK_IO_STACK}).  See also io.stack/<fname>.
+io.stack.push:;  @${stream.peek} | $(call io.stack.push)
+	@# Push stdin JSON onto the default stack.  See also io.stack.push/<fname>.
+io.stack.pop:;   @$(call io.stack.pop)
+	@# Pop the default stack.  See also io.stack.pop/<fname>.
+io.stack.reset:; @$(call io.stack.reset)
+	@# (Re)initialize the default stack (${CMK_IO_STACK}) to empty.
 
 io.string.hash=$(shell printf "${1}" | sed 's/ /_/g'|sed 's/[.]/_/g'|sed 's/\//_/g')
 
