@@ -1712,11 +1712,14 @@ io.shell.isolated=env -i TERM=$${TERM} COLORTERM=$${COLORTERM} PATH=$${PATH} HOM
 io.shell.iso=${io.shell.isolated}
 
 # Every io.stack.* macro resolves its stack-file the same way: the ${1} argument
-# when one is given, else the default ${CMK_IO_STACK}. The $(origin) guard keeps
-# this warning-clean (and the ${1} reference absent) when called argument-free, so
-# `$(call io.stack.pop)` works inline with no `${make}` sub-make. The argless
-# *targets* below are thin wrappers over the same macros.
-io.stack.cur = $(if $(filter-out undefined,$(origin 1)),${1},${CMK_IO_STACK})
+# when one is given AND non-empty, else the default ${CMK_IO_STACK}. The $(origin)
+# guard keeps this warning-clean (the ${1} reference is absent) when called with
+# no args at all, so `$(call io.stack.pop)` works inline with no `${make}`
+# sub-make; the inner $(or ..) additionally falls back when ${1} is present but
+# EMPTY -- which is what the CMK `cmk.io.stack.pop()` sugar emits (it lowers to a
+# trailing-comma `$(call io.stack.pop,)`). The argless *targets* below are thin
+# wrappers over the same macros.
+io.stack.cur = $(if $(filter-out undefined,$(origin 1)),$(or ${1},${CMK_IO_STACK}),${CMK_IO_STACK})
 
 io.stack/%:; $(call io.stack, ${*})
 	@# Returns all the data in the named stack-file
@@ -1736,7 +1739,14 @@ io.stack.pop/%:
 	@#
 	$(call log.io,  io.stack.pop ${sep} ${dim}stack@${no_ansi}${*} ${cyan_flow_right})
 	$(call io.stack.pop, ${*})
-io.stack.pop=(${io.stack} | ${jq.run} '.[-1]'; ${io.stack} | ${jq.run} '.[:-1]' > ${io.stack.cur}.tmp && mv ${io.stack.cur}.tmp ${io.stack.cur})
+# discard = pop without returning the value (it just trims the top off the
+# file); pop is defined as "show the top, then discard it" so the trim lives in
+# one place.
+io.stack.discard=(${io.stack} | ${jq.run} '.[:-1]' > ${io.stack.cur}.tmp && mv ${io.stack.cur}.tmp ${io.stack.cur})
+io.stack.pop=(${io.stack} | ${jq.run} '.[-1]'; ${io.stack.discard})
+# pop.word = pop, but emits the value RAW (jq -r): an unquoted string instead of
+# JSON.  Saves callers a trailing `| jq -r .`.  (`word` as in a bare scalar.)
+io.stack.pop.word=(${io.stack} | ${jq.run} -r '.[-1]'; ${io.stack.discard})
 
 io.stack.require=( ls ${io.stack.cur} >/dev/null 2>/dev/null || echo '[]' > ${io.stack.cur})
 io.stack.push=(${io.stack.require} && obj=`${stream.stdin} | ${jq.run} -c .` && ${jq} --argjson obj "$${obj}" '. + [$$obj]' ${io.stack.cur} > ${io.stack.cur}.tmp && mv ${io.stack.cur}.tmp ${io.stack.cur})
@@ -1752,6 +1762,25 @@ io.stack.push/%:
 	&& ${stream.peek} | $(call io.stack.push, ${*})
 io.stack.reset/%:; @$(call io.stack.reset, ${*})
 	@# (Re)initialize the named stack-file to empty.
+io.stack.discard/%:
+	@# Discards the top item of the given stack-file: like `io.stack.pop`, but
+	@# removes the top WITHOUT emitting it.  Not strict (empty stack is allowed).
+	@# Also available as a macro.
+	@#
+	@# USAGE:
+	@#  ./compose.mk io.stack.discard/<fname>
+	@#
+	$(call log.io,  io.stack.discard ${sep} ${dim}stack@${no_ansi}${*} ${cyan_flow_right})
+	$(call io.stack.discard, ${*})
+io.stack.pop.word/%:
+	@# Like `io.stack.pop`, but returns the top as a RAW value (jq -r): an
+	@# unquoted string instead of JSON.  Removes the top.  Also available as a macro.
+	@#
+	@# USAGE:
+	@#  ./compose.mk io.stack.pop.word/<fname>
+	@#
+	$(call log.io,  io.stack.pop.word ${sep} ${dim}stack@${no_ansi}${*} ${cyan_flow_right})
+	$(call io.stack.pop.word, ${*})
 
 # Argless aliases over the default stack (${CMK_IO_STACK}), so you can use a
 # stack without naming a file. The whole invocation's process tree shares it.
@@ -1762,6 +1791,10 @@ io.stack.push:;  @${stream.peek} | $(call io.stack.push)
 	@# Push stdin JSON onto the default stack.  See also io.stack.push/<fname>.
 io.stack.pop:;   @$(call io.stack.pop)
 	@# Pop the default stack.  See also io.stack.pop/<fname>.
+io.stack.pop.word:; @$(call io.stack.pop.word)
+	@# Pop the default stack as a raw value (jq -r).  See also io.stack.pop.word/<fname>.
+io.stack.discard:; @$(call io.stack.discard)
+	@# Discard the top of the default stack (no value returned).  See also io.stack.discard/<fname>.
 io.stack.reset:; @$(call io.stack.reset)
 	@# (Re)initialize the default stack (${CMK_IO_STACK}) to empty.
 
@@ -2083,10 +2116,16 @@ mk.compile! mk.compiler!:
 
 
 mk.kernel:
-	@# Executes the input data on stdin as a kind of "script" that 
+	@# Executes the input data on stdin as a kind of "script" that
 	@# runs inside the current make-context.  This basically allows
-	@# you to treat targets as an instruction-set without any kind 
+	@# you to treat targets as an instruction-set without any kind
 	@# of 'make ... ' preamble.
+	@#
+	@# This is the BATCH form: the whole stream becomes one `make instr1 instr2 ..`
+	@# invocation, so it realizes a *set* of goals once (make builds each at most
+	@# once; whitespace separates instructions).  For a *program* -- where order &
+	@# repetition matter, or a line carries an argument -- use `mk.kernel.each`,
+	@# which dispatches per line instead.
 	@#
 	@# USAGE: ( concrete )
 	@#  echo flux.ok | ./compose.mk kernel
@@ -2098,7 +2137,29 @@ mk.kernel:
 	&& $(call log.target.part2, ${yellow}$${count}${no_ansi_dim} total) \
 	&& ${trace_maybe} && ${make} $${instructions}
 
-mk.src: 
+mk.kernel.each:
+	@# Iterative sibling of `mk.kernel`: runs each NON-EMPTY line of the input
+	@# stream as its own instruction, in order, each in a SEPARATE recursive
+	@# `${make}` (so a line may carry an argument, e.g. `target/arg`).  Fails fast.
+	@#
+	@# Where `mk.kernel` collapses the whole stream to whitespace and runs it as
+	@# ONE `make instr1 instr2 ..` invocation, this re-enters make per line.  That
+	@# distinction matters for stateful / repeating programs, because of two
+	@# properties of the batch form: (1) make builds each goal at most once per
+	@# invocation, so `mk.kernel` would silently DEDUP a repeated instruction;
+	@# (2) the whitespace-collapse splits a line that carries an argument.
+	@# `mk.kernel.each` preserves both repeats and per-line arguments -- use it
+	@# when the stream is a *program* (order + repetition significant), and plain
+	@# `mk.kernel` when it is just a *set* of goals to realize once.
+	@#
+	@# USAGE:
+	@#   printf 'flux.ok\nflux.ok\n' | ./compose.mk mk.kernel.each
+	@#
+	${trace_maybe} && while IFS= read -r instr || [ -n "$${instr}" ]; do \
+		[ -z "$${instr}" ] || ${make} "$${instr}" </dev/null || exit $$? ; \
+	done
+
+mk.src:
 	@# Returns source-code for this make-context (excluding compose.mk).
 	@# This effectively flattens includes, basically concatenating 
 	@# MAKEFILE_LIST in reverse order, and is used internally as part 
@@ -6053,12 +6114,29 @@ function process_text(text, result, pos, method_start, method_name, args_start, 
         result = result "$(call " method_name "," processed_args ")"
     }
     return result }
-# Ensure header is printed before any output
-# Apply string substitutions (only outside define blocks)
-# If we're in a define-endef block, print the line unchanged
-# Otherwise, process the line for method call conversion
+# `LHS ⇐ RHS` -> shell command-substitution assignment.  Captures RHS up to the
+# nearest shell separator (; && ||), a trailing line-continuation, or end of line,
+# leaving the rest of the line intact; handles several per line.  Runs after
+# process_text, so a RHS using this./cmk.() is already lowered.  index/substr (awk
+# gsub has no capture-group backrefs); length(" ⇐ ") is byte/char agnostic.
+function entail(s,   out, cont, p, rest, ce, k, i, term) {
+    out = ""; cont = ""
+    if (s ~ /[ \t]*\\$/) { sub(/[ \t]*\\$/, "", s); cont = " \\" }
+    term[1]=";"; term[2]="&&"; term[3]="||"
+    while ((p = index(s, " ⇐ ")) > 0) {
+        out = out substr(s, 1, p-1) "=`"
+        rest = substr(s, p + length(" ⇐ "))
+        ce = length(rest) + 1
+        for (i = 1; i <= 3; i++) { k = index(rest, term[i]); if (k > 0 && k < ce) ce = k }
+        out = out substr(rest, 1, ce-1) "`"
+        s = substr(rest, ce) }
+    return out s cont }
+# Ensure header is printed first; outside define-blocks apply string
+# substitutions, then cmk.() lowering, then the `⇐` command-substitution
+# operator; inside a define-block print the line verbatim.
 { ensure_header(); line = string_substitute($0)
-  if (in_define_block) {print $0} else {print process_text(line)} }
+  if (in_define_block) { print $0 }
+  else { line = process_text(line); if (index(line, " ⇐ ")) line = entail(line); print line } }
 endef
 define .awk.dispatch
 { while (match($$0, /([[:alnum:]_.]+)\.dispatch\(([^)]+)\)/, arr)) {
