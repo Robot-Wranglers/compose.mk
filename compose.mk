@@ -5984,7 +5984,8 @@ BEGIN {
     from_string[5] = "polyglot.import("; to_string[5] = "$(call polyglot.import,"
     from_string[6] = "polyglots.import("; to_string[6] = "$(call polyglots.import,"
     from_string[7] = "polyglot.import.file("; to_string[7] = "$(call polyglot.import.file,"
-    num_substitutions = 7 }
+    from_string[8] = "mk.import.def("; to_string[8] = "$(call mk.import.def,"
+    num_substitutions = 8 }
 # Function to ensure the header is printed once before any other output
 function ensure_header() {if (!header_printed) { printf "%s", header; header_printed = 1 } }
 # Track when we enter/exit define-endef blocks
