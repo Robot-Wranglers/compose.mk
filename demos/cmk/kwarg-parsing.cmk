@@ -6,7 +6,8 @@
 emit: 
 	🡄 shape=triangle color=red
 
-consume: ᝏargs.from_json(shape color=blue name=default)
+ᝏargs.from_json(shape color=blue name=default)
+consume:
 	printf "shape=$${shape} color=$${color} name=$${name}\n"
 
 __main__:; this.emit | this.consume
