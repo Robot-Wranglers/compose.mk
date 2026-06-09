@@ -2,7 +2,7 @@
 
 Uses the `project` fixture (a temp project dir) to either write files inline or
 `load()` a prebuilt tree from tests/fixtures/. First family covered:
-Dockerfile.* — the bridge from an on-disk / embedded Dockerfile to a built
+Dockerfile.* - the bridge from an on-disk / embedded Dockerfile to a built
 image. Every artifact is cmktest-labeled via docker_cmk and swept on teardown.
 """
 
@@ -36,8 +36,8 @@ def test_dockerfile_build_from_embedded_def(project):
 
 
 def test_build_context_includes_scaffolded_files(project, runid):
-  # The Dockerfile COPYs payload.txt — proving the build context is the
-  # scaffolded project dir — then we run the image and read the file back.
+  # The Dockerfile COPYs payload.txt - proving the build context is the
+  # scaffolded project dir - then we run the image and read the file back.
   project.load("dockerfile-copy")
   tag = f"compose.mk:cmktest-{runid}-copy"
   build = project.run("Dockerfile.from.fs/Dockerfile", env={"tag": tag})

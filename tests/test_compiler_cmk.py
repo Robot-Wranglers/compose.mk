@@ -1,6 +1,6 @@
 """Compiler suite (low-hanging fruit): pure CMK->Makefile transforms.
 
-The CMK transpile pipeline (mk.compile, mk.preprocess.*) is local awk/sed —
+The CMK transpile pipeline (mk.compile, mk.preprocess.*) is local awk/sed -
 pure stdin->stdout, no docker. These assert *containment* of key transforms
 rather than byte-exact golden output (compiled output carries a context header,
 an `__interpreting__=` shebang, and a trailing NUL; golden tests deferred).

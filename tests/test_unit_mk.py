@@ -4,7 +4,7 @@ These exercise compose.mk's introspection helpers (variable + define lookup,
 namespace listing, env/tool assertions, makefile validation). They're pure and
 no-docker. The CMK compiler/transpiler targets (mk.compile, mk.interpret,
 mk.preprocess.*, and mk.parse golden output) are intentionally NOT covered here
-— that's the deferred compiler test layer.
+- that's the deferred compiler test layer.
 
 mk.* introspection partly reflects compose.mk on itself; where a test would
 be brittle against the full target list, it asserts membership/shape rather

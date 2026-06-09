@@ -222,7 +222,7 @@ def _sweep_stale() -> None:
   """Reclaim resources leaked by previously-interrupted harness runs.
 
   The ``cmktest`` label and ``cmktest*`` compose-project network names are
-  exclusively ours, so this is safe — but it assumes no *concurrent* harness
+  exclusively ours, so this is safe - but it assumes no *concurrent* harness
   session (we run docker suites serially). Respects CMK_TEST_KEEP_IMAGES.
   """
   if not _docker_available():

@@ -125,7 +125,7 @@ def test_io_stack_push_and_read(cmk):
 @pytest.mark.xfail(
   reason=(
     "io.stack.pop returns the last element (.[-1]) but removes the "
-    "FIRST (.[1:]) from the file — inconsistent LIFO "
+    "FIRST (.[1:]) from the file - inconsistent LIFO "
     "(compose.mk:1647)"
   ),
   strict=False,

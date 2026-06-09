@@ -20,7 +20,7 @@ def test_compose_get_stem(cmk, arg, expected):
   assert r.stdout.strip() == expected
 
 
-# compose.versions/* just greps the file for ${VAR:-default} VERSION vars — no
+# compose.versions/* just greps the file for ${VAR:-default} VERSION vars - no
 # docker, so these stay unit (scaffold a compose file in the fixture cwd).
 _DC_VER = "services:\n  s:\n    image: alpine:${ALPINE_TEST_VERSION:-3.21.2}\n"
 

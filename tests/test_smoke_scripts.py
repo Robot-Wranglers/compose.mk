@@ -1,7 +1,7 @@
 """Smoke tests: wrap the legacy shell scripts in tests/scripts/.
 
 Each `tests/scripts/*.sh` is run and asserted to exit cleanly. For now we
-only check the exit status — stdout/stderr are intentionally not asserted
+only check the exit status - stdout/stderr are intentionally not asserted
 (the scripts are exploratory smoke coverage, not golden output).
 
 The scripts use repo-relative paths (`./compose.mk`, `./demos/...`), so they

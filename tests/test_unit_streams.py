@@ -3,7 +3,7 @@
 These targets depend only on coreutils/awk/sed/jq (already assumed by
 compose.mk), so the layer is fast and needs no docker. Expected values
 were derived by running each target and reviewing the bytes against its
-docstring — they encode *intended* behavior, not a blind snapshot. Where
+docstring - they encode *intended* behavior, not a blind snapshot. Where
 the earlier code review found a real defect, the test asserts the correct
 result and is marked ``xfail`` (non-strict) with a pointer to the
 finding: the suite stays green, the bug stays pinned, and the case flips
