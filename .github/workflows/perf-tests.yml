@@ -21,6 +21,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Initialize
+        run: make clean init
       - name: Run perf-test (report-only)
         env:
           CMK_PERF_SAMPLES: '5'

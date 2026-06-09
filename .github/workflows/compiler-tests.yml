@@ -25,5 +25,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Initialize
+        run: make clean init
       - name: Run compiler-tests
         run: make compiler-test

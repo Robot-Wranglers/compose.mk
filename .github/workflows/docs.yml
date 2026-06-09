@@ -31,9 +31,10 @@ jobs:
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
+      - name: Initialize
+        run: make clean init
       - name: Build with mkdocs
-        run: |
-          make clean init docs.pynchon.build docs
+        run: make docs.pynchon.build docs
       
       # https://github.com/actions/upload-pages-artifact
       - name: Upload artifact
