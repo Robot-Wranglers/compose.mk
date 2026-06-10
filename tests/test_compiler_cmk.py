@@ -76,14 +76,33 @@ def test_stage_minify_preserves_define_block(cmk):
   assert "foo \\\nbar" in r.stdout  # continuation preserved in the block
 
 
-def test_stage_decorators_folds_onto_recipe(cmk):
-  # A `ᝏ` decorator line is folded onto its following recipe with `; `.
+def test_stage_decorators_relocate_above_target(cmk):
+  # A `ᝏ` decorator written ABOVE a target is relocated to be the target's
+  # first recipe line (then joinbody chains it with the rest of the body).
   r = cmk(
     "mk.preprocess.decorators",
-    stdin="t: ᝏcompose.bind.target(debian)\n\techo hi\n",
+    stdin="ᝏcompose.bind.target(debian)\nt:\n\techo hi\n",
   )
   assert r.ok, r.stderr
-  assert "compose.bind.target(debian); " in r.stdout
+  assert "t:\n\tᝏcompose.bind.target(debian)\n\techo hi" in r.stdout
+
+
+def test_stage_decorators_inline_form_errors(cmk):
+  # The old inline form (`target: ᝏ...`) is no longer supported.
+  r = cmk(
+    "mk.preprocess.decorators", stdin="t: ᝏcompose.bind.target(x)\n\techo hi\n"
+  )
+  assert not r.ok
+  assert "no longer supported" in r.stderr
+
+
+def test_stage_decorators_require_adjacent_target(cmk):
+  # A blank line between the decorator and the target is rejected.
+  r = cmk(
+    "mk.preprocess.decorators", stdin="ᝏargs.from_json(s)\n\nt:\n\techo hi\n"
+  )
+  assert not r.ok
+  assert "immediately above a target" in r.stderr
 
 
 def test_stage_dialect_glyph_substitutions(cmk):
@@ -302,16 +321,23 @@ def test_interpret_comments_minified(cmk, project):
 
 
 def test_interpret_decorator_args_from_json(cmk, project):
-  # `ᝏargs.from_json(...)` decorates a target: parse JSON stdin into vars,
-  # filling defaults for absent keys (kwarg-parsing idiom).
+  # `ᝏargs.from_json(...)` ABOVE a target: parse JSON stdin into vars, filling
+  # defaults for absent keys (kwarg-parsing idiom). The recipe body is TWO lines
+  # and BOTH must see the bound vars -- i.e. the decorator + body share one shell
+  # (the multi-line bug the above-form + joinbody fixes).
   src = (
-    "consume: ᝏargs.from_json(shape color=blue name=default)\n"
-    '\tprintf "shape=$${shape} color=$${color} name=$${name}\\n"\n'
+    "ᝏargs.from_json(shape color=blue name=default)\n"
+    "consume:\n"
+    '\tprintf "1:shape=$${shape} color=$${color}\\n"\n'
+    '\tprintf "2:name=$${name}\\n"\n'
     '__main__:\n\techo \'{"shape":"triangle"}\' | this.consume\n'
   )
   r = _run_cmk(cmk, project, src)
   assert r.ok, r.stderr
-  assert "shape=triangle color=blue name=default" in r.stdout
+  assert "1:shape=triangle color=blue" in r.stdout
+  assert (
+    "2:name=default" in r.stdout
+  )  # 2nd recipe line also sees the bound var
 
 
 # --- functional idioms: transpilation of sugar blocks / glyphs (compile-only)
@@ -365,16 +391,56 @@ def test_compile_dispatch_glyph_and_call(cmk):
 
 
 def test_compile_decorator(cmk):
-  # `ᝏ<deco>(args)` -> `; cmk.bind.<deco>` -> `$(call bind.<deco>,args)`.
-  r = cmk("mk.compile", stdin="t: ᝏcompose.bind.target(debian)\n")
+  # `ᝏ<deco>(args)` above a target -> `cmk.bind.<deco>` -> `$(call bind.<deco>,args)`
+  # as the target's first recipe line.
+  r = cmk("mk.compile", stdin="ᝏcompose.bind.target(debian)\nt:\n")
   assert r.ok, r.stderr
-  assert "bind.target" in r.stdout
+  assert "$(call bind.compose.bind.target,debian)" in r.stdout
+
+
+def test_compile_decorator_log_target(cmk):
+  # `bind.log.target` lets log.target be a decorator (with a message).
+  r = cmk("mk.compile", stdin="ᝏlog.target(starting)\nt:\n\tcmd\n")
+  assert r.ok, r.stderr
+  assert "$(call bind.log.target,starting)" in r.stdout
+
+
+def test_compile_decorator_bare_no_parens(cmk):
+  # A bare decorator (no `()`) behaves like an empty call: both lower the same.
+  bare = cmk("mk.compile", stdin="ᝏlog.target\nt:\n\tcmd\n")
+  empty = cmk("mk.compile", stdin="ᝏlog.target()\nt:\n\tcmd\n")
+  assert bare.ok and empty.ok, bare.stderr
+  assert "$(call bind.log.target,)" in bare.stdout
+  assert "$(call bind.log.target,)" in empty.stdout
+
+
+def test_interpret_decorator_log_target(cmk, project):
+  # log.target as a decorator: it logs (stderr) and returns 0, so the body runs.
+  src = (
+    "ᝏlog.target(starting)\n"
+    "build:\n\tprintf 'BODY1\\n'\n\tprintf 'BODY2\\n'\n"
+    "__main__: build\n"
+  )
+  r = _run_cmk(cmk, project, src)
+  assert r.ok, r.stderr
+  assert (
+    "BODY1" in r.stdout and "BODY2" in r.stdout
+  )  # decorator returned 0; body ran
+  assert "starting" in (r.stdout + r.stderr)  # the message was logged
 
 
 def test_compile_call_sugar(cmk):
   r = cmk("mk.compile", stdin="compose.import(file=x.yml)\n")
   assert r.ok, r.stderr
   assert "$(call compose.import" in r.stdout and "file=x.yml" in r.stdout
+
+
+def test_compile_import_target_bare_call(cmk):
+  # bare `mk.import.target(..)` lowers to `$(call mk.import.target, ..)`.
+  r = cmk("mk.compile", stdin='mk.import.target(file=t.mk targets="a b")\n')
+  assert r.ok, r.stderr
+  assert "$(call mk.import.target" in r.stdout
+  assert 'targets="a b"' in r.stdout
 
 
 def test_compile_jb_glyph(cmk):
@@ -488,3 +554,57 @@ def test_compile_triplequote_skips_define_block(cmk):
   r = cmk("mk.compile", stdin="define blk\nx = '''doc'''\nendef\n")
   assert r.ok, r.stderr
   assert "x = '''doc'''" in r.stdout
+
+
+# --- recipe-body joining (.awk.joinbody) ------------------------------------
+# The newline-separated lines of a recipe body are joined into ONE shell with
+# ` && \` (shared state, fail-fast).
+
+
+def test_compile_joinbody_basic(cmk):
+  r = cmk("mk.compile", stdin="x:\n\tcmd1\n\tcmd2\n")
+  assert r.ok, r.stderr
+  assert "cmd1 && \\\n" in r.stdout
+  assert "\tcmd2" in r.stdout
+
+
+def test_compile_joinbody_keeps_trailing_connector(cmk):
+  # a line already ending in a connector just continues (no extra `&&`).
+  r = cmk("mk.compile", stdin="x:\n\tcmd1 ;\n\tcmd2\n")
+  assert r.ok, r.stderr
+  assert "cmd1 ; \\\n" in r.stdout
+  assert "cmd1 ; && " not in r.stdout
+
+
+def test_compile_joinbody_prefix_stands_alone(cmk):
+  # `-`/`+`-prefixed lines are not joined (make honors the prefix only at a
+  # recipe-line start).
+  r = cmk("mk.compile", stdin="x:\n\tcmd1\n\t-cmd2\n\tcmd3\n")
+  assert r.ok, r.stderr
+  assert "-cmd2" in r.stdout
+  assert "cmd1 && \\" not in r.stdout  # cmd1 flushed before the -line
+  assert "-cmd2 && \\" not in r.stdout  # -line not joined into cmd3
+
+
+def test_compile_joinbody_single_line_unchanged(cmk):
+  r = cmk("mk.compile", stdin="x:\n\tonly\n")
+  assert r.ok, r.stderr
+  assert "\tonly" in r.stdout
+  assert "only && \\" not in r.stdout
+
+
+def test_compile_joinbody_explicit_continuation(cmk):
+  # minify zips the `\`-continued `a`+`b` into one command; joinbody adds ` && `
+  # only before the separate `c` -- never between `a` and `b`.
+  r = cmk("mk.compile", stdin="x:\n\ta \\\n\tb\n\tc\n")
+  assert r.ok, r.stderr
+  assert "a b && \\\n" in r.stdout
+  assert "\tc" in r.stdout
+
+
+def test_compile_joinbody_skips_define_block(cmk):
+  # define...endef bodies (polyglot/awk) are not joined.
+  r = cmk("mk.compile", stdin="define blk\nl1\nl2\nendef\n")
+  assert r.ok, r.stderr
+  assert "l1\nl2" in r.stdout
+  assert "l1 && \\" not in r.stdout

@@ -1881,37 +1881,153 @@ io.xargs.verbose=xargs -I% sh -x -c
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-# Import a single `define`-block from another file into THIS file's namespace,
-# re-establishing it verbatim so every mk.def.*/io.awk consumer works on it
-# locally.  Parse-time only (it creates a `define`).  The source file must
-# `include compose.mk` (so it provides `mk.def.read`, the reader that preserves
-# `$`/indentation/newlines -- plain `mk.get` would expand the body and eat an
-# awk block's `$0`).  Self-evaling, so call it directly (no outer `$(eval ..)`).
+# Import `define`-block(s) from another file into THIS file's namespace, re-
+# establishing each verbatim so every mk.def.*/io.awk consumer works on it
+# locally.  Parse-time only (it creates `define`s); call it at top-level.  The
+# source file must `include compose.mk` (it provides `mk.def.read`, the $(value)
+# reader that preserves `$`/indentation/newlines).  `def=` imports one block (and
+# `as=` may rename it); `defs="a b ..."` imports several -- each kept under its own
+# name -- and a spec containing `*`/`?` is a glob matching every define whose name
+# fits (so `defs='underload_*'` grabs a whole family).  Errors if the file or any
+# spec matches nothing.  Bounded to the file's own `define` lines (not includes).
 #
-# Three load-bearing tricks: (1) the generated `define <as> .. endef` wrapper
-# makes `$(eval ..)` store the body VERBATIM (so `$`/`$$` survive); (2) a
-# tmpfile + `$(file <)` is used instead of `$(shell ..)` directly, because make's
-# `$(shell)` flattens newlines (so multi-line blocks would collapse); (3) the
-# fetch/read/cleanup `$(shell)`/`$(file)` run in textual order during expansion.
+# Load-bearing tricks (per imported block): (1) the generated `define <name> ..
+# endef` wrapper makes `$(eval)` store the body VERBATIM (so `$`/`$$` survive);
+# (2) a tmpfile + `$(file <)` (not `$(shell)` directly) preserves newlines that
+# `$(shell)` would flatten; (3) fetch/read/cleanup run in textual order.
 #
 # USAGE:
 #   $(call mk.import.def, file=<path> def=<name>)
 #   $(call mk.import.def, file=<path> def=<name> as=<local_name>)
-mk.import.def=$(eval $(call _mk.import.def, ${1}))
-define _mk.import.def
-$(call mk.unpack.kwargs, ${1}, file)
-$(call mk.unpack.kwargs, ${1}, def)
-$(call mk.unpack.kwargs, ${1}, as, ${kwargs_def})
-$(shell make -f ${kwargs_file} mk.def.read/${kwargs_def} > .tmp.mk.import.${kwargs_as} 2>/dev/null)
-define ${kwargs_as}
-$(file < .tmp.mk.import.${kwargs_as})
+#   $(call mk.import.def, file=<path> defs="<name> <name> ...")
+#   $(call mk.import.def, file=<path> defs="<glob> ...")    # e.g. 'underload_*'
+mk.import.def=$(call _mk.import.def, ${1})
+# Plural-name alias (identical signature/behavior); reads naturally with `defs=`.
+mk.import.defs=$(call _mk.import.def, ${1})
+
+# Names of `define`s in file ${1} whose name matches glob spec ${2} (shell `case`,
+# so `*`/`?`/`[..]` are native globs); scans the file's own `define` lines only.
+_mk.def.match=$(shell grep -E '^define[[:space:]]' '${1}' 2>/dev/null | awk '{print $$2}' | while read n; do case "$$n" in (${2}) printf '%s\n' "$$n";; esac; done)
+
+# Import ONE define by exact name ${2} from file ${1}, under local name ${3}: read
+# verbatim via mk.def.read ($(value)), error if absent, wrap in a fresh `define`.
+# Invoke via `$(eval $(call _mk.import.def.one,..))` so the wrapper is parsed.
+define _mk.import.def.one
+$(shell make -f ${1} mk.def.read/${2} > .tmp.mk.import.def.${3} 2>/dev/null)
+$(if $(strip $(file < .tmp.mk.import.def.${3})),,$(error mk.import.def: def `${2}` not found in `${1}`))
+define ${3}
+$(file < .tmp.mk.import.def.${3})
 endef
-$(shell rm -f .tmp.mk.import.${kwargs_as})
+$(shell rm -f .tmp.mk.import.def.${3})
+endef
+
+# Resolve one `defs=` spec: a glob expands to every matching define name (error if
+# none), an exact name imports directly.
+_mk.import.def.spec=$(if $(findstring *,${2})$(findstring ?,${2}),$(eval _mk_id_names:=$(call _mk.def.match,${1},${2}))$(if ${_mk_id_names},$(foreach _n,${_mk_id_names},$(eval $(call _mk.import.def.one,${1},${_n},${_n}))),$(error mk.import.def: no def matching `${2}` in `${1}`)),$(eval $(call _mk.import.def.one,${1},${2},${2})))
+
+define _mk.import.def
+$(eval _mk_id_args:=$(subst %,%%,$(subst ",',${1})))
+$(call mk.unpack.kwargs, ${_mk_id_args}, file)
+$(call mk.unpack.kwargs, ${_mk_id_args}, def, MKID_NONE)
+$(call mk.unpack.kwargs, ${_mk_id_args}, defs, MKID_NONE)
+$(call mk.unpack.kwargs, ${_mk_id_args}, as, MKID_NONE)
+$(if $(wildcard ${kwargs_file}),,$(error mk.import.def: file not found: `${kwargs_file}`))
+$(if $(filter-out MKID_NONE,${kwargs_def} ${kwargs_defs}),,$(error mk.import.def: give def=<name> or defs="<a b c>". Input: `${1}`))
+$(if $(filter-out MKID_NONE,${kwargs_def}),$(eval $(call _mk.import.def.one,${kwargs_file},${kwargs_def},$(if $(filter-out MKID_NONE,${kwargs_as}),${kwargs_as},${kwargs_def}))))
+$(foreach _s,$(filter-out MKID_NONE,${kwargs_defs}),$(call _mk.import.def.spec,${kwargs_file},${_s}))
 endef
 
 # Positional convenience over `mk.import.def` (kept for the old `mk.include.def`
 # call-shape; note it now self-evals -- no outer `$(eval ..)` needed).
 mk.include.def=$(call mk.import.def, file=$(strip ${2}) def=$(strip ${1}))
+
+# The textual extractor used by `mk.import.target`: pulls the block for an EXACT
+# target name `t` out of the source (glob resolution happens earlier, so `t` here
+# is always a concrete name).  Matches the header `^<t>:` (covers `name:`,
+# `name: prereqs`, `name:; inline`; the `([^=]|$)` guard excludes `:=`/`?=`
+# assignments), then captures consecutive TAB recipe lines (incl. `@#` docs /
+# `\`-continuations).  `g2r` regex-escapes the name (`.` literal; `/`/`%` stay
+# literal so pattern targets like `ul.push/%` match).  Read via `$(value ..)` so
+# the awk's `$0`/`$`/backslashes pass through un-expanded (like `$(file <)`).
+define mk.target.extract.awk
+function g2r(s,  r,i,c){ r="";
+  for(i=1;i<=length(s);i++){ c=substr(s,i,1);
+    if(c=="*") r=r ".*";
+    else if(c=="?") r=r ".";
+    else if(c ~ /[][(){}.^$+|\\]/) r=r "\\" c;
+    else r=r c };
+  return r }
+BEGIN { cap=0; pat = "^" g2r(t) "[ \t]*:([^=]|$)" }
+cap && /^\t/ { print; next }
+{ cap=0; if ($0 ~ pat) { print; cap=1 } }
+endef
+
+# Target names defined textually in file ${1} (`^name:` headers, split on
+# multi-target rules; the `([^=]|$)` guard skips `:=`/`?=` assignments).  Skips
+# `define ... endef` bodies -- their content (e.g. an awk block or a literal with
+# `:`) must not be mistaken for target headers.
+_mk.target.names=$(shell awk '/^define /{d=1} /^endef/{d=0;next} d{next} /^[^[:space:]#=][^=]*:([^=]|$$)/{ h=$$0; sub(/[ \t]*:.*/,"",h); k=split(h,a," "); for(i=1;i<=k;i++) print a[i] }' '${1}' 2>/dev/null | sort -u)
+
+# Subset of the space-list ${2} that is ALSO a target in file ${1}.  Scans ${1}
+# once but emits only the intersection, so this stays cheap even when ${1} is a big
+# (e.g. interpreter-inlined) file -- used as the never-override set.  Skips
+# `define ... endef` bodies for the same reason as `_mk.target.names`.
+_mk.local.of=$(shell awk -v want="${2}" 'BEGIN{ k=split(want,w," "); for(i=1;i<=k;i++) W[w[i]]=1 } /^define /{d=1} /^endef/{d=0;next} d{next} /^[^[:space:]#=][^=]*:([^=]|$$)/{ h=$$0; sub(/[ \t]*:.*/,"",h); n=split(h,a," "); for(j=1;j<=n;j++) if(a[j] in W) print a[j] }' '${1}' 2>/dev/null | sort -u)
+
+# Subset of the space-list ${2} matching the shell glob ${1} (native `*`/`?`/`[..]`).
+_mk.glob.filter=$(shell for n in ${2}; do case "$$n" in (${1}) printf '%s\n' "$$n";; esac; done)
+
+# Import one EXACT target ${2} from file ${1}: tmpfile keeps the newlines/tabs a
+# bare `$(shell)` would flatten; the recipe parsed by `$(eval)` keeps deferred
+# expansion (so `$${y}` survives).  No define-wrapper -- we want a rule.
+define _mk.import.target.one
+$(eval _mk_it_tmp:=.tmp.mk.import.target.$(subst ?,_,$(subst *,_,$(subst /,_,$(subst %,_,${2})))))
+$(shell awk -v t='${2}' '$(value mk.target.extract.awk)' '${1}' > ${_mk_it_tmp})
+$(eval $(file < ${_mk_it_tmp}))
+$(shell rm -f ${_mk_it_tmp})
+endef
+
+# Resolve one spec to source target names (glob or exact), error if it matches
+# nothing, then import each EXCEPT names the destination already defines: a local
+# target is NEVER overridden -- silently (no `make` "overriding recipe" warning,
+# which recursion would otherwise spam).  `$(filter)` treats `%` as a wildcard, so
+# membership is tested literally via `$(findstring <name>,..)` on the bracketed set.
+define _mk.import.target.spec
+$(eval _mk_it_hits:=$(call _mk.glob.filter,${2},${_mk_it_src}))
+$(if ${_mk_it_hits},,$(error mk.import.target: no target matching `${2}` in `${1}`))
+$(foreach _n,${_mk_it_hits},$(if $(findstring <${_n}>,${_mk_it_localb}),,$(eval $(call _mk.import.target.one,${1},${_n}))))
+endef
+
+# The target-flavoured sibling of `mk.import.def`: copies whole target(s) -- header
+# (with prerequisites) and recipe -- verbatim out of another makefile into this one,
+# for sharing targets between a `.cmk` port and its plain-make twin.  Parse-time
+# only (it creates rules); call it directly at top-level.  Errors if the file or
+# any spec matches nothing.  Quote `targets=` when passing more than one.  A spec
+# with `*` (any run) or `?` (one char) is a glob matching every target whose name
+# fits; a spec with neither is an exact name.  An import NEVER overrides a target
+# the importing file already defines (local wins, silently).  NOTE: scans the given
+# <file> textually only (not its includes, not `::`/appended rules).
+#
+# USAGE:
+#   $(call mk.import.target, file=<path> target=<name>)
+#   $(call mk.import.target, file=<path> targets="<name> <name> ...")
+#   $(call mk.import.target, file=<path> targets="<glob> ...")   # e.g. 'ul.push/*'
+mk.import.target=$(call _mk.import.target, ${1})
+# Plural-name alias (identical signature/behavior); reads naturally with `targets=`.
+mk.import.targets=$(call _mk.import.target, ${1})
+
+define _mk.import.target
+$(eval _mk_it_args:=$(subst %,%%,$(subst ",',${1})))
+$(call mk.unpack.kwargs, ${_mk_it_args}, file)
+$(call mk.unpack.kwargs, ${_mk_it_args}, target, MKIT_NONE)
+$(call mk.unpack.kwargs, ${_mk_it_args}, targets, MKIT_NONE)
+$(if $(wildcard ${kwargs_file}),,$(error mk.import.target: file not found: `${kwargs_file}`))
+$(eval _mk_it_src:=$(call _mk.target.names,${kwargs_file}))
+$(eval _mk_it_localb:=$(foreach _l,$(call _mk.local.of,$(firstword ${MAKEFILE_LIST}),${_mk_it_src}),<${_l}>))
+$(eval _mk_it_specs:=$(strip $(filter-out MKIT_NONE,${kwargs_target} ${kwargs_targets})))
+$(if ${_mk_it_specs},,$(error mk.import.target: give target=<name> or targets="<a b c>". Input: `${1}`))
+$(foreach _s,${_mk_it_specs},$(call _mk.import.target.spec,${kwargs_file},${_s}))
+endef
 
 mk.assert.env/%:
 	@# Asserts that the (comma-delimited) environment variables are set and non-empty.
@@ -6072,7 +6188,10 @@ BEGIN {
     from_string[6] = "polyglots.import("; to_string[6] = "$(call polyglots.import,"
     from_string[7] = "polyglot.import.file("; to_string[7] = "$(call polyglot.import.file,"
     from_string[8] = "mk.import.def("; to_string[8] = "$(call mk.import.def,"
-    num_substitutions = 8 }
+    from_string[9] = "mk.import.target("; to_string[9] = "$(call mk.import.target,"
+    from_string[10] = "mk.import.defs("; to_string[10] = "$(call mk.import.defs,"
+    from_string[11] = "mk.import.targets("; to_string[11] = "$(call mk.import.targets,"
+    num_substitutions = 11 }
 # Function to ensure the header is printed once before any other output
 function ensure_header() {if (!header_printed) { printf "%s", header; header_printed = 1 } }
 # Track when we enter/exit define-endef blocks

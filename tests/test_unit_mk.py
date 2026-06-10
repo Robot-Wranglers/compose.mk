@@ -174,6 +174,200 @@ def test_mk_include_def_positional_shim(cmk, tmp_path):
   assert r.stdout == "hi X\n"
 
 
+# --- mk.import.def : defs= (multiple) + wildcards ---------------------------
+# `defs="a b ..."` imports several define-blocks, each under its own name; a spec
+# with `*`/`?` is a glob matching every define whose name fits.
+_DEFS_SRC = (
+  "define salute.a\nhello A\nendef\n"
+  "define salute.b\nhello B\nendef\n"
+  "define other.x\nnope\nendef"
+)
+
+
+def test_mk_import_def_defs_multiple(cmk, tmp_path):
+  _, con = _import_pair(
+    tmp_path,
+    _DEFS_SRC,
+    "$(call mk.import.def, file=SRCPATH defs='salute.a salute.b')",
+  )
+  a = cmk("mk.def.read/salute.a", makefile=con)
+  b = cmk("mk.def.read/salute.b", makefile=con)
+  assert a.ok, a.stderr
+  assert b.ok, b.stderr
+  assert a.stdout == "hello A\n"
+  assert b.stdout == "hello B\n"
+
+
+def test_mk_import_def_defs_wildcard(cmk, tmp_path):
+  # the glob imports every matching define, and nothing else.
+  _, con = _import_pair(
+    tmp_path, _DEFS_SRC, "$(call mk.import.def, file=SRCPATH defs='salute.*')"
+  )
+  assert cmk("mk.def.read/salute.a", makefile=con).stdout == "hello A\n"
+  assert cmk("mk.def.read/salute.b", makefile=con).stdout == "hello B\n"
+  # other.x did not match the glob, so it was not imported (empty value).
+  assert cmk("mk.def.read/other.x", makefile=con).stdout.strip() == ""
+
+
+def test_mk_import_def_defs_no_match(cmk, tmp_path):
+  # a glob that matches nothing is a hard error.
+  _, con = _import_pair(
+    tmp_path, _DEFS_SRC, "$(call mk.import.def, file=SRCPATH defs='zzz*')"
+  )
+  r = cmk("flux.ok", makefile=con)
+  assert not r.ok
+  assert "no def matching" in r.stderr
+
+
+# --- mk.import.target : import whole target(s) from another file ------------
+# Targets (unlike defines) are not introspectable via $(value), so the importer
+# extracts them textually and $(eval)s each as its own rule. The source below
+# covers the gotchas: a multi-line recipe, an escaped `$$`, a `%`-stem pattern
+# target, and a target name containing a `.` (which the extractor must regex-
+# escape). The recipes round-trip because $(file <) + $(eval) keep deferred
+# recipe expansion (so `$$`/`$*` survive to run-time).
+_TARGETS_SRC = (
+  "greet:\n"
+  "\t@printf 'hi %s\\n' world\n"
+  "\n"
+  "twice:\n"
+  "\t@printf 'a\\n'\n"
+  "\t@printf 'b\\n'\n"
+  "\n"
+  "shouty:\n"
+  '\t@echo "home=$${HOME:-none}"\n'
+  "\n"
+  "echo/%:\n"
+  "\t@printf 'stem=%s\\n' \"$*\"\n"
+)
+
+
+def test_mk_import_target_single(cmk, tmp_path):
+  # a multi-line-recipe target is recreated and runs (joined recipe still works).
+  _, con = _import_pair(
+    tmp_path,
+    _TARGETS_SRC,
+    "$(call mk.import.target, file=SRCPATH target=twice)",
+  )
+  r = cmk("twice", makefile=con)
+  assert r.ok, r.stderr
+  assert r.stdout == "a\nb\n"
+
+
+def test_mk_import_target_preserves_double_dollar(cmk, tmp_path):
+  # an escaped `$$` round-trips, so `${VAR}`-style shell refs survive.
+  _, con = _import_pair(
+    tmp_path,
+    _TARGETS_SRC,
+    "$(call mk.import.target, file=SRCPATH target=shouty)",
+  )
+  r = cmk("shouty", makefile=con, env={"HOME": "/x/y"})
+  assert r.ok, r.stderr
+  assert r.stdout.strip() == "home=/x/y"
+
+
+def test_mk_import_target_multiple(cmk, tmp_path):
+  # `targets="a b"` imports several at once (space-separated, quoted).
+  _, con = _import_pair(
+    tmp_path,
+    _TARGETS_SRC,
+    '$(call mk.import.target, file=SRCPATH targets="greet twice")',
+  )
+  g = cmk("greet", makefile=con)
+  t = cmk("twice", makefile=con)
+  assert g.ok, g.stderr
+  assert t.ok, t.stderr
+  assert g.stdout == "hi world\n"
+  assert t.stdout == "a\nb\n"
+
+
+def test_mk_import_target_pattern(cmk, tmp_path):
+  # a `%`-stem pattern target imports and matches; `$*` (the stem) survives.
+  _, con = _import_pair(
+    tmp_path,
+    _TARGETS_SRC,
+    "$(call mk.import.target, file=SRCPATH target=echo/%)",
+  )
+  r = cmk("echo/world", makefile=con)
+  assert r.ok, r.stderr
+  assert r.stdout == "stem=world\n"
+
+
+def test_mk_import_target_missing_file(cmk, tmp_path):
+  # a nonexistent file is a hard error.
+  _, con = _import_pair(
+    tmp_path,
+    _TARGETS_SRC,
+    "$(call mk.import.target, file=/no/such/file.mk target=twice)",
+  )
+  r = cmk("twice", makefile=con)
+  assert not r.ok
+  assert "file not found" in r.stderr
+
+
+def test_mk_import_target_missing_target(cmk, tmp_path):
+  # a target absent from the source file is a hard error.
+  _, con = _import_pair(
+    tmp_path,
+    _TARGETS_SRC,
+    "$(call mk.import.target, file=SRCPATH target=nonesuch)",
+  )
+  r = cmk("nonesuch", makefile=con)
+  assert not r.ok
+  assert "no target matching" in r.stderr
+
+
+# a source with a common prefix, for glob specs (`*` any run, `?` one char).
+_GLOB_SRC = "foo.a:\n\t@echo aa\n\nfoo.b:\n\t@echo bb\n\nbar:\n\t@echo cc\n"
+
+
+def test_mk_import_target_wildcard(cmk, tmp_path):
+  # `targets='foo.*'` imports every matching target (foo.a + foo.b), not `bar`.
+  _, con = _import_pair(
+    tmp_path,
+    _GLOB_SRC,
+    "$(call mk.import.target, file=SRCPATH targets='foo.*')",
+  )
+  a = cmk("foo.a", makefile=con)
+  b = cmk("foo.b", makefile=con)
+  assert a.ok and b.ok, (a.stderr, b.stderr)
+  assert a.stdout == "aa\n"
+  assert b.stdout == "bb\n"
+  # `bar` did NOT match the glob, so it was not imported.
+  assert not cmk("bar", makefile=con).ok
+
+
+def test_mk_import_target_wildcard_no_match(cmk, tmp_path):
+  # a glob that matches nothing is a hard error (like an absent exact name).
+  _, con = _import_pair(
+    tmp_path,
+    _GLOB_SRC,
+    "$(call mk.import.target, file=SRCPATH targets='zzz*')",
+  )
+  r = cmk("foo.a", makefile=con)
+  assert not r.ok
+  assert "no target matching" in r.stderr
+
+
+def test_mk_import_target_never_overrides_local(cmk, tmp_path):
+  # An import never clobbers a local target: a glob silently skips names the
+  # destination already defines (local wins, no "overriding recipe" warning --
+  # which would otherwise spam on every recursive ${make}), while still importing
+  # the non-overlapping ones.
+  _, con = _import_pair(
+    tmp_path,
+    _GLOB_SRC,
+    "$(call mk.import.target, file=SRCPATH targets='foo.*')\nfoo.a:\n\t@echo LOCAL\n",
+  )
+  a = cmk("foo.a", makefile=con)
+  b = cmk("foo.b", makefile=con)
+  assert a.ok, a.stderr
+  assert b.ok, b.stderr
+  assert a.stdout == "LOCAL\n"  # local override wins (foo.a import skipped)
+  assert b.stdout == "bb\n"  # foo.b had no local def -> still imported
+  assert "overriding recipe" not in a.stderr
+
+
 # --- mk.kernel / mk.kernel.each : run a target-stream as an instruction set --
 # mk.kernel BATCHES the stream into one `make a b c` invocation; mk.kernel.each
 # re-enters make PER line. The contrast (dedup + whitespace vs. repeat + intact)
