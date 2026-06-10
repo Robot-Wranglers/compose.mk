@@ -10,8 +10,3 @@ consume:
 __main__:
 	this.emit | this.consume
 	cmk.log.target(hello world!)
-
-xxx:
-	this.emit | this.test
-test:
-	x=`🡆 .key`; printf $${x}
