@@ -1,0 +1,99 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+## CMK Quick Reference
+<hr style="width:100%;border-bottom:3px solid black;">
+<a name=quick-reference></a>
+
+A one-page cheat-sheet of CMK-lang syntax.  Each entry links to the full
+explanation on the [Compiler &amp; Dialects]({{mkdocs.site_relative_url}}/compiler) page;
+see also the [CMK demo index]({{mkdocs.site_relative_url}}/compiler/#all-demos).
+
+<table class=quickref>
+  <thead>
+    <tr><th>Syntax</th><th>Example</th><th>Meaning</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>this.</code><i>target</i></td>
+      <td><code>this.build</code></td>
+      <td>Recursive call to another target
+      <a href="{{mkdocs.site_relative_url}}/compiler/#dialects">(detail)</a></td>
+    </tr>
+    <tr>
+      <td><i>svc</i><code>⧐</code><i>target</i></td>
+      <td><code>debian⧐build</code></td>
+      <td>Dispatch a target inside container <i>svc</i> 
+      <a href="{{mkdocs.site_relative_url}}/compiler/#dialects">(detail)</a></td>
+    </tr>
+    <tr>
+      <td><code>🡄</code> <i>k=v…</i></td>
+      <td><code>🡄 name=$USER n=3</code></td>
+      <td>Emit JSON from key=value pairs (<code>jb</code>). 
+      <a href="{{mkdocs.site_relative_url}}/compiler/#dialects">(detail)</a></td>
+    </tr>
+    <tr>
+      <td><code>🡆</code> <i>.key</i></td>
+      <td><code>🡆 .name</code></td>
+      <td>Extract a field from JSON on stdin (<code>jq -r</code>). 
+      <a href="{{mkdocs.site_relative_url}}/compiler/#dialects">(detail)</a></td>
+    </tr>
+    <tr>
+      <td><i>x</i> <code>⇐</code> <i>cmd</i></td>
+      <td><code>top ⇐ this.peek</code></td>
+      <td>Capture a command's output into shell var <i>x</i>. <a href="{{mkdocs.site_relative_url}}/compiler/#assignment-operator">(detail)</a></td>
+    </tr>
+    <tr>
+      <td><code>cmk.</code><i>fn</i><code>(args)</code></td>
+      <td><code>cmk.log.target(hi)</code></td>
+      <td>Call a compose.mk function/macro (<code>$(call fn,args)</code>). <a href="{{mkdocs.site_relative_url}}/compiler/#dialects">(detail)</a></td>
+    </tr>
+    <tr>
+      <td><i>name</i><code>(args)</code></td>
+      <td><code>compose.import(file=svc.yml)</code></td>
+      <td>Bare-call form of import statements (<code>compose.import</code>, <code>polyglot.import</code>, <code>mk.import.def</code>, <code>mk.import.target</code>, …). <a href="{{mkdocs.site_relative_url}}/compiler/#dialects">(detail)</a></td>
+    </tr>
+    <tr>
+      <td><code>'''…'''</code> &nbsp; <code>"""…"""</code></td>
+      <td><code>'''(Hi)S''' | this.eval</code></td>
+      <td>Literal text, with no quoting/escaping hassle. <a href="{{mkdocs.site_relative_url}}/compiler/#triple-quote-literals">(detail)</a></td>
+    </tr>
+    <tr>
+      <td><i>(Recipe Body)</i></td>
+      <td><code>cd /tmp<br/>make thing</code></td>
+      <td>Lines are joined into a single shell with <code>&amp;&amp;</code>. <a href="{{mkdocs.site_relative_url}}/compiler/#recipe-body-joining">(detail)</a></td>
+    </tr>
+    <tr>
+      <td><code>ᝏ</code><i>deco(args)</i></td>
+      <td><code>ᝏlog.target</code></td>
+      <td>Bind-declaration / decorator, above a target. <a href="{{mkdocs.site_relative_url}}/compiler/#bind-declarations">(detail)</a></td>
+    </tr>
+    <tr>
+      <td><code>⟦</code> <i>lang … </i><code>⟧</code></td>
+      <td><code>⟦ python … ⟧</code></td>
+      <td>Embedded polyglot code block. <a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">(detail)</a></td>
+    </tr>
+    <tr>
+      <td><code>⨖</code> <i>… </i><code>⨖</code></td>
+      <td><code>⨖ with … as … ⨖</code></td>
+      <td>Script block dispatched into a container (with / as). <a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">(detail)</a></td>
+    </tr>
+    <tr>
+      <td><code>🞹</code> <i>… </i><code>🞹</code></td>
+      <td><code>🞹 mycode … 🞹</code></td>
+      <td>Embedded compose-config code. <a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">(detail)</a></td>
+    </tr>
+    <tr>
+      <td><code>⋘</code> <i>name … </i><code>⋙</code></td>
+      <td><code>⋘ mylib … ⋙</code></td>
+      <td>Embedded compose file; imports its services. <a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">(detail)</a></td>
+    </tr>
+    <tr>
+      <td><code>⫻</code> <i>… </i><code>⫻</code></td>
+      <td><code>⫻ FROM debian … ⫻</code></td>
+      <td>Embedded Dockerfile. <a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">(detail)</a></td>
+    </tr>
+  </tbody>
+</table>
+
+For the full walk-through of dialects, sugar, and the rest of the compiler, see
+[Compiler &amp; Dialects]({{mkdocs.site_relative_url}}/compiler).

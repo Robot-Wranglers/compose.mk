@@ -1,0 +1,215 @@
+/*
+ * compose.mk site-specific styles.
+ */
+
+/* "Quick Reference" cheat-sheet table (docs/compiler.md.j2).
+ * Opted out of the global `docutils` class (see js/theme_extra.js) so these
+ * rules fully own its look: compact, zebra-striped, and readable. */
+table.quickref {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0 1.5rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  background: #ffffff;
+  border: 1px solid #e1e4e8; /* subtle border around the whole table */
+}
+
+table.quickref thead th {
+  text-align: left;
+  padding: 0.4em 0.75em;
+  border-bottom: 2px solid #b8c0c8;
+  font-weight: 700;
+}
+
+table.quickref td {
+  padding: 0.35em 0.75em;
+  border: none;
+  vertical-align: top;
+}
+
+/* shrink the syntax column to its content */
+table.quickref td:first-child {
+  width: 1%;
+}
+
+/* zebra rows + gentle hover.  Both stripes are set explicitly (odd = white)
+ * so neither row ever shows through as the page background. */
+table.quickref tbody tr:nth-child(odd) {
+  background: #ffffff;
+}
+table.quickref tbody tr:nth-child(even) {
+  background: #f6f8fa;
+}
+table.quickref tbody tr:hover {
+  background: #eaf2fb;
+}
+
+table.quickref code {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 0.05em 0.35em;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+table.quickref a {
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+/* ---- Default content tables -------------------------------------------------
+ * The global `docutils` class (added to every non-quickref table by
+ * js/theme_extra.js) is re-skinned to match `table.quickref`: a clean white
+ * panel with a subtle border, white/faint zebra rows, and a light header
+ * underline -- overriding the heavier theme_extra defaults (cyan tint, thick
+ * dark/black borders, bold cells).  Also covers the `docutils-wrap` variant
+ * (its `td.wrap{white-space:normal}` wrapping is preserved, since these rules set
+ * no `white-space`).  The `api_docs` and `field-list` variants keep their own
+ * styling, so they are excluded.  The `:not(...)` chain also lifts specificity
+ * above those theme_extra rules; this sheet loads last (see base.html), so
+ * equal-specificity rules win too. */
+.rst-content table.docutils:not(.api_docs):not(.field-list) {
+  width: 100%; /* fit the content area (like quickref) so wide cells wrap, not overflow */
+  border: 1px solid #e1e4e8;
+  border-collapse: collapse;
+  background: #ffffff;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+/* let long, comma-separated chip lists wrap inside their cell instead of
+ * pushing the column past the page width */
+.rst-content table.docutils:not(.api_docs):not(.field-list) td,
+.rst-content table.docutils:not(.api_docs):not(.field-list) th {
+  overflow-wrap: anywhere;
+}
+.rst-content table.docutils:not(.api_docs):not(.field-list) tr,
+.rst-content table.docutils:not(.api_docs):not(.field-list) td,
+.rst-content table.docutils:not(.api_docs):not(.field-list) th {
+  border: none;
+  margin: 0;
+  padding: 0.4em 0.75em;
+  text-align: left;
+  vertical-align: top;
+  font-weight: normal;
+  background-color: transparent;
+}
+.rst-content table.docutils:not(.api_docs):not(.field-list) thead th {
+  font-weight: 700;
+  border-bottom: 2px solid #b8c0c8;
+}
+/* zebra: odd = white, even = faint tint (override the cyan + grey stripes).
+ * `border:none` is repeated here because theme_extra's odd-row rule uses
+ * `:nth-child` (a pseudo-class, so specificity (0,4,3)) and would otherwise beat
+ * the plain `td{border:none}` above -- leaving a heavy 2px border on odd rows. */
+.rst-content table.docutils:not(.api_docs):not(.field-list) tbody tr:nth-child(odd) td {
+  background-color: #ffffff;
+  border: none;
+}
+.rst-content table.docutils:not(.api_docs):not(.field-list) tbody tr:nth-child(even) td {
+  background-color: #f6f8fa;
+  border: none;
+}
+.rst-content table.docutils:not(.api_docs):not(.field-list) tbody tr:hover td {
+  background-color: #eaf2fb;
+}
+/* links read as links again (theme_extra forces `.docutils tr a` to black) */
+.rst-content table.docutils:not(.api_docs):not(.field-list) td a {
+  color: #2980b9;
+}
+
+/* Consistent 1em gap below code blocks and CLI-output panels
+ * (theme_extra sets `div .highlight` to margin:0 and `.cli_output` to ~3em). */
+div.highlight,
+.cli_output {
+  margin-bottom: 1em;
+}
+/* ...except inside a <details> demo-embed, where the code block butts up against
+ * its `div.code_table_bottom` bar -- the 1em there leaves an unwanted gap. */
+details div.highlight {
+  margin-bottom: 0;
+}
+
+/* Image lightbox modal (built/toggled by js/theme_extra.js): click an image
+ * that links to an image file to view it enlarged; Escape or a click outside
+ * the image closes it. */
+#img-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.82);
+  cursor: zoom-out;
+}
+#img-modal.open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#img-modal img {
+  max-width: 92vw;
+  max-height: 92vh;
+  border-radius: 4px;
+  box-shadow: 0 0 28px rgba(0, 0, 0, 0.6);
+  cursor: default;
+}
+
+/* a little breathing room above level-3/4 headings */
+.rst-content h3 {
+  margin-top: 2em;
+}
+.rst-content h4 {
+  margin-top: 1em;
+}
+
+/* The API-reference *card* (`div.api_docs` / `.api_docs_target`, on the API page)
+ * keeps the dark "reference card" concept, but subdued -- soft slate instead of
+ * pure black, muted sage instead of bright green. */
+.rst-content div.api_docs {
+  background-color: #2b2f36;
+  color: #cfd4da;
+  border-bottom: 2px solid #3d434c;
+}
+.rst-content .api_docs_target {
+  background-color: #2b2f36;
+  color: #a3be8c;
+}
+
+/* The "Related API" *tables* (`table.api_docs`, from api_link_many) get the
+ * quickref look instead: white panel, subtle border, light header underline, no
+ * cyan/teal/black borders.  Their header is a bare `tr > th` (not `thead > th`),
+ * hence the explicit `th` rule; `html.writer-html5` + `:nth-child` lift specificity
+ * over theme_extra's teal/cyan/black-border rules. */
+.rst-content table.docutils.api_docs {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e1e4e8;
+  background: #ffffff;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+html.writer-html5 .rst-content table.docutils.api_docs td,
+html.writer-html5 .rst-content table.docutils.api_docs th {
+  border: none;
+  margin: 0;
+  padding: 0.4em 0.75em;
+  text-align: left;
+  vertical-align: top;
+  font-weight: normal;
+  background-color: transparent;
+  color: inherit;
+}
+html.writer-html5 .rst-content table.docutils.api_docs th {
+  font-weight: 700;
+  border-bottom: 2px solid #b8c0c8;
+}
+.rst-content table.docutils.api_docs tr:nth-child(2n-1) td,
+.rst-content table.docutils.api_docs tr:nth-child(2n) td {
+  background-color: transparent;
+  border: none;
+}
+.rst-content table.docutils.api_docs td a {
+  color: #2980b9;
+}

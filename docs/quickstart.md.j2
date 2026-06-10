@@ -26,12 +26,30 @@ $ ./compose.mk ...
 
 If you have `make` and `docker`, that's all the setup you'll need for stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview) usage.  
 
-Note that since [various containers]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) are only pulled on demand, initial usage might be slow.  *(For example, you might need a `jq` container before `compose.mk` can work with JSON)*.  Subsequent runs however will take advantage of cache.
+Note that since [various containers]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) are only pulled on demand, initial usage might be slow.  *(For example, you might need a `jq` container before `compose.mk` can work with JSON)*.  Later runs will take advantage of cache.
 
 If you want to keep `compose.mk` out of your project root, you could use a `.cmk/` folder, and while it's not really necessary or recommended.. you could also track upstream with a git submodule. *(See the [Plugins, Forks, and Versioning section](#forks-versioning) for more details.)*
 
-<a name=global-install></a>
-**Prefer a global install?**  In addition to the drop-in above, `compose.mk` ships package-manager shims under {{macros.repo_link('via', name='via/', github=github)}} that put it on your `PATH`: {{macros.repo_link('via/basher', name='basher', github=github)}}, {{macros.repo_link('via/npm', name='npm', github=github)}}, or {{macros.repo_link('via/pip', name='pip', github=github)}}.  After a global install you can `include $(shell which compose.mk)` from any Makefile, anywhere.
+### Global Install
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Besides the vendored drop-in above, `compose.mk` ships package-manager shims under {{macros.repo_link('the `via/` folder', name='via/', github=github)}} which install to `PATH`.  Currently supported, mostly untested, contributions welcome:
+
+* {{macros.repo_link('via/basher', name='basher', github=github)}}
+* {{macros.repo_link('via/npm', name='npm', github=github)}}
+* {{macros.repo_link('via/pip', name='pip', github=github)}}
+
+Pip has good support for the common use-cases, but see also [these remarks](#forks-versioning) about versioning.  You can install from the repo subdirectory (no PyPI package needed):
+
+```bash {.cli_example}
+# Install from the `via/pip` subdir on the default branch:
+$ pip install "git+https://github.com/Robot-Wranglers/compose.mk.git#subdirectory=via/pip"
+
+# Pin to a specific branch (or tag / commit) with `@<ref>`:
+$ pip install "git+https://github.com/Robot-Wranglers/compose.mk.git@main#subdirectory=via/pip"
+```
+
+After a global install you can `include $(shell which compose.mk)` from any Makefile, anywhere.
 
 Read on for details about tighter integration with projects, and see the [compatibility notes](#compatibility-notes) for details about docker versions / possible gotchas in OSX.
 
@@ -144,7 +162,7 @@ $ make demos/cmk
 <hr style="width:100%;border-bottom:3px solid black;">
 <a name=forks-version></a><a name=forks-versioning></a>
 
-Given the advice above to simply embed `compose.mk` directly into your project repositories, some people might be reading this and thinking **what if compose.mk changes upstream?**  *(If you'd rather not vendor a copy at all, `compose.mk` now ships [global-install shims](#global-install) for basher / npm / pip.)*  For a vendored copy, the main things you can do are:
+Given the advice above to simply embed `compose.mk` directly into your project repositories, some people might be reading this and thinking **what if compose.mk changes upstream?**  The [global-install shims](#global-install) can help here too, but for a vendored copy, the main things you can do are:
 
 **Fork-and-Forget:**
 :   The [standard library]({{mkdocs.site_relative_url}}/standard-lib) for `compose.mk` is approaching *frozen*, so especially if you're not using [CMK-lang]({{mkdocs.site_relative_url}}/compiler), this is a pretty reasonable option.

@@ -1,11 +1,12 @@
 /*
  * Assign 'docutils' class to tables so styling and
- * JavaScript behavior is applied.
+ * JavaScript behavior is applied.  `.quickref` tables opt out -- they carry
+ * their own compact/zebra styling (see css/compose.mk.css).
  *
  * https://github.com/mkdocs/mkdocs/issues/2028
  */
 
-$('div.rst-content table').addClass('docutils');
+$('div.rst-content table:not(.quickref)').addClass('docutils');
 document.addEventListener('DOMContentLoaded', function() {
     // Wait for MkDocs to fully render the page including ToC
     setTimeout(function() {
@@ -257,17 +258,91 @@ function wrapContiguousDefineBlocks() {
    */
   function wrapNodesInDefineBlock(nodes) {
     if (nodes.length === 0) return;
-    
+
     // Create a new div with class "define_block"
     const defineBlockDiv = document.createElement('span');
     defineBlockDiv.className = 'define_block';
-    
+
     // Insert the div before the first node
     const firstNode = nodes[0];
     firstNode.parentNode.insertBefore(defineBlockDiv, firstNode);
-    
+
     // Move all nodes into the div
     nodes.forEach(node => {
       defineBlockDiv.appendChild(node);
     });
   }
+
+
+/*
+ * Image lightbox.  The `img_link` macro wraps each <img> in an
+ * <a href="<the image>">, so clicking would normally navigate to the raw file.
+ * Instead we show it enlarged in a modal overlay.  Close with the Escape key or
+ * by clicking anywhere outside the image.  Only anchors whose href is an image
+ * file are intercepted, so `img_link(... link=<page>)` (non-image targets) still
+ * navigate normally.  Styling: `#img-modal` in css/compose.mk.css.
+ */
+document.addEventListener('DOMContentLoaded', function () {
+  function isImageHref(href) {
+    return href && /\.(?:png|gif|jpe?g|svg|webp)(?:[?#].*)?$/i.test(href);
+  }
+  var modal = document.createElement('div');
+  modal.id = 'img-modal';
+  var big = document.createElement('img');
+  modal.appendChild(big);
+  document.body.appendChild(modal);
+
+  function close() {
+    modal.classList.remove('open');
+    big.removeAttribute('src');
+  }
+
+  // open: click on an anchor that wraps an <img> and points at an image file
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a');
+    if (!a || !a.querySelector('img') || !isImageHref(a.getAttribute('href'))) {
+      return;
+    }
+    e.preventDefault();
+    big.src = a.href;
+    modal.classList.add('open');
+  });
+
+  // close: click on the backdrop (i.e. anywhere but the image itself)
+  modal.addEventListener('click', function (e) {
+    if (e.target !== big) { close(); }
+  });
+  // close: Escape key
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { close(); }
+  });
+});
+
+
+/*
+ * Give every content table a stable, unique id so they're easy to refer to.
+ * The id is derived from the nearest preceding heading (a table under the
+ * "Families" heading -> id "families-table"), numbered when a heading has more
+ * than one table, with a final de-dup guard.  Tables that already carry an id
+ * are left alone.
+ */
+document.addEventListener('DOMContentLoaded', function () {
+  var content = document.querySelector('.rst-content') || document.body;
+  var nodes = content.querySelectorAll(
+    'h1[id], h2[id], h3[id], h4[id], h5[id], h6[id], table'
+  );
+  var lastHeading = '';
+  var counts = {};
+  nodes.forEach(function (n) {
+    if (n.tagName !== 'TABLE') {
+      if (n.id) { lastHeading = n.id; }
+      return;
+    }
+    if (n.id) { return; }
+    var base = lastHeading ? lastHeading + '-table' : 'table';
+    counts[base] = (counts[base] || 0) + 1;
+    var id = counts[base] > 1 ? base + '-' + counts[base] : base;
+    while (document.getElementById(id)) { id += 'x'; }
+    n.id = id;
+  });
+});

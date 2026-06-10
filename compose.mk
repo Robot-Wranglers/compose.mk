@@ -847,23 +847,37 @@ docker.context/%:
 			| ${jq.run} ".[]|select(.Name==\"${*}\")" -r; ;; \
 	esac
 
+# Content hash (md5) of a Dockerfile define-block's rendered text.  Used to bust
+# the build cache when a def changes but its tag/name does not.  Arg 1 is the bare
+# name (the `Dockerfile.` prefix is added), matching `Dockerfile.build/<name>`.
+docker.def.sha=${mk.def.read}/Dockerfile.$(strip ${1}) | md5sum | cut -d' ' -f1
+
 docker.def.is.cached/%:
-	@# Answers whether the named define has a cached docker image
+	@# Answers whether the named define has an up-to-date cached docker image.
 	@#
-	@# This never fails and exits with "yes" if the image has been
-	@# built at least once, and "no" otherwise, but it also respects
-	@# whether 'force=1' has been set.
+	@# "Up-to-date" means an image exists *and* its recorded def-content hash
+	@# (the `compose.mk.def.sha` label, stamped by `Dockerfile.build`) matches the
+	@# current text of `Dockerfile.<name>` -- so editing the def busts the cache
+	@# even though the tag is unchanged, and a stale same-named tag from an
+	@# unrelated build never counts as cached.
+	@#
+	@# This never fails; it echoes "yes" or "no".  It honors 'force=1' (always
+	@# "no").  The image tag inspected is `$${tag}` if set, else `compose.mk:<name>`;
+	@# the wanted hash is `$${want}` if set, else computed from the def.
 	@#
 	header="${GLYPH.DOCKER} ${no_ansi_dim} Checking if ${dim_cyan}${ital}${*}${no_ansi_dim} is cached" \
 	&& $(call log.trace.part1, $${header} ) \
-	&& ( ${docker.images} || true) | grep --word-regexp "${*}" 2>/dev/null >/dev/null \
-	; case $$? in \
-		0) ( case $${force:-0} in \
-				1) ($(call log.trace.part2, ${yellow}no${no_ansi_dim} (force is set)) && echo no;);; \
-				*) ($(call log.trace.part2, ${dim_green}yes) && echo yes;);;  \
-			esac); ;;  \
-		*) $(call log.trace.part2, missing) && echo no; ;; \
-	esac
+	&& img_tag="$${tag:-compose.mk:${*}}" \
+	&& if [ -z "$${want:-}" ]; then want=`$(call docker.def.sha,${*})`; fi \
+	&& have=`docker image inspect "$${img_tag}" --format '{{ index .Config.Labels "compose.mk.def.sha" }}' 2>/dev/null || true` \
+	&& case $${force:-0} in \
+		1) $(call log.trace.part2, ${yellow}no${no_ansi_dim} (force is set)) && echo no && exit 0;; \
+	esac \
+	&& if [ -n "$${want}" ] && [ "$${have}" = "$${want}" ]; then \
+		$(call log.trace.part2, ${dim_green}yes) && echo yes; \
+	else \
+		$(call log.trace.part2, ${yellow}no${no_ansi_dim} (def changed or missing)) && echo no; \
+	fi
 docker.def.run/%:
 	@# Builds, then runs the docker-container for the given define-block
 	@#
@@ -1001,17 +1015,18 @@ docker.from.def/% docker.build.def/% Dockerfile.build/%:
 	${trace_maybe} && inp=`printf ${*}|sed 's/compose.mk://'` \
 	&& def_name="Dockerfile.$${inp}" \
 	&& tag="compose.mk:$${tag:-$${inp}}" \
+	&& sha=`$(call docker.def.sha,$${inp})` \
 	&& header="${GLYPH.DOCKER} Dockerfile.build ${sep} ${dim_cyan}${ital}$${def_name}${no_ansi_dim}" \
 	&& $(call log.trace, $${header} ) \
 	&& $(trace_maybe) \
-	&& case `${make} docker.def.is.cached/$${inp}` in \
+	&& case `tag=$${tag} want=$${sha} ${make} docker.def.is.cached/$${inp}` in \
 		yes) true;; \
 		no) ( $(call io.mktemp) && ${mk.def.to.file}/$${def_name}/$${tmpf} \
 			  && $(call log.docker, $(shell echo ${@}|cut -d/ -f1) \
 					${sep} ${ital}${dim_cyan}$(shell echo ${@}|cut -d/ -f2) ${sep} ${dim}tag=${no_ansi}$${tag}${no_ansi_dim}) \
 				&& cat $${tmpf} | ${stream.as.log} \
 				&& $(call log, ${cyan_flow_right} ${bold}Building..) \
-				&& tag=$${tag} ${make} docker.build/$${tmpf} ); ;; \
+				&& docker_args="--label compose.mk.def.sha=$${sha} $${docker_args:-}" tag=$${tag} ${make} docker.build/$${tmpf} ); ;; \
 	esac
 docker.from.github:
 	@# Helper that constructs an appropriate url, then chains to `docker.from.url`.

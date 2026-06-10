@@ -1,14 +1,9 @@
 # See also: https://docs.github.com/en/actions
 name: Notebook Pipeline
+# On-demand only: run manually from the Actions tab, or when called by another workflow.
 on:
   workflow_dispatch: {}
   workflow_call: {}
-  push:
-    branches: [ "main" ]
-    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg', '.cmk']
-  pull_request:
-    branches: [ "main" ]
-    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg', '.cmk']
 permissions:
   contents: read
 jobs:

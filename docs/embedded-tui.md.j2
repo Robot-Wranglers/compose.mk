@@ -10,8 +10,6 @@
 
 At a high level, the TUI only has one job, which is all about **mapping `make` targets onto `tmux` panes**.  Simple right?  But the interesting part is, [everything is a target]({{mkdocs.site_relative_url}}/language/#homoiconic), so it's very quick and easy to treat containers or existing automation as UI elements, and stick them together as an application.  A *looping group* of targets?  That's a target.  A containerized sub-UI?  That's a target.  A console-friendly selector widget?   Maybe even a whole x11 application or xsession??  Target, target, target.
 
-
-
 ### TUI Gallery
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -35,7 +33,7 @@ For the impatient, here's a small gallery that show-cases the type of stuff you 
 
 For a quickstart, you might like to:
 
-1. Run a simple test to get a look at the TUI yourself. Try running `./compose.mk tux.demo`
+1. Run a simple test to start a TUI.  Try running `./compose.mk tux.demo`
 1. Skim at least the [layout basics on this page](#layout-basics)
 1. Jump to the [first TUI tutorial]({{mkdocs.site_relative_url}}/zero-config-tuis), then follow the sequence.
 
