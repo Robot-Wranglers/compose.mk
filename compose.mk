@@ -2064,7 +2064,7 @@ define cmk.default.sugar
 endef
 define cmk.default.dialect
 [
-	["ᝏ","; cmk.bind."], ["ᝏ ","; cmk.bind."],
+	["ᝏ","cmk.bind."],
 	["⧐", ".dispatch/"],
 	["🡆", "${stream.stdin} | ${jq} -r"], 
 	["🡄", "${jb}"], 
@@ -2104,8 +2104,8 @@ esac \
 && __interpreting__=$${__interpreting__:-stdin} \
 	${make} mk.src \
 && case $${CMK_COMPILER_STEPWISE:-0} in \
-	1) cat $${inputf} | style=monokai lexer=makefile ${make} $${runner}/mk.preprocess,io.awk/.awk.main.preprocess,io.awk/.awk.dispatch ;; \
-	*) cat $${inputf} | ${make} mk.preprocess | awk "$${_cmk_blk_mainpre}" | awk "$${_cmk_blk_dispatch}" ;; \
+	1) cat $${inputf} | style=monokai lexer=makefile ${make} $${runner}/mk.preprocess,io.awk/.awk.main.preprocess,io.awk/.awk.dispatch,io.awk/.awk.joinbody ;; \
+	*) cat $${inputf} | ${make} mk.preprocess | awk "$${_cmk_blk_mainpre}" | awk "$${_cmk_blk_dispatch}" | awk "$${_cmk_blk_joinbody}" ;; \
 	esac
 endef
 
@@ -2262,24 +2262,33 @@ mk.preprocess.decorators:
 	@# NB: This must come before sugar/dialects.
 	${stream.stdin} | ${.cmk.decorators}
 define mk.preprocess.decorators
-{   current_line = $0
-    if (current_line ~ /ᝏ/) {
-        decorator_line = current_line
-        while ((getline next_line) > 0) {
-            stripped_line = next_line
-            clean=decorator_line
-            if (clean ~ /[^"]\\[ \t]*$/) { gsub(/[ \t]*\\[ \t]*$/, "", clean) }
-            if (stripped_line ~ /(^#|^@#)/) {
-                print decorator_line; print next_line; decorator_line = ""; break }
-            else if (next_line ~ /ᝏ/) { decorator_line = clean " " next_line }
-            else if (next_line ~ /^[\t ]+[^#]/) {
-                print clean "; " next_line; decorator_line = ""; break
-            }
-            else { print clean "\n" next_line; decorator_line = ""; break }
-        }
-        if (decorator_line != "") { print decorator_line }
+# CMK bind-declarations (`ᝏ`) are written on the line(s) IMMEDIATELY ABOVE a
+# target (python-decorator style).  This relocates them to be the LEADING recipe
+# line(s) of that target, so the later joinbody pass chains decorator + body into
+# one shell (the decorator's exports/bindings then reach every recipe line).  The
+# dialect lowers `ᝏfoo(args)` -> `cmk.bind.foo(args)` -> `$(call bind.foo,args)`.
+function is_target(s) { return (s ~ /^[^\t#][^=]*:([^=]|$)/) }
+function die(m) { print "compose.mk (cmk): " m > "/dev/stderr"; exit 79 }
+BEGIN { in_def = 0; np = 0 }
+{
+    if ($0 ~ /^ᝏ/ && !in_def) { d = $0; if (d !~ /\(/) d = d "()"; pend[++np] = d; next }
+    if (np > 0) {
+        if ($0 ~ /ᝏ/) die("inline decorators (target: ᝏ...) are no longer supported; put ᝏ on the line ABOVE the target")
+        if (!is_target($0)) die("a ᝏ decorator must be immediately above a target (no blank line between)")
+        r = index($0, ";"); c = index($0, ":")
+        if (r > c) {
+            hdr = substr($0, 1, r-1); rec = substr($0, r+1); sub(/^[ \t]+/, "", rec)
+            print hdr; for (i = 1; i <= np; i++) print "\t" pend[i]; print "\t" rec }
+        else { print $0; for (i = 1; i <= np; i++) print "\t" pend[i] }
+        np = 0; next
     }
-    else { print current_line } }
+    if ($0 ~ /^define /) { in_def = 1; print; next }
+    if ($0 ~ /^endef[ \t]*$/) { in_def = 0; print; next }
+    if (in_def) { print; next }
+    if ($0 ~ /ᝏ/ && is_target($0)) die("inline decorators (target: ᝏ...) are no longer supported; put ᝏ on the line ABOVE the target")
+    print $0
+}
+END { if (np > 0) die("trailing ᝏ decorator has no target") }
 endef
 	
 mk.preprocess.dialect:
@@ -4022,8 +4031,11 @@ stream.img=${stream.stdin} \
 	&& echo "--size 100x -c full --fg-only --invert --symbols dot,quad,braille,diagonal" \
 	|| echo "--center on"` /dev/stdin
 
-# Converts multiple sequential newlines to just one.
-stream.nl.compress=awk -v RS='\0' '{ gsub(/\n{2,}/, "\n"); printf "%s", $$0 RS }'
+# Converts multiple sequential newlines to just one.  `RS='\0'` reads the whole
+# stream as a single record so the gsub spans it; we deliberately do NOT re-emit
+# `RS` (a NUL) -- that artifact otherwise lands in the compiled output and makes
+# `make` warn "NUL character seen" on every re-parse of an interpreted file.
+stream.nl.compress=awk -v RS='\0' '{ gsub(/\n{2,}/, "\n"); printf "%s", $$0 }'
 
 stream.chafa=${stream.img}
 stream.img stream.chafa stream.img.preview: tux.require
@@ -5858,6 +5870,13 @@ compose_context=${compose.bind.script}
 bind.compose.bind.target=${compose.bind.target}
 bind.polyglot.bind.file=${polyglot.bind.file}
 
+# Thin wrapper so `log.target` works as a decorator: `ᝏlog.target(msg)` logs the
+# given message before the target's body runs; `ᝏlog.target()` (zero args) logs
+# the target name.  The $(origin) guard passes the message only when present, so
+# it stays warning-clean for any arg-count.  Returns 0 (log.target does), so it
+# composes with the recipe-body `&&`-join.
+bind.log.target=$(call log.target,$(if $(filter-out undefined,$(origin 1)),${1}))
+
 define docker.bind.script
 $(call _mk.unpack.kwargs,${1},img,${1}) \
 && $(call _mk.unpack.kwargs,${1},def,${@}) \
@@ -6243,6 +6262,40 @@ in_def { print; next }
             if (!closed) rest = "" } }
     print out }
 endef
+define .awk.joinbody
+# Join the newline-separated lines of a target's recipe body into ONE shell
+# invocation: each line but the last gets a trailing ` && \` (logical-and +
+# continuation), so the body shares shell state and is fail-fast.  Runs LAST,
+# after all content transforms.  Skips define..endef (raw polyglot/awk bodies).
+# Explicit `\`-continued commands were already collapsed to a single line by the
+# minify stage, so a hand-continued command is one buffered statement here and
+# never gets a ` && ` injected mid-command.  Edges: a line already ending in a
+# shell connector just continues (no extra `&&`); `-`/`+`-prefixed lines stand
+# alone (make honors those only at a recipe-line start); a redundant `@` on a
+# continuation is dropped (moot under -s, and `&& @cmd` is invalid); blank recipe
+# lines are skipped.
+BEGIN { in_def = 0; n = 0 }
+function flush(   i, conn) {
+    for (i = 1; i <= n; i++) {
+        if (i < n) {
+            if (buf[i] ~ /\\$/) conn = ""
+            else if (buf[i] ~ /(;|&&|\|\||\||&)[ \t]*$/) conn = " \\"
+            else conn = " && \\"
+            print "\t" buf[i] conn }
+        else print "\t" buf[i] }
+    n = 0 }
+/^define / { flush(); in_def = 1; print; next }
+/^endef[ \t]*$/ { flush(); in_def = 0; print; next }
+in_def { print; next }
+/^\t/ {
+    c = $0; sub(/^\t/, "", c)
+    if (c ~ /^[ \t]*$/) next
+    if (c ~ /^[-+]/) { flush(); print "\t" c; next }
+    if (n > 0) sub(/^@/, "", c)
+    buf[++n] = c; next }
+{ flush(); print }
+END { flush() }
+endef
 
 # Compile-stage def-blocks captured literally (via `$(value)`, like mk.def.read)
 # and exported so the `.cmk.*` stage macros can read them straight from the
@@ -6257,6 +6310,7 @@ export _cmk_blk_sugarawk := $(value .awk.sugar)
 export _cmk_blk_mainpre := $(value .awk.main.preprocess)
 export _cmk_blk_dispatch := $(value .awk.dispatch)
 export _cmk_blk_triplequote := $(value .awk.triplequote)
+export _cmk_blk_joinbody := $(value .awk.joinbody)
 
 flux.pre/%:
 	@# Dispatch pre-hook if one is available
