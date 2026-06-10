@@ -1901,6 +1901,18 @@ io.xargs.verbose=xargs -I% sh -x -c
 #   $(call mk.import.def, file=<path> def=<name> as=<local_name>)
 #   $(call mk.import.def, file=<path> defs="<name> <name> ...")
 #   $(call mk.import.def, file=<path> defs="<glob> ...")    # e.g. 'underload_*'
+#
+# Compile-time inlining hooks (see `_mk.import.emit`): when `_mk_emit` is a file
+# path the import macros APPEND resolved block text to it instead of `$(eval)`ing
+# into the live namespace, and `_mk_exclude_from` overrides the never-override
+# source.  Both default to empty so the runtime path is unchanged (and
+# `--warn-undefined-variables` stays quiet); they are set (via env) only in the
+# CMK compile stage.
+_mk_emit ?=
+_mk_exclude_from ?=
+# Consume one resolved define block ${1}=file ${2}=name ${3}=local-name: append its
+# text to `_mk_emit` (compile-time) or `$(eval)` it into the namespace (runtime).
+_mk.emit.or.eval.def=$(if ${_mk_emit},$(file >> ${_mk_emit},$(call _mk.import.def.one,${1},${2},${3})),$(eval $(call _mk.import.def.one,${1},${2},${3})))
 mk.import.def=$(call _mk.import.def, ${1})
 # Plural-name alias (identical signature/behavior); reads naturally with `defs=`.
 mk.import.defs=$(call _mk.import.def, ${1})
@@ -1923,7 +1935,7 @@ endef
 
 # Resolve one `defs=` spec: a glob expands to every matching define name (error if
 # none), an exact name imports directly.
-_mk.import.def.spec=$(if $(findstring *,${2})$(findstring ?,${2}),$(eval _mk_id_names:=$(call _mk.def.match,${1},${2}))$(if ${_mk_id_names},$(foreach _n,${_mk_id_names},$(eval $(call _mk.import.def.one,${1},${_n},${_n}))),$(error mk.import.def: no def matching `${2}` in `${1}`)),$(eval $(call _mk.import.def.one,${1},${2},${2})))
+_mk.import.def.spec=$(if $(findstring *,${2})$(findstring ?,${2}),$(eval _mk_id_names:=$(call _mk.def.match,${1},${2}))$(if ${_mk_id_names},$(foreach _n,${_mk_id_names},$(call _mk.emit.or.eval.def,${1},${_n},${_n})),$(error mk.import.def: no def matching `${2}` in `${1}`)),$(call _mk.emit.or.eval.def,${1},${2},${2}))
 
 define _mk.import.def
 $(eval _mk_id_args:=$(subst %,%%,$(subst ",',${1})))
@@ -1933,7 +1945,7 @@ $(call mk.unpack.kwargs, ${_mk_id_args}, defs, MKID_NONE)
 $(call mk.unpack.kwargs, ${_mk_id_args}, as, MKID_NONE)
 $(if $(wildcard ${kwargs_file}),,$(error mk.import.def: file not found: `${kwargs_file}`))
 $(if $(filter-out MKID_NONE,${kwargs_def} ${kwargs_defs}),,$(error mk.import.def: give def=<name> or defs="<a b c>". Input: `${1}`))
-$(if $(filter-out MKID_NONE,${kwargs_def}),$(eval $(call _mk.import.def.one,${kwargs_file},${kwargs_def},$(if $(filter-out MKID_NONE,${kwargs_as}),${kwargs_as},${kwargs_def}))))
+$(if $(filter-out MKID_NONE,${kwargs_def}),$(call _mk.emit.or.eval.def,${kwargs_file},${kwargs_def},$(if $(filter-out MKID_NONE,${kwargs_as}),${kwargs_as},${kwargs_def})))
 $(foreach _s,$(filter-out MKID_NONE,${kwargs_defs}),$(call _mk.import.def.spec,${kwargs_file},${_s}))
 endef
 
@@ -1949,7 +1961,7 @@ mk.include.def=$(call mk.import.def, file=$(strip ${2}) def=$(strip ${1}))
 # `\`-continuations).  `g2r` regex-escapes the name (`.` literal; `/`/`%` stay
 # literal so pattern targets like `ul.push/%` match).  Read via `$(value ..)` so
 # the awk's `$0`/`$`/backslashes pass through un-expanded (like `$(file <)`).
-define mk.target.extract.awk
+define _mk.target.extract.awk
 function g2r(s,  r,i,c){ r="";
   for(i=1;i<=length(s);i++){ c=substr(s,i,1);
     if(c=="*") r=r ".*";
@@ -1982,8 +1994,8 @@ _mk.glob.filter=$(shell for n in ${2}; do case "$$n" in (${1}) printf '%s\n' "$$
 # expansion (so `$${y}` survives).  No define-wrapper -- we want a rule.
 define _mk.import.target.one
 $(eval _mk_it_tmp:=.tmp.mk.import.target.$(subst ?,_,$(subst *,_,$(subst /,_,$(subst %,_,${2})))))
-$(shell awk -v t='${2}' '$(value mk.target.extract.awk)' '${1}' > ${_mk_it_tmp})
-$(eval $(file < ${_mk_it_tmp}))
+$(shell awk -v t='${2}' '$(value _mk.target.extract.awk)' '${1}' > ${_mk_it_tmp})
+$(if ${_mk_emit},$(shell cat ${_mk_it_tmp} >> ${_mk_emit}),$(eval $(file < ${_mk_it_tmp})))
 $(shell rm -f ${_mk_it_tmp})
 endef
 
@@ -2023,11 +2035,38 @@ $(call mk.unpack.kwargs, ${_mk_it_args}, target, MKIT_NONE)
 $(call mk.unpack.kwargs, ${_mk_it_args}, targets, MKIT_NONE)
 $(if $(wildcard ${kwargs_file}),,$(error mk.import.target: file not found: `${kwargs_file}`))
 $(eval _mk_it_src:=$(call _mk.target.names,${kwargs_file}))
-$(eval _mk_it_localb:=$(foreach _l,$(call _mk.local.of,$(firstword ${MAKEFILE_LIST}),${_mk_it_src}),<${_l}>))
+$(eval _mk_it_localb:=$(foreach _l,$(call _mk.local.of,$(or ${_mk_exclude_from},$(firstword ${MAKEFILE_LIST})),${_mk_it_src}),<${_l}>))
 $(eval _mk_it_specs:=$(strip $(filter-out MKIT_NONE,${kwargs_target} ${kwargs_targets})))
 $(if ${_mk_it_specs},,$(error mk.import.target: give target=<name> or targets="<a b c>". Input: `${1}`))
 $(foreach _s,${_mk_it_specs},$(call _mk.import.target.spec,${kwargs_file},${_s}))
 endef
+
+_mk.import.emit:
+	@# Compile-time inliner for ONE `$$(call mk.import.*)`, driven by env vars:
+	@# `ekind` (target|targets|def|defs), `eargs` (the arg-string), and
+	@# `_mk_exclude_from` (the source being compiled, so locals aren't overridden).
+	@# Reuses the normal import machinery, but because `_mk_emit` is set the resolved
+	@# blocks are APPENDED to a tmp instead of `$$(eval)`ed; the tmp is printed to
+	@# stdout.  Used by `_mk.compile.imports` to bake imports in at compile-time.
+	$(eval _mk_emit:=$(shell TMPDIR=. mktemp ./.tmp.mk.emit.XXXXXXXX))
+	$(if $(filter target targets,${ekind}),$(call mk.import.target,${eargs}),$(call mk.import.def,${eargs}))
+	@cat ${_mk_emit}; rm -f ${_mk_emit}
+
+_mk.compile.imports:
+	@# CMK compile stage (stdin->stdout): replaces each
+	@# `$$(call mk.import.{target,targets,def,defs}, ..)` line with the resolved blocks
+	@# (via `_mk.import.emit`), so imports resolve at COMPILE time and cost nothing at
+	@# runtime; all other lines pass through.  `inputf` (the source being compiled, set
+	@# by `mk.compile`) seeds the never-override check for local targets.
+	${stream.stdin} | while IFS= read -r line; do \
+		case "$${line}" in \
+			'$$(call mk.import.target,'*|'$$(call mk.import.targets,'*|'$$(call mk.import.def,'*|'$$(call mk.import.defs,'*) \
+				rest="$${line#'$$(call mk.import.'}"; \
+				k="$${rest%%,*}"; a="$${rest#*,}"; a="$${a%)}"; \
+				ekind="$$k" eargs="$$a" _mk_exclude_from="$${inputf:-}" ${make} _mk.import.emit;; \
+			*) printf '%s\n' "$${line}";; \
+		esac; \
+	done
 
 mk.assert.env/%:
 	@# Asserts that the (comma-delimited) environment variables are set and non-empty.
@@ -2220,8 +2259,8 @@ esac \
 && __interpreting__=$${__interpreting__:-stdin} \
 	${make} mk.src \
 && case $${CMK_COMPILER_STEPWISE:-0} in \
-	1) cat $${inputf} | style=monokai lexer=makefile ${make} $${runner}/mk.preprocess,io.awk/.awk.main.preprocess,io.awk/.awk.dispatch,io.awk/.awk.joinbody ;; \
-	*) cat $${inputf} | ${make} mk.preprocess | awk "$${_cmk_blk_mainpre}" | awk "$${_cmk_blk_dispatch}" | awk "$${_cmk_blk_joinbody}" ;; \
+	1) cat $${inputf} | style=monokai lexer=makefile ${make} $${runner}/mk.preprocess,io.awk/.awk.main.preprocess,io.awk/.awk.dispatch,io.awk/.awk.joinbody,_mk.compile.imports ;; \
+	*) cat $${inputf} | ${make} mk.preprocess | awk "$${_cmk_blk_mainpre}" | awk "$${_cmk_blk_dispatch}" | awk "$${_cmk_blk_joinbody}" | ${make} _mk.compile.imports ;; \
 	esac
 endef
 

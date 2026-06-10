@@ -435,12 +435,31 @@ def test_compile_call_sugar(cmk):
   assert "$(call compose.import" in r.stdout and "file=x.yml" in r.stdout
 
 
-def test_compile_import_target_bare_call(cmk):
-  # bare `mk.import.target(..)` lowers to `$(call mk.import.target, ..)`.
-  r = cmk("mk.compile", stdin='mk.import.target(file=t.mk targets="a b")\n')
+def test_compile_inlines_import_target(cmk, tmp_path):
+  # `mk.import.target(s)(..)` is resolved + INLINED at compile-time (the block is
+  # baked into the output), not deferred to a runtime `$(call mk.import.*)`.
+  (tmp_path / "src.mk").write_text("greet:\n\t@echo hi\n")
+  r = cmk("mk.compile", stdin="mk.import.targets(file=src.mk target=greet)\n")
   assert r.ok, r.stderr
-  assert "$(call mk.import.target" in r.stdout
-  assert 'targets="a b"' in r.stdout
+  assert "$(call mk.import" not in r.stdout  # not deferred to runtime
+  assert "greet:" in r.stdout  # block inlined verbatim
+  assert "@echo hi" in r.stdout
+
+
+def test_compile_inlines_import_def(cmk, tmp_path):
+  # likewise for define-blocks: inlined as a fresh `define ... endef`.  (The def
+  # source must `include compose.mk` -- the importer reads via `mk.def.read`.)
+  from pathlib import Path
+
+  compose_mk = Path(__file__).resolve().parent.parent / "compose.mk"
+  (tmp_path / "src.mk").write_text(
+    f"include {compose_mk}\ndefine greeting\nhello world\nendef\n"
+  )
+  r = cmk("mk.compile", stdin="mk.import.def(file=src.mk def=greeting)\n")
+  assert r.ok, r.stderr
+  assert "$(call mk.import" not in r.stdout
+  assert "define greeting" in r.stdout
+  assert "hello world" in r.stdout
 
 
 def test_compile_jb_glyph(cmk):
