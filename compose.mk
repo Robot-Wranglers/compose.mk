@@ -2750,22 +2750,40 @@ mk.pkg:
 	set -x && archive="$${archive} ${CMK_SRC}" ${make} mk.self
 
 mk.pkg/%:
-	@# Packages the given make target as a single-file executable.
+	@# Packages a make-target, a `.mk` file, or a `.cmk` app as a single-file executable.
 	@#
-	@# This works by using to `makeself` to bundle/freeze/release 
-	@# a self-extracting archive where we include the current Makefile, 
-	@# and try to automatically include any related dependencies.
+	@# This works by using `makeself` to bundle/freeze/release a self-extracting
+	@# archive that includes `compose.mk` plus whatever is being packaged.  Dispatch
+	@# is by suffix, and everything is referenced/bundled by basename so the produced
+	@# binary is portable (it needs no `compose.mk` or source on the target host, and
+	@# works the same whether this `compose.mk` is vendored or installed globally):
 	@#
-	@# To add other explicit deps to the archive, set `archive` 
-	@# as a space-separated list of files or directories.
+	@#   *.cmk  -> freeze a CMK app   (entrypoint re-interprets the bundled `.cmk`)
+	@#   *.mk   -> freeze a makefile  (entrypoint runs its default goal)
+	@#   *      -> package a target of the current Makefile  (the original behavior)
+	@#
+	@# `bin` defaults to the input's basename (no extension).  For inputs that pull in
+	@# sibling files (relative `include`/`mk.import.*`), add them to the bundle with
+	@# `archive` as a space-separated list of extra files or directories.
 	@#
 	@# USAGE:
-	@#  archive="file1 file2 dir1" make -f ... mk.pkg/<target_name>
+	@#  ./compose.mk mk.pkg/<target_name>           # e.g. mk.pkg/flux.ok
+	@#  ./compose.mk mk.pkg/path/to/app.cmk         # freeze a CMK app
+	@#  ./compose.mk mk.pkg/path/to/app.mk          # freeze a makefile
+	@#  archive="file1 dir1" ./compose.mk mk.pkg/path/to/app.cmk
 	@#
-	${make} .mk.pkg/${*}
+	pkg_in="${*}" && case "$${pkg_in}" in \
+	  *.cmk) base=`basename "$${pkg_in}"` \
+	    && bin="$${bin:-$${base%.cmk}}" archive="$${pkg_in} $${archive:-}" script=bash \
+	       script_args="$(notdir ${CMK_SRC}) mk.interpret! $${base}" ${make} mk.pkg ;; \
+	  *.mk)  base=`basename "$${pkg_in}"` \
+	    && bin="$${bin:-$${base%.mk}}" archive="$${pkg_in} $${archive:-}" script=make \
+	       script_args="${MAKE_FLAGS} -f $${base}" ${make} mk.pkg ;; \
+	  *)     ${make} .mk.pkg/$${pkg_in} ;; \
+	esac
 
 ifeq (${__interpreting__},) 
-.mk.pkg/%:; cmd=${*} ${make} mk.pkg.root
+.mk.pkg/%:; cmd=${*} bin=$${bin:-${*}} label=$${label:-${*}} ${make} mk.pkg.root
 mk.pkg.root:
 	@# Packages the application root, or the given command if provided.
 	label=$${label:-${*}} bin=$${bin:-${*}} script=make \
@@ -2782,7 +2800,7 @@ mk.pkg.root:
 	label=$${label:-${*}} bin=$${bin:-${*}} script=bash \
 	script_args="$(notdir ${CMK_SRC}) mk.interpret! ${__interpreting__} $${cmd:-}" \
 	${make} mk.pkg
-.mk.pkg/%:; cmd=${*} ${make} mk.pkg.root
+.mk.pkg/%:; cmd=${*} bin=$${bin:-${*}} label=$${label:-${*}} ${make} mk.pkg.root
 endif
 mk.namespace.filter/%:
 	@# Lists all targets in the given namespace, filtering them by the given pattern.

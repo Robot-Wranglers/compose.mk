@@ -4,8 +4,12 @@
     returning a self-contained forked source on stdout. Pure text, no docker.
   * mk.self        -- wraps a dockerized `makeself` to turn (archive + entrypoint
     script) into a self-extracting executable.
-  * mk.pkg/<tgt>   -- packages a make target as a single-file executable (mk.self
-    under the hood, bundling compose.mk).
+  * mk.pkg/<x>     -- smart single entrypoint: a suffix-dispatcher that packages a
+    make target (mk.pkg/flux.ok, the original behavior), a `.cmk` app
+    (mk.pkg/app.cmk), or a `.mk` file (mk.pkg/app.mk) as a single-file executable
+    (mk.self under the hood, bundling compose.mk). File inputs are referenced/
+    bundled by basename, so the binary is portable (no double-load, vendored or
+    global install alike).
 
 These tests now EXECUTE the produced artifacts (not just validate the Makeself
 header). The makeself entrypoint's stdout IS surfaced when its argv is
@@ -13,9 +17,12 @@ space-separated (e.g. `make ... -f compose.mk flux.ok`); the pitfall is an
 inner-quoted `sh -c "..."` whose quotes are lost crossing the make->docker->makeself
 layers -- so the mk.self exec test uses a quote-free `echo` entrypoint.
 
-Coverage: a forked Makefile, a raw makeself archive, packaging a built-in target,
-the same under a GLOBAL/on-PATH install, and packaging a `.cmk` via `mk.interpret!`
-(the interpret branch of mk.pkg.root). The makeself-backed cases need docker.
+Coverage forms a {non-global, global} x {target, .mk file, .cmk file} matrix for the
+smart `mk.pkg/<x>` entrypoint (a target via the built-in `flux.ok`, a `.mk` that
+include's compose.mk, and a `.cmk` app -- each both vendored and under a GLOBAL/on-PATH
+install), plus the `bin`-default regression, the raw `mk.self` archive, a forked
+Makefile, and the legacy `.cmk` interpret branch (`mk.interpret! ... mk.pkg.root`).
+The makeself-backed cases need docker.
 """
 
 import os
@@ -120,6 +127,23 @@ def test_mk_pkg_packages_and_runs_builtin(project):
 
 
 @pytest.mark.needs_docker
+def test_mk_pkg_target_default_bin(project):
+  # With no `bin=`, packaging a target must default the executable name to the
+  # target (regression: `.mk.pkg/%` forwards bin/label, since mk.pkg.root's
+  # `:-${*}` default is dead on its non-parametric stem).
+  project.seed_compose_mk()
+  r = project.run("mk.pkg/flux.ok", timeout=420)
+  assert r.ok, r.stderr
+  out_bin = project.dir / "flux.ok"
+  assert out_bin.exists(), (
+    "mk.pkg/<target> did not default bin to the target name"
+  )
+  rc, out = _run_artifact(out_bin, cwd=project.dir)
+  assert rc == 0, out
+  assert "flux.ok" in out, out
+
+
+@pytest.mark.needs_docker
 def test_mk_pkg_under_global_install_runs(staged_global):
   # Package a built-in with compose.mk staged OUTSIDE the workspace (global/on-PATH
   # install), then run the produced binary on this host. Guards that mk.pkg works at
@@ -158,3 +182,85 @@ def test_mk_pkg_interpret_cmk_runs(project):
   rc, out = _run_artifact(out_bin, cwd=project.dir)
   assert rc == 0, out
   assert "CMK-PKG-4q" in out, out
+
+
+@pytest.mark.needs_docker
+def test_mk_pkg_file_cmk_runs(project):
+  # Smart entrypoint: `mk.pkg/<app.cmk>` freezes a CMK app in one step (no manual
+  # archive=/mk.interpret! juggling). It bundles PLAIN compose.mk + the .cmk by
+  # basename, so the binary interprets the .cmk exactly once at runtime -- assert it
+  # runs AND that there's no double-load `overriding recipe` noise.
+  project.seed_compose_mk()
+  project.write("app.cmk", "demo:\n\t@echo CMK-FILE-9q\n__main__: demo\n")
+  r = project.run("mk.pkg/app.cmk", env={"bin": "app.bin"}, timeout=420)
+  assert r.ok, r.stderr
+  out_bin = project.dir / "app.bin"
+  assert out_bin.exists(), (
+    "smart mk.pkg/<file.cmk> did not produce the executable"
+  )
+  assert b"Makeself" in out_bin.read_bytes()[:4096]
+  rc, out = _run_artifact(out_bin, cwd=project.dir)
+  assert rc == 0, out
+  assert "CMK-FILE-9q" in out, out
+  assert "overriding recipe" not in out, "double-load: " + out
+
+
+@pytest.mark.needs_docker
+def test_mk_pkg_file_mk_runs(project):
+  # Smart entrypoint: `mk.pkg/<app.mk>` freezes a makefile. The entrypoint is
+  # `make -f <basename>`, and the self-contained makefile's `include compose.mk`
+  # resolves against the bundled basename -- so the default goal runs portably.
+  project.seed_compose_mk()
+  project.write(
+    "app.mk",
+    "include compose.mk\nhello:\n\t@echo MK-FILE-9q\n__main__: hello\n",
+  )
+  r = project.run("mk.pkg/app.mk", env={"bin": "app.bin"}, timeout=420)
+  assert r.ok, r.stderr
+  out_bin = project.dir / "app.bin"
+  assert out_bin.exists(), (
+    "smart mk.pkg/<file.mk> did not produce the executable"
+  )
+  assert b"Makeself" in out_bin.read_bytes()[:4096]
+  rc, out = _run_artifact(out_bin, cwd=project.dir)
+  assert rc == 0, out
+  assert "MK-FILE-9q" in out, out
+
+
+@pytest.mark.needs_docker
+def test_mk_pkg_file_cmk_global_runs(staged_global):
+  # .cmk frozen under a GLOBAL install (compose.mk lives OUTSIDE the workspace):
+  # the smart entrypoint must bundle compose.mk by basename (not the host abspath)
+  # for the binary to be portable -- the main win over the old interpret path.
+  (staged_global.workspace / "app.cmk").write_text(
+    "demo:\n\t@echo CMK-GLOBAL-9q\n__main__: demo\n"
+  )
+  r = staged_global("mk.pkg/app.cmk", bin="app.bin")
+  assert r.returncode == 0, r.stderr
+  out_bin = staged_global.workspace / "app.bin"
+  assert out_bin.exists(), (
+    "global mk.pkg/<file.cmk> did not produce the executable"
+  )
+  rc, out = _run_artifact(out_bin, cwd=staged_global.workspace)
+  assert rc == 0, out
+  assert "CMK-GLOBAL-9q" in out, out
+  assert "overriding recipe" not in out, "double-load: " + out
+
+
+@pytest.mark.needs_docker
+def test_mk_pkg_file_mk_global_runs(staged_global):
+  # .mk (that include's compose.mk) frozen under a GLOBAL install: the bundled
+  # compose.mk lands at basename, so the makefile's `include compose.mk` resolves
+  # in the extracted archive no matter where compose.mk was installed on the host.
+  (staged_global.workspace / "app.mk").write_text(
+    "include compose.mk\nhello:\n\t@echo MK-GLOBAL-9q\n__main__: hello\n"
+  )
+  r = staged_global("mk.pkg/app.mk", bin="app.bin")
+  assert r.returncode == 0, r.stderr
+  out_bin = staged_global.workspace / "app.bin"
+  assert out_bin.exists(), (
+    "global mk.pkg/<file.mk> did not produce the executable"
+  )
+  rc, out = _run_artifact(out_bin, cwd=staged_global.workspace)
+  assert rc == 0, out
+  assert "MK-GLOBAL-9q" in out, out
