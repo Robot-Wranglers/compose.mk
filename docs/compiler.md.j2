@@ -460,6 +460,38 @@ their own control-flow: a line that already ends in a connector (`&&`, `||`, `|`
 just continues to the next, a line you split yourself with a trailing `\` stays
 one command, and `-`- or `+`-prefixed lines stand alone.
 
+### Indentation
+<hr style="width:100%;border-bottom:3px solid black;">
+<a name=indentation></a>
+
+Plain Makefiles require recipe lines to begin with a literal **tab**.  CMK relaxes
+this to **python-style indentation**: a target body may be indented with **tabs or
+spaces**, and the compiler normalizes a consistently space-indented body to the tab
+Make needs.  So this is valid CMK:
+
+```Makefile {.snippet .language-Makefile}
+__main__:
+    printf 'space line one\n'
+    printf 'space line two\n'
+```
+
+The rules, like Python's, are about *consistency*:
+
+* A body indented with **tabs** is passed through unchanged (so you keep Make's
+  "extra tab = literal command content" behavior).
+* A body indented with **spaces** must use the *same* indent on every line; it is
+  rewritten to a single leading tab.
+* It is an **error** to mix tabs and spaces *within one indent* ("mixed mode"), or
+  to use inconsistent amounts of space-indentation in one body ("mismatched") --
+  the compiler stops with a clear message, much like Python's `TabError` /
+  `IndentationError`.
+
+Indentation is normalized as the **last** preprocessing step, after [sugar
+blocks](#about-sugar) have been lowered, so the literal (often space-indented)
+contents of `⋘`/`⫻`/`⟦`/`⨖`/`🞹` blocks and `define`/`endef` bodies are left exactly
+as written.  See the {{macros.repo_link('demos/cmk/space-indented.cmk', name='space-indented demo', github=github)}}
+(the underlying preprocess stage is `mk.preprocess.indent`).
+
 ### Quick Reference
 <hr style="width:100%;border-bottom:3px solid black;">
 <a name=quick-reference></a>

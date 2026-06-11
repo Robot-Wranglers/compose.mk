@@ -63,6 +63,11 @@ see also the [CMK demo index]({{mkdocs.site_relative_url}}/compiler/#all-demos).
       <td>Lines are joined into a single shell with <code>&amp;&amp;</code>. <a href="{{mkdocs.site_relative_url}}/compiler/#recipe-body-joining">(detail)</a></td>
     </tr>
     <tr>
+      <td><i>(Indentation)</i></td>
+      <td><code>__main__:<br/>&nbsp;&nbsp;&nbsp;&nbsp;echo hi</code></td>
+      <td>Bodies may be indented with tabs <i>or</i> spaces (python-style); errors on mixed/mismatched. <a href="{{mkdocs.site_relative_url}}/compiler/#indentation">(detail)</a></td>
+    </tr>
+    <tr>
       <td><code>ᝏ</code><i>deco(args)</i></td>
       <td><code>ᝏlog.target</code></td>
       <td>Bind-declaration / decorator, above a target. <a href="{{mkdocs.site_relative_url}}/compiler/#bind-declarations">(detail)</a></td>

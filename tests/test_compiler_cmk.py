@@ -627,3 +627,60 @@ def test_compile_joinbody_skips_define_block(cmk):
   assert r.ok, r.stderr
   assert "l1\nl2" in r.stdout
   assert "l1 && \\" not in r.stdout
+
+
+# --- python-style indentation: space OR tab recipe bodies (mk.preprocess.indent) --
+# The `indent` stage runs LAST in the preprocess chain (after sugar lowered its
+# literal blocks to define..endef), normalizing a consistently SPACE-indented body
+# to the leading tab Make needs, passing TAB bodies through verbatim, and erroring
+# on mixed (tabs+spaces in one indent) or mismatched indentation. Error cases use
+# the standalone stage target (`mk.preprocess.indent`) so the nonzero exit is
+# observable -- the full `mk.compile` pipe masks a mid-pipe failure (same as the
+# decorator-stage errors above); the real `mk.interpret!` path does surface it.
+
+
+def test_compile_space_indented_recipe(cmk):
+  # A space-indented recipe body compiles: spaces -> one leading tab, then joined.
+  r = cmk("mk.compile", stdin="x:\n    cmd1\n    cmd2\n")
+  assert r.ok, r.stderr
+  assert (
+    "cmd1 && \\\n" in r.stdout
+  )  # joinbody saw it as a recipe (i.e. tab-led)
+  assert "\tcmd2" in r.stdout  # normalized to a tab, not left as spaces
+  assert "    cmd2" not in r.stdout  # the original spaces are gone
+
+
+def test_indent_stage_normalizes_spaces_to_tab(cmk):
+  # The stage itself rewrites leading spaces to a single tab.
+  r = cmk("mk.preprocess.indent", stdin="x:\n    a\n    b\n")
+  assert r.ok, r.stderr
+  assert "\ta\n" in r.stdout and "\tb\n" in r.stdout
+  assert "    a" not in r.stdout
+
+
+def test_indent_stage_tab_body_unchanged(cmk):
+  # Back-compat: tab-indented bodies pass through verbatim (incl. deeper tabs).
+  r = cmk("mk.preprocess.indent", stdin="x:\n\ta\n\t\tb\n")
+  assert r.ok, r.stderr
+  assert "\ta\n" in r.stdout and "\t\tb\n" in r.stdout
+
+
+def test_indent_stage_skips_define_block(cmk):
+  # define..endef data (e.g. lowered sugar blocks: compose YAML) is verbatim.
+  r = cmk("mk.preprocess.indent", stdin="define blk\n    raw spaces\nendef\n")
+  assert r.ok, r.stderr
+  assert "    raw spaces" in r.stdout  # NOT rewritten to a tab
+
+
+def test_indent_mixed_tabs_and_spaces_errors(cmk):
+  # A single indent that mixes a tab and spaces is rejected ("mixed mode").
+  r = cmk("mk.preprocess.indent", stdin="x:\n\t  cmd\n")
+  assert not r.ok
+  assert "mixes tabs and spaces" in r.stderr
+
+
+def test_indent_mismatched_spaces_errors(cmk):
+  # Inconsistent space-indent within one body is rejected ("mismatched").
+  r = cmk("mk.preprocess.indent", stdin="x:\n    cmd1\n  cmd2\n")
+  assert not r.ok
+  assert "inconsistent indentation" in r.stderr
