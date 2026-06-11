@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# `cmk`: a short alias for `compose.mk`.  It execs the sibling `compose.mk`
+# (installed in the same bin/ by this shim) BY ITS REAL NAME -- the CMK compiler
+# derives CMK_SRC from finding the literal "compose.mk" on the command line, so
+# `mk.interpret!`/`mk.compile` must run as `compose.mk`, not `cmk`.  Falls back to
+# a PATH lookup if the sibling isn't found.
+here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd 2>/dev/null)" || here=""
+if [ -n "$here" ] && [ -x "$here/compose.mk" ]; then exec "$here/compose.mk" "$@"; fi
+exec compose.mk "$@"
