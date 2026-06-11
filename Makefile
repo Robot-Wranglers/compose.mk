@@ -9,7 +9,7 @@ SHELL := bash
 MAKEFLAGS=-s -S --warn-undefined-variables
 THIS_MAKEFILE:=$(abspath $(firstword $(MAKEFILE_LIST)))
 
-.PHONY: docs demos demos/cmk README.md docs.agent
+.PHONY: docs demos README.md docs.agent
 
 export SRC_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 export PROJECT_ROOT := $(shell dirname ${THIS_MAKEFILE})
@@ -117,10 +117,6 @@ demos demos.test demo-test:
 	set -x && ls demos/*.mk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 	# set -x && ls demos/*.mk |grep -v lean| xargs -I% bash -x -c "./% || exit 255"
 
-demos/cmk:
-	@# 
-	set -x && ls demos/cmk/*.cmk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
-
 demo:
 	@# Interactive selector for which demo to run.
 	pattern='*.mk' dir=demos/ ${make} flux.select.file/mk.select
@@ -135,6 +131,12 @@ docs.agent:
 actions.demos:
 	@# Entrypoint for test-action
 	${io.shell.isolated} script -q -e -c "bash --noprofile --norc -eo pipefail -x -c 'make demos'"
+
+actions.demos.cmk:
+	@# CI-only entrypoint for the on-demand full sweep of every CMK-lang demo
+	@# (heavy/GUI/LLM demos included).  The push/PR gate for CMK demos is the pytest
+	@# suite (tests/test_integration_cmk.py); this is the manual safety net.
+	set -x && ls demos/cmk/*.cmk | xargs -I% ${io.shell.isolated} sh -x -c "./% || exit 255"
 
 serve: docs.serve
 	@# Runs the mkdocs server

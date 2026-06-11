@@ -38,6 +38,7 @@ Besides the vendored drop-in above, `compose.mk` ships package-manager shims und
 * {{macros.repo_link('via/basher', name='basher', github=github)}}
 * {{macros.repo_link('via/npm', name='npm', github=github)}}
 * {{macros.repo_link('via/pip', name='pip', github=github)}}
+* {{macros.repo_link('via/docker', name='docker', github=github)}} (runs `compose.mk` *from a container*, see [below](#run-from-a-container))
 
 Pip has good support for the common use-cases, but see also [these remarks](#forks-versioning) about versioning.  You can install from the repo subdirectory (no PyPI package needed):
 
@@ -52,6 +53,31 @@ $ pip install "git+https://github.com/Robot-Wranglers/compose.mk.git@main#subdir
 After a global install you can `include $(shell which compose.mk)` from any Makefile, anywhere.
 
 Read on for details about tighter integration with projects, and see the [compatibility notes](#compatibility-notes) for details about docker versions / possible gotchas in OSX.
+
+### Run from a Container
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Rather than installing anything on the host, you can run `compose.mk` *from a container* using the {{macros.repo_link('via/docker', name='via/docker', github=github)}} shim.  Build the image straight from a git ref + subdirectory (no checkout needed):
+
+```bash {.cli_example}
+$ docker build -t compose.mk \
+    https://github.com/Robot-Wranglers/compose.mk.git#main:via/docker
+```
+
+Because `compose.mk`'s whole model is running tools *in containers*, a containerized `compose.mk` needs the **host docker socket shared** so it can start those as *sibling* containers on the host daemon:
+
+```bash {.cli_example}
+$ docker run --rm -it \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "$PWD:$PWD" -w "$PWD" \
+    -e DOCKER_HOST_WORKSPACE="$PWD" \
+    compose.mk flux.ok
+```
+
+!!! warning "Mount at the same path"
+    Mount your project at its *own* host path (`-v "$PWD:$PWD" -w "$PWD"`), not remapped to `/workspace`.  Sibling tool-containers are created by the *host* daemon, so any path compose.mk hands to docker must be valid on the host; same-path mounting makes in-container paths equal host paths.  (Remapping to `/workspace` is fine for trivial host-only targets but breaks container-dispatch.)  See the README for running *your* project's dispatch targets.
+
+The image is also `FROM`-able as a base for your own app, and its `--target test` stage can run compose.mk's own test suite from inside the container.  See the {{macros.repo_link('via/docker README', name='via/docker README', github=github)}} for those plus prebuilt GHCR images and caveats (file ownership, `DOCKER_SOCKET`).  See also the [raw-docker docs]({{mkdocs.site_relative_url}}/raw-docker) for how dispatch and the shared socket work.
 
 ### Project Integration
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -151,12 +177,14 @@ $ make clean build
 $ make demos
 ```
 
-You can also test just the [CMK-lang]({{mkdocs.site_relative_url}}/compiler) demos to exercise the features involving compilers, interpreters, and special syntax:
+To exercise the [CMK-lang]({{mkdocs.site_relative_url}}/compiler) features (compilers, interpreters, and special syntax), run the integration suite, which drives the CMK demos through the real interpreter with assertions:
 
 ```bash {.cli_example}
-# Run only  CMK-lang Demos
-$ make demos/cmk
+# Run the integration suite (covers the CMK-lang demos)
+$ make integration-test
 ```
+
+Any individual demo can also be run directly via its shebang, e.g. `./demos/cmk/underload.cmk`.
 
 ### Plugins, Forks, & Versioning
 <hr style="width:100%;border-bottom:3px solid black;">

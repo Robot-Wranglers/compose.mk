@@ -6,91 +6,131 @@
 
 A one-page cheat-sheet of CMK-lang syntax.  Each entry links to the full
 explanation on the [Compiler &amp; Dialects]({{mkdocs.site_relative_url}}/compiler) page;
-see also the [CMK demo index]({{mkdocs.site_relative_url}}/compiler/#all-demos).
+see also the [CMK Demo Index]({{mkdocs.site_relative_url}}/cmk-demos).
 
 <table class=quickref>
   <thead>
-    <tr><th>Syntax</th><th>Example</th><th>Meaning</th></tr>
+    <tr><th>Operator</th><th>Syntax</th><th>Example</th><th>Meaning</th></tr>
   </thead>
   <tbody>
     <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#dialects">Target Invocation</a></td>
       <td><code>this.</code><i>target</i></td>
       <td><code>this.build</code></td>
-      <td>Recursive call to another target
-      <a href="{{mkdocs.site_relative_url}}/compiler/#dialects">(detail)</a></td>
+      <td>Recursive call to make.
+      </br>Starts a subprocess.
+      </br>Inherits the launch environment.
+      </br>Dynamic, i.e. triggers a reparse.
+      </td>
     </tr>
     <tr>
-      <td><i>svc</i><code>⧐</code><i>target</i></td>
-      <td><code>debian⧐build</code></td>
-      <td>Dispatch a target inside container <i>svc</i> 
-      <a href="{{mkdocs.site_relative_url}}/compiler/#dialects">(detail)</a></td>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#dialects">Target Dispatch
+      <br/>Container Dispatch</a></td>
+      <td><i>svc</i><code>ᐉ</code><i>target</i></td>
+      <td><code><i>container</i> ᐉ <i>target_name<i></code></td>
+      <td>Dispatch a target inside container.
+        </br>Costs a process/container.
+        </br>Dynamic: triggers a reparse; container may have *different targets* than the launch-context
+      </td>
     </tr>
     <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#dialects">JSON Emit</a></td>
       <td><code>🡄</code> <i>k=v…</i></td>
       <td><code>🡄 name=$USER n=3</code></td>
-      <td>Emit JSON from key=value pairs (<code>jb</code>). 
-      <a href="{{mkdocs.site_relative_url}}/compiler/#dialects">(detail)</a></td>
+      <td>Emit JSON from key=value pairs (<code>jb</code>).</td>
     </tr>
     <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#dialects">JSON Extract</a></td>
       <td><code>🡆</code> <i>.key</i></td>
       <td><code>🡆 .name</code></td>
-      <td>Extract a field from JSON on stdin (<code>jq -r</code>). 
-      <a href="{{mkdocs.site_relative_url}}/compiler/#dialects">(detail)</a></td>
+      <td>Extract a field from JSON on stdin (<code>jq -r</code>).</td>
     </tr>
     <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#assignment-operator">Assignment</a></td>
       <td><i>x</i> <code>⇐</code> <i>cmd</i></td>
       <td><code>top ⇐ this.peek</code></td>
-      <td>Capture a command's output into shell var <i>x</i>. <a href="{{mkdocs.site_relative_url}}/compiler/#assignment-operator">(detail)</a></td>
+      <td>Capture a command's output into shell var <i>x</i>.</td>
     </tr>
     <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#dialects">Macro Invocation<br/>Function Calls</a></td>
       <td><code>cmk.</code><i>fn</i><code>(args)</code></td>
       <td><code>cmk.log.target(hi)</code></td>
-      <td>Call a compose.mk function/macro (<code>$(call fn,args)</code>). <a href="{{mkdocs.site_relative_url}}/compiler/#dialects">(detail)</a></td>
+      <td>Call a compose.mk function/macro (<code>$(call fn,args)</code>).</td>
     </tr>
     <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#callable-targets">Target Streams 
+      <br/> Callables
+      <br/> Tagged Strings
+      </a></td>
+      <td><code>this.</code><i>t</i><code>(arg)</code> &nbsp; <code>this.</code><i>t</i><code>'''…'''</code></td>
+      <td><code>this.eval('''(Hi)S''')</code></td>
+      <td>Call a <i>target</i> by piping <i>arg</i> to its stdin (<code>arg | this.t</code>). Quoted = literal; unquoted = run &amp; pipe (single-line).</td>
+    </tr>
+    <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#dialects">Import</a></td>
       <td><i>name</i><code>(args)</code></td>
       <td><code>compose.import(file=svc.yml)</code></td>
-      <td>Bare-call form of import statements (<code>compose.import</code>, <code>polyglot.import</code>, <code>mk.import.def</code>, <code>mk.import.target</code>, …). <a href="{{mkdocs.site_relative_url}}/compiler/#dialects">(detail)</a></td>
+      <td>Bare-call form of import statements (<code>compose.import</code>, <code>polyglot.import</code>, <code>mk.import.def</code>, <code>mk.import.target</code>, …).</td>
     </tr>
     <tr>
-      <td><code>'''…'''</code> &nbsp; <code>"""…"""</code></td>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#triple-quote-literals">Literal</a></td>
+      <td><code>'''…'''</code></td>
       <td><code>'''(Hi)S''' | this.eval</code></td>
-      <td>Literal text, with no quoting/escaping hassle. <a href="{{mkdocs.site_relative_url}}/compiler/#triple-quote-literals">(detail)</a></td>
+      <td>Literal text (single-quoted): shell <code>$vars</code>/<code>`cmds`</code> NOT expanded.</td>
     </tr>
     <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#triple-quote-literals">Interpolated</a></td>
+      <td><code>"""…"""</code> &nbsp; <code>```…```</code></td>
+      <td><code>"""val=$$X"""</code></td>
+      <td>Interpolating (double-quoted): shell <code>$vars</code>, <code>`cmds`</code>, <code>$(..)</code> expand.</td>
+    </tr>
+    <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#recipe-body-joining">Recipe Body</a></td>
       <td><i>(Recipe Body)</i></td>
       <td><code>cd /tmp<br/>make thing</code></td>
-      <td>Lines are joined into a single shell with <code>&amp;&amp;</code>. <a href="{{mkdocs.site_relative_url}}/compiler/#recipe-body-joining">(detail)</a></td>
+      <td>Lines are joined into a single shell with <code>&amp;&amp;</code>.</td>
     </tr>
     <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#indentation">Indentation</a></td>
+      <td><i>(Indentation)</i></td>
+      <td><code>__main__:<br/>&nbsp;&nbsp;&nbsp;&nbsp;echo hi</code></td>
+      <td>Bodies may be indented with tabs <i>or</i> spaces (python-style); errors on mixed/mismatched.</td>
+    </tr>
+    <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#bind-declarations">Decorator</a></td>
       <td><code>ᝏ</code><i>deco(args)</i></td>
       <td><code>ᝏlog.target</code></td>
-      <td>Bind-declaration / decorator, above a target. <a href="{{mkdocs.site_relative_url}}/compiler/#bind-declarations">(detail)</a></td>
+      <td>Bind-declaration / decorator, above a target.</td>
     </tr>
     <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">Embed: Code</a></td>
       <td><code>⟦</code> <i>lang … </i><code>⟧</code></td>
       <td><code>⟦ python … ⟧</code></td>
-      <td>Embedded polyglot code block. <a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">(detail)</a></td>
+      <td>Embedded polyglot code block.</td>
     </tr>
     <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">Embed: Script</a></td>
       <td><code>⨖</code> <i>… </i><code>⨖</code></td>
       <td><code>⨖ with … as … ⨖</code></td>
-      <td>Script block dispatched into a container (with / as). <a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">(detail)</a></td>
+      <td>Script block dispatched into a container (with / as).</td>
     </tr>
     <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">Embed: Config</a></td>
       <td><code>🞹</code> <i>… </i><code>🞹</code></td>
       <td><code>🞹 mycode … 🞹</code></td>
-      <td>Embedded compose-config code. <a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">(detail)</a></td>
+      <td>Embedded compose-config code.</td>
     </tr>
     <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">Embed: Compose</a></td>
       <td><code>⋘</code> <i>name … </i><code>⋙</code></td>
       <td><code>⋘ mylib … ⋙</code></td>
-      <td>Embedded compose file; imports its services. <a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">(detail)</a></td>
+      <td>Embedded compose file; imports its services.</td>
     </tr>
     <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">Embed: Dockerfile</a></td>
       <td><code>⫻</code> <i>… </i><code>⫻</code></td>
       <td><code>⫻ FROM debian … ⫻</code></td>
-      <td>Embedded Dockerfile. <a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">(detail)</a></td>
+      <td>Embedded Dockerfile.</td>
     </tr>
   </tbody>
 </table>

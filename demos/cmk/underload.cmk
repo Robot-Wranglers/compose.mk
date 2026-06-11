@@ -1,4 +1,4 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
+#!/usr/bin/env -S ./compose.mk cmk run
 # An implementation of Underload: a stack-based concatenative esolang
 # See also: https://esolangs.org/wiki/Underload
 # CMK-lang port of demos/underload.mk; imports its lexer via mk.import.def.
@@ -13,76 +13,72 @@
 # Imported verbatim from the makefile twin for DRYness
 mk.import.def(file=demos/underload.mk def=ul.lexer)
 
-# Underload push/pop helpers.
-# Just a thin layer on top of native compose.mk support.
-# See also: the docs for `io.stack.*`
-ul.pop  = ${io.stack.pop.word}
-ul.push = ${jq} -n 'env.q' | ${io.stack.push}
+# The underload stack maps directly onto the standard-lib stack helpers: a quotation
+# is popped with `io.stack.pop_word` (top as a raw word) and pushed with
+# `io.stack.push_word` (reads a raw word from stdin), needing no demo-specific wrappers.
+# The lexer (imported below) emits `io.stack.push_word/<literal>` for quotation literals.
+# This port leans on the callable-target sugar: `x ⇐ this.io.stack.pop_word` captures a
+# pop, and `this.io.stack.push_word(<literal>)` pushes (lowers to `<literal> | ...push_word`).
 
-# the `ul.push/...` targets are single-sourced from the makefile twin
-# mk.import.targets(file=demos/underload.mk targets='ul.push/*')
+# Reuse the push-free machinery (lexer, apply, discard, the VM) from the makefile twin.
 mk.import.targets(file=demos/underload.mk targets='ul.* underload')
 mk.import.def(file=demos/underload.mk defs='underload_*')
 
 ul.swap:
 	@# Swap operator:  "~"
 	@#   (x)(y) -> (y)(x)
-	y ⇐ ${ul.pop}
-	x ⇐ ${ul.pop}
-	q="$${y}" ${ul.push}
-	q="$${x}" ${ul.push}
+	y ⇐ this.io.stack.pop_word
+	x ⇐ this.io.stack.pop_word
+	this.io.stack.push_word("""$${y}""")
+	this.io.stack.push_word("""$${x}""")
 
 ul.dup:
 	@# Duplicate operator: ":"
 	@#   (x) -> (x)(x)
-	x ⇐ ${ul.pop}
-	q="$${x}" ${ul.push}
-	q="$${x}" ${ul.push}
+	x ⇐ this.io.stack.pop_word
+	this.io.stack.push_word("""$${x}""")
+	this.io.stack.push_word("""$${x}""")
 
 ul.cat:
 	@# Concat operator: "*"
 	@#   (x)(y) -> (xy)
-	y ⇐ ${ul.pop}
-	x ⇐ ${ul.pop}
-	q="$${x}$${y}" ${ul.push}
+	y ⇐ this.io.stack.pop_word
+	x ⇐ this.io.stack.pop_word
+	this.io.stack.push_word("""$${x}$${y}""")
 
 ul.enclose:
 	@# Enclose operator: "a"
 	@#   (x) -> ((x))
-	q="(`${ul.pop}`)" ${ul.push}
+	this.io.stack.push_word("""(`${io.stack.pop_word}`)""")
 
 ul.print:
 	@# Pop/print operator.  "S"
 	@#  (x) -> ; pop x and output it
-	printf '%s' "`${ul.pop}`"
-ul.eval: flux.pipeline/ul.lex,mk.kernel.each
-	@# Parse / run Underload program text.
-	@# The decoded program is a stream of goals in the form of
-	@# operators + `ul.push/<literal>`.  We pipe this to
-	@# `mk.kernel.each` is the engine to dispatches each
+	"""`${io.stack.pop_word}`"""
 
-ᝏlog.target
+# The `underload` VM reads a program from stdin; the callable-target sugar
+# `this.underload(<literal>)` feeds it directly (lowers to `<literal> | this.underload`).
+# Program text is literal, so it uses the single-quote form '''...''' (the double-quote
+# """...""" form below interpolates shell vars, which factorial needs for `$${arg}`).
 hello.world: io.stack.reset
-	'''(Hello, world!)S''' | this.underload
+	this.underload('''(Hello, world!)S''')
 
-ᝏlog.target(input=AB)
 swapper: io.stack.reset
-	'''(A)(B)~*S''' | this.underload
+	this.underload('''(A)(B)~*S''')
 
 quine: io.stack.reset
-	printf '${underload_quine}' | this.underload
+	this.underload('''${underload_quine}''')
 
-ᝏlog.target
-quine.palindromic:
-	printf '${underload_quine_palindromic}' | this.underload
+quine.palindromic: io.stack.reset
+	this.underload('''${underload_quine_palindromic}''')
 
 # Generic access to the factorial function.  Underload's factorial only accepts
 # and returns *unary* arguments, so we encode the input (`yes`/`head`) and decode
 # the output (`wc`) around the raw function.
-ᝏlog.target(calculating ${*}! ..)
 factorial/%:
+	cmk.log.target(calculating ${*}! ..)
 	arg ⇐ yes ':' | head -n${*} | tr -d '\n'
-	prog="($${arg}):${underload_factorial_fxn}"
+	prog ⇐ """($${arg}):${underload_factorial_fxn}"""
 	printf "$${prog}" | this.ul.eval | tail -1 | ${stream.peek} | wc -c
 factorial: factorial/4
 

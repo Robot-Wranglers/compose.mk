@@ -1,4 +1,4 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
+#!/usr/bin/env -S ./compose.mk cmk run
 # Demonstrates building a self-contained ollama application with CMK-lang.
 #
 # This demo ships with the `compose.mk` repository.

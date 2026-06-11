@@ -28,9 +28,11 @@ table.quickref td {
   vertical-align: top;
 }
 
-/* shrink the syntax column to its content */
-table.quickref td:first-child {
+/* shrink the operator + syntax columns to their content */
+table.quickref td:first-child,
+table.quickref td:nth-child(2) {
   width: 1%;
+  white-space: nowrap;
 }
 
 /* zebra rows + gentle hover.  Both stripes are set explicitly (odd = white)
@@ -115,6 +117,20 @@ table.quickref a {
 /* links read as links again (theme_extra forces `.docutils tr a` to black) */
 .rst-content table.docutils:not(.api_docs):not(.field-list) td a {
   color: #2980b9;
+}
+
+/* Families table (docs/macros.md.j2): the "representative macros" cells hold a
+ * comma-separated list of inline <code> chips.  The default `.rst-content code`
+ * (white-space:pre-wrap; word-wrap:break-word) breaks names mid-token on narrow
+ * screens (e.g. `bind.args.fr` / `om_json`).  Instead keep each name intact and
+ * wrap BETWEEN names, at the commas, so the list reflows as whole chips. */
+.rst-content table td.macro-list {
+  white-space: normal;
+  line-height: 2;
+}
+.rst-content table td.macro-list code {
+  white-space: nowrap;   /* never split a macro name across lines */
+  margin: 1px 0;         /* breathing room once chips wrap to several rows */
 }
 
 /* Consistent 1em gap below code blocks and CLI-output panels
@@ -212,4 +228,11 @@ html.writer-html5 .rst-content table.docutils.api_docs th {
 }
 .rst-content table.docutils.api_docs td a {
   color: #2980b9;
+}
+
+/* Definition-list descriptions: add breathing room below each `dd`.  Matches the
+ * specificity of theme_extra's `.rst-content dl dd` rule and loads after it, so
+ * only the bottom margin is overridden (its other margins / line-height stand). */
+.rst-content dl dd {
+  margin-bottom: 1em;
 }

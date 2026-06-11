@@ -1,0 +1,120 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+## Subcommands
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Subcommands are just the typical interface style you'd see with things like `git log ..` or `docker run ..`.  There's good support for this in many languages and libraries, but it's something that's normally out of reach for Makefile-based automation where `make target1 target2` are always thought of as *independent goals* without any kind of layered or shared context.
+
+In yet another break with traditional `make`, we'll see that `compose.mk` *can* support subcommand-style CLIs, and it does this in a way that's pretty elegant.  Features include:
+
+* Flexible approach, but minimal code and configuration by default.  
+* Subcommands can be discovered by namespacing, or enumerated directly.
+* Usage / help is generated for free.
+
+**Caveats:** The subcommands-style interface approach is used for the built-in [`cmk` CLI]({{mkdocs.site_relative_url}}/compiler), so it's mature and tested.  Subcommand-style entrypoints do *not* require using the [CMK-language]({{mkdocs.site_relative_url}}/compiler), and it works with vanilla Makefile.  But for reasons related to [signals & supervisors]({{mkdocs.site_relative_url}}/signals) it *does require* using the `compose.mk` interpreter (notice the shebang in the example below).
+
+### The Interface
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+There are two pieces: an **entrypoint** that calls `mk.subcommands.enter`, and one **handler
+target per subcommand**.
+
+```Makefile
+#!/usr/bin/env -S ./compose.mk mk.interpret
+
+# Entrypoint: one line makes `greet` a subcommand CLI
+greet:; $(call mk.subcommands.enter)
+
+# Plus one handler per subcommand.  
+# Zero-arguments or parametrics are both allowed.
+.greet.world:;     printf 'hello world\n'
+.greet.hello/%:;   printf 'hello, %s!\n' "${*}"
+```
+
+* A **handler** is named `.<namespace>.<subcommand>`.  The namespace defaults to the
+  entrypoint's name (`greet` above), so handlers live under `.greet.*`.
+* `.<ns>.<sub>` is **non-parametric**, taking no argument.
+* `.<ns>.<sub>/%` is **parametric**: the next CLI word becomes its `%` stem, and any
+  further words arrive in the `argv` environment variable.
+* The subcommand list and the **default** subcommand are detected automatically from your
+  handlers, and usage/help is generated from them.  With no subcommand (or `help`/`-h`),
+  usage is printed.  An **unrecognized first word** routes to the default *only when the
+  default is parametric* (the word becomes its argument; this is what makes `cmk <file>`
+  shorthand work).  If the default is non-parametric, an unrecognized word is an
+  "unknown subcommand" error.
+
+For `mk.subcommands.enter`, arguments are optional and overridable via keyword arguments:
+
+| kwarg | meaning | default |
+| --- | --- | --- |
+| `namespace` | one or more (space-separated) namespaces to search | the target name |
+| `subs` | the subcommand list | reflected from the handlers |
+| `default` | the bare-form fallback subcommand | the first subcommand |
+| `sep` | separator between namespace and subcommand in a handler name | `.` |
+
+```Makefile
+# e.g. force a specific default
+greet:; $(call mk.subcommands.enter, default=hello)
+```
+
+!!! tip "See also"
+    Since the `namespace` keyword accepts *several* namespaces, searched in order, there's a happy coincidence here.  We find ourselves not very far away from the concept of MRO *(=method resolution order)* in object-oriented programming.  See the [this demo]({{mkdocs.site_relative_url}}/demos/oop) for more on that aspect.
+
+### Example
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+A complete `greet` CLI, with two non-parametric subcommands (`world`, `me`) and one
+parametric (`hello`):
+
+{{site.embed_demo('demos/subcommands.mk', github=github, bottom_right=site.link_mirror('demos/cmk/subcommands.cmk'))}}
+
+Using it:
+
+```bash {.cli_example}
+# non-parametric subcommands
+$ ./demos/subcommands.mk greet world
+$ ./demos/subcommands.mk greet me
+
+# parametric subcommand (the word after `hello` is the argument)
+$ ./demos/subcommands.mk greet hello bob
+
+# no subcommand (or `help`) prints generated usage
+$ ./demos/subcommands.mk greet
+$ ./demos/subcommands.mk greet help
+
+# an unrecognized subcommand is rejected (default `world` is non-parametric)
+$ ./demos/subcommands.mk greet wrold      # -> unknown subcommand: wrold
+```
+
+### The entrypoint body
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+The entrypoint is usually just the lone `$(call mk.subcommands.enter ..)` line, but its
+recipe body is ordinary and can do more:
+
+* **Docstring.**  A `@#` docstring on the entrypoint target is surfaced as a description at
+  the top of the generated help (try `greet help`).  Keep it short; the subcommand list
+  itself is generated.
+* **Preamble.**  Recipe lines *before* the `enter` call run on every invocation, before
+  dispatch, which is handy for a banner or a preflight check (`which docker >/dev/null ||
+  exit 1`).  Caveats: the preamble also runs for `help`/unknown invocations; environment it
+  exports does **not** reach the dispatched subcommand (which runs in a separate process);
+  and lines *after* `enter` never run (it transfers control to the dispatcher).
+
+Generated usage lists each subcommand, marking the ones that accept an argument:
+
+```bash {.cli_output}
+greet // USAGE: greet <subcommand> [args..]
+  ├┈world
+  ├┈me
+  ╰┈hello <arg> [args..]
+```
+
+### CMK-lang Equivalent
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+In [CMK-lang]({{mkdocs.site_relative_url}}/compiler), the entrypoint can be written as a
+**decorator** (`ᝏsubcommands` on the line above the target) instead of a `$(call ..)`
+recipe.  Keyword arguments are the same (e.g. `ᝏsubcommands(default=hello)`).
+
+{{site.embed_demo('demos/cmk/subcommands.cmk', type='cmk', github=github, bottom_right=site.link_mirror('demos/subcommands.mk'))}}

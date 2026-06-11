@@ -1,4 +1,4 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
+#!/usr/bin/env -S ./compose.mk cmk run
 #
 # CMK-lang equivalent of demos/bind-target.mk & demos/bind-script.mk,
 # demonstrating some idioms similar to function-decorators.

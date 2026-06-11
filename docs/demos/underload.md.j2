@@ -4,11 +4,33 @@
 <hr style="width:100%;border-bottom:3px solid black;">
 
 !!! tip "Tip"
-    This demo builds on a few others: an awk [polyglot]({{mkdocs.site_relative_url}}/demos/polyglots) for the lexer, the [`io.stack.*` structured stack]({{mkdocs.site_relative_url}}/standard-lib) for state, and the idea that [everything is a target]({{mkdocs.site_relative_url}}/language/#homoiconic) -- so a decoded program is just a stream of `make` goals.
+    This demo builds on several others: an awk [polyglot]({{mkdocs.site_relative_url}}/demos/polyglots) for the lexer, the [`io.stack.*` structured stack]({{mkdocs.site_relative_url}}/standard-lib) for state, and the idea that [everything is a target]({{mkdocs.site_relative_url}}/language/#homoiconic), so a decoded program is just a stream of `make` goals.
 
-[Underload](https://esolangs.org/wiki/Underload)[^1] is a small, stack-based, concatenative esoteric language: a program is a string of single-character commands operating on a stack of strings.  `(`...`)` pushes a literal, `~` swaps the top two, `:` duplicates, `!` discards, `*` concatenates, `a` wraps the top in parentheses, `S` prints it, and `^` pops the top and *runs it as Underload*.  That last one is what makes it Turing-complete -- and makes quines delightfully easy.
+Underload[^1] is a small, stack-based, concatenative esoteric language: a program is a string of single-character commands operating on a stack of strings.  The full command set:
 
-This demo implements a complete Underload interpreter with `compose.mk`, and the pieces map cleanly onto the standard library.  The **lexer** is an awk define that rewrites program text into one dispatchable goal per line; the **stack** is `io.stack.*`; each **operator** (`~`, `:`, `*`, ...) is its own `make` target; and the decoded program is run by `mk.kernel.each`, which dispatches each line as an instruction (order and repetition preserved).  The bundled programs include a quine, a palindromic quine, and an (abstracted) factorial.
+| Operator | Operation | Effect |
+| :-: | --- | --- |
+| `(`...`)` | push | push the enclosed text onto the stack as a quotation |
+| `~` | swap | `(x)(y)` -> `(y)(x)` |
+| `:` | dup | `(x)` -> `(x)(x)` |
+| `!` | discard | `(x)` -> (nothing) |
+| `*` | concatenate | `(x)(y)` -> `(xy)` |
+| `a` | enclose | `(x)` -> `((x))` |
+| `S` | print | pop `(x)` and output `x` |
+| `^` | apply | pop `(x)` and *run `x` as Underload* |
+
+That last command (`^`) is what makes Underload Turing-complete, and makes quines delightfully easy.
+
+------------------
+
+This demo implements a complete Underload interpreter with `compose.mk`, and we'll see how easy the pieces map cleanly onto the standard library.  
+
+* The **lexer** is an awk define that rewrites program text into one dispatchable goal per line
+* The **stack** is `io.stack.*`
+* Each **operator** is a target
+* The decoded program is run by `mk.kernel.each`, which dispatches each line as an instruction (order and repetition preserved).  
+
+Bundled programs include a quine, a palindromic quine, and an (abstracted) factorial.
 
 ```bash {.cli_example}
 # Run the bundled demo programs:
@@ -17,14 +39,14 @@ $ ./demos/underload.mk
 # Evaluate a program from stdin:
 $ printf '(Hello, world!)S' | ./demos/underload.mk ul.eval
 
-# A quine -- prints its own source:
+# A quine, which prints its own source:
 $ printf '(a(:^)*S):^' | ./demos/underload.mk ul.eval
 ```
 
 ### Underload Demo
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The first flavor uses `compose.mk` as a **library** (pure Makefile).
+The first version of a `compose.mk` implementation is pure Makefile, leveraging only [standard library]({{mkdocs.site_relative_url}}/standard-lib).  In the [next section](#underload-demo-cmk) we'll see how much a [CMK-lang]({{mkdocs.site_relative_url}}/compiler) implementation can clean things up.
 
 {{site.embed_demo('demos/underload.mk',
     bottom_right=site.link_mirror(
@@ -34,7 +56,21 @@ The first flavor uses `compose.mk` as a **library** (pure Makefile).
 ### Underload Demo (CMK)
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The second flavor uses `compose.mk` as an **interpreter**, written in [CMK-lang]({{mkdocs.site_relative_url}}/compiler).  Besides the cleaner syntax, it shows off single-sourcing: rather than copy the shared pieces, it pulls the lexer in with [`mk.import.def`]({{mkdocs.site_relative_url}}/macros), the operator/stack targets with [`mk.import.target`]({{mkdocs.site_relative_url}}/macros), and the sample-program literals with `mk.import.def` -- all imported from the Makefile twin above, so the two stay in lock-step.
+With the vanilla-Makefile version out of the way, here's a version showing off more of the 
+[CMK-lang]({{mkdocs.site_relative_url}}/compiler) primitives.  A few things to highlight about that:
+
+**Single-sourcing / Imports:** we keep things DRY by pulling in shared components that we don't plan to change, i.e. pulling in shared definitions from the Makefile twin in the last section. See also the documentation for:
+
+* [`mk.import.def`]({{mkdocs.site_relative_url}}/macros)
+* [`mk.import.target`]({{mkdocs.site_relative_url}}/macros)
+
+**Triple-Quoted Inlines:** Are a form that CMK supports, with and without interpolation.
+See also the documentation [here]({{mkdocs.site_relative_url}}/compiler/#triple-quote-literals).
+
+**Callable Targets:** The `underload` VM reads its program from stdin, so the demos invoke
+it with the callable-target sugar `this.underload("""...""")` (which lowers to
+`"""...""" | this.underload`).  See also the documentation
+[here]({{mkdocs.site_relative_url}}/compiler/#callable-targets).
 
 {{site.embed_demo('demos/cmk/underload.cmk',
     bottom_right=site.link_mirror(

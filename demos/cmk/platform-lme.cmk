@@ -1,4 +1,4 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
+#!/usr/bin/env -S ./compose.mk cmk run
 # A version of demos/platform-lme.mk ported from Makefile to CMK-lang.
 # See the other file for more details and docs, and the tutorial at 
 # http://robot-wranglers.github.io/compose.mk/demos/platform/

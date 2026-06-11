@@ -1,0 +1,24 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# demos/cmk/subcommands.cmk:
+#   A minimal subcommand CLI / CMK-lang equivalent of demos/subcommands.mk.
+#   Part of the `compose.mk` repo. This file runs as part of the test-suite.
+#
+# USAGE: (non-parametric subcommands)
+#   ./demos/cmk/subcommands.cmk greet world       # -> hello world
+#   ./demos/cmk/subcommands.cmk greet me          # -> hello <user>
+#
+# USAGE: (parametric subcommands)
+#   ./demos/cmk/subcommands.cmk greet hello bob   # -> hello, bob!
+#
+# USAGE: (help)
+#   ./demos/cmk/subcommands.cmk greet             # -> usage
+#   ./demos/cmk/subcommands.cmk greet help        # -> usage
+#   ./demos/cmk/subcommands.cmk                   # -> usage
+
+ᝏsubcommands
+greet:
+├┈world:; """hello world\n"""
+├┈me:; printf 'hello %s\n' "$${USER}"
+╰┈hello/%:; printf 'hello, %s! (argv=%s)\n' "${*}" "$${argv:-}"
+
+__main__: greet

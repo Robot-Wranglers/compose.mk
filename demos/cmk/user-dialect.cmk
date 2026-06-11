@@ -1,4 +1,4 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
+#!/usr/bin/env -S ./compose.mk cmk run
 # Demonstrating user-defined extensions for the CMK -> Makefile compiler.
 #
 # cmk_dialect ::: [ 

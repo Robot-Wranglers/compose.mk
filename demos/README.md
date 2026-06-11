@@ -8,10 +8,6 @@
 
 * [ansible-playbook.mk](./ansible-playbook.mk) (45 lines)
 
-* [basic-integration-2.mk](./basic-integration-2.mk) (14 lines)
-
-* [basic-integration.mk](./basic-integration.mk) (14 lines)
-
 * [bind-def-to-env.mk](./bind-def-to-env.mk) (21 lines)
 
 * [bind-file.mk](./bind-file.mk) (15 lines)
@@ -38,7 +34,11 @@
 
 * [container-dispatch.mk](./container-dispatch.mk) (22 lines)
 
+* [counter-machine.mk](./counter-machine.mk) (49 lines)
+
 * [dashboarding.mk](./dashboarding.mk) (24 lines)
+
+* [docker.import.mk](./docker.import.mk) (25 lines)
 
 * [double-dispatch.mk](./double-dispatch.mk) (21 lines)
 
@@ -59,8 +59,6 @@
 * [guests.mk](./guests.mk) (40 lines)
 
 * [import-file.mk](./import-file.mk) (21 lines)
-
-* [docker.import.mk](./docker.import.mk) (25 lines)
 
 * [inlined-composefile.mk](./inlined-composefile.mk) (59 lines)
 
@@ -102,6 +100,8 @@
 
 * [notebooking.mk](./notebooking.mk) (287 lines)
 
+* [oop.mk](./oop.mk) (35 lines)
+
 * [parsing-parameters.mk](./parsing-parameters.mk) (20 lines)
 
 * [partials.mk](./partials.mk) (20 lines)
@@ -122,6 +122,8 @@
 
 * [section-dividers.mk](./section-dividers.mk) (27 lines)
 
+* [ski.mk](./ski.mk) (87 lines)
+
 * [stage-wrapper.mk](./stage-wrapper.mk) (21 lines)
 
 * [stages-idiom.mk](./stages-idiom.mk) (24 lines)
@@ -134,7 +136,15 @@
 
 * [structured-io.mk](./structured-io.mk) (18 lines)
 
+* [subcommands.mk](./subcommands.mk) (30 lines)
+
+* [tag-system.mk](./tag-system.mk) (39 lines)
+
+* [tarski.mk](./tarski.mk) (113 lines)
+
 * [tinycc.mk](./tinycc.mk) (35 lines)
+
+* [underload.mk](./underload.mk) (146 lines)
 
 * [uv.mk](./uv.mk) (39 lines)
 

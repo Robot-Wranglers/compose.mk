@@ -1,4 +1,4 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
+#!/usr/bin/env -S ./compose.mk cmk run
 # CMK-lang translation of demos/code-objects.mk
 # USAGE: ./demos/cmk/code-objects.cmk
 

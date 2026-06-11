@@ -1,4 +1,4 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
+#!/usr/bin/env -S ./compose.mk cmk run
 #
 # CMK-lang equivalent of demos/import-file.mk.
 # Part of the `compose.mk` repo. This file runs as part of the test-suite.  

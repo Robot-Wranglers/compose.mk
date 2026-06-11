@@ -47,7 +47,7 @@ def test_mk_preprocess_decorators_passthrough(cmk):
 # below pin each *stage's* transform in isolation via its target, so the planned
 # pipeline refactor (Stage 5: macros + fused fast path / flux.pipeline debug
 # path) is provably behavior-preserving stage-by-stage -- not just end-to-end.
-# All pure stdin->stdout (no docker). Stage boundaries are non-obvious: e.g. `⧐`
+# All pure stdin->stdout (no docker). Stage boundaries are non-obvious: e.g. `ᐉ`
 # and `this.` are *dialect* rules; the block glyphs (⋘⫻⟦🞹⨖) are *sugar*.
 
 
@@ -106,8 +106,8 @@ def test_stage_decorators_require_adjacent_target(cmk):
 
 
 def test_stage_dialect_glyph_substitutions(cmk):
-  # Default dialect maps the inline glyphs (⧐ -> .dispatch/, 🡄 -> ${jb}).
-  r = cmk("mk.preprocess.dialect", stdin="r: svc⧐t\ne:\n\t🡄 k=v\n")
+  # Default dialect maps the inline glyphs (ᐉ -> .dispatch/, 🡄 -> ${jb}).
+  r = cmk("mk.preprocess.dialect", stdin="r: svcᐉt\ne:\n\t🡄 k=v\n")
   assert r.ok, r.stderr
   assert "svc.dispatch/t" in r.stdout
   assert "${jb} k=v" in r.stdout
@@ -379,10 +379,10 @@ def test_compile_sugar_script_block(cmk):
 
 
 def test_compile_dispatch_glyph_and_call(cmk):
-  # `⧐` and `.dispatch(x)` both lower to `.dispatch/x`.
+  # `ᐉ` and `.dispatch(x)` both lower to `.dispatch/x`.
   assert (
     "svc.dispatch/target"
-    in cmk("mk.compile", stdin="run: svc⧐target\n").stdout
+    in cmk("mk.compile", stdin="run: svcᐉtarget\n").stdout
   )
   assert (
     "svc.dispatch/target"
@@ -547,11 +547,18 @@ def test_compile_triplequote_internal_double_quote(cmk):
   assert "printf '%s' 'say \"hi\"'" in r.stdout
 
 
-def test_compile_triplequote_internal_single_quote(cmk):
-  # `"""…"""` delimiter lets the content hold a single quote; it's escaped '\''.
+def test_compile_triplequote_double_is_interpolating(cmk):
+  # `"""…"""` is the interpolating (DOUBLE-quoted) form: shell `$VAR`/`` `cmd` `` expand.
+  r = cmk("mk.compile", stdin='"""$X"""\n')
+  assert r.ok, r.stderr
+  assert "printf '%s' \"$X\"" in r.stdout
+
+
+def test_compile_triplequote_double_internal_single_quote(cmk):
+  # A literal single quote sits fine inside the double-quoted form (no escaping).
   r = cmk("mk.compile", stdin='"""it\'s"""\n')
   assert r.ok, r.stderr
-  assert "printf '%s' 'it'\\''s'" in r.stdout
+  assert "printf '%s' \"it's\"" in r.stdout
 
 
 def test_compile_triplequote_percent_is_literal(cmk):
@@ -573,6 +580,178 @@ def test_compile_triplequote_skips_define_block(cmk):
   r = cmk("mk.compile", stdin="define blk\nx = '''doc'''\nendef\n")
   assert r.ok, r.stderr
   assert "x = '''doc'''" in r.stdout
+
+
+# --- triple-BACKTICK literals (```…```) -------------------------------------
+# Like triple-quote, but DOUBLE-quoted -> standard interpolation (`cmds`, $vars).
+
+
+def test_compile_triplebacktick_interpolating(cmk):
+  # the distinguishing behavior: DOUBLE-quoted printf (vs triple-quote's single).
+  r = cmk("mk.compile", stdin="```$X``` | this.t\n")
+  assert r.ok, r.stderr
+  assert "printf '%s' \"$X\" | ${make} t" in r.stdout
+
+
+def test_compile_triplebacktick_backtick_passthrough(cmk):
+  # a command-sub inside survives verbatim (interpolated by the shell at runtime).
+  r = cmk("mk.compile", stdin="```a`id`b```\n")
+  assert r.ok, r.stderr
+  assert "printf '%s' \"a`id`b\"" in r.stdout
+
+
+def test_compile_triplebacktick_escapes_double_quote(cmk):
+  # an internal " is escaped so the double-quoted string stays well-formed.
+  r = cmk("mk.compile", stdin='```say "hi"```\n')
+  assert r.ok, r.stderr
+  assert 'printf \'%s\' "say \\"hi\\""' in r.stdout
+
+
+def test_compile_triplebacktick_multiline(cmk):
+  r = cmk("mk.compile", stdin="x:\n\t```L1\nL2``` | this.t\n")
+  assert r.ok, r.stderr
+  assert 'printf \'%s\\n%s\' "L1" "L2" | ${make} t' in r.stdout
+
+
+def test_compile_triplebacktick_content_ends_with_backtick(cmk):
+  # The closer is the LAST 3 of a backtick run, so the content may end with a
+  # backtick (e.g. a command-sub right before the close): ````id```` -> "`id`".
+  r = cmk("mk.compile", stdin="````id````\n")
+  assert r.ok, r.stderr
+  assert "printf '%s' \"`id`\"" in r.stdout
+
+
+def test_compile_triplequote_still_literal(cmk):
+  # regression: the single-quoted (literal) forms are unchanged by the backtick add.
+  r = cmk("mk.compile", stdin="'''$X''' | this.t\n")
+  assert r.ok, r.stderr
+  assert "printf '%s' '$X' | ${make} t" in r.stdout
+
+
+# --- callable targets: this.NAME(...) / this.NAME'''...''' (.awk.callable) ----
+# The `callable` stage runs AFTER dialect (so `this.NAME` is already `${make} NAME`)
+# and BEFORE triplequote; it relocates a target's argument into a stdin pipe and never
+# lowers the literal itself.  Happy-path tests go through full `mk.compile`; error cases
+# use the standalone stage target (`mk.preprocess.callable`, fed the post-dialect
+# `${make} ` form) so the nonzero exit is observable -- the full pipe masks a mid-stage
+# failure (same convention as the indent-stage tests below).
+
+
+def test_callable_quoted_call(cmk):
+  r = cmk("mk.compile", stdin="x:\n\tthis.eval('''(Hi)S''')\n")
+  assert r.ok, r.stderr
+  assert "printf '%s' '(Hi)S' | ${make} eval" in r.stdout
+
+
+def test_callable_quoted_call_doublequote(cmk):
+  # `"""…"""` is interpolating, so it lowers to a double-quoted printf.
+  r = cmk("mk.compile", stdin='x:\n\tthis.eval("""(Hi)S""")\n')
+  assert r.ok, r.stderr
+  assert "printf '%s' \"(Hi)S\" | ${make} eval" in r.stdout
+
+
+def test_callable_quoted_call_backtick_interpolates(cmk):
+  # the ``` delimiter is interpolating: lowers to a DOUBLE-quoted printf.
+  r = cmk("mk.compile", stdin="x:\n\tthis.eval(```$X```)\n")
+  assert r.ok, r.stderr
+  assert "printf '%s' \"$X\" | ${make} eval" in r.stdout
+
+
+def test_callable_tagged(cmk):
+  r = cmk("mk.compile", stdin="x:\n\tthis.eval'''(Hi)S'''\n")
+  assert r.ok, r.stderr
+  assert "printf '%s' '(Hi)S' | ${make} eval" in r.stdout
+
+
+def test_callable_tagged_backtick(cmk):
+  r = cmk("mk.compile", stdin="x:\n\tthis.eval```$X```\n")
+  assert r.ok, r.stderr
+  assert "printf '%s' \"$X\" | ${make} eval" in r.stdout
+
+
+def test_callable_unquoted_pipes_command(cmk):
+  # unquoted arg is moved verbatim (its stdout is piped in).
+  r = cmk("mk.compile", stdin="x:\n\tthis.eval(cat f)\n")
+  assert r.ok, r.stderr
+  assert "cat f | ${make} eval" in r.stdout
+
+
+def test_callable_chaining(cmk):
+  # this.b(this.a) -> ${make} a | ${make} b (inner already lowered by dialect).
+  r = cmk("mk.compile", stdin="x:\n\tthis.b(this.a)\n")
+  assert r.ok, r.stderr
+  assert "${make} a | ${make} b" in r.stdout
+
+
+def test_callable_multiline_quoted(cmk):
+  r = cmk("mk.compile", stdin="x:\n\tthis.eval('''L1\nL2''')\n")
+  assert r.ok, r.stderr
+  assert "printf '%s\\n%s' 'L1' 'L2' | ${make} eval" in r.stdout
+
+
+def test_callable_subshell_arg(cmk):
+  # a subshell argument is spanned by balanced parens and piped verbatim.
+  r = cmk("mk.compile", stdin="x:\n\tthis.foo((echo a; echo b))\n")
+  assert r.ok, r.stderr
+  assert "(echo a; echo b) | ${make} foo" in r.stdout
+
+
+def test_callable_not_a_call_semicolon_subshell(cmk):
+  # `this.b; (this.a)` is plain shell, NOT a call -- must stay verbatim.
+  r = cmk("mk.compile", stdin="x:\n\tthis.b; (this.a)\n")
+  assert r.ok, r.stderr
+  assert "${make} b; (${make} a)" in r.stdout
+  assert "${make} a | ${make} b" not in r.stdout
+
+
+def test_callable_not_a_call_space_before_paren(cmk):
+  # a space between NAME and `(` means it's not a call.
+  r = cmk("mk.compile", stdin="x:\n\tthis.foo (x)\n")
+  assert r.ok, r.stderr
+  assert "${make} foo (x)" in r.stdout
+
+
+def test_callable_bare_this_unchanged(cmk):
+  # bare this.foo (no adjacent (/delim) is an ordinary make invocation.
+  r = cmk("mk.compile", stdin="x:\n\tthis.foo bar\n")
+  assert r.ok, r.stderr
+  assert "${make} foo bar" in r.stdout
+
+
+def test_callable_skips_define_block(cmk):
+  # inert inside define..endef (dialect/callable/triplequote all skip it).
+  r = cmk("mk.compile", stdin="define blk\nthis.t('''x''')\nendef\n")
+  assert r.ok, r.stderr
+  assert "this.t('''x''')" in r.stdout
+
+
+def test_callable_defers_dispatch_form(cmk):
+  # `.dispatch(target)` is container dispatch (the .awk.dispatch pass), NOT a callable
+  # pipe -- callable must leave names ending in `.dispatch` alone.
+  r = cmk("mk.compile", stdin="x:\n\tthis.alice.dispatch(self.task)\n")
+  assert r.ok, r.stderr
+  assert "${make} alice.dispatch/self.task" in r.stdout
+  assert "self.task | ${make}" not in r.stdout
+
+
+def test_callable_error_unterminated_unquoted(cmk):
+  r = cmk("mk.preprocess.callable", stdin="x:\n\t${make} t(a b\n")
+  assert not r.ok
+  assert "compose.mk (cmk:callable) error:" in r.stderr
+  assert "unterminated" in r.stderr
+  assert "at line" in r.stderr
+
+
+def test_callable_error_unterminated_literal(cmk):
+  r = cmk("mk.preprocess.callable", stdin="x:\n\t${make} t('''oops\n")
+  assert not r.ok
+  assert "unterminated triple-quoted literal" in r.stderr
+
+
+def test_callable_error_mixed_content(cmk):
+  r = cmk("mk.preprocess.callable", stdin="x:\n\t${make} t('''a''' more)\n")
+  assert not r.ok
+  assert "expected ')'" in r.stderr
 
 
 # --- recipe-body joining (.awk.joinbody) ------------------------------------
@@ -627,3 +806,60 @@ def test_compile_joinbody_skips_define_block(cmk):
   assert r.ok, r.stderr
   assert "l1\nl2" in r.stdout
   assert "l1 && \\" not in r.stdout
+
+
+# --- python-style indentation: space OR tab recipe bodies (mk.preprocess.indent) --
+# The `indent` stage runs LAST in the preprocess chain (after sugar lowered its
+# literal blocks to define..endef), normalizing a consistently SPACE-indented body
+# to the leading tab Make needs, passing TAB bodies through verbatim, and erroring
+# on mixed (tabs+spaces in one indent) or mismatched indentation. Error cases use
+# the standalone stage target (`mk.preprocess.indent`) so the nonzero exit is
+# observable -- the full `mk.compile` pipe masks a mid-pipe failure (same as the
+# decorator-stage errors above); the real `mk.interpret!` path does surface it.
+
+
+def test_compile_space_indented_recipe(cmk):
+  # A space-indented recipe body compiles: spaces -> one leading tab, then joined.
+  r = cmk("mk.compile", stdin="x:\n    cmd1\n    cmd2\n")
+  assert r.ok, r.stderr
+  assert (
+    "cmd1 && \\\n" in r.stdout
+  )  # joinbody saw it as a recipe (i.e. tab-led)
+  assert "\tcmd2" in r.stdout  # normalized to a tab, not left as spaces
+  assert "    cmd2" not in r.stdout  # the original spaces are gone
+
+
+def test_indent_stage_normalizes_spaces_to_tab(cmk):
+  # The stage itself rewrites leading spaces to a single tab.
+  r = cmk("mk.preprocess.indent", stdin="x:\n    a\n    b\n")
+  assert r.ok, r.stderr
+  assert "\ta\n" in r.stdout and "\tb\n" in r.stdout
+  assert "    a" not in r.stdout
+
+
+def test_indent_stage_tab_body_unchanged(cmk):
+  # Back-compat: tab-indented bodies pass through verbatim (incl. deeper tabs).
+  r = cmk("mk.preprocess.indent", stdin="x:\n\ta\n\t\tb\n")
+  assert r.ok, r.stderr
+  assert "\ta\n" in r.stdout and "\t\tb\n" in r.stdout
+
+
+def test_indent_stage_skips_define_block(cmk):
+  # define..endef data (e.g. lowered sugar blocks: compose YAML) is verbatim.
+  r = cmk("mk.preprocess.indent", stdin="define blk\n    raw spaces\nendef\n")
+  assert r.ok, r.stderr
+  assert "    raw spaces" in r.stdout  # NOT rewritten to a tab
+
+
+def test_indent_mixed_tabs_and_spaces_errors(cmk):
+  # A single indent that mixes a tab and spaces is rejected ("mixed mode").
+  r = cmk("mk.preprocess.indent", stdin="x:\n\t  cmd\n")
+  assert not r.ok
+  assert "mixes tabs and spaces" in r.stderr
+
+
+def test_indent_mismatched_spaces_errors(cmk):
+  # Inconsistent space-indent within one body is rejected ("mismatched").
+  r = cmk("mk.preprocess.indent", stdin="x:\n    cmd1\n  cmd2\n")
+  assert not r.ok
+  assert "inconsistent indentation" in r.stderr

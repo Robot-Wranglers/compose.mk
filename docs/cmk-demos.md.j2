@@ -1,0 +1,166 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+## CMK Demo Index
+<hr style="width:100%;border-bottom:3px solid black;">
+<a name=all-demos></a>
+
+Every CMK demo that's featured elsewhere in these docs, cross-referenced to where it appears and to its plain-Makefile twin (where one exists).  The full set of sources lives in the {{macros.repo_link('demos/cmk', github=github)}} folder.  For how to run and compile these, see [About CMK Demos]({{mkdocs.site_relative_url}}/compiler/#about-cmk-demos) on the [Compiler &amp; Dialects]({{mkdocs.site_relative_url}}/compiler) page.
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile twin</th></tr>
+  </thead>
+  <tbody>
+    <tr><td colspan=3><strong>Basics & Structured IO</strong></td></tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/structured-io.cmk', name='structured-io', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#basic-example">Basic Example</a></td>
+      <td>{{macros.repo_link('demos/structured-io.mk', name='structured-io.mk', github=github)}}</td>
+    </tr>
+
+    <tr><td colspan=3><strong>Containers & Dispatch</strong></td></tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/container-dispatch.cmk', name='container-dispatch', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/container-dispatch">Container Dispatch</a></td>
+      <td>{{macros.repo_link('demos/container-dispatch.mk', name='container-dispatch.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/container-dispatch-2.cmk', name='container-dispatch-2', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/container-dispatch">Container Dispatch</a></td>
+      <td>{{macros.repo_link('demos/container-dispatch-2.mk', name='container-dispatch-2.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/bind-script.cmk', name='bind-script', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/container-dispatch">Container Dispatch</a>, <a href="{{mkdocs.site_relative_url}}/compiler/#bind-script">Bind-Script</a></td>
+      <td>{{macros.repo_link('demos/bind-script.mk', name='bind-script.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/bind-target.cmk', name='bind-target', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/container-dispatch">Container Dispatch</a>, <a href="{{mkdocs.site_relative_url}}/compiler/#bind-target">Bind-Target</a></td>
+      <td>{{macros.repo_link('demos/bind-target.mk', name='bind-target.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/io.pushd.cmk', name='io.pushd', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#bind-target">Bind-Target</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/script-dispatch-host.cmk', name='script-dispatch-host', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/demos/polyglots">Polyglots</a></td>
+      <td>{{macros.repo_link('demos/script-dispatch-host.mk', name='script-dispatch-host.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/script-dispatch-stock.cmk', name='script-dispatch-stock', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/raw-docker">Raw Docker</a></td>
+      <td>{{macros.repo_link('demos/script-dispatch-stock.mk', name='script-dispatch-stock.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/script-dispatch-custom.cmk', name='script-dispatch-custom', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#local-context-embedded-containers">Local-Context & Embedded Containers</a></td>
+      <td>{{macros.repo_link('demos/script-dispatch-custom.mk', name='script-dispatch-custom.mk', github=github)}}</td>
+    </tr>
+
+    <tr><td colspan=3><strong>Compose Files & Dockerfiles</strong></td></tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/inlined-composefile.cmk', name='inlined-composefile', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/demos/matrioshka">Matrioshka</a></td>
+      <td>{{macros.repo_link('demos/inlined-composefile.mk', name='inlined-composefile.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/inlined-dockerfile.cmk', name='inlined-dockerfile', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/demos/inlined-dockerfiles">Inlined Dockerfiles</a></td>
+      <td>{{macros.repo_link('demos/inlined-dockerfile.mk', name='inlined-dockerfile.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/import-file.cmk', name='import-file', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#files-as-targets">Files as Targets</a></td>
+      <td>{{macros.repo_link('demos/import-file.mk', name='import-file.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/bind-file.cmk', name='bind-file', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#files-as-targets">Files as Targets</a></td>
+      <td>{{macros.repo_link('demos/bind-file.mk', name='bind-file.mk', github=github)}}</td>
+    </tr>
+
+    <tr><td colspan=3><strong>Polyglots</strong></td></tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/code-objects.cmk', name='code-objects', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/demos/polyglots">Polyglots</a></td>
+      <td>{{macros.repo_link('demos/code-objects.mk', name='code-objects.mk', github=github)}}</td>
+    </tr>
+
+    <tr><td colspan=3><strong>Argument Parsing</strong></td></tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/kwarg-parsing.cmk', name='kwarg-parsing', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/argument-parsing">Argument Parsing</a></td>
+      <td>{{macros.repo_link('demos/kwarg-parsing.mk', name='kwarg-parsing.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/kwarg-parsing-2.cmk', name='kwarg-parsing-2', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/argument-parsing">Argument Parsing</a></td>
+      <td>{{macros.repo_link('demos/kwarg-parsing-2.mk', name='kwarg-parsing-2.mk', github=github)}}</td>
+    </tr>
+
+    <tr><td colspan=3><strong>Extending CMK</strong></td></tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/user-dialect.cmk', name='user-dialect', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#user-defined-dialects">User-Defined Dialects</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/user-sugar.cmk', name='user-sugar', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#user-defined-sugar">User-Defined Sugar</a></td>
+      <td>-</td>
+    </tr>
+
+    <tr><td colspan=3><strong>AI & LLMs</strong></td></tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/ollama.cmk', name='ollama', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/demos/ai">AI Demos</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/rag.cmk', name='rag', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/demos/ai">AI Demos</a></td>
+      <td>-</td>
+    </tr>
+
+    <tr><td colspan=3><strong>GUIs (X11)</strong></td></tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/xephyr.cmk', name='xephyr', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/guis">GUIs</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/xpra.cmk', name='xpra', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/guis">GUIs</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/xpra-doom.cmk', name='xpra-doom', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/guis">GUIs</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/xpra-net.cmk', name='xpra-net', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/guis">GUIs</a></td>
+      <td>-</td>
+    </tr>
+
+    <tr><td colspan=3><strong>Platform & Formal Methods</strong></td></tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/platform-lme.cmk', name='platform-lme', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/demos/platform">Platform</a></td>
+      <td>{{macros.repo_link('demos/platform-lme.mk', name='platform-lme.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/lean.cmk', name='lean', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/demos/lean">Lean</a></td>
+      <td>{{macros.repo_link('demos/lean.mk', name='lean.mk', github=github)}}</td>
+    </tr>
+  </tbody>
+</table>
+
+A few experimental demos aren't featured in the docs yet, but ship in the repo: {{macros.repo_link('demos/cmk/elixir.cmk', name='elixir', github=github)}}, {{macros.repo_link('demos/cmk/just.cmk', name='just', github=github)}}, and {{macros.repo_link('demos/cmk/underload.cmk', name='underload', github=github)}}.
+
+See also the [Compiler &amp; Dialects]({{mkdocs.site_relative_url}}/compiler) walk-through and the [CMK Quick Reference]({{mkdocs.site_relative_url}}/cmk-quick-ref) cheat-sheet.

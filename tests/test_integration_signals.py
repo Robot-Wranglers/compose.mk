@@ -189,10 +189,160 @@ def test_default_path_skips_internal_dispatcher_hook(tmp_path):
 
 def test_at_exit_handler_runs(tmp_path):
   # CMK_AT_EXIT_TARGETS fires via mk.supervisor.exit after the main pipeline.
-  # NB: a user-defined at-exit target currently yields a nonzero supervisor exit
-  # (the handler resolves against compose.mk's namespace) -- a pre-existing quirk
-  # unrelated to this path; we assert the handler RAN, not the exit code.
+  # A successful goal + at-exit handler now exits 0 (the wrapper no longer adopts
+  # mk.supervisor.exit's own status -- see the exact-exit-code work below).
   body = HOOKED + "myexit:; @echo AT-EXIT-RAN\n"
   r = _interp(tmp_path, body, "nohook", env={"CMK_AT_EXIT_TARGETS": "myexit"})
+  assert r.ok, r.stderr  # success goal + handler -> clean 0 exit
   assert "PLAIN" in r.stdout
   assert "AT-EXIT-RAN" in r.stdout, r.stdout
+
+
+def test_at_exit_handler_runs_even_when_main_fails(tmp_path):
+  # The guarantee demos rely on for cleanup: mk.supervisor.exit runs the at-exit
+  # target "regardless of whether the pipeline was successful". Here the CLI goal
+  # FAILS, yet the handler still fires (and the run reports nonzero).
+  body = HOOKED + "boom:; @echo MAIN-RAN ; false\nmyexit:; @echo AT-EXIT-RAN\n"
+  r = _interp(tmp_path, body, "boom", env={"CMK_AT_EXIT_TARGETS": "myexit"})
+  assert "MAIN-RAN" in r.stdout, r.stdout
+  assert "AT-EXIT-RAN" in r.stdout, r.stdout  # fired despite the failure
+  assert not r.ok  # a failed main pipeline still surfaces a nonzero exit
+
+
+def test_at_exit_multiple_targets_all_run(tmp_path):
+  # CMK_AT_EXIT_TARGETS is a space-separated list (docs/signals.md): every named
+  # target runs at exit, in order.
+  body = HOOKED + "exit1:; @echo EXIT-ONE\nexit2:; @echo EXIT-TWO\n"
+  r = _interp(
+    tmp_path, body, "nohook", env={"CMK_AT_EXIT_TARGETS": "exit1 exit2"}
+  )
+  assert "PLAIN" in r.stdout
+  assert "EXIT-ONE" in r.stdout and "EXIT-TWO" in r.stdout, r.stdout
+
+
+def test_at_exit_declared_in_file_via_export(tmp_path):
+  # The idiomatic in-program form (cf. demos/cmk/exceptions.cmk): the makefile
+  # itself `export`s CMK_AT_EXIT_TARGETS, so no caller env is needed.
+  body = (
+    "export CMK_AT_EXIT_TARGETS=myexit\n"
+    + HOOKED
+    + "myexit:; @echo AT-EXIT-RAN\n"
+  )
+  r = _interp(tmp_path, body, "nohook")
+  assert "PLAIN" in r.stdout
+  assert "AT-EXIT-RAN" in r.stdout, r.stdout
+
+
+def test_at_exit_append_preserves_existing(tmp_path):
+  # A program should `+=` (append) its handler rather than overriding, so a
+  # caller-provided CMK_AT_EXIT_TARGETS survives (cf. demos/cmk/exceptions.cmk).
+  # With a caller value in the env, the in-file `+=` adds to it -> BOTH run.
+  body = (
+    "export CMK_AT_EXIT_TARGETS += progexit\n"
+    + HOOKED
+    + "progexit:; @echo PROG-EXIT\ncallerexit:; @echo CALLER-EXIT\n"
+  )
+  r = _interp(
+    tmp_path, body, "nohook", env={"CMK_AT_EXIT_TARGETS": "callerexit"}
+  )
+  assert "PLAIN" in r.stdout
+  assert "CALLER-EXIT" in r.stdout, r.stdout  # caller's handler not clobbered
+  assert "PROG-EXIT" in r.stdout, r.stdout  # program's handler also ran
+
+
+# --- exact exit-code propagation (record-and-continue) -----------------------
+# GNU make collapses any recipe failure to exit 2 at every sub-make boundary.
+# `mk.exit.code/<N>` records the EXACT code out-of-band (the supervisor pidfile)
+# and fails normally, so the make stack unwinds (finally/cleanup arms still run)
+# and the bash supervisor wrapper -- the only non-flattening exit point -- delivers
+# <N> to the OS. These are the first tests to assert SPECIFIC nonzero codes; they
+# must use `_interp` (CMK_SUPERVISOR=1), since the channel needs the supervisor.
+
+# Minimal program exercising the exact-code paths.
+EXITBODY = (
+  "rerr:; @$(call mk.exit.code,42)\n"  # macro form
+  "fin:; @echo SENTINEL-FINALLY\n"
+  "okx:; @echo OKX\n"
+  "boom7:; @echo MAIN ; exit 7\n"
+  "atx:; @echo AT-EXIT-SENTINEL\n"
+  # hand-rolled swallow that must clear the recorded code to recover:
+  "handled:; @${make} rerr </dev/null || { echo HANDLED ; ${make} mk.exit.clear ; } ; echo CONTINUED\n"
+  "leaked:; @${make} rerr </dev/null || true ; echo CONTINUED\n"
+  "__main__:; @echo D\n"
+)
+
+
+def test_exit_code_exact_record_and_continue(tmp_path):
+  # The headline: the top-level process exits with the EXACT code, not make's 2.
+  r = _interp(tmp_path, EXITBODY, "mk.exit.code/42")
+  assert r.returncode == 42, (r.returncode, r.stderr)
+
+
+def test_exit_code_macro_form(tmp_path):
+  # `$(call mk.exit.code,42)` inline inside a recipe delivers the same exact code.
+  r = _interp(tmp_path, EXITBODY, "rerr")
+  assert r.returncode == 42, (r.returncode, r.stderr)
+
+
+def test_exit_code_finally_still_runs(tmp_path):
+  # The record-and-continue payoff: an unrecovered failure carrying an exact code
+  # STILL runs the `finally` arm, and the exact code survives to the top.
+  r = _interp(tmp_path, EXITBODY, "flux.try.except.finally/rerr,flux.fail,fin")
+  assert r.returncode == 42, (r.returncode, r.stderr)
+  assert "SENTINEL-FINALLY" in r.stdout, r.stdout  # finally ran
+
+
+def test_exit_code_recovery_clears(tmp_path):
+  # If the `except` arm RECOVERS, the pending exact code is cleared -> exit 0
+  # (no stale leak), and finally still runs.
+  r = _interp(tmp_path, EXITBODY, "flux.try.except.finally/rerr,flux.ok,fin")
+  assert r.returncode == 0, (r.returncode, r.stderr)
+  assert "SENTINEL-FINALLY" in r.stdout, r.stdout
+
+
+def test_exit_code_ordinary_failure_still_two(tmp_path):
+  # Backward-compat: a plain failure with no mk.exit.code still flattens to 2.
+  r = _interp(tmp_path, EXITBODY, "boom7")
+  assert r.returncode == 2, (r.returncode, r.stderr)
+  assert "MAIN" in r.stdout
+
+
+def test_exit_code_success_zero_no_stale(tmp_path):
+  # Success exits 0 and leaves no supervisor pidfile behind.
+  r = _interp(tmp_path, EXITBODY, "okx")
+  assert r.returncode == 0, (r.returncode, r.stderr)
+  assert "OKX" in r.stdout
+  assert not list(tmp_path.glob(".tmp.mk.super.*")), (
+    "stale pidfile left behind"
+  )
+
+
+def test_exit_code_with_at_exit_handler(tmp_path):
+  # An exact exit code and the CMK_AT_EXIT_TARGETS handler coexist: handler runs,
+  # and the exact code is still delivered.
+  r = _interp(
+    tmp_path, EXITBODY, "mk.exit.code/42", env={"CMK_AT_EXIT_TARGETS": "atx"}
+  )
+  assert r.returncode == 42, (r.returncode, r.stderr)
+  assert "AT-EXIT-SENTINEL" in r.stdout, r.stdout
+
+
+def test_exit_clear_recovers_in_custom_handler(tmp_path):
+  # A hand-rolled swallow (`|| { ... }`) only fully recovers if it also calls
+  # `mk.exit.clear` to retract the recorded code -> exit 0.
+  r = _interp(tmp_path, EXITBODY, "handled")
+  assert r.returncode == 0, (r.returncode, r.stderr)
+  assert "HANDLED" in r.stdout and "CONTINUED" in r.stdout, r.stdout
+
+
+def test_exit_code_leaks_without_clear(tmp_path):
+  # Counterpoint: a bare `|| true` swallow continues execution but does NOT clear
+  # the recorded code, so it still reaches the top (the sharp edge mk.exit.clear fixes).
+  r = _interp(tmp_path, EXITBODY, "leaked")
+  assert "CONTINUED" in r.stdout, (
+    r.stdout
+  )  # execution continued past the swallow
+  assert r.returncode == 42, (
+    r.returncode,
+    r.stderr,
+  )  # ...yet the code leaked out

@@ -158,7 +158,7 @@ def test_io_stack_macro_empty_arg_defaults_to_default_stack(cmk, tmp_path):
     "probe:\n"
     "\t@$(call io.stack.reset,)\n"
     "\t@printf '\"x\"' | $(call io.stack.push,)\n"
-    "\t@$(call io.stack.pop.word,)\n"
+    "\t@$(call io.stack.pop_word,)\n"
   )
   r = cmk("probe", makefile=mk)
   assert r.ok, r.stderr

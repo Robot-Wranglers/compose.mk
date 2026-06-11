@@ -2,19 +2,35 @@
 
 Opt-in: **not gated on push/PR**. Runs on-demand via the Perf Tests workflow
 (``.github/workflows/perf-tests.yml``); locally via ``tox -e perf-test``
-(or ``make perf-test``). Measures wall-clock *cold-start* (a fresh process per sample) over
-N samples (default 10, override with ``CMK_PERF_SAMPLES``) for a few
+(or ``make perf-test``). Measures wall-clock *cold-start* (a fresh process per
+sample) over N samples (default 10, override with ``CMK_PERF_SAMPLES``) for a few
 representative usages:
 
-  1. simple tool-mode:        ``./compose.mk flux.ok``
-  2. CMK compile (transpile): ``./compose.mk mk.compile`` (source on stdin)
-  3. CMK compile+interpret:   ``./compose.mk mk.interpret! <file>``
+  1. simple tool-mode:        ``compose.mk flux.ok``
+  2. CMK compile (transpile): ``compose.mk mk.compile`` (source on stdin)
+  3. CMK compile+interpret:   ``compose.mk mk.interpret! <file>``
   4. headless TUI bring-up:   ``./compose.mk tux.open/...`` (needs docker)
 
 (2) and (3) share the same CMK source, so the (3)-vs-(2) delta isolates the
 *run* cost on top of pure transpilation. (1)-(3) are pure in-process cold-starts
 (no docker); (4) measures the latency to spin the tux container and load the
 tmuxp session, and is auto-skipped when no docker daemon is available.
+
+Benchmarks (1)-(3) are **parametrized** across two axes:
+
+  * make version -- the host's native ``make``, plus pinned versions run inside
+    stock containers (``debian:bookworm-slim`` = make 4.3, ``alpine:3.21.2`` =
+    make 4.4.x). The container envs are ``needs_docker`` and build a tiny deps
+    image once per session; their per-sample timing includes a ~constant
+    docker-run overhead, so read DELTAS *across make versions at the same mode*,
+    not absolute container-vs-host numbers. (This axis exists because GNU make
+    4.4 re-expands exported ``$(shell)`` vars per subshell -- see the
+    ``compose.mk`` probe comments -- so it is the canary for that class of
+    regression.)
+  * install mode -- ``local`` (vendored ``./compose.mk`` in the workspace) vs
+    ``global`` (``compose.mk`` outside the workspace, invoked by absolute path /
+    on PATH, with ``DOCKER_HOST_WORKSPACE`` set), which exercise compose.mk's two
+    self-path branches.
 
 Unlike the rest of the suite, these run with compose.mk's *real* defaults
 (supervisor + hooks ON) -- that's the latency a user actually pays on a cold
@@ -23,7 +39,10 @@ min/median/mean/max but assert no latency threshold (machine-dependent, so this
 is a report, not a PR gate).
 """
 
+import functools
 import os
+import re
+import shutil
 import statistics
 import subprocess
 import time
@@ -50,6 +69,24 @@ PERF_ENV = {
   "TERM": "dumb",
   "GITHUB_ACTIONS": "false",
 }
+
+# Parametrization axes for the in-process benchmarks ------------------------
+# make environments: (label, base-image-or-None). None => the host's native make;
+# a base image => run inside a tiny deps container built from it (needs_docker).
+MAKE_ENVS = [
+  pytest.param(("host", None), id="host"),
+  pytest.param(
+    ("deb", "debian:bookworm-slim"),
+    id="deb-make4.3",
+    marks=pytest.mark.needs_docker,
+  ),
+  pytest.param(
+    ("alp", "alpine:3.21.2"),
+    id="alp-make4.4",
+    marks=pytest.mark.needs_docker,
+  ),
+]
+INSTALL_MODES = ["local", "global"]
 
 
 def _bench(
@@ -115,35 +152,179 @@ def _report(label, times):
   )
 
 
+@functools.lru_cache(maxsize=None)
+def _make_version(image=None):
+  """`GNU Make X.Y` version for the host (image=None) or a built image tag."""
+  cmd = ["make", "--version"]
+  if image is not None:
+    cmd = ["docker", "run", "--rm", image, "make", "--version"]
+  try:
+    out = subprocess.run(
+      cmd, capture_output=True, text=True, timeout=120
+    ).stdout
+    m = re.search(r"GNU Make (\S+)", out)
+    return m.group(1) if m else "?"
+  except Exception:
+    return "?"
+
+
+@pytest.fixture(scope="session")
+def perf_image():
+  """Build (once per session, on demand) a tiny deps image for a container
+  make-env. compose.mk's runtime needs: bash, GNU make/awk, jq, coreutils."""
+  cache = {}
+
+  def build(label, base):
+    if label in cache:
+      return cache[label]
+    if "alpine" in base:
+      df = f"FROM {base}\nRUN apk add --no-cache bash make jq gawk coreutils\n"
+    else:
+      df = (
+        f"FROM {base}\nRUN apt-get update -qq && DEBIAN_FRONTEND=noninteractive "
+        "apt-get install -y -qq make bash jq gawk coreutils >/dev/null\n"
+      )
+    tag = f"cmkperf-{label}:test"
+    r = subprocess.run(
+      ["docker", "build", "-t", tag, "-"],
+      input=df,
+      text=True,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.STDOUT,
+    )
+    if r.returncode != 0:
+      pytest.skip(f"could not build perf image {tag}:\n{r.stdout[-1500:]}")
+    cache[label] = tag
+    return tag
+
+  return build
+
+
+def _runner(make_env, mode, tmp_path, perf_image):
+  """Return a ``bench(name, args, ...)`` that runs ``compose.mk args`` for the
+  given (make_env, install_mode), timing it via ``_bench``.
+
+  install mode is realized by WHERE compose.mk lives: ``local`` -> a vendored
+  copy in the (host-shared) workspace, run as ``./compose.mk``; ``global`` -> a
+  copy outside the workspace, invoked by absolute path / on PATH with
+  ``DOCKER_HOST_WORKSPACE`` pointed at the workspace.
+  """
+  label, image = make_env
+  ws = tmp_path / "ws"
+  ws.mkdir()
+
+  if image is None:  # ---- native host make ----
+    ver = _make_version()
+    if mode == "local":
+      shutil.copy(COMPOSE_MK, ws / "compose.mk")
+      argv0, cwd, xenv = [str(ws / "compose.mk")], ws, {}
+    else:  # global: compose.mk outside the workspace
+      gbin = tmp_path / "bin"
+      gbin.mkdir()
+      shutil.copy(COMPOSE_MK, gbin / "compose.mk")
+      argv0 = [str(gbin / "compose.mk")]
+      cwd, xenv = ws, {"DOCKER_HOST_WORKSPACE": str(ws)}
+
+    def bench(name, args, stdin=None, files=None, env=None, **kw):
+      for n, c in (files or {}).items():
+        (ws / n).write_text(c)
+      _bench(
+        f"{name} [host make {ver} / {mode}]",
+        argv0 + args,
+        cwd=cwd,
+        env={**xenv, **(env or {})},
+        stdin=stdin,
+        **kw,
+      )
+
+    return bench
+
+  # ---- pinned make inside a container ----
+  tag = perf_image(label, image)
+  ver = _make_version(tag)
+  # identical-path workspace mount so any in-container path == host path.
+  if mode == "local":
+    shutil.copy(COMPOSE_MK, ws / "compose.mk")
+    mounts, compose = ["-v", f"{ws}:{ws}"], "./compose.mk"
+  else:  # global: bind compose.mk onto PATH, workspace has no vendored copy
+    mounts = [
+      "-v",
+      f"{COMPOSE_MK}:/usr/local/bin/compose.mk:ro",
+      "-v",
+      f"{ws}:{ws}",
+    ]
+    compose = "compose.mk"
+
+  def bench(name, args, stdin=None, files=None, env=None, **kw):
+    for n, c in (files or {}).items():
+      (ws / n).write_text(c)
+    eflags = [
+      "-e",
+      "NO_COLOR=1",
+      "-e",
+      "TERM=dumb",
+      "-e",
+      f"DOCKER_HOST_WORKSPACE={ws}",
+    ]
+    for k, v in (env or {}).items():
+      eflags += ["-e", f"{k}={v}"]
+    cmd = f"cd {ws} && {compose} " + " ".join(args)
+    argv = [
+      "docker",
+      "run",
+      "--rm",
+      "-i",
+      *mounts,
+      *eflags,
+      tag,
+      "sh",
+      "-c",
+      cmd,
+    ]
+    _bench(
+      f"{name} [container make {ver} / {mode} (+docker-run overhead)]",
+      argv,
+      cwd=ws,
+      stdin=stdin,
+      **kw,
+    )
+
+  return bench
+
+
 @pytest.mark.perf
-def test_perf_flux_ok_coldstart(tmp_path):
-  """N cold-start samples of simple tool-mode ``./compose.mk flux.ok``."""
-  _bench(
-    "flux.ok (tool-mode cold-start)",
-    [str(COMPOSE_MK), "flux.ok"],
-    cwd=tmp_path,
+@pytest.mark.parametrize("install_mode", INSTALL_MODES)
+@pytest.mark.parametrize("make_env", MAKE_ENVS)
+def test_perf_flux_ok_coldstart(make_env, install_mode, tmp_path, perf_image):
+  """N cold-start samples of simple tool-mode ``compose.mk flux.ok``."""
+  _runner(make_env, install_mode, tmp_path, perf_image)(
+    "flux.ok (tool-mode)", ["flux.ok"]
   )
 
 
 @pytest.mark.perf
-def test_perf_cmk_compile_coldstart(tmp_path):
+@pytest.mark.parametrize("install_mode", INSTALL_MODES)
+@pytest.mark.parametrize("make_env", MAKE_ENVS)
+def test_perf_cmk_compile_coldstart(
+  make_env, install_mode, tmp_path, perf_image
+):
   """N cold-start samples of pure CMK transpilation (``mk.compile``)."""
-  _bench(
-    "mk.compile (cmk transpile cold-start)",
-    [str(COMPOSE_MK), "mk.compile"],
-    cwd=tmp_path,
-    stdin=SAMPLE_CMK,
+  _runner(make_env, install_mode, tmp_path, perf_image)(
+    "mk.compile (cmk transpile)", ["mk.compile"], stdin=SAMPLE_CMK
   )
 
 
 @pytest.mark.perf
-def test_perf_cmk_interpret_coldstart(tmp_path):
+@pytest.mark.parametrize("install_mode", INSTALL_MODES)
+@pytest.mark.parametrize("make_env", MAKE_ENVS)
+def test_perf_cmk_interpret_coldstart(
+  make_env, install_mode, tmp_path, perf_image
+):
   """N cold-start samples of a CMK compile+interpret (``mk.interpret!``)."""
-  (tmp_path / "perf.cmk").write_text(SAMPLE_CMK)
-  _bench(
-    "mk.interpret! (cmk compile+interpret cold-start)",
-    [str(COMPOSE_MK), "mk.interpret!", "perf.cmk"],
-    cwd=tmp_path,
+  _runner(make_env, install_mode, tmp_path, perf_image)(
+    "mk.interpret! (cmk compile+interpret)",
+    ["mk.interpret!", "perf.cmk"],
+    files={"perf.cmk": SAMPLE_CMK},
     # interpret!'s yield-epilogue transfers control via a signal supervisor;
     # without one it exits nonzero (see test_interpret_entrypoint_supervisor).
     env={"CMK_SUPERVISOR": "1"},
@@ -160,13 +341,16 @@ TUI_SAMPLES = max(1, min(SAMPLES, 3))
 def test_perf_tui_bringup_coldstart():
   """N cold-start samples of headless TUI bring-up (``tux.open`` -> tmuxp).
 
-  Measures the wall-clock to spin the ``compose.mk:tux`` container and load the
-  tmuxp session -- the latency before the UI is interactive. Headless, so stdin
-  is closed and success is the tmuxp ``Loaded workspace`` marker, NOT rc==0 (the
-  final ``tmux attach`` fails without a tty). The tux image is built once up
-  front so its one-time build cost is excluded from the samples; needs docker
-  (auto-skipped otherwise). Invoked by the RELATIVE ``./compose.mk`` from the
-  repo so the in-container ``make -f`` paths resolve via the /workspace mount.
+  Not in the make-version/install matrix above: its cost is dominated by the
+  dockerized ``compose.mk:tux`` build + tmuxp load, and the make that matters
+  inside is the tux image's own, not the host's. Measures the wall-clock to spin
+  the container and load the tmuxp session -- the latency before the UI is
+  interactive. Headless, so stdin is closed and success is the tmuxp ``Loaded
+  workspace`` marker, NOT rc==0 (the final ``tmux attach`` fails without a tty).
+  The tux image is built once up front so its one-time build cost is excluded
+  from the samples; needs docker (auto-skipped otherwise). Invoked by the
+  RELATIVE ``./compose.mk`` from the repo so the in-container ``make -f`` paths
+  resolve via the /workspace mount.
   """
   proj = "cmkperftui"
   env = {"CMK_SUPERVISOR": "1", "COMPOSE_PROJECT_NAME": proj}

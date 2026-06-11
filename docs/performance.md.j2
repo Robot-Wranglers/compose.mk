@@ -23,8 +23,8 @@ A full `compose.mk` invocation costs roughly the same as `python -c "import dock
 <tr><td><code>python -c "import requests"</code></td><td>~155ms</td></tr>
 <tr><td><code>python -c "import docker"</code></td><td>~165ms</td></tr>
 <tr><td><b><code>./compose.mk flux.ok</code></b> <em>(full supervisor + hooks + run)</em></td><td><b>~1+65ms</b></td></tr>
-<tr><td><code>./compose.mk mk.compile</code> <em>(transpile a CMK file)</em></td><td>~500ms</td></tr>
-<tr><td><code>./compose.mk mk.interpret!</code> <em>(compile <b>and</b> run)</em></td><td>~750ms</td><tr>
+<tr><td><code>./compose.mk cmk compile &lt;file&gt;</code> <em>(transpile a CMK file)</em></td><td>~500ms</td></tr>
+<tr><td><code>./compose.mk cmk run &lt;file&gt;</code> <em>(compile <b>and</b> run)</em></td><td>~750ms</td><tr>
 </table>
 
 A bare interpreter (`bash`, `python -c pass`) is of course far cheaper, but that's not a realistic baseline for work: any Python automation script immediately pays ~150ms+ to import its first non-trivial dependency (`requests`, `docker`, `boto3`, ..).  Measured against the cost of actually being useful `compose.mk` is competitive.
@@ -32,10 +32,10 @@ A bare interpreter (`bash`, `python -c pass`) is of course far cheaper, but that
 ### Compilation & caching
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The [CMK compiler]({{mkdocs.site_relative_url}}/compiler) (`mk.compile` / `mk.interpret!`) is heavier than a bare invocation because transpilation fans out into several sub-passes.  Here the contrast with Python is **architectural, and not in `compose.mk`'s favor**:
+The [CMK compiler]({{mkdocs.site_relative_url}}/compiler) (`cmk compile` / `cmk run`) is heavier than a bare invocation because transpilation fans out into several sub-passes.  Here the contrast with Python is **architectural, and not in `compose.mk`'s favor**:
 
 * **Python caches bytecode.**  The first run of a module compiles it to a `.pyc`; subsequent runs skip compilation entirely.
-* **`compose.mk` re-parses every time.**  There is no on-disk compilation cache and each run re-parses the standard library and (for `mk.interpret!`) re-runs the transpile pipeline.
+* **`compose.mk` re-parses every time.**  There is no on-disk compilation cache and each run re-parses the standard library and (for `cmk run`) re-runs the transpile pipeline.
 
 This is a deliberate trade for `compose.mk`'s defining feature: it is **a single, dependency-free, drop-in file**.  A persistent bytecode/`.pyc`-style cache is awkward to reconcile with "copy one file into any repo and it just works," so the cost is paid up front on each run instead of amortized across runs.  For the short-lived CLI/automation invocations `compose.mk` is built for, this is usually the right trade but it's worth understanding if you're calling the compiler in a tight loop.
 

@@ -92,7 +92,7 @@ $ echo msg=HelloWorld | module=debug ./ansible.adhoc
 ### Example: CMK App to Executable
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The same `mk.pkg/<..>` shortcut also freezes a [CMK-lang]({{mkdocs.site_relative_url}}/compiler) program: pass a file ending in `.cmk` instead of a target-name, and you get a portable executable in one step (no `archive=` juggling, no manual `mk.interpret!`).  Take this small structured-IO app, which emits a key/value and consumes it back:
+The same `mk.pkg/<..>` shortcut also freezes a [CMK-lang]({{mkdocs.site_relative_url}}/compiler) program: pass a file ending in `.cmk` instead of a target-name, and you get a portable executable in one step (no `archive=` juggling, no manual `cmk run`).  Take this small structured-IO app, which emits a key/value and consumes it back:
 
 ```Makefile {.snippet .language-Makefile}
 emit:
@@ -110,7 +110,7 @@ __main__:
 # freeze the .cmk (bin defaults to the file's basename)
 $ ./compose.mk mk.pkg/demos/cmk/structured-io.cmk
 
-# now portable -- runs anywhere, with no compose.mk / source on disk:
+# now portable, runs anywhere, with no compose.mk / source on disk:
 $ ./structured-io
 ```
 ```bash {.cli_output}

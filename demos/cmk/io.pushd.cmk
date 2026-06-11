@@ -1,0 +1,30 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# Demo: combine `ᝏio.pushd(dir)` with `ᝏcompose.bind.target(svc)` -- dispatch a
+# target INTO a tool-container, and (via io.pushd on its in-container body) run
+# every command there from `dir`, then `popd` back.
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.
+# See also: http://robot-wranglers.github.io/compose.mk/container-dispatch
+# USAGE: ./demos/cmk/io.pushd.cmk
+
+# Scaffolding for the `debian` tool-container (ships make + bash).
+compose.import(file=demos/data/docker-compose.yml)
+
+# Stage a file in a subdir of the (host-shared) workspace.
+setup:
+	mkdir -p .tmp.pushd.demo
+	printf 'in-the-subdir\n' > .tmp.pushd.demo/marker.txt
+
+# `show` is dispatched into the debian container (compose.bind.target); its
+# in-container body `self.show` then runs from .tmp.pushd.demo (io.pushd): the
+# hostname is the container's, `pwd` is the subdir, the relative `marker.txt`
+# resolves there, and `popd` returns to the container's working dir.
+ᝏcompose.bind.target(debian)
+show: setup
+
+ᝏio.pushd(.tmp.pushd.demo)
+self.show:
+	printf 'container=%s cwd=%s\n' "`hostname`" "$$(basename $$(pwd))"
+	cat marker.txt
+	popd >/dev/null && printf 'after popd, cwd=%s\n' "$$(basename $$(pwd))"
+
+__main__: show

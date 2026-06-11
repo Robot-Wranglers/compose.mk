@@ -46,7 +46,7 @@ In [CMK-lang]({{mkdocs.site_relative_url}}/compiler) the call syntax is sugared:
 ### Discovering &amp; reflecting on macros
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-Two reflection helpers (each is *itself* available as both a target and a macro --
+Two reflection helpers (each is *itself* available as both a target and a macro;
 see [Reflection]({{mkdocs.site_relative_url}}/reflection)) let you inspect any
 macro or define at runtime:
 
@@ -73,52 +73,52 @@ A map of the macro/function families.  Most members mirror a same-named target. 
   <tbody>
     <tr><td colspan="2"><strong><code>log.*</code>:</strong> Structured logging to stderr (glyph-prefixed, color-aware).</td></tr>
     <tr>
-      <td><code>log.target</code>, <code>log</code>, <code>log.json</code>, <code>log.trace</code>, <code>log.io</code>/<code>log.mk</code>/<code>log.docker</code></td>
+      <td class="macro-list"><code>log.target</code>, <code>log</code>, <code>log.json</code>, <code>log.trace</code>, <code>log.io</code>/<code>log.mk</code>/<code>log.docker</code></td>
       <td><a href="{{mkdocs.site_relative_url}}/logging">Logging</a></td>
     </tr>
     <tr><td colspan="2"><strong><code>stream.*</code>:</strong> Composable stdin/stdout text transforms.</td></tr>
     <tr>
-      <td><code>stream.stdin</code>, <code>stream.peek</code>, <code>stream.nl.to.space</code>, <code>stream.comma.to.nl</code>, <code>stream.indent</code>, <code>stream.dim</code></td>
+      <td class="macro-list"><code>stream.stdin</code>, <code>stream.peek</code>, <code>stream.nl.to.space</code>, <code>stream.comma.to.nl</code>, <code>stream.indent</code>, <code>stream.dim</code></td>
       <td><a href="{{mkdocs.site_relative_url}}/standard-lib">Standard Library</a></td>
     </tr>
     <tr><td colspan="2"><strong><code>io.*</code>:</strong> Files, tempfiles, HTTP, and user-input helpers.</td></tr>
     <tr>
-      <td><code>io.mktemp</code>, <code>io.mktempd</code>, <code>io.curl</code>, <code>io.gum.run</code>, <code>io.get.choice</code></td>
+      <td class="macro-list"><code>io.mktemp</code>, <code>io.mktempd</code>, <code>io.curl</code>, <code>io.gum.run</code>, <code>io.get.choice</code></td>
       <td><a href="{{mkdocs.site_relative_url}}/io.mktemp">io.mktemp</a>, <a href="{{mkdocs.site_relative_url}}/user-input">User Input</a></td>
     </tr>
     <tr><td colspan="2"><strong><code>bind.*</code>:</strong> Decorators that bind args/containers to a target.</td></tr>
     <tr>
-      <td><code>bind.args.from_json</code>, <code>bind.args.from_env</code>, <code>bind.posargs</code>, <code>bind.log.target</code></td>
+      <td class="macro-list"><code>bind.args.from_json</code>, <code>bind.args.from_env</code>, <code>bind.posargs</code>, <code>bind.log.target</code></td>
       <td><a href="{{mkdocs.site_relative_url}}/argument-parsing">Argument Parsing</a></td>
     </tr>
     <tr><td colspan="2"><strong><code>mk.*</code>:</strong> Meta-tooling: reflection, kwargs, importing, assertions.</td></tr>
     <tr>
-      <td><code>mk.get</code>, <code>mk.def.read</code>, <code>mk.unpack.kwargs</code>, <code>mk.import.def</code>, <code>mk.import.target</code>, <code>mk.assert.env</code></td>
+      <td class="macro-list"><code>mk.get</code>, <code>mk.def.read</code>, <code>mk.unpack.kwargs</code>, <code>mk.import.def</code>, <code>mk.import.target</code>, <code>mk.assert.env</code></td>
       <td><a href="{{mkdocs.site_relative_url}}/reflection">Reflection</a></td>
     </tr>
     <tr><td colspan="2"><strong><code>flux.*</code>:</strong> Workflow / functional operators (pipelines, map/fold, retries).</td></tr>
     <tr>
-      <td><code>flux.pipeline</code>, <code>flux.map</code>, <code>flux.apply</code>, <code>flux.each</code></td>
+      <td class="macro-list"><code>flux.pipeline</code>, <code>flux.map</code>, <code>flux.apply</code>, <code>flux.each</code></td>
       <td><a href="{{mkdocs.site_relative_url}}/functional">Functional</a></td>
     </tr>
     <tr><td colspan="2"><strong><code>docker.*</code>:</strong> Container plumbing (run bases, mounts, image/tag queries).</td></tr>
     <tr>
-      <td><code>docker.run.base</code>, <code>docker.compose</code>, <code>docker.images.filter</code>, <code>docker.curry.command</code></td>
+      <td class="macro-list"><code>docker.run.base</code>, <code>docker.compose</code>, <code>docker.images.filter</code>, <code>docker.curry.command</code></td>
       <td><a href="{{mkdocs.site_relative_url}}/raw-docker">Raw Docker</a></td>
     </tr>
     <tr><td colspan="2"><strong><code>compose.*</code>:</strong> Parse-time scaffolding from docker-compose files.</td></tr>
     <tr>
-      <td><code>compose.import</code>, <code>compose.import.string</code>, <code>compose.bind.target</code>, <code>compose.bind.script</code></td>
+      <td class="macro-list"><code>compose.import</code>, <code>compose.import.string</code>, <code>compose.bind.target</code>, <code>compose.bind.script</code></td>
       <td><a href="{{mkdocs.site_relative_url}}/bridge">Compose Bridge</a></td>
     </tr>
     <tr><td colspan="2"><strong><code>polyglot.*</code>:</strong> Parse-time scaffolding for embedded foreign code.</td></tr>
     <tr>
-      <td><code>polyglot.import</code>, <code>polyglot.import.file</code>, <code>polyglot.bind.file</code></td>
+      <td class="macro-list"><code>polyglot.import</code>, <code>polyglot.import.file</code>, <code>polyglot.bind.file</code></td>
       <td><a href="{{mkdocs.site_relative_url}}/demos/polyglots">Polyglots</a></td>
     </tr>
     <tr><td colspan="2"><strong><i>colors / glyphs</i>:</strong> ANSI color &amp; brand-glyph constants for log/output formatting.</td></tr>
     <tr>
-      <td><code>${red}</code>, <code>${dim}</code>, <code>${green}</code>, <code>${no_ansi}</code>, <code>${sep}</code>, <code>${GLYPH_MK}</code></td>
+      <td class="macro-list"><code>${red}</code>, <code>${dim}</code>, <code>${green}</code>, <code>${no_ansi}</code>, <code>${sep}</code>, <code>${GLYPH_MK}</code></td>
       <td><a href="{{mkdocs.site_relative_url}}/style">Style &amp; Idioms</a></td>
     </tr>
   </tbody>

@@ -3,7 +3,9 @@
 ## Compiler & Dialects
 <hr style="width:100%;border-bottom:3px solid black;">
 
-To avoid freaking out people who are just interested in [tools]({{mkdocs.site_relative_url}}/tool-mode) or [libraries]({{mkdocs.site_relative_url}}/standard-lib), the fact that [compose.mk is actually a programming language]({{mkdocs.site_relative_url}}/language#language-properties) isn't emphasized in most docs, and the shocking secret truth is safe to ignore.  If you *are* interested though, this section is hands-on with the language itself, and enough details to extend it.
+To avoid freaking out people who are just interested in [tools]({{mkdocs.site_relative_url}}/tool-mode) or [libraries]({{mkdocs.site_relative_url}}/standard-lib), the fact that [compose.mk is actually a programming language]({{mkdocs.site_relative_url}}/language#language-properties) isn't emphasized in most docs, and the shocking secret truth is safe to ignore.  
+
+If you *are* interested though, this section is hands-on with the language itself, and enough details to extend it.
 
 !!! tip "Quick Version"
     1. The `compose.mk` language is called **CMK** or **CMK-lang**.
@@ -13,38 +15,51 @@ To avoid freaking out people who are just interested in [tools]({{mkdocs.site_re
     1. The compiler is contained inside `compose.mk`, and there are no other tools.
     1. The compiler is extensible, enabling new CMK dialects with user-defined config.
 
-`CMK = Makefile + compose.mk standard library + optional extra syntax`
+Even quicker:
+
+> CMK = Makefile + compose.mk standard library + optional extra syntax
 
 Crucially, writing code in the CMK language **does not add new core capabilities** to the stuff that `compose.mk` already does *without* CMK.  
 
-At a high level, the point of CMK is to **eliminate lots of pesky dollar-signs and curly brackets** in pure Makefile, while it also **elevates various existing idioms for [containers]({{mkdocs.site_relative_url}}/demos/matrioshka) and [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) to native syntax.**
+At a high level, the point of CMK is to eliminate lots of pesky dollar-signs and curly brackets in pure Makefile, while it also **elevates various existing idioms to native syntax**.  That includes the support for [containers]({{mkdocs.site_relative_url}}/demos/matrioshka), [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots), and more.
 
-Whether you love `make` or passionately hate it, you'll probably agree that default syntax can be annoying.  Since `compose.mk` fixes most of the *other* problems with practical general-purpose usage, syntax is the main problem left!  This actually matters a lot, not just for adoption or usage as a daily driver, but because notation is part of how we think.[^1]
+Whether you love `make` or passionately hate it, you'll probably agree that default syntax can be annoying.  Since `compose.mk` fixes most of the *other* problems with practical general-purpose usage, syntax is the main problem left!  This actually matters a lot, not just for adoption or usage as a daily driver, but because **notation is part of how we think.**[^1]
 
-### About CMK Demos
-<hr style="width:100%;border-bottom:3px solid black;">
+This page is a walk-through in a tutorial mode.  Other pages you might be looking for instead:
 
-All examples written in CMK rather than pure Makefile can be found in the {{macros.repo_link('demos/cmk', github=github)}} folder and are scattered throughout this documentation.  Most CMK demos are direct ports from existing pure-Makefile demos that are twins, i.e. given `demos/cmk/example.cmk` there's a corresponding vanilla Makefile demo at `demos/example.mk`.  
+* [CMK Quick Reference]({{mkdocs.site_relative_url}}/cmk-quick-ref), a cheat-sheet of important CMK-lang syntax.
+* [CMK Demo Index]({{mkdocs.site_relative_url}}/cmk-demos): a single cross-referenced listing of every featured demo (and its plain-Makefile twin), see the .  Most CMK demos are direct ports from existing pure-Makefile demos that are twins.
+* CMK demos in the source tree @ {{macros.repo_link('demos/cmk', github=github)}}
+
+#### Running Demos 
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+The `cmk` subcommand is the public interface for CMK programs (`run` | `compile` | `build` | `doc`):
 
 ```bash {.cli_example}
-# Run some "foo" demo directly, using CMK interpreter via shebang
+# Run a demo directly, via its shebang (`#!/usr/bin/env -S ./compose.mk cmk run`)
 $ ./demos/cmk/example.cmk
 
-# Run demo explicitly using interpreter
-$ ./compose.mk mk.interpret! ./demos/cmk/example.cmk
+# Run a demo explicitly (`cmk <file>` is shorthand for `cmk run <file>`)
+$ ./compose.mk cmk run ./demos/cmk/example.cmk
 
-# Test the compiler without running the result
-$ cat ./demos/cmk/example.cmk | ./compose.mk mk.compiler
+# Compile only, without running (highlighted preview to a terminal)
+$ ./compose.mk cmk compile ./demos/cmk/example.cmk
 ```
 
-In the last example, the "compiled" CMK source actually still requires an external `compose.mk` to access library functions.  But a stand-alone version can be obtained like this:
+That preview still requires an external `compose.mk` to access library functions.  But a stand-alone version with an *embedded* standard library is one step away: pass an output path, and `cmk compile` emits a self-contained, directly-runnable program:
 
 ```bash {.cli_example}
-$ cat ./demos/cmk/example.cmk | ./compose.mk mk.compile! > example
-$ chmod +x ./example
+$ ./compose.mk cmk compile ./demos/cmk/example.cmk example
+$ chmod +x ./example && ./example
 ```
 
-For related background, see the documentation for [guests & forks]({{mkdocs.site_relative_url}}/standard-lib/#forks-guests-and-payloads) and [self-extracting executables]({{mkdocs.site_relative_url}}/demos/packaging/#makeself-reference)
+#### Compilation vs Transpilation 
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+For all the nerds out there, yes, CMK -> Makefile is really *transpiling*.. a source-to-source transformation.  Thus "interpretation", which piggy-backs on `make`, is really transpilation + execution, and doesn't involve anything like bytecode and VM.
+
+If you were expecting "compilation" to create an executable artifact, that's calling "packaging".  See instead the docs for [self-extracting executables]({{mkdocs.site_relative_url}}/demos/packaging/#makeself-reference) and  [guests & forks]({{mkdocs.site_relative_url}}/standard-lib/#forks-guests-and-payloads).
 
 ### Basic Example
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -60,30 +75,29 @@ Let's revisit the JSON emit/consume example that's part of the [structured IO do
 
 We'll get to the odd arrow syntax at the end of this section, but start with most basic stuff first. 
 
-**New Interpreter:**
-:  This example introduces {{site.api_link('mk.interpret!',mkdocs)}} in a shebang.  Not to be confused with {{site.api_link('mk.interpret',mkdocs)}},  **mk.interpret!** includes additional steps for CMK->Makefile transpilation, allowing us to extend the base syntax and use the more exotic stuff you see in the rest of the file.  As with other demos, this one is **executable directly** as `./demos/cmk/structured-io.cmk`.  Unlike other demos, we can't run it directly with `make -f ..`, and would use instead `./compose.mk mk.interpret! ..`  
-: &nbsp;
+**Running CMK programs:**
+:  This example runs via the **`cmk` subcommand** (its shebang is `#!/usr/bin/env -S ./compose.mk cmk run`).  `cmk run` compiles CMK -> Makefile and then executes the result, which is what lets us extend the base syntax and use the more exotic stuff you see in the rest of the file.  As with other demos, this one is **executable directly** as `./demos/cmk/structured-io.cmk`.  Unlike a plain-Makefile demo, it can't be run with `make -f ..`; use `./compose.mk cmk run ..` instead.
 
 **Implied Include + Standard Library:**
 :  When using the interpreter, a line like `include compose.mk` is always implied, and this brings with it full access to the [standard library]({{mkdocs.site_relative_url}}/standard-lib).
-: &nbsp;
 
 **Function Calls Rewritten:**
 :  Awkward stuff like `$(call log.target, ...)` can be written as `cmk.log.target(..)` instead.  That means cleaner [compose.import statements]({{mkdocs.site_relative_url}}/bridge/#other-import-statements), and cleaner versions of [many other macros]({{mkdocs.site_relative_url}}/macros).
-: &nbsp;
 
 **Recursive Calls Rewritten:**
 :  Awkward stuff like `${make} foo` can be written as `this.foo` instead.  Recursive invocation of the current context is common, and absolutely critical for code-reuse.[^3] The choice of `this` for a new keyword is actually configurable too.. we'll get to that in the next section.
 
 Finally, **about that arrow syntax?**  These operators just help to make JSON IO feel more native, and are sugar to safely use `jq` and `jb` for parsing and pushing JSON, respectively, regardless of whether those tools are available on the host.  A hint about what's happening here: glancing at the [original code]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) that's "ported" to CMK-lang here, you'll notice the only "code transformation" we really need to get from **CMK -> Makefile** in this case involves very simple string substititions.
 
-Read on for a walk-through, including the specific substitions that enable the code above at the same time as explaining "dialects" in general.  For a one-page cheat-sheet of the syntax, see the [CMK Quick Reference]({{mkdocs.site_relative_url}}/cmk-quick-ref); jump to the end of this page for the [CMK demo index](#all-demos).
+Read on for a walk-through, including the specific substitions that enable the code above at the same time as explaining "dialects" in general.  For a one-page cheat-sheet of the syntax, see the [CMK Quick Reference]({{mkdocs.site_relative_url}}/cmk-quick-ref); for the full list of demos, see the [CMK Demo Index]({{mkdocs.site_relative_url}}/cmk-demos).
 
 ### About Dialects
 <hr style="width:100%;border-bottom:3px solid black;">
 <a name=dialects></a>
 
-**A dialect is an array of paired substitition rules,** and during compilation these rules take effect everywhere *except* for inside define-blocks.  Using the [reflection capabilities]({{mkdocs.site_relative_url}}/standard-lib#reflection-support), we can show some info about the default dialect that the compiler supports like this:
+**A dialect is an array of paired substitition rules,** and during compilation these rules take effect everywhere, *except* for inside define-blocks or inside things that compile to define-blocks.  
+
+Using the [reflection capabilities]({{mkdocs.site_relative_url}}/standard-lib#reflection-support), we can show some info about the default dialect that the compiler supports like this:
 
 ```bash {.cli_example}
 $ ./compose.mk mk.def.read/cmk.default.dialect
@@ -103,7 +117,7 @@ Full dialect details are [available in the appendix](#appendix-default-dialect),
 
 It might not be obvious how useful and powerful that simple substition actually is here, so let's take a brief detour to peel back the layers.  Above is the dialect literal, but below you can see a first approximation of variable expansion.
 
-As discussed in [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics), we try to use local tools if available, and fall back to docker.
+As discussed in [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics), we try to use local tools if available, and fall back to docker.  Expansion shows that working:
 
 ```bash {.cli_example}
 $ ./compose.mk mk.get/cmk.default.dialect
@@ -126,7 +140,7 @@ $ ./compose.mk mk.get/cmk.default.dialect
 
 One layer of expansion reveals that fallback works as advertised; in this case `compose.mk` knows that a local copy of `jq` is available already, but `jb` is missing and will have to use docker.
 
-It also reveals that there is actually yet another layer of expansion, where `JB_CLI_VERSION` has a default value for tool versions that supports user-override.  Therefore *besides* being visually easy to parse and clarifying intent, the **usage of the arrow operators results in portable code with no extra tool installation.**  And of course the value of `${make}` is expanded dynamically just in time also.  In fact, for a CMK-lang script, you'll get a different answer every time due to the compilation step!  Try it yourself like this: `./demos/cmk/structured-io.cmk mk.get/make`
+It also reveals that there is actually yet another layer of expansion, where `JB_CLI_VERSION` has a default value for tool versions that supports user-override.  Therefore *besides* being visually easy to parse and clarifying intent, the **usage of the arrow operators results in portable code with no extra tool installation.**
 
 ### Compose File Example
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -439,13 +453,80 @@ Like the rest of the dialect, `⇐` is inert inside define-blocks.
 <hr style="width:100%;border-bottom:3px solid black;">
 <a name=triple-quote-literals></a>
 
-`'''…'''` (or the equivalent `"""…"""`) emits literal text, which is handy for
-feeding a snippet or program into a pipeline without `printf` and the usual
-quoting/escaping hassle.  Internal single and double quotes (and `%`) are taken
-literally, and multi-line content is supported, so pick whichever delimiter does
-not clash with the body.  Like the rest of the dialect this is inert inside
-define-blocks, so a python `'''docstring'''` inside a [polyglot](#polyglot-examples)
-is left untouched.
+CMK has three triple-delimiter literal forms.  Each emits its body as text via a
+`printf` (handy for feeding a snippet or whole program into a pipeline without the usual
+quoting/escaping hassle), each supports multi-line content, and each is **inert inside
+`define`-blocks** (so a python `'''docstring'''` inside a [polyglot](#polyglot-examples)
+is left untouched).  They differ only in *what gets interpolated*.  One caveat applies to
+all three: the body can't contain an internal run of three-or-more of its own delimiter
+character.
+
+#### `'''…'''`: literal (to the shell)
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Lowers to a **single-quoted** `printf '%s' '…'`; internal quotes and `%` are taken
+literally.  "Literal" means literal *to the shell*: a `printf` in a recipe is still an
+ordinary make recipe, so the usual two-layer expansion applies:
+
+* **Make** variables and functions DO expand (`${VAR}`, `$(VAR)`, `$(call …)`), because
+  make expands a recipe line *before* handing it to the shell.
+* **Shell** constructs do NOT: a shell variable `$$VAR`, a command-substitution
+  `` `cmd` ``, and `$$(…)` are passed through verbatim (the single quotes protect them).
+
+```Makefile {.language-makefile}
+X := MAKEVAL
+demo:; '''mk=${X} sh=$${USER}'''    # -> mk=MAKEVAL sh=${USER}   (shell var stays literal)
+```
+
+#### `"""…"""` and ` ```…``` `: interpolating (shell too)
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+These two are **equivalent**: both lower to a **double-quoted** `printf '%s' "…"`.  Use
+whichever doesn't clash with the body (`"""` if it contains backticks, ``` if it contains
+`"`).  On top of the make expansion above, the **shell** layer now interpolates as well:
+`$$VAR`, `` `cmd` ``, and `$$(…)` all expand at runtime.  (Single quote = literal, double
+quote = interpolating, just like in shell.)
+
+```Makefile {.language-makefile}
+X := MAKEVAL
+demo:; """mk=${X} sh=$${USER}"""    # -> mk=MAKEVAL sh=<value of $USER>
+```
+
+` ```(`${io.stack.pop_word}`)``` ` wraps the popped value in literal parens.  Because the
+closing delimiter is the *last* three of a backtick run, the body may begin or end with a
+backtick: ` ````cmd```` ` interpolates `` `cmd` `` and prints it bare.
+
+### Callable Targets
+<hr style="width:100%;border-bottom:3px solid black;">
+<a name=callable-targets></a>
+
+Where `cmk.fn(args)` *calls a macro*, the `this.` forms below *call a target* by feeding
+its **stdin**: handy for any target that reads a stream.  All three lower to a pipe into the
+target, so `this.foo(...)` is just sugar for the hand-written `... | this.foo`.
+
+```Makefile {.language-makefile}
+# call form -- feed a literal to a target that reads stdin
+demo:; this.eval('''(Hi)S''')          # -> '''(Hi)S''' | this.eval
+
+# tagged form (JS/Scala-style) -- same thing, no parens
+demo:; this.eval'''(Hi)S'''
+
+# unquoted -- the argument is run and its OUTPUT is piped (verbatim)
+demo:; this.eval(cat program.txt)      # -> cat program.txt | this.eval
+demo:; this.b(this.a)                  # chain targets: ${make} a | ${make} b
+```
+
+* The tag must be **`this.`-prefixed** (this is what distinguishes a *target* call from a
+  `cmk.fn(...)` *macro* call).  `this.` itself is just the default-dialect entry for
+  `${make} `, so a custom `cmk_dialect` can still redefine it.
+* The argument may be a [triple-quote / triple-backtick literal](#triple-quote-literals)
+  (call or tagged form) -- literal vs interpolating exactly as in that section -- or, in the
+  call form only, an **unquoted single-line** expression that is moved verbatim (so a
+  subshell `this.foo((echo a; echo b))` or a command works).
+* **Multi-line input requires triple-quotes**; unquoted arguments are single-line.
+* Only a `(` or triple-delimiter written **immediately** after the name is a call, so
+  ordinary shell parentheses are untouched: `this.b; (this.a)` and `this.foo (x)` (note the
+  space) stay plain shell.
 
 ### Recipe-Body Joining
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -460,170 +541,20 @@ their own control-flow: a line that already ends in a connector (`&&`, `||`, `|`
 just continues to the next, a line you split yourself with a trailing `\` stays
 one command, and `-`- or `+`-prefixed lines stand alone.
 
-### Quick Reference
+### Indentation
 <hr style="width:100%;border-bottom:3px solid black;">
-<a name=quick-reference></a>
+<a name=indentation></a>
 
-A one-page cheat-sheet of CMK-lang syntax lives on the dedicated
-[CMK Quick Reference]({{mkdocs.site_relative_url}}/cmk-quick-ref) page.
+Plain Makefiles require recipe lines to begin with a literal **tab**.  CMK relaxes this to **python-style indentation**: a target body may be indented with **tabs or spaces**, and the compiler normalizes a consistently space-indented body to the tab Make needs.
 
-### CMK Demos
-<hr style="width:100%;border-bottom:3px solid black;">
-<a name=all-demos></a>
+The rules, like Python's, are about *consistency*:
 
-Every CMK demo that's featured elsewhere in these docs, cross-referenced to where it appears and to its plain-Makefile twin (where one exists).  The full set of sources lives in the {{macros.repo_link('demos/cmk', github=github)}} folder.
+* A body indented with **tabs** is passed through unchanged (so you keep Make's "extra tab = literal command content" behavior).
+* A body indented with **spaces** must use the *same* indent on every line; it is rewritten to a single leading tab.
+* It is an **error** to mix tabs and spaces *within one indent* ("mixed mode"), or to use inconsistent amounts of space-indentation in one body ("mismatched").  The compiler stops with a clear message, much like Python's `TabError` / `IndentationError`.
 
-<table>
-  <thead>
-    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile twin</th></tr>
-  </thead>
-  <tbody>
-    <tr><td colspan=3><strong>Basics & Structured IO</strong></td></tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/structured-io.cmk', name='structured-io', github=github)}}</td>
-      <td><a href="#basic-example">Basic Example</a></td>
-      <td>{{macros.repo_link('demos/structured-io.mk', name='structured-io.mk', github=github)}}</td>
-    </tr>
-
-    <tr><td colspan=3><strong>Containers & Dispatch</strong></td></tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/container-dispatch.cmk', name='container-dispatch', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/container-dispatch">Container Dispatch</a></td>
-      <td>{{macros.repo_link('demos/container-dispatch.mk', name='container-dispatch.mk', github=github)}}</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/container-dispatch-2.cmk', name='container-dispatch-2', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/container-dispatch">Container Dispatch</a></td>
-      <td>{{macros.repo_link('demos/container-dispatch-2.mk', name='container-dispatch-2.mk', github=github)}}</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/bind-script.cmk', name='bind-script', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/container-dispatch">Container Dispatch</a>, <a href="#bind-script">Bind-Script</a></td>
-      <td>{{macros.repo_link('demos/bind-script.mk', name='bind-script.mk', github=github)}}</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/bind-target.cmk', name='bind-target', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/container-dispatch">Container Dispatch</a>, <a href="#bind-target">Bind-Target</a></td>
-      <td>{{macros.repo_link('demos/bind-target.mk', name='bind-target.mk', github=github)}}</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/script-dispatch-host.cmk', name='script-dispatch-host', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/demos/polyglots">Polyglots</a></td>
-      <td>{{macros.repo_link('demos/script-dispatch-host.mk', name='script-dispatch-host.mk', github=github)}}</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/script-dispatch-stock.cmk', name='script-dispatch-stock', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/raw-docker">Raw Docker</a></td>
-      <td>{{macros.repo_link('demos/script-dispatch-stock.mk', name='script-dispatch-stock.mk', github=github)}}</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/script-dispatch-custom.cmk', name='script-dispatch-custom', github=github)}}</td>
-      <td><a href="#local-context-embedded-containers">Local-Context & Embedded Containers</a></td>
-      <td>{{macros.repo_link('demos/script-dispatch-custom.mk', name='script-dispatch-custom.mk', github=github)}}</td>
-    </tr>
-
-    <tr><td colspan=3><strong>Compose Files & Dockerfiles</strong></td></tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/inlined-composefile.cmk', name='inlined-composefile', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/demos/matrioshka">Matrioshka</a></td>
-      <td>{{macros.repo_link('demos/inlined-composefile.mk', name='inlined-composefile.mk', github=github)}}</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/inlined-dockerfile.cmk', name='inlined-dockerfile', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/demos/inlined-dockerfiles">Inlined Dockerfiles</a></td>
-      <td>{{macros.repo_link('demos/inlined-dockerfile.mk', name='inlined-dockerfile.mk', github=github)}}</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/import-file.cmk', name='import-file', github=github)}}</td>
-      <td><a href="#files-as-targets">Files as Targets</a></td>
-      <td>{{macros.repo_link('demos/import-file.mk', name='import-file.mk', github=github)}}</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/bind-file.cmk', name='bind-file', github=github)}}</td>
-      <td><a href="#files-as-targets">Files as Targets</a></td>
-      <td>{{macros.repo_link('demos/bind-file.mk', name='bind-file.mk', github=github)}}</td>
-    </tr>
-
-    <tr><td colspan=3><strong>Polyglots</strong></td></tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/code-objects.cmk', name='code-objects', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/demos/polyglots">Polyglots</a></td>
-      <td>{{macros.repo_link('demos/code-objects.mk', name='code-objects.mk', github=github)}}</td>
-    </tr>
-
-    <tr><td colspan=3><strong>Argument Parsing</strong></td></tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/kwarg-parsing.cmk', name='kwarg-parsing', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/argument-parsing">Argument Parsing</a></td>
-      <td>{{macros.repo_link('demos/kwarg-parsing.mk', name='kwarg-parsing.mk', github=github)}}</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/kwarg-parsing-2.cmk', name='kwarg-parsing-2', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/argument-parsing">Argument Parsing</a></td>
-      <td>{{macros.repo_link('demos/kwarg-parsing-2.mk', name='kwarg-parsing-2.mk', github=github)}}</td>
-    </tr>
-
-    <tr><td colspan=3><strong>Extending CMK</strong></td></tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/user-dialect.cmk', name='user-dialect', github=github)}}</td>
-      <td><a href="#user-defined-dialects">User-Defined Dialects</a></td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/user-sugar.cmk', name='user-sugar', github=github)}}</td>
-      <td><a href="#user-defined-sugar">User-Defined Sugar</a></td>
-      <td>—</td>
-    </tr>
-
-    <tr><td colspan=3><strong>AI & LLMs</strong></td></tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/ollama.cmk', name='ollama', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/demos/ai">AI Demos</a></td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/rag.cmk', name='rag', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/demos/ai">AI Demos</a></td>
-      <td>—</td>
-    </tr>
-
-    <tr><td colspan=3><strong>GUIs (X11)</strong></td></tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/xephyr.cmk', name='xephyr', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/guis">GUIs</a></td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/xpra.cmk', name='xpra', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/guis">GUIs</a></td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/xpra-doom.cmk', name='xpra-doom', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/guis">GUIs</a></td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/xpra-net.cmk', name='xpra-net', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/guis">GUIs</a></td>
-      <td>—</td>
-    </tr>
-
-    <tr><td colspan=3><strong>Platform & Formal Methods</strong></td></tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/platform-lme.cmk', name='platform-lme', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/demos/platform">Platform</a></td>
-      <td>{{macros.repo_link('demos/platform-lme.mk', name='platform-lme.mk', github=github)}}</td>
-    </tr>
-    <tr>
-      <td>{{macros.repo_link('demos/cmk/lean.cmk', name='lean', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/demos/lean">Lean</a></td>
-      <td>{{macros.repo_link('demos/lean.mk', name='lean.mk', github=github)}}</td>
-    </tr>
-  </tbody>
-</table>
-
-A few experimental demos aren't featured in the docs yet, but ship in the repo: {{macros.repo_link('demos/cmk/elixir.cmk', name='elixir', github=github)}}, {{macros.repo_link('demos/cmk/just.cmk', name='just', github=github)}}, and {{macros.repo_link('demos/cmk/underload.cmk', name='underload', github=github)}}.
+Indentation is normalized as the **last** preprocessing step, after [sugar
+blocks](#about-sugar) have been lowered.  See the {{macros.repo_link('demos/cmk/space-indented.cmk', name='space-indented demo', github=github)}}.
 
 ### Status Info, Limitations, & Other Advice
 <hr style="width:100%;border-bottom:3px solid black;">

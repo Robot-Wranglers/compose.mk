@@ -1,4 +1,4 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
+#!/usr/bin/env -S ./compose.mk cmk run
 # Demonstrates doing some LLM stuff with compose.mk, using docker-compose, 
 # ollama and langchain.  This includes a small RAG pipeline, and 
 # also demonstrates tool-usage.  No host dependencies, no host ports.

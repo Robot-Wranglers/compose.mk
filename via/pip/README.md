@@ -10,13 +10,16 @@ This is **additive**: the normal drop-in usage (download `compose.mk` into your 
 pip install "git+https://github.com/robot-wranglers/compose.mk.git@<ref>#subdirectory=via/pip"
 ```
 
-`<ref>` is a tag/branch/sha (e.g. `v1.2.3`). pip clones the repo, builds from this subdirectory, and drops `compose.mk` into your environment's `bin/`.
+`<ref>` is a tag/branch/sha (e.g. `v1.2.3`). pip clones the repo, builds from this subdirectory, and drops `compose.mk` (plus a short `cmk` alias) into your environment's `bin/`.
 
 ## Use after install
 
 ```bash
 compose.mk flux.ok                 # tool mode
 compose.mk mk.interpret! foo.cmk   # run a .cmk anywhere (CMK_SUPERVISOR=1)
+
+cmk flux.ok                        # `cmk` is a short alias for `compose.mk`
+cmk mk.interpret! foo.cmk          # (a tiny wrapper that execs `compose.mk`)
 ```
 
 In a project Makefile (library mode):

@@ -1,4 +1,7 @@
 --ignore-dir=.tmp
+# io.mktempd drops `.tmp.XXXXXXXXX` working dirs in the cwd (cf. the `.tmp.*` file
+# rule below); skip those dirs too. `.tmp` (exact) above covers a plain temp dir.
+--ignore-dir=match:/^[.]tmp[.]/
 --ignore-dir=docs/theme
 --ignore-dir=site/
 --ignore-dir=scratch/

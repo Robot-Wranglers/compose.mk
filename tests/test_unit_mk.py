@@ -62,6 +62,238 @@ def test_hook_rewrite_skips_compiler_and_interpreter(cmk):
     assert r.stdout.strip() == target, f"{target} should not be hook-wrapped"
 
 
+def test_hook_rewrite_skips_cmk(cmk):
+  # `cmk <sub> <file>` is a greedy CLI-consumer (its tail is a subcommand, not
+  # make goals), so the whole goal-line passes through UNwrapped -- otherwise a
+  # `flux.post/cmk` hook token would poison cmk's own `${MAKE_CLI#*cmk}` parse.
+  line = "cmk run demos/cmk/example.cmk"
+  r = cmk("io.awk/.awk.rewrite.targets.maybe", stdin=line)
+  assert r.ok, r.stderr
+  assert r.stdout.strip() == line
+
+
+# --- mk.subcommands engine: robust tail capture (.awk.subcommands.tail) ------
+# The capture awk recovers a dispatcher's CLI tail from a (possibly hook-decorated)
+# MAKE_CLI: drop up to & incl. `mk.supervisor.enter/<pid>`, drop flux.pre/* flux.post/*,
+# drop the leading namespace token. Unit-tested in isolation via the io.awk idiom
+# (no supervisor needed) by feeding fake MAKE_CLI strings on stdin.
+
+_ANCHOR = (
+  "make -sS --warn-undefined-variables -f ./compose.mk mk.supervisor.enter/9"
+)
+
+
+def _tail(cmk, goals: str) -> str:
+  r = cmk("io.awk/.awk.subcommands.tail", stdin=f"{_ANCHOR} {goals}")
+  assert r.ok, r.stderr
+  return r.stdout.strip()
+
+
+def test_subcommands_tail_decorated(cmk):
+  # hooks-on: every bare word is wrapped flux.pre/X X flux.post/X (incl. the
+  # namespace, the subcommand, and dotted-but-slashless files like foo.cmk).
+  goals = (
+    "flux.pre/cmk cmk flux.post/cmk flux.pre/run run flux.post/run "
+    "flux.pre/foo.cmk foo.cmk flux.post/foo.cmk"
+  )
+  assert _tail(cmk, goals) == "run foo.cmk"
+
+
+def test_subcommands_tail_undecorated(cmk):
+  # hooks-off (the test env) or a skip-listed namespace: no decoration.
+  assert _tail(cmk, "cmk run foo.cmk") == "run foo.cmk"
+
+
+def test_subcommands_tail_path_arg(cmk):
+  # slash-bearing args are never decorated by the rewrite; pass through intact.
+  assert _tail(cmk, "cmk run demos/cmk/x.cmk") == "run demos/cmk/x.cmk"
+
+
+def test_subcommands_tail_empty(cmk):
+  # namespace with no args -> empty tail (engine then prints usage).
+  assert _tail(cmk, "cmk") == ""
+
+
+# --- mk.subcommands engine: routing ----------------------------------------
+# mk.subcommands never yields, so it runs fine WITHOUT the supervisor: invoke it
+# directly with the subcmd_* env a client's `mk.subcommands.enter` would set, over a
+# wrapper with parametric (.t.echo/%, .t.run/%) and non-parametric (.t.ping) handlers
+# echoing the stem (${*}) and $argv.
+
+# Handlers under namespace `.t` (parametric .t.echo/%, .t.run/%; non-parametric
+# .t.ping) plus one under a SECOND namespace `.u` (for the MRO tests).
+_SUBCMD_WRAPPER = (
+  '.t.echo/%:; @printf \'echo %s [%s]\\n\' "${*}" "$${argv:-}"\n'
+  '.t.run/%:; @printf \'run %s [%s]\\n\' "${*}" "$${argv:-}"\n'
+  ".t.ping:; @printf 'ping [%s]\\n' \"$${argv:-}\"\n"
+  ".u.extra:; @printf 'extra [%s]\\n' \"$${argv:-}\"\n"
+)
+
+
+def _denv(tail, default="run", subs="echo run ping", ns=".t"):
+  # subcmd_ns is the namespace MRO (space-separated); sep joins ns and sub, so a
+  # handler is `<ns><sep><sub>`, here `.t` + `.` + `echo` = `.t.echo`.
+  return {
+    "subcmd_name": "t",
+    "subcmd_ns": ns,
+    "subcmd_sep": ".",
+    "subcmd_subs": subs,
+    "subcmd_default": default,
+    "subcmd_tail": tail,
+  }
+
+
+def test_subcommands_routes_known_parametric_sub(cmk, tmp_path):
+  w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
+  r = cmk("mk.subcommands", makefile=w, env=_denv("echo hi a b"))
+  assert r.ok, r.stderr
+  # parametric sub -> .t.echo/<arg1>, remaining args in $argv.
+  assert "echo hi [a b]" in r.stdout
+
+
+def test_subcommands_routes_non_parametric_sub(cmk, tmp_path):
+  w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
+  r = cmk("mk.subcommands", makefile=w, env=_denv("ping a b"))
+  assert r.ok, r.stderr
+  # non-parametric sub -> .t.ping (no stem), ALL remaining args in $argv.
+  assert "ping [a b]" in r.stdout
+
+
+def test_subcommands_routes_bare_to_default(cmk, tmp_path):
+  w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
+  r = cmk("mk.subcommands", makefile=w, env=_denv("myfile x"))
+  assert r.ok, r.stderr
+  # unrecognized first word -> the PARAMETRIC default (`.t.run/%`): it becomes the
+  # default's stem (the `cmk <file>` shorthand), the rest in $argv.
+  assert "run myfile [x]" in r.stdout
+
+
+def test_subcommands_unknown_errors_when_default_nonparametric(cmk, tmp_path):
+  # An unrecognized first word errors when the default is NON-parametric (`.t.ping`),
+  # instead of silently running it -- a non-parametric default has no positional to
+  # consume the word, so it's treated as a typo'd subcommand.
+  w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
+  r = cmk("mk.subcommands", makefile=w, env=_denv("zzz", default="ping"))
+  assert not r.ok
+  assert "unknown subcommand" in r.stderr.lower()
+
+
+def test_subcommands_help_prints_usage(cmk, tmp_path):
+  w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
+  for tail in ("help", "", "-h", "--help"):
+    r = cmk("mk.subcommands", makefile=w, env=_denv(tail))
+    assert r.ok, r.stderr
+    assert "usage" in r.stderr.lower()
+    for sub in (
+      "echo",
+      "run",
+      "ping",
+    ):  # each subcommand listed (one per line)
+      assert sub in r.stderr
+
+
+def test_subcommands_usage_marks_parametric(cmk, tmp_path):
+  # the multi-line usage annotates parametric subs (.t.echo/%, .t.run/%) with `<arg>`
+  # and leaves non-parametric (.t.ping) unannotated.
+  w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
+  r = cmk("mk.subcommands", makefile=w, env=_denv("help"))
+  assert r.ok, r.stderr
+  lines = r.stderr.splitlines()
+  echo_line = next(line for line in lines if "echo" in line)
+  ping_line = next(line for line in lines if "ping" in line)
+  assert "<arg>" in echo_line  # parametric -> accepts an argument
+  assert "<arg>" not in ping_line  # non-parametric -> no argument
+
+
+def test_subcommands_usage_terminates_last_item(cmk, tmp_path):
+  # the tree uses ├ for items and ╰ (terminator) for the LAST subcommand (ping).
+  w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
+  r = cmk("mk.subcommands", makefile=w, env=_denv("help"))
+  assert r.ok, r.stderr
+  lines = r.stderr.splitlines()
+  echo_line = next(line for line in lines if "echo" in line)
+  ping_line = next(line for line in lines if "ping" in line)  # last sub
+  assert "├" in echo_line and "╰" not in echo_line
+  assert "╰" in ping_line and "├" not in ping_line
+
+
+def test_subcommands_no_handlers_errors(cmk, tmp_path):
+  # With auto-detect, an omitted default falls back to the first reflected sub --
+  # so the only "unknown subcommand" case is a namespace with NO handlers at all
+  # (subs reflect empty -> default empty -> error).
+  w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
+  r = cmk(
+    "mk.subcommands",
+    makefile=w,
+    env=_denv("whatever", default="", subs="", ns=".nope"),
+  )
+  assert not r.ok
+  assert "unknown subcommand" in r.stderr.lower()
+
+
+# --- mk.subcommands engine: namespace MRO ----------------------------------
+# subcmd_ns may be a space-separated list, searched in order; the first namespace
+# that defines a handler for the sub wins. `.u.extra` lives ONLY in the 2nd namespace.
+
+
+def test_subcommands_mro_searches_second_namespace(cmk, tmp_path):
+  w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
+  r = cmk(
+    "mk.subcommands",
+    makefile=w,
+    env=_denv("extra a b", subs="echo extra", ns=".t .u"),
+  )
+  assert r.ok, r.stderr
+  assert "extra [a b]" in r.stdout  # resolved from .u (not in .t)
+
+
+def test_subcommands_mro_reflects_union(cmk, tmp_path):
+  # empty subs -> reflect the union across BOTH namespaces in the MRO.
+  w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
+  r = cmk(
+    "mk.subcommands",
+    makefile=w,
+    env=_denv("help", default="", subs="", ns=".t .u"),
+  )
+  assert r.ok, r.stderr
+  for sub in ("echo", "run", "ping", "extra"):
+    assert sub in r.stderr
+
+
+# --- mk.subcommands engine: reflection (auto-detect subs + default) ---------
+# When subcmd_subs is empty, the engine reflects the `.<ns>.<sub>` handlers (both
+# parametric `/%` and non-parametric) from MAKEFILE_LIST (source order); when
+# subcmd_default is empty, it uses the first reflected sub. The wrapper declares
+# .t.echo/%, .t.run/%, then .t.ping (in that order).
+
+
+def test_subcommands_reflects_subcommands(cmk, tmp_path):
+  # subcmd_subs empty -> reflected (incl. the non-parametric .t.ping); ping routes.
+  w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
+  r = cmk("mk.subcommands", makefile=w, env=_denv("ping a", subs=""))
+  assert r.ok, r.stderr
+  assert "ping [a]" in r.stdout
+
+
+def test_subcommands_reflects_default_as_first_sub(cmk, tmp_path):
+  # both empty -> subs reflected (echo run ping), default = first reflected sub
+  # (echo); a bare arg routes to that default.
+  w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
+  r = cmk(
+    "mk.subcommands", makefile=w, env=_denv("myfile x", default="", subs="")
+  )
+  assert r.ok, r.stderr
+  assert "echo myfile [x]" in r.stdout
+
+
+def test_subcommands_usage_lists_reflected_subs(cmk, tmp_path):
+  w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
+  r = cmk("mk.subcommands", makefile=w, env=_denv("help", default="", subs=""))
+  assert r.ok, r.stderr
+  for sub in ("echo", "run", "ping"):  # reflected subcommands shown in usage
+    assert sub in r.stderr
+
+
 # --- `makefile_list` invariant (the -f args derived from MAKE_CLI) ----------
 # `makefile_list` backs the `${make}` recursion macro; it must reflect the `-f`
 # files of the *current* invocation. These pin the value in both invocation
