@@ -2452,6 +2452,37 @@ in_define == 1 {print; next}
 }
 END { if (length(continuation_line) > 0) { print continuation_line } }
 endef
+# Python-style indentation for CMK recipe bodies.  A target body may be indented
+# with TABS (Make-native; passed through verbatim, preserving the "extra tab =
+# literal command content" escape hatch) or with SPACES (normalized to a single
+# leading tab, which is what `.awk.joinbody`/Make require).  Errors -- like
+# Python's TabError/IndentationError -- on a line whose leading whitespace mixes
+# tabs and spaces ("mixed mode"), or a space-indented body whose lines don't share
+# one indent ("mismatched").  This runs LAST in the preprocess chain, AFTER sugar
+# has lowered its `⋘`/`⫻`/`⟦`/`⨖`/`🞹` blocks (literal compose YAML, Dockerfiles,
+# polyglot code -- often space-indented) into `define...endef`; so we just skip
+# `define...endef` verbatim and never need to know any sugar/dialect syntax.  We
+# track consistency among SPACE lines only and pass TAB lines through, so the
+# decorator stage's injected `\t` recipe lines coexist with a space-indented body.
+define .awk.cmk.indent
+function die(m) { print "compose.mk (cmk): " m > "/dev/stderr"; exit 79 }
+BEGIN { in_def = 0; space_unit = "" }
+/^define / { in_def = 1; space_unit = ""; print; next }
+/^endef[ \t]*$/ { in_def = 0; print; next }
+in_def { print; next }
+/^[ \t]*$/ { print; next }
+/^[ \t]/ {
+    match($0, /^[ \t]*/); lead = substr($0, 1, RLENGTH); rest = substr($0, RLENGTH+1)
+    if (lead ~ /\t/ && lead ~ / /) die("indentation mixes tabs and spaces: " rest)
+    if (lead ~ / /) {
+        if (space_unit == "") space_unit = lead
+        else if (lead != space_unit) die("inconsistent indentation in recipe body (expected " length(space_unit) " spaces): " rest)
+        print "\t" rest
+    } else print $0
+    next
+}
+{ space_unit = ""; print }
+endef
 mk.preprocess: flux.timer/.mk.preprocess
 .mk.preprocess:
 	@# Runs the CMK input preprocessor on stdin.
@@ -2465,10 +2496,10 @@ mk.preprocess: flux.timer/.mk.preprocess
 	&& export cmk_sugar=$$(cat $${inputf} | ${.cmk.parse.sugar.hint}) \
 	&& case $${CMK_COMPILER_STEPWISE:-0} in \
 		1) cat $${inputf} \
-			| ${make} flux.pipeline/mk.preprocess.minify,mk.preprocess.decorators,mk.preprocess.dialect,mk.preprocess.sugar,mk.preprocess.triplequote ;; \
+			| ${make} flux.pipeline/mk.preprocess.minify,mk.preprocess.decorators,mk.preprocess.dialect,mk.preprocess.sugar,mk.preprocess.triplequote,mk.preprocess.indent ;; \
 		*) cat $${inputf} \
 			| ${.cmk.minify} | ${.cmk.decorators} \
-			| ${.cmk.dialect} | ${.cmk.sugar} | ${.cmk.triplequote} ;; \
+			| ${.cmk.dialect} | ${.cmk.sugar} | ${.cmk.triplequote} | ${.cmk.indent} ;; \
 	esac \
 	| ${stream.nl.compress} \
 	&& printf '\n'
@@ -2478,6 +2509,7 @@ mk.preprocess: flux.timer/.mk.preprocess
 # `.mk.preprocess` chains them in one process (no make-per-stage). Each is a
 # stdin->stdout pipe fragment.
 .cmk.minify=grep -a -v '^\#' | sed '/^[ \t]*@\#.*$$/d' | awk "$${_cmk_blk_zip}"
+.cmk.indent=awk "$${_cmk_blk_indent}"
 .cmk.decorators=awk "$${_cmk_blk_dec}"
 # Dialect/sugar as pipe-stage macros (verbatim transcription of the target bodies
 # below; only `${@}` -> literal name and `#` -> `\#` for the make-variable comment
@@ -2490,6 +2522,13 @@ mk.preprocess: flux.timer/.mk.preprocess
 mk.preprocess.minify:
 	@# Assuming stdin is makefile source, minifies it and outputs to stdout
 	${stream.stdin} | ${.cmk.minify}
+mk.preprocess.indent:
+	@# Normalizes python-style recipe-body indentation on stdin: space-indented
+	@# bodies are rewritten to a leading tab; tab-indented bodies pass through.
+	@# Errors on mixed (tabs+spaces in one indent) or mismatched indentation.
+	@# Runs LAST -- after sugar has lowered its literal blocks to define..endef,
+	@# which this skips verbatim (so no sugar/dialect syntax is hardcoded here).
+	${stream.stdin} | ${.cmk.indent}
 mk.preprocess/%:
 	@# A version of `mk.preprocess` that accepts a file-arg.
 	@#
@@ -6585,6 +6624,7 @@ endef
 # (after all the define blocks above) freezes the unexpanded body; export ships it
 # verbatim. `awk "$_zip"`/`printf '%s' "$_dialect_dict"|jq` consume them in-shell.
 export _cmk_blk_zip := $(value .awk.zip.linefeeds)
+export _cmk_blk_indent := $(value .awk.cmk.indent)
 export _cmk_blk_dec := $(value mk.preprocess.decorators)
 export _cmk_blk_dialect := $(value cmk.default.dialect)
 export _cmk_blk_sugar := $(value cmk.default.sugar)
