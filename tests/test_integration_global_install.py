@@ -63,12 +63,18 @@ def test_global_install_container_dispatch(docker_cmk, tmp_path, global_bin):
   # Dispatch a make target into a compose service under a global install. The
   # mirror-mount makes compose.mk reachable in-container so the re-run's
   # `include $(shell which compose.mk)` resolves.
+  #
+  # The service name must be UNIQUE across the suite: a `build:.` service with no
+  # explicit `image:` is tagged by compose as `<project>-<service>`, and the whole
+  # session shares one COMPOSE_PROJECT_NAME. A generic name (e.g. `appsvc`, also
+  # used by the make-less `compose-import-app` fixture) collides on that tag, so
+  # `<svc>.dispatch` would reuse whichever image built first -> `make: not found`.
   (tmp_path / "Dockerfile").write_text(
     "FROM alpine:3.21.2\nRUN apk add --no-cache make bash coreutils\n"
   )
   (tmp_path / "dc.yml").write_text(
     "services:\n"
-    "  appsvc:\n"
+    "  gidispatchsvc:\n"
     "    build: .\n"
     "    working_dir: /workspace\n"
     "    volumes:\n"
@@ -81,7 +87,7 @@ def test_global_install_container_dispatch(docker_cmk, tmp_path, global_bin):
   )
   env = {"PATH": f"{global_bin}:{os.environ['PATH']}"}
   r = docker_cmk(
-    "appsvc.dispatch/incontainer",
+    "gidispatchsvc.dispatch/incontainer",
     makefile="Makefile",
     cwd=tmp_path,
     env=env,

@@ -43,6 +43,7 @@ Prefer it **globally, on your `PATH`**?  That's supported with several different
 | {{macros.repo_link('via/basher', name='basher', github=github)}} | `basher install Robot-Wranglers/compose.mk` |
 | {{macros.repo_link('via/pip', name='pip', github=github)}} | `pip install "git+https://github.com/Robot-Wranglers/compose.mk.git#subdirectory=via/pip"` |
 | {{macros.repo_link('via/npm', name='npm', github=github)}} | `npm install -g ./via/npm` *(from a checkout)* |
+| {{macros.repo_link('via/docker', name='docker', github=github)}} | `docker build -t compose.mk "https://github.com/Robot-Wranglers/compose.mk.git#main:via/docker"` *(runs from a container; or `docker pull ghcr.io/robot-wranglers/compose.mk`)* |
 
 See the [Quickstart]({{mkdocs.config.site_url}}/quickstart) for tighter project integration and the [compatibility notes]({{mkdocs.config.site_url}}/quickstart/#compatibility-notes).
 

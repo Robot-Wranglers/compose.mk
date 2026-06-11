@@ -64,9 +64,16 @@ MAKEFLAGS:=-s -S --warn-undefined-variables --no-builtin-rules
 .SUFFIXES:
 .INTERMEDIATE: .tmp.* .flux.*
 export TERM?=xterm-256color
-# Host-invariant within a run: export + `?=` so recursive sub-makes inherit the
-# parent's value (env-origin) and skip re-forking `uname` on every re-parse.
-export OS_NAME ?= $(shell uname -s)
+# Host-invariant within a run. Probe ONCE but honor any value already set in the
+# environment / on the CLI, via simply-expanded `:=` + `$(or $(value VAR),...)`.
+# NB: do NOT write `export VAR ?= $(shell ...)` (recursive) here -- GNU make 4.4+
+# passes exported variables into every `$(shell ...)` subshell, so a recursive
+# exported probe is re-run for each of compose.mk's hundreds of parse-time $(shell)
+# calls (~40x slowdown; detect via the `shell-export` value in $(.FEATURES)). `:=`
+# makes the exported value a literal once assigned, so there is nothing to re-run;
+# `$(value VAR)` (not `$(VAR)`) reads any preset value WITHOUT tripping
+# `--warn-undefined-variables` when it is unset.
+export OS_NAME := $(or $(value OS_NAME),$(shell uname -s))
 
 # Pre-declared (?= empty) so native `$(VAR)` reads are safe under
 # --warn-undefined-variables -- this lets us replace per-parse
@@ -149,6 +156,10 @@ GLYPH.ARRS=${dim_green}$(word $(words $(wordlist 1,${1},${GLYPH_ARRS}) +),${GLYP
 GLYPH.tree_item:=├┈
 
 # FIXME: docs 
+# NB: keep this RECURSIVE (`?=`), unlike the OS_NAME/DOCKER_UID/DOCKER_GID probes:
+# it is load-bearing for DIND / container-dispatch path resolution -- freezing it to
+# the parse-time pwd (`:=`) mangles the in-container `-f`. It also does NOT hit the
+# make-4.4 $(shell) blowup in practice (set/inherited before the parse-time storm).
 export DOCKER_HOST_WORKSPACE?=$(shell pwd)
 
 ifeq (${OS_NAME},Darwin)
@@ -157,8 +168,8 @@ export DOCKER_GID:=0
 export DOCKER_UGNAME:=root
 export MAKE_CLI:=$(shell echo `which make` `ps -o args -p $${PPID} | tail -1 | cut -d' ' -f2-`)
 else
-export DOCKER_UID ?= $(shell id -u)
-export DOCKER_GID ?= $(shell getent group docker 2> /dev/null | cut -d: -f3 || id -g)
+export DOCKER_UID := $(or $(value DOCKER_UID),$(shell id -u))  # := $(or $(value)): see OS_NAME note (make 4.4 shell-export)
+export DOCKER_GID := $(or $(value DOCKER_GID),$(shell getent group docker 2> /dev/null | cut -d: -f3 || id -g))
 export DOCKER_UGNAME:=user
 export MAKE_CLI:=$(shell \
 	( cat /proc/$${PPID}/cmdline 2>/dev/null \
