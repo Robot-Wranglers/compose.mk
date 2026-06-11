@@ -187,6 +187,10 @@ make=make ${MAKE_FLAGS} ${makefile_list}
 # `lastword`). Used only to make compose.mk reachable inside dispatch containers
 # when it lives OUTSIDE the mounted workspace (i.e. a global / on-PATH install).
 cmk.self := $(abspath $(firstword $(filter %compose.mk,$(MAKEFILE_LIST))))
+# Canonical location compose.mk is mounted at INSIDE a dispatch container (and is
+# on PATH there). Shared by `docker.cmk.mount` (the mount) and `makefile_list.dind`
+# (the matching `-f` rewrite) so the two never drift.
+CMK_DOCKER_PATH:=/usr/local/bin/compose.mk
 # Additive dispatch mount: bind the host compose.mk at a canonical on-PATH
 # location inside the container, so a project's `include $(shell which
 # compose.mk)` resolves there to the identical file/version. Emitted ONLY when
@@ -194,7 +198,28 @@ cmk.self := $(abspath $(firstword $(filter %compose.mk,$(MAKEFILE_LIST))))
 # the workspace mount) -- so vendored/drop-in dispatch is byte-for-byte
 # unchanged (the var expands to empty). Recursive (=) so it honors the
 # workspace at dispatch time.
-docker.cmk.mount=$(shell s='${cmk.self}'; ws="$${DOCKER_HOST_WORKSPACE:-$$PWD}"; [ -n "$$s" ] && [ "$${s#$$ws/}" = "$$s" ] && echo "-v $$s:/usr/local/bin/compose.mk:ro" || true)
+docker.cmk.mount=$(shell s='${cmk.self}'; ws="$${DOCKER_HOST_WORKSPACE:-$$PWD}"; [ -n "$$s" ] && [ "$${s#$$ws/}" = "$$s" ] && echo "-v $$s:${CMK_DOCKER_PATH}:ro" || true)
+# `makefile_list` / `${make}` as they should be invoked INSIDE a dispatch
+# container. When compose.mk lives OUTSIDE the workspace (so `docker.cmk.mount` is
+# engaged and binds it to ${CMK_DOCKER_PATH}), its host `-f` entry is rewritten to
+# that mount path; otherwise the list is unchanged -- a vendored copy resolves via
+# the /workspace mount, and a library-mode project Makefile is already inside the
+# workspace (and `include $(shell which compose.mk)` finds the mount on PATH).
+# This is what lets standalone tools (esp. tux, which dispatches compose.mk's OWN
+# targets) work under a global install. (Limit: a global install invoked by a
+# *relative* `-f` path won't match `cmk.self` and so won't be rewritten.)
+makefile_list.dind=$(if $(strip ${docker.cmk.mount}),$(patsubst -f${cmk.self},-f${CMK_DOCKER_PATH},${makefile_list}),${makefile_list})
+make.dind=make ${MAKE_FLAGS} ${makefile_list.dind}
+# Path to compose.mk for a generated makefile that is consumed BOTH on the host
+# (cwd = workspace) AND inside a dispatch container (cwd = /workspace) -- e.g. the
+# `loadf` makefile, whose panes re-`make` it in the tux container. A vendored copy
+# is reachable by its workspace-relative path in both places (same content under
+# the host cwd and the /workspace mount); a global/out-of-workspace copy is
+# reachable at the ${CMK_DOCKER_PATH} mount inside the container. (NOT `${CMK_SRC}`,
+# which is an absolute HOST path that does not exist inside the container.)
+# Exported (shell-valid name) so it expands in the `loadf` heredoc, where the
+# include is resolved by the shell -- exactly like the exported `${CMK_SRC}`.
+export CMK_WORKSPACE_SRC=$(shell s='${cmk.self}'; ws="$${DOCKER_HOST_WORKSPACE:-$$PWD}"; rel="$${s#$$ws/}"; if [ "$$rel" = "$$s" ]; then echo "${CMK_DOCKER_PATH}"; else echo "$$rel"; fi)
 
 # Stream constants
 stderr:=/dev/stderr
@@ -494,8 +519,12 @@ GLOW_STYLE?=dracula
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 ${CMK_COMPOSE_FILE}:
+	@# Generate (and validate, once) the embedded-TUI compose file. It's cached --
+	@# the recipe is a no-op when the file already exists -- so validation runs only
+	@# at generation time, not on every `tux.require`/`tux.open`/`loadf` bootstrap.
 	ls ${CMK_COMPOSE_FILE} 2>/dev/null >/dev/null \
-	|| verbose=0 ${mk.def.to.file}/FILE.TUX_COMPOSE/${CMK_COMPOSE_FILE}
+	|| ( verbose=0 ${mk.def.to.file}/FILE.TUX_COMPOSE/${CMK_COMPOSE_FILE} \
+		&& ${make} compose.validate.quiet/${CMK_COMPOSE_FILE} )
 
 compose.build/%:
 	@# Builds all services for the given compose file.
@@ -537,20 +566,26 @@ compose.clean/%:
 	&& ${docker.compose} -f ${*} \
 		--progress quiet down -t 1 --remove-orphans --rmi local $${svc:-}
 
+# Single chokepoint for "run a one-off command in a compose service". Applies
+# --rm/--remove-orphans + the global-install compose.mk mount (docker.cmk.mount)
+# in exactly ONE place, so every caller (compose.dispatch.sh and all the tux.*
+# container runs) stays consistent instead of hand-rolling its own `docker
+# compose run`. Inputs (shell env): compose_file, svc, entrypoint (=bash),
+# compose_env (extra `-e ..` flags), compose_run_flags (e.g. `-T`). Callers append
+# their own tail (`-c "$cmd"` / `-i`) plus ${dash_x_maybe} and $(_compose_quiet).
+docker.compose.run=${docker.compose} $${COMPOSE_EXTRA_ARGS} -f $${compose_file} run $${compose_run_flags:-} --rm --remove-orphans ${docker.cmk.mount} $${compose_env:-} --entrypoint $${entrypoint:-bash} $${svc}
 compose.dispatch.sh/%:
 	@# Similar interface to the scaffolded '<compose_stem>.dispatch' target,
 	@# except that this is a backup plan for when 'compose.import' has not
 	@# imported services more directly.
 	@#
-	@# USAGE: 
+	@# USAGE:
 	@#   cmd=<shell_cmd> svc=<svc_name> compose.dispatch.sh/<fname>
 	@#
 	$(call log.trace, ${GLYPH.DOCKER} compose.dispatch ${sep} ${green}${*}) \
 	&& ${trace_maybe} \
-	&& ${docker.compose} $${COMPOSE_EXTRA_ARGS} -f ${*} run \
-		--rm --remove-orphans \
-		${docker.cmk.mount} \
-		--entrypoint $${entrypoint:-bash} $${svc} ${dash_x_maybe} \
+	&& compose_file="${*}" \
+	&& ${docker.compose.run} ${dash_x_maybe} \
 		-c "$${cmd:-true}" $(_compose_quiet)
 
 compose.get.stem/%:; basename -s .yml `basename -s .yaml ${*}`
@@ -903,7 +938,7 @@ docker.dispatch/%:
 	@#
 	$(trace_maybe) \
 	&& entrypoint=make \
-		cmd="${MAKE_FLAGS} ${makefile_list} ${*}" \
+		cmd="${MAKE_FLAGS} ${makefile_list.dind} ${*}" \
 			img=$${img} ${make} docker.run.sh
 
 docker.images=(\
@@ -1364,8 +1399,7 @@ io.shell:
 	@# by the parent environment, plus those set by this Makefile context.
 	$(call log.io, ${@} ${sep} ${ital}${bold}Interactive)
 	$(call log.io, ${@} ${sep} ${dim}${GLYPH_CHECK}.. environment will match make-context)
-	export PS1="${bold}[${no_ansi_dim}lvl=${MAKELEVEL}${no_ansi}${bold}]${no_ansi} ${dim}[${green}make-debug${no_ansi_dim}] \w $$ " \
-	&& bash --norc -i </dev/tty >/dev/tty 2>&1
+	bash -i </dev/tty >/dev/tty 2>&1
 
 io.browser:
 	@# Tries to open the given URL in a browser.
@@ -2715,8 +2749,13 @@ mk.pkg.root:
 else 
 mk.pkg.root:
 	@# Packages the application root, or the given command if provided.
-	label=$${label:-${*}} bin=$${bin:-${*}} script=./compose.mk \
-	script_args="mk.interpret! ${__interpreting__} $${cmd:-}" \
+	@# `mk.pkg` bundles ${CMK_SRC}, which `mk.self` lands at the archive root by
+	@# basename -- so run THAT copy via `bash` (compose.mk's shebang interpreter):
+	@# no `./compose.mk`-at-cwd assumption and no executable-bit requirement (an
+	@# `include`d compose.mk often isn't chmod +x), while keeping the shebang's
+	@# supervisor trampoline that `mk.interpret!` relies on.
+	label=$${label:-${*}} bin=$${bin:-${*}} script=bash \
+	script_args="$(notdir ${CMK_SRC}) mk.interpret! ${__interpreting__} $${cmd:-}" \
 	${make} mk.pkg
 .mk.pkg/%:; cmd=${*} ${make} mk.pkg.root
 endif
@@ -4422,7 +4461,7 @@ tux.pane/%:
 # Possible optimization: this command is *usually* but not 
 # always called from  `MAKELEVEL<3` and above that it is 
 # probably cached already?
-tux.require: ${CMK_COMPOSE_FILE} compose.validate.quiet/${CMK_COMPOSE_FILE}
+tux.require: ${CMK_COMPOSE_FILE}
 	@# Require the embedded-TUI stack to finish bootstrap.  This is time-consuming, 
 	@# so it should be called strategically and only when needed.  Note that this might 
 	@# be required for things like 'gum' and for anything that depends on 'dind_base', 
@@ -4503,7 +4542,7 @@ tux.callback/%:
 	@# USAGE: 
 	@#   layout=.. ./compose.mk tux.spiral/<t1>,<t2>
 	@#
-	pane_targets=`printf "${*}" | ./compose.mk stream.comma.to.nl | nl -v0 | awk '{print ".tux.pane/" $$1 "/" substr($$0, index($$0,$$2))}'` \
+	pane_targets=`printf "${*}" | ${stream.comma.to.nl} | nl -v0 | awk '{print ".tux.pane/" $$1 "/" substr($$0, index($$0,$$2))}'` \
 	&& pane_targets=".tux.layout.$${layout} .tux.geo.set $${pane_targets}" \
 	&& layout="flux.and/$${pane_targets}" \
 	&& layout=`echo $$layout|${stream.space.to.comma}` \
@@ -4535,9 +4574,16 @@ tux.dispatch/%:
 	@#  ./compose.mk tux.dispatch/<target_name>
 	@#
 	$(trace_maybe) \
-	&& cmd="${make} ${*}" ${tux.dispatch.sh}
+	&& export cmd="${make.dind} ${*}" && ${tux.dispatch.sh}
 
-tux.dispatch.sh=sh ${dash_x_maybe} -c "svc=tux cmd=\"$${cmd}\" ${make} tux.require compose.dispatch.sh/${TUI_COMPOSE_FILE}" 
+# `cmd` (the command to run in the tux container) and `svc` reach the inner
+# `compose.dispatch.sh` purely by environment inheritance: callers export `cmd`
+# (tux.dispatch/% above) or set it in the env (the tux.dispatch.sh target below),
+# `svc=tux` is a prefix on the inner make, and both flow down to that recipe. (The
+# old form re-passed `cmd=\"$cmd\"`, but the outer recipe shell expanded `$cmd`
+# from an *unset* var -- a prefix-assignment isn't visible to its own command's
+# expansions -- so the dispatched target was silently dropped and `true` ran.)
+tux.dispatch.sh=sh ${dash_x_maybe} -c "svc=tux ${make} tux.require compose.dispatch.sh/${TUI_COMPOSE_FILE}"
 tux.dispatch.sh:; ${tux.dispatch.sh}
 	@# Runs the given <cmd> inside the embedded TUI container.
 	@#
@@ -4589,24 +4635,22 @@ tux.mux.detach/%:
 	&& cmd="${trace_maybe}" \
 	&& cmd="$${cmd} && tmuxp load -d -S ${TUI_TMUX_SOCKET} $${TMUXP}" \
 	&& cmd="$${cmd} && TMUX=${TMUX} tmux list-sessions" \
-	&& cmd="$${cmd} && label='TUI Init' ${make} io.print.banner $${TUI_INIT_CALLBACK}" \
-	&& cmd="$${cmd} && label='TUI Layout' ${make} io.print.banner $${TUX_LAYOUT_CALLBACK}" \
-	&& cmd="$${cmd} && ${make} $${reattach}" \
+	&& cmd="$${cmd} && label='TUI Init' ${make.dind} io.print.banner $${TUI_INIT_CALLBACK}" \
+	&& cmd="$${cmd} && label='TUI Layout' ${make.dind} io.print.banner $${TUX_LAYOUT_CALLBACK} $${reattach}" \
 	&& trap "${docker.compose} -f ${TUI_COMPOSE_FILE} stop -t 1" exit \
 	&& $(call log.tux, $${header} Enter main loop for TUI) \
-	&& ${docker.compose} -f ${TUI_COMPOSE_FILE} \
-		$${COMPOSE_EXTRA_ARGS} run --rm --remove-orphans \
-		${docker.env.standard} \
-		-e TUI_TMUX_SOCKET="${TUI_TMUX_SOCKET}" \
-		-e TUI_TMUX_SESSION_NAME="${TUI_TMUX_SESSION_NAME}" \
-		-e TUI_INIT_CALLBACK="$${TUI_INIT_CALLBACK}" \
-		-e TUX_LAYOUT_CALLBACK="$${TUX_LAYOUT_CALLBACK}" \
+	&& compose_file=${TUI_COMPOSE_FILE} svc=$${TUI_SVC_NAME} \
+	&& compose_env="${docker.env.standard} \
+		-e TUI_TMUX_SOCKET=${TUI_TMUX_SOCKET} \
+		-e TUI_TMUX_SESSION_NAME=${TUI_TMUX_SESSION_NAME} \
+		-e TUI_INIT_CALLBACK=$${TUI_INIT_CALLBACK} \
+		-e TUX_LAYOUT_CALLBACK=$${TUX_LAYOUT_CALLBACK} \
 		-e TUI_SVC_STARTED=1 \
 		-e geometry=$${geometry:-} \
-		-e reattach="$${reattach}" \
-		-e k8s_commander_targets="$${k8s_commander_targets:-}" \
-		-e tux_commander_targets="$${tux_commander_targets:-}" \
-		--entrypoint bash $${TUI_SVC_NAME} ${dash_x_maybe} -c "$${cmd}" $(_compose_quiet) \
+		-e reattach=$${reattach} \
+		-e k8s_commander_targets=$${k8s_commander_targets:-} \
+		-e tux_commander_targets=$${tux_commander_targets:-}" \
+	&& ${docker.compose.run} ${dash_x_maybe} -c "$${cmd}" $(_compose_quiet) \
 	; st=$$? \
 	&& case $${st} in \
 		0) $(call log.tux, ${dim_cyan}exiting TUI); ;; \
@@ -4666,9 +4710,8 @@ tux.shell: tux.require
 	@# USAGE:
 	@#  ./compose.mk tux.shell
 	${trace_maybe} \
-	&& ${docker.compose} -f ${TUI_COMPOSE_FILE} \
-		$${COMPOSE_EXTRA_ARGS} run --rm --remove-orphans \
-		--entrypoint bash $${TUI_SVC_NAME} ${dash_x_maybe} -i $(_compose_quiet)
+	&& compose_file=${TUI_COMPOSE_FILE} svc=$${TUI_SVC_NAME} \
+	&& ${docker.compose.run} ${dash_x_maybe} -i $(_compose_quiet)
 
 tux.shell.pipe: tux.require
 	@# A pipe into the shell for the embedded TUI container.
@@ -4676,9 +4719,8 @@ tux.shell.pipe: tux.require
 	@# USAGE:
 	@#  ./compose.mk tux.shell
 	${trace_maybe} \
-	&& ${docker.compose} -f ${TUI_COMPOSE_FILE} \
-		$${COMPOSE_EXTRA_ARGS} run -T --rm --remove-orphans \
-		--entrypoint bash $${TUI_SVC_NAME} ${dash_x_maybe} -c "`${stream.stdin}`" $(_compose_quiet)
+	&& compose_file=${TUI_COMPOSE_FILE} svc=$${TUI_SVC_NAME} compose_run_flags=-T \
+	&& ${docker.compose.run} ${dash_x_maybe} -c "`${stream.stdin}`" $(_compose_quiet)
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## END: tux.*' public targets
@@ -4777,7 +4819,7 @@ tux.shell.pipe: tux.require
 	&& ${trace_maybe} && tmux set -g base-index 0 \
 	&& tmux setw -g pane-base-index 0 \
 	&& tmux set -g pane-border-status top \
-	&& ${make} .tux.pane.focus/0 || $(call log.tux, ${@} ${sep}${dim} ${red}Failed initializing panes)
+	&& ( tmux select-pane -t 0.0 || true ) || $(call log.tux, ${@} ${sep}${dim} ${red}Failed initializing panes)
 
 .tux.init.buttons:
 	@# Generates tmux-script that configures the buttons for "New Pane" and "Exit".
@@ -4938,7 +4980,7 @@ endef
 	&& export targets="${*}" \
 	&& ( printf "$${targets}" \
 		 | ${stream.comma.to.nl}  \
-		 | xargs -I% echo "{\"name\":\"%\",\"shell\":\"${make} %\"}" \
+		 | xargs -I% echo "{\"name\":\"%\",\"shell_command\":\"${make.dind} %\"}" \
 	) | ${jq} -s -c | echo \'$$(${stream.stdin})\' | ${stream.peek.maybe}
 
 .tux.quit .tux.panic:
@@ -4956,8 +4998,7 @@ endef
 	@# for TUI_THEME_NAME, TUI_THEME_HOOK_PRE, & TUI_THEME_HOOK_POST
 	@#
 	$(trace_maybe) \
-	&& ${make} ${TUI_THEME_HOOK_PRE} \
-	&& ${make} .tux.theme.set/${TUI_THEME_NAME}  \
+	&& ${make} ${TUI_THEME_HOOK_PRE} .tux.theme.set/${TUI_THEME_NAME}  \
 	&& [ -z ${TUI_THEME_HOOK_POST} ] \
 		&& true \
 		|| ${make} ${TUI_THEME_HOOK_POST}
@@ -6168,7 +6209,7 @@ cat <<EOF
 SHELL:=/bin/bash
 .SHELLFLAGS?=-euo pipefail -c
 MAKEFLAGS=-s -S --warn-undefined-variables
-include ${CMK_SRC}
+include ${CMK_WORKSPACE_SRC}
 \$(eval \$(call compose.import.generic, ▰, TRUE, ${fname}))
 EOF
 endef
