@@ -52,6 +52,19 @@ def test_demo_container_dispatch(run_demo):
   assert "Debian GNU/Linux" in r.stdout
 
 
+def test_demo_io_pushd(run_demo):
+  # `ᝏio.pushd(dir)` decorator: EVERY command in the target runs from `dir`
+  # (pwd is the subdir; the relative `marker.txt` resolves there), and because it
+  # uses bash `pushd`, the body can `popd` back to the caller's dir.
+  r = run_demo("demos/cmk/io.pushd.cmk")
+  assert r.ok, r.stderr
+  assert (
+    "cwd=.tmp.pushd.demo" in r.stdout
+  )  # all commands ran in the pushed dir
+  assert "in-the-subdir" in r.stdout  # relative file resolved there
+  assert "after popd, cwd=" in r.stdout  # body popped back out
+
+
 # More lightweight demos (no heavy interpreters: rag/ollama/lean/just excluded).
 # These are jb/jq-light or host-only, exercising additional idioms.
 

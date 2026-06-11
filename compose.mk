@@ -6146,6 +6146,16 @@ bind.polyglot.bind.file=${polyglot.bind.file}
 # composes with the recipe-body `&&`-join.
 bind.log.target=$(call log.target,$(if $(filter-out undefined,$(origin 1)),${1}))
 
+# `ᝏio.pushd(dir)` decorator: run the WHOLE target body from `dir`.  The compiler
+# relocates the decorator to the head of the recipe and the joinbody pass
+# `&&`-chains the body into ONE shell, so this directory change persists to every
+# command in the target (without it each recipe line is its own shell and the
+# change would not carry).  Uses bash `pushd` (the recipe SHELL is bash) rather
+# than `cd` so the body can `popd` back to the caller's dir if it wants; the
+# stack listing is muted.  Fails fast (nonzero) if `dir` is missing, aborting the
+# `&&`-chain.
+bind.io.pushd=pushd "$(strip ${1})" >/dev/null
+
 define docker.bind.script
 $(call _mk.unpack.kwargs,${1},img,${1}) \
 && $(call _mk.unpack.kwargs,${1},def,${@}) \
