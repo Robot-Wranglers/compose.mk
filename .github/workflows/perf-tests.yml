@@ -3,7 +3,9 @@
 # asserts only a clean exit and prints min/median/mean/max timings to the log --
 # there is NO latency threshold (machine-dependent). It is therefore NOT wired to
 # push/PR (timings would be noisy gates); instead it runs on demand and is
-# reusable from other workflows (workflow_call). No docker required.
+# reusable from other workflows (workflow_call). The cold-start samples need no
+# docker; the headless TUI bring-up sample uses docker (present on ubuntu-latest,
+# auto-skipped where a daemon isn't available).
 name: Perf Tests
 on:
   workflow_dispatch: {}

@@ -96,6 +96,10 @@ itest integration-test:
 	@# Runs the integration-test suite (delegates to tests/).
 	pushd tests && make init integration-test
 
+tui-test:
+	@# Runs the headless embedded-TUI suite (heavy/opt-in; delegates to tests/).
+	pushd tests && make init tui-test
+
 stest smoke-test:
 	@# Runs the smoke-test suite (delegates to tests/).
 	pushd tests && make init smoke-test

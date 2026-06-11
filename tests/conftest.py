@@ -476,6 +476,113 @@ def run_demo(request, docker_cmk, tmp_path_factory):
 
 
 @pytest.fixture
+def staged_global(tmp_path_factory):
+  """Run an ARBITRARY compose.mk target from a GLOBAL install: a copy of
+  compose.mk on its own bin dir OUTSIDE any workspace, executed by absolute path
+  with an empty workspace as ${PWD}/DOCKER_HOST_WORKSPACE. This forces cmk.self /
+  docker.cmk.mount / makefile_list.dind down their global-install branches (so the
+  in-container command references the /usr/local/bin/compose.mk mount, not the
+  host path). Scoped with the session docker label + compose project so teardown
+  sweeps anything it makes; container runs use --rm so most cleans up itself.
+  """
+  prog = tmp_path_factory.mktemp("cmkbin") / "compose.mk"
+  shutil.copy(COMPOSE_MK, prog)
+  prog.chmod(0o755)
+  ws = tmp_path_factory.mktemp("cmkws")  # empty workspace (no vendored copy)
+
+  def run(*args, timeout=1800, **env):
+    merged = {
+      **os.environ,
+      **BASE_ENV,
+      "CMK_SUPERVISOR": "1",
+      "CMK_INTERNAL": "0",
+      "docker_args": f"--label {CMKTEST_LABEL}",
+      "DOCKER_HOST_WORKSPACE": str(ws),
+      "COMPOSE_PROJECT_NAME": COMPOSE_PROJECT,
+      **env,
+    }
+    proc = subprocess.Popen(
+      [str(prog), *args],
+      stdin=subprocess.PIPE,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.PIPE,
+      text=True,
+      cwd=str(ws),
+      env=merged,
+      start_new_session=True,
+    )
+    _LIVE_PROCS.add(proc)
+    try:
+      out, err = proc.communicate(input="", timeout=timeout)
+    except subprocess.TimeoutExpired:
+      _kill_proc_group(proc)
+      out, err = proc.communicate()
+      scoped_cleanup()
+      raise
+    finally:
+      _LIVE_PROCS.discard(proc)
+    return Result(out, err, proc.returncode)
+
+  # expose the staged paths so callers can run artifacts the target produced
+  # (e.g. a packaged binary lands in the workspace).
+  run.workspace = ws
+  run.prog = prog
+  return run
+
+
+@pytest.fixture
+def tui():
+  """Run a tux/loadf TUI entrypoint HEADLESSLY from the repo root.
+
+  Interactive TUI flows end by attaching to tmux, which needs a real TTY. Run
+  headless we close stdin and time-box the process, then assert on the tmuxp
+  *load* markers in the (merged stdout+stderr) output -- NOT the exit code, since
+  the final `tmux attach` always fails without a tty. compose.mk is invoked by
+  the RELATIVE `./compose.mk` (cwd = repo) so the in-container `make -f` paths
+  resolve via the /workspace mount. CMK_SUPERVISOR=1 because loadf/tux.* use
+  `mk.yield`. Scoped with the session docker label + compose project so teardown
+  sweeps the tux containers/volumes/networks; repo `.tmp.*` are swept too.
+  """
+
+  def run(*args, timeout=600, **env):
+    before = set(REPO.glob(".tmp.*"))
+    merged = {
+      **os.environ,
+      **BASE_ENV,
+      "CMK_SUPERVISOR": "1",
+      "CMK_INTERNAL": "0",
+      "docker_args": f"--label {CMKTEST_LABEL}",
+      "DOCKER_HOST_WORKSPACE": str(REPO),
+      "COMPOSE_PROJECT_NAME": COMPOSE_PROJECT,
+      **env,
+    }
+    proc = subprocess.Popen(
+      ["./compose.mk", *args],
+      stdin=subprocess.DEVNULL,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.STDOUT,
+      text=True,
+      cwd=str(REPO),
+      env=merged,
+      start_new_session=True,
+    )
+    _LIVE_PROCS.add(proc)
+    try:
+      out, _ = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+      _kill_proc_group(proc)
+      out, _ = proc.communicate()
+      scoped_cleanup()
+      raise
+    finally:
+      _LIVE_PROCS.discard(proc)
+      _sweep_repo_tmp(before)
+    return Result(out, "", proc.returncode)
+
+  return run
+
+
+@pytest.fixture
 def run_plain_demo(docker_cmk):
   """Run a plain ``demos/*.mk`` Makefile directly -- NOT via ``mk.interpret!``
   (that path is only for ``demos/cmk/*.cmk``). Executes ``make -f
@@ -534,6 +641,12 @@ def pytest_collection_modifyitems(config, items):
     for item in nush:
       item.add_marker(
         pytest.mark.skip(reason="nushell disabled (set CMK_TEST_NUSHELL=1)")
+      )
+  tui = [i for i in items if "tui" in i.keywords]
+  if tui and os.environ.get("CMK_TEST_TUI") != "1":
+    for item in tui:
+      item.add_marker(
+        pytest.mark.skip(reason="tui disabled (set CMK_TEST_TUI=1)")
       )
 
 
@@ -607,7 +720,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 # Printed right after "collected N items", before the run starts.
 def pytest_report_collectionfinish(config, items):
   suites = ("unit", "smoke", "docker", "integration", "compiler")
-  gates = ("needs_docker", "network", "nushell")
+  gates = ("needs_docker", "network", "nushell", "tui")
   by_marker = Counter()
   by_file = Counter()
   for item in items:

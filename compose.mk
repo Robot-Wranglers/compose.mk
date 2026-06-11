@@ -8,7 +8,7 @@
 # dependencies beyond what's already in your development environment.
 #
 # DOCS: https://github.com/robot-wranglers/compose.mk
-# LATEST: https://github.com/robot-wranglers/compose.mk/tree/master/compose.mk
+# LATEST: https://github.com/robot-wranglers/compose.mk/tree/main/compose.mk
 #
 #░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 #
@@ -182,15 +182,41 @@ endef
 makefile_list=$(addprefix -f,$(shell echo "${MAKE_CLI}"|awk '{for(i=1;i<=NF;i++)if($$i=="-f"&&i+1<=NF){print$$(++i)}else if($$i~/^-f./){print substr($$i,3)}}' | xargs))
 make=make ${MAKE_FLAGS} ${makefile_list}
 
+# ── "Where is compose.mk?" -- the self-path family ──────────────────────────
+# Several vars answer this, each for a DIFFERENT context; they are not redundant:
+#   cmk.self        host ABSPATH of compose.mk (single source of truth, below).
+#   CMK_SRC         the source to READ/`include` in the CURRENT process (see ~L382):
+#                   standalone == cmk.self; library == the include path. User-facing
+#                   (`$(CMK_SRC)`) and its VALUE is baked into compiled artifacts.
+#   CMK_BIN         the INVOCATION/executable path ($0 from the shebang, ~L28);
+#                   backs ${__interpreter__} and `mk.fork` -- "the command you ran".
+# The rest bridge the HOST<->dispatch-container boundary (a host path is meaningless
+# inside a container; the workspace is bind-mounted at /workspace):
+#   CMK_DOCKER_PATH the fixed on-PATH location compose.mk is mounted at in-container.
+#   docker.cmk.mount the `-v` bind-mount, emitted only for an out-of-workspace copy.
+#   makefile_list.dind / make.dind  ${makefile_list}/${make} with the host `-f`
+#                   rewritten to the mount path, for `make` run INSIDE a container.
+#   CMK_DIND_SRC    the `include` path for a makefile consumed on BOTH sides (loadf).
+# (We use these DERIVED vars rather than env-reassigning CMK_* at dispatch because a
+# `-f` path is a make CLI arg an env var can't redirect, and CMK_SRC is `=`/not `?=`.)
+#
 # compose.mk's own absolute path. Resolved by NAME from MAKEFILE_LIST (robust to
 # position/order across multiple `-f`/includes; not the naive positional
 # `lastword`). Used only to make compose.mk reachable inside dispatch containers
 # when it lives OUTSIDE the mounted workspace (i.e. a global / on-PATH install).
 cmk.self := $(abspath $(firstword $(filter %compose.mk,$(MAKEFILE_LIST))))
 # Canonical location compose.mk is mounted at INSIDE a dispatch container (and is
-# on PATH there). Shared by `docker.cmk.mount` (the mount) and `makefile_list.dind`
-# (the matching `-f` rewrite) so the two never drift.
+# on PATH there). Shared by `docker.cmk.mount` (the mount), `makefile_list.dind`
+# (the matching `-f` rewrite), and `CMK_DIND_SRC` so they never drift.
 CMK_DOCKER_PATH:=/usr/local/bin/compose.mk
+# Shared probe for the host<->container path vars below: sets `s` (compose.mk
+# abspath), `ws` (the bind-mounted workspace), and `rel` (s relative to ws, == s
+# when s is OUTSIDE ws, i.e. a global/on-PATH install). Recursive (=) so `$$`/`${}`
+# resolve identically at each use. One definition so the membership test can't drift.
+# (The `\#` escapes the shell prefix-strip's `#` -- a bare `#` in a make assignment
+# would start a comment and truncate the value; inside the old inline `$(shell ..)`
+# it didn't need escaping.)
+_cmk.ws.probe=s='${cmk.self}'; ws="$${DOCKER_HOST_WORKSPACE:-$$PWD}"; rel="$${s\#$$ws/}"
 # Additive dispatch mount: bind the host compose.mk at a canonical on-PATH
 # location inside the container, so a project's `include $(shell which
 # compose.mk)` resolves there to the identical file/version. Emitted ONLY when
@@ -198,7 +224,7 @@ CMK_DOCKER_PATH:=/usr/local/bin/compose.mk
 # the workspace mount) -- so vendored/drop-in dispatch is byte-for-byte
 # unchanged (the var expands to empty). Recursive (=) so it honors the
 # workspace at dispatch time.
-docker.cmk.mount=$(shell s='${cmk.self}'; ws="$${DOCKER_HOST_WORKSPACE:-$$PWD}"; [ -n "$$s" ] && [ "$${s#$$ws/}" = "$$s" ] && echo "-v $$s:${CMK_DOCKER_PATH}:ro" || true)
+docker.cmk.mount=$(shell ${_cmk.ws.probe}; [ -n "$$s" ] && [ "$$rel" = "$$s" ] && echo "-v $$s:${CMK_DOCKER_PATH}:ro" || true)
 # `makefile_list` / `${make}` as they should be invoked INSIDE a dispatch
 # container. When compose.mk lives OUTSIDE the workspace (so `docker.cmk.mount` is
 # engaged and binds it to ${CMK_DOCKER_PATH}), its host `-f` entry is rewritten to
@@ -216,10 +242,11 @@ make.dind=make ${MAKE_FLAGS} ${makefile_list.dind}
 # is reachable by its workspace-relative path in both places (same content under
 # the host cwd and the /workspace mount); a global/out-of-workspace copy is
 # reachable at the ${CMK_DOCKER_PATH} mount inside the container. (NOT `${CMK_SRC}`,
-# which is an absolute HOST path that does not exist inside the container.)
-# Exported (shell-valid name) so it expands in the `loadf` heredoc, where the
-# include is resolved by the shell -- exactly like the exported `${CMK_SRC}`.
-export CMK_WORKSPACE_SRC=$(shell s='${cmk.self}'; ws="$${DOCKER_HOST_WORKSPACE:-$$PWD}"; rel="$${s#$$ws/}"; if [ "$$rel" = "$$s" ]; then echo "${CMK_DOCKER_PATH}"; else echo "$$rel"; fi)
+# which is an absolute HOST path that does not exist inside the container.) The name
+# matches the other `*.dind` host<->container bridges (it is NOT workspace-relative
+# in global mode -- it's the mount path). Exported (shell-valid name) so it expands
+# in the `loadf` heredoc, where the include is resolved by the shell -- like CMK_SRC.
+export CMK_DIND_SRC=$(shell ${_cmk.ws.probe}; if [ "$$rel" = "$$s" ]; then echo "${CMK_DOCKER_PATH}"; else echo "$$rel"; fi)
 
 # Stream constants
 stderr:=/dev/stderr
@@ -251,15 +278,11 @@ log.prefix.makelevel=${log.prefix.makelevel.glyph} ${log.prefix.makelevel.indent
 log.prefix.loop.inner=${log.prefix.makelevel}${bold}${dim_green}${GLYPH.tree_item}${no_ansi}
 log.stdout=printf "${log.prefix.makelevel} $(strip $(if $(filter undefined,$(origin 1)),...,$(1))) ${no_ansi}\n"
 log=([ "$(or $(quiet),0)" == "1" ] || ( ${log.stdout} >${stderr} ))
-log.noindent=(printf "${log.prefix.makelevel.glyph} `echo "$(or $(1),)"| ${stream.lstrip}`${no_ansi}\n" >${stderr})
-log.fmt=( ${log} && (printf "${2}" | fmt -w 55 | ${stream.indent} | ${stream.indent} | ${stream.indent.to.stderr} ) )
 log.json=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.docker} ${1} | ${jq.run} . | ${stream.as.log}
-log.json.trace=( [ "${TRACE}" == "0" ] && true || $(call log.json, ${1}) )
 log.json.min=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.docker} ${1} | ${jq.run} -c . | ${stream.as.log}
 log.target=$(call log.io, ${dim_green}$(strip $(shell printf "${@}" | cut -d/ -f1)) ${sep}${dim_ital} $(strip $(or $(strip $(if $(filter undefined,$(origin 1)),,$(1))),$(shell printf "${@}" | cut -d/ -f2-))))
 log.target.pad_top=printf '\n' >> /dev/stderr; ${log.target}
 log.target.pad_bottom=${log.target}; printf '\n'>>/dev/stderr
-log.target.pad=printf '\n' >> /dev/stderr; ${log.target}; printf '\n'>>/dev/stderr
 log.target.part1=([ -z "$${quiet:-}" ] && (printf "${log.prefix.makelevel}${GLYPH_IO}${dim_green} $(shell printf "${@}" | cut -d/ -f1) ${sep}${dim_ital} `echo "$(strip $(or $(1),))"| ${stream.lstrip}`${no_ansi_dim}..${no_ansi}") || true )>${stderr}
 log.target.part2=([ -z "$${quiet:-}" ] && $(call log.part2, ${1}))
 log.test_case=$(call log.io, ${dim_green} $(shell printf "${@}" | cut -d/ -f1) ${sep} ${dim}..\n  ${cyan_flow_right}${dim_ital_cyan}$(or $(1),$(shell printf "${@}" | cut -d/ -f2-)))
@@ -269,7 +292,6 @@ log.trace.fmt=( ${log.trace} && [ "${TRACE}" == "0" ] && true || (printf "${2}" 
 log.trace.part1=[ "${TRACE}" == "0" ] && true || $(call log.part1, ${1})
 log.trace.part2=[ "${TRACE}" == "0" ] && true || $(call log.part2, ${1})
 log.target.rerouting=$(call log, ${dim}${_GLYPH_IO}${dim} $(shell echo ${@} | sed 's/\/.*//') ${sep}${dim} Invoked from top; rerouting to tool-container)
-log.trace.target.rerouting=( [ "${TRACE}" == "0" ] && true || $(call log.target.rerouting) )
 log.file.contents=$(call log.target, file=$(strip ${1})) && cat ${1} | ${stream.as.log}
 log.preview.file=$(call log.target, ${cyan}$(strip ${1})) ; $(call io.preview.file, ${1})
 log.compiler=( [ "${CMK_COMPILER_VERBOSE}" == "0" ] && true || $(call log, ${GLYPH_MK} ${1}))
@@ -318,7 +340,6 @@ log.part1=(${log.stdout.part1}>${stderr})
 log.part2=(${log.stdout.part2}>${stderr})
 log.compiler.part1=( [ "${CMK_COMPILER_VERBOSE}" == "0" ] && true || $(call log.part1, ${GLYPH_MK} ${1}))
 log.compiler.part2=( [ "${CMK_COMPILER_VERBOSE}" == "0" ] && true || $(call log.part2, ${1}))
-log.maybe=([ "$${quiet:-0}" == "1" ] || $(call log, ${1}))
 
 # Completely silent output iff quiet is set and quiet!=0
 quiet.maybe=$(shell [ "$${quiet:-0}" == "0" ] && echo '' || echo '> /dev/null 2>/dev/null' )
@@ -342,7 +363,11 @@ docker.run.base:=docker run --rm -i -v $${DOCKER_HOST_WORKSPACE:-$${PWD}}:/works
 ## | CMK_PLUGINS_DIR        | Defaults to ".cmk".  This controls how `mk.include.plugin` macros work|
 ## | CMK_COMPILER_VERBOSE   | 1 if debugging-messages from compilation are allowed                  |
 ## | CMK_DIND               | *Determines whether docker-in-docker is allowed*                      |
-## | CMK_SRC:               | path to compose.mk source code                                        |
+## | CMK_SRC:               | path to compose.mk source to READ/include (standalone==cmk.self)      |
+## | cmk.self               | compose.mk's host ABSPATH (single source of truth for the above)      |
+## | CMK_BIN                | compose.mk's INVOCATION/exe path ($0); backs __interpreter__ + fork   |
+## | CMK_DOCKER_PATH        | where compose.mk is mounted INSIDE a dispatch container (on PATH)     |
+## | CMK_DIND_SRC           | compose.mk include-path for a makefile run on host AND in-container   |
 ## | CMK_SUPERVISOR         | *1 if supervisor/signals is enabled, otherwise 0*                     |
 ## | DOCKER_HOST_WORKSPACE  | *Needs override for correctly working with DIND volumes*              |
 ## | TRACE                  | 1 if increase in verbosity desired (more detailed than verbose)       |
@@ -351,7 +376,7 @@ docker.run.base:=docker run --rm -i -v $${DOCKER_HOST_WORKSPACE:-$${PWD}}:/works
 ## | quiet                  | 0 if debugging output should be shown, otherwise 1 (affects docker build output) |
 ## | force                  | 0 if operation should not be forced, otherwise 1 (affects docker pulls, etc) |
 ## | __file__               | val of CMK_SRC if stand-alone mode, invoked file if in library mode   |
-## | __interpreter__        | `./${CMK_SRC}` unless overridden                                      |
+## | __interpreter__        | invocation path; defaults to ${CMK_BIN} unless overridden             |
 ## | __interpreting__       | CMK_SRC unless overridden; sometimes useful for extensions            |
 ##
 ## CMK_INTERNAL: 
@@ -4427,7 +4452,9 @@ export TUI_THEME_HOOK_POST?=.tux.init.buttons
 export TUI_CONTAINER_IMAGE?=compose.mk:tux
 export TUI_SVC_BUILD_ORDER?=dind_base,tux
 export TUX_LAYOUT_CALLBACK?=.tux.commander.layout
-export TMUXP:=.tmp.tmuxp.yml
+# TMUXP (the tmuxp profile path) is no longer a fixed `.tmp.tmuxp.yml`; tux.mux.detach
+# generates it per-run via io.mktemp (auto-removed on exit), previews it under
+# verbose, and exports it into the container so .tux.init reads the same file.
 
 tux.browser: .tux.browser.require
 	@# Launches carbonyl browser in a docker container.
@@ -4630,14 +4657,16 @@ tux.mux.detach/%:
 	&& export panes=$(strip $(shell ${make} .tux.panes/${*})) \
 	&& $(call log.part2, ${dim_green}ok) \
 	&& $(call log.part1, ${GLYPH_TUI} $${header} Generating tmuxp profile) \
+	&& suffix=.yml && $(call io.mktemp) && export TMUXP=$${tmpf} \
 	&& eval "$${_TUI_TMUXP_PROFILE_DATA_}" > $${TMUXP}  \
 	&& $(call log.part2, ${dim_green}ok) \
+	&& if [ "$${verbose:-0}" = 1 ]; then $(call log.preview.file, $${TMUXP}); fi \
 	&& cmd="${trace_maybe}" \
 	&& cmd="$${cmd} && tmuxp load -d -S ${TUI_TMUX_SOCKET} $${TMUXP}" \
 	&& cmd="$${cmd} && TMUX=${TMUX} tmux list-sessions" \
 	&& cmd="$${cmd} && label='TUI Init' ${make.dind} io.print.banner $${TUI_INIT_CALLBACK}" \
 	&& cmd="$${cmd} && label='TUI Layout' ${make.dind} io.print.banner $${TUX_LAYOUT_CALLBACK} $${reattach}" \
-	&& trap "${docker.compose} -f ${TUI_COMPOSE_FILE} stop -t 1" exit \
+	&& trap "${docker.compose} -f ${TUI_COMPOSE_FILE} stop -t 1; rm -f $${TMUXP}" exit \
 	&& $(call log.tux, $${header} Enter main loop for TUI) \
 	&& compose_file=${TUI_COMPOSE_FILE} svc=$${TUI_SVC_NAME} \
 	&& compose_env="${docker.env.standard} \
@@ -4649,7 +4678,8 @@ tux.mux.detach/%:
 		-e geometry=$${geometry:-} \
 		-e reattach=$${reattach} \
 		-e k8s_commander_targets=$${k8s_commander_targets:-} \
-		-e tux_commander_targets=$${tux_commander_targets:-}" \
+		-e tux_commander_targets=$${tux_commander_targets:-} \
+		-e TMUXP=$${TMUXP}" \
 	&& ${docker.compose.run} ${dash_x_maybe} -c "$${cmd}" $(_compose_quiet) \
 	; st=$$? \
 	&& case $${st} in \
@@ -4765,7 +4795,7 @@ tux.shell.pipe: tux.require
 	tmux set -g pane-border-style fg=green \
 	&& tmux set -g pane-active-border-style "bg=black fg=lightgreen" \
 	&& index=0 \
-	&& cat .tmp.tmuxp.yml | yq -r .windows[].panes[].name | ${stream.peek} \
+	&& cat "$${TMUXP:-/dev/null}" | yq -r .windows[].panes[].name | ${stream.peek} \
 	| while read item; do \
 		$(call log.tux, ${@} ${sep} ${dim}Setting pane labels ${TMUX} $${item})\
 		; tmux select-pane -t $${index} -T " ┅ $${item} " \
@@ -5247,10 +5277,9 @@ endef
 
 define _TUI_TMUXP_PROFILE
 cat <<EOF
-# This tmuxp profile is generated by compose.mk.
-# Do not edit by hand and do not commit to version control.
-# it is left just for reference & transparency, and is regenerated
-# on demand, so you can feel free to delete it.
+# This tmuxp profile is generated by compose.mk into a per-run temp file
+# (io.mktemp, auto-removed on exit). Do not edit by hand. For transparency,
+# run with verbose=1 to have tux.mux.detach preview it (log.preview.file).
 session_name: tui
 start_directory: /workspace
 environment: {}
@@ -6209,7 +6238,7 @@ cat <<EOF
 SHELL:=/bin/bash
 .SHELLFLAGS?=-euo pipefail -c
 MAKEFLAGS=-s -S --warn-undefined-variables
-include ${CMK_WORKSPACE_SRC}
+include ${CMK_DIND_SRC}
 \$(eval \$(call compose.import.generic, ▰, TRUE, ${fname}))
 EOF
 endef

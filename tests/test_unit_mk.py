@@ -12,6 +12,9 @@ than an exact dump.
 """
 
 import json
+import os
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -538,3 +541,110 @@ def test_mk_def_dispatch(cmk, tmp_path):
   r = cmk("mk.def.dispatch/sh,script", makefile=mk)
   assert r.ok, r.stderr
   assert "SCRIPT-RAN" in r.stdout
+
+
+# --- dispatch path rewrite (global-install / tux) --------------------------
+# `makefile_list.dind` rewrites compose.mk's host `-f` path to its in-container
+# mount location (/usr/local/bin/compose.mk) ONLY when compose.mk lives OUTSIDE
+# the workspace (a global / on-PATH install); a vendored in-workspace copy is left
+# untouched. This is what makes the tux subsystem -- which dispatches compose.mk's
+# OWN targets standalone -- work under a global install. These are pure/no-docker:
+# they only inspect the command compose.mk *would* run in the container.
+_DIND_ENV = {
+  "NO_COLOR": "1",
+  "CMK_SUPERVISOR": "0",
+  "CMK_INTERNAL": "1",
+  "CMK_DISABLE_HOOKS": "1",
+  "TERM": "dumb",
+  "TRACE": "0",
+  "GITHUB_ACTIONS": "false",
+}
+
+
+def _stage(dirpath) -> Path:
+  """Copy compose.mk into dirpath and make it executable (returns the path)."""
+  prog = Path(dirpath) / "compose.mk"
+  shutil.copy(COMPOSE_MK, prog)
+  prog.chmod(0o755)
+  return prog
+
+
+def _run_staged(prog, *args, cwd, **env):
+  merged = {**os.environ, **_DIND_ENV, **env}
+  return subprocess.run(
+    [str(prog), *args],
+    text=True,
+    capture_output=True,
+    cwd=str(cwd),
+    env=merged,
+  )
+
+
+def test_makefile_list_dind_rewrites_under_global_install(tmp_path):
+  # compose.mk staged OUTSIDE the workspace -> mount engaged -> -f rewritten to
+  # the canonical in-container mount path.
+  bindir = tmp_path / "bin"
+  bindir.mkdir()
+  ws = tmp_path / "ws"
+  ws.mkdir()
+  prog = _stage(bindir)
+  r = _run_staged(
+    prog, "mk.get/makefile_list.dind", cwd=ws, DOCKER_HOST_WORKSPACE=str(ws)
+  )
+  assert r.returncode == 0, r.stderr
+  assert r.stdout.strip() == "-f/usr/local/bin/compose.mk"
+  # the un-rewritten list still points at the (un-mountable) host path
+  r2 = _run_staged(
+    prog, "mk.get/makefile_list", cwd=ws, DOCKER_HOST_WORKSPACE=str(ws)
+  )
+  assert str(prog) in r2.stdout
+
+
+def test_makefile_list_dind_noop_when_vendored(tmp_path):
+  # compose.mk staged INSIDE the workspace -> mount empty -> list unchanged.
+  ws = tmp_path / "ws"
+  ws.mkdir()
+  prog = _stage(ws)
+  r = _run_staged(
+    prog, "mk.get/docker.cmk.mount", cwd=ws, DOCKER_HOST_WORKSPACE=str(ws)
+  )
+  assert r.returncode == 0, r.stderr
+  assert r.stdout.strip() == ""  # mount not engaged for an in-workspace copy
+  rd = _run_staged(
+    prog, "mk.get/makefile_list.dind", cwd=ws, DOCKER_HOST_WORKSPACE=str(ws)
+  )
+  rl = _run_staged(
+    prog, "mk.get/makefile_list", cwd=ws, DOCKER_HOST_WORKSPACE=str(ws)
+  )
+  assert rd.stdout.strip() == rl.stdout.strip()
+  assert "/usr/local/bin/compose.mk" not in rd.stdout
+
+
+def test_tux_panes_uses_mount_path_under_global_install(tmp_path):
+  # The pane shell-commands run INSIDE the tux container; under a global install
+  # they must reference the mount path, never the (unreachable) host path.
+  bindir = tmp_path / "bin"
+  bindir.mkdir()
+  ws = tmp_path / "ws"
+  ws.mkdir()
+  prog = _stage(bindir)
+  r = _run_staged(
+    prog, ".tux.panes/flux.ok", cwd=ws, DOCKER_HOST_WORKSPACE=str(ws)
+  )
+  assert r.returncode == 0, r.stderr
+  assert "/usr/local/bin/compose.mk" in r.stdout
+  assert (
+    str(bindir) not in r.stdout
+  )  # host path must not leak into the pane cmd
+
+
+def test_tux_panes_vendored_uses_local_path(tmp_path):
+  ws = tmp_path / "ws"
+  ws.mkdir()
+  prog = _stage(ws)
+  r = _run_staged(
+    prog, ".tux.panes/flux.ok", cwd=ws, DOCKER_HOST_WORKSPACE=str(ws)
+  )
+  assert r.returncode == 0, r.stderr
+  assert str(prog) in r.stdout  # the in-workspace path, unrewritten
+  assert "/usr/local/bin/compose.mk" not in r.stdout
