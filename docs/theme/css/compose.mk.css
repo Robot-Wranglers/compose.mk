@@ -213,3 +213,10 @@ html.writer-html5 .rst-content table.docutils.api_docs th {
 .rst-content table.docutils.api_docs td a {
   color: #2980b9;
 }
+
+/* Definition-list descriptions: add breathing room below each `dd`.  Matches the
+ * specificity of theme_extra's `.rst-content dl dd` rule and loads after it, so
+ * only the bottom margin is overridden (its other margins / line-height stand). */
+.rst-content dl dd {
+  margin-bottom: 1em;
+}

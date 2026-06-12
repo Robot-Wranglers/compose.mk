@@ -1,0 +1,31 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+# demos/cmk/oop.cmk:
+#   CMK-lang equivalent of demos/oop.mk -- (ab)using the namespace MRO of
+#   the `ᝏsubcommands` decorator to simulate OOP inheritance.  `pet` searches the
+#   namespaces in order (`.puppy`, `.dog`, `.animal`) like a method-resolution order:
+#   a more-derived "class" OVERRIDES the base; base-only subs are INHERITED.
+#   Part of the `compose.mk` repo. This file runs as part of the test-suite.
+#
+# USAGE:
+#   ./demos/cmk/oop.cmk pet speak          # -> yip!   (.puppy override)
+#   ./demos/cmk/oop.cmk pet fetch          # -> ...    (inherited from .dog)
+#   ./demos/cmk/oop.cmk pet legs           # -> 4      (inherited from .animal)
+#   ./demos/cmk/oop.cmk pet describe rex   # -> ...    (inherited, parametric)
+#   ./demos/cmk/oop.cmk pet                # -> usage
+
+ᝏsubcommands(namespace='.puppy .dog .animal')
+pet:
+
+# base "class": animal
+.animal.legs:; printf '4\n'
+.animal.speak:; printf 'generic animal noise\n'
+.animal.describe/%:; printf '%s is a kind of animal\n' "${*}"
+
+# "subclass" dog (is-a animal): overrides speak, adds fetch
+.dog.speak:; printf 'woof!\n'
+.dog.fetch:; printf 'fetches the ball\n'
+
+# "subclass" puppy (is-a dog): overrides speak again
+.puppy.speak:; printf 'yip!\n'
+
+__main__: pet

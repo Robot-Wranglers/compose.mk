@@ -154,6 +154,7 @@ GLYPH.NUM=${dim_green}$(word $(words $(wordlist 1,${1},${GLYPH_NUMS}) +),${GLYPH
 GLYPH_ARRS=▋ ▊ ▉ █ █ █ █ █ ▏ ▎ ▍
 GLYPH.ARRS=${dim_green}$(word $(words $(wordlist 1,${1},${GLYPH_ARRS}) +),${GLYPH_ARRS})${no_ansi}
 GLYPH.tree_item:=├┈
+GLYPH.tree_last:=╰┈
 
 # FIXME: docs 
 # NB: keep this RECURSIVE (`?=`), unlike the OS_NAME/DOCKER_UID/DOCKER_GID probes:
@@ -287,6 +288,7 @@ log.prefix.makelevel.glyph=${dim}$(call GLYPH.NUM, ${MAKELEVEL})
 log.prefix.makelevel.indent=
 log.prefix.makelevel=${log.prefix.makelevel.glyph} ${log.prefix.makelevel.indent}
 log.prefix.loop.inner=${log.prefix.makelevel}${bold}${dim_green}${GLYPH.tree_item}${no_ansi}
+log.prefix.loop.last=${log.prefix.makelevel}${bold}${dim_green}${GLYPH.tree_last}${no_ansi}
 log.stdout=printf "${log.prefix.makelevel} $(strip $(if $(filter undefined,$(origin 1)),...,$(1))) ${no_ansi}\n"
 log=([ "$(or $(quiet),0)" == "1" ] || ( ${log.stdout} >${stderr} ))
 log.json=$(call log, ${dim}${bold_green}${@} ${no_ansi_dim} ${cyan_flow_right}); ${jb.docker} ${1} | ${jq.run} . | ${stream.as.log}
@@ -329,8 +331,11 @@ endef
 define log.stdout.loop.item # Call this in the loop
 (printf "${log.prefix.loop.inner}`echo "$(or $(1),)" | sed 's/^ //'`${no_ansi}\n")
 endef
-define log.loop.item 
+define log.loop.item
  ( printf "${log.prefix.loop.inner}`echo "$(or $(1),)" | sed 's/^ //'`${no_ansi}\n" > ${stderr} )
+endef
+define log.loop.item.last # Call this for the FINAL item (terminator glyph)
+ ( printf "${log.prefix.loop.last}`echo "$(or $(1),)" | sed 's/^ //'`${no_ansi}\n" > ${stderr} )
 endef
 define log.trace.loop.top
 [ "${TRACE}" == "0" ] && true || $(call log.loop.top, ${1})
@@ -1867,6 +1872,20 @@ io.stack.pop.word/%:
 	$(call log.io,  io.stack.pop.word ${sep} ${dim}stack@${no_ansi}${*} ${cyan_flow_right})
 	$(call io.stack.pop.word, ${*})
 
+# stream.push.word: push a RAW word read from stdin onto the default stack -- the
+# stdin-input counterpart of `io.stack.pop.word` (which emits a raw word).  `jq -Rs .`
+# slurps stdin into one JSON string, which `io.stack.push` then appends.
+stream.push.word=${jq} -Rs . | ${io.stack.push}
+stream.push.word/%:
+	@# Push the (raw, literal) stem as a word onto the default stack.  NB: `%` is the
+	@# WORD to push here (unlike `io.stack.push/<file>`, where it names a stack-file).
+	@# Also a macro -- `echo word | ${stream.push.word}` -- for piping a value in.
+	@#
+	@# USAGE: ./compose.mk stream.push.word/<word>
+	@#
+	printf '%s' "${*}" | ${stream.push.word}
+stream.push.word/:; printf '' | ${stream.push.word}
+
 # Argless aliases over the default stack (${CMK_IO_STACK}), so you can use a
 # stack without naming a file. The whole invocation's process tree shares it.
 # Each is the no-arg form of the like-named macro (no `${make}` sub-make).
@@ -2352,7 +2371,7 @@ endef
 mk.compile! mk.compiler!:
 	@# Like `mk.compile`, but also embeds the result thus removing the include 
 	@# for `compose.mk` to produce a completely stand-alone file.  See also: `mk.fork.guest`
-	${flux.pipeline}/mk.compile,mk.preprocess.minify | sed "/^MAKEFILE_LIST+=${CMK_SRC}/d" | ${make} mk.fork.guest
+	${flux.pipeline}/mk.compile,mk.preprocess.minify | sed "\|^MAKEFILE_LIST+=${CMK_SRC}|d" | ${make} mk.fork.guest
 
 
 mk.kernel:
@@ -2748,6 +2767,201 @@ mk.interpret/%:
 	&& export __interpreting__=$${__interpreting__:-${*}} \
 	&& __script__=${__script__} MAKEFILE=$${tmpf} \
 		stdbuf -o0 -e0 $${tmpf} $${continuation:-}
+
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+## `mk.subcommands`: a reusable subcommand-dispatch engine.  Turn any namespace
+## into a `compose.mk <ns> <sub> <args>` subcommand CLI in one line:
+##
+##   <ns>:; $(call mk.subcommands.enter)
+##
+## All kwargs are optional and auto-detected; pass any to override:
+##   namespace    defaults to the target name (${@}).
+##   subs         reflected from the `.<ns>.<sub>` handler targets (source order).
+##   default      the first reflected subcommand (the bare-form fallback).
+##
+## plus a handler target per subcommand, either form:
+##   `.<ns>.<sub>/%`  parametric -- the `%` stem is the first arg, the rest in `argv`.
+##   `.<ns>.<sub>`    non-parametric -- takes no stem; all args arrive in `argv`.
+## `cmk` (below) and `demos/subcommands.mk` are clients.
+##
+## Tail capture is robust: `.awk.subcommands.tail` reads the goal list positionally,
+## starting just after the always-present `mk.supervisor.enter/<pid>` token, and
+## strips the hook-rewrite's `flux.pre/* flux.post/*` decorations.  So a client needs
+## NO entry in the `.awk.rewrite.targets.maybe` skip-list -- an unregistered namespace
+## merely incurs a harmless no-op `flux.pre/<ns>` before dispatch.
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+# Recovers a dispatcher's CLI tail from a (possibly hook-decorated) MAKE_CLI on stdin:
+# drop up to & including `mk.supervisor.enter/<pid>`, drop flux.pre/* flux.post/*, drop
+# the leading namespace token, print the rest.  Unit-tested via `io.awk/.awk.subcommands.tail`.
+define .awk.subcommands.tail
+{ for(i=1;i<=NF;i++){
+	if(!seen){ if($i ~ /^mk\.supervisor\.enter\//) seen=1; continue }
+	if($i ~ /^flux\.(pre|post)\//) continue
+	a[++n]=$i } }
+END { s=""; for(i=2;i<=n;i++) s=s (s==""?"":" ") a[i]; print s }
+endef
+
+# Optimized internal-recursion prefix for dispatch/transform sub-makes: mark internal
+# + skip re-installing the target-rewrite/at-exit hooks and the SIGINT supervisor.  The
+# client keeps the real supervisor at the top level; a handler that execs a program
+# re-enables CMK_SUPERVISOR itself (see `.cmk.run/%`).
+mk.subcommands.make=CMK_INTERNAL=1 CMK_DISABLE_HOOKS=1 CMK_SUPERVISOR=0 ${make}
+
+# Generic multi-line usage, derived from subcmd_ns + subcmd_subs (stderr): a header
+# then one tree-line per subcommand, with parametric subs (`.<ns>.<sub>/%`) annotated
+# `<arg>` so it's clear which ones accept an argument.
+mk.subcommands.usage=( $(call log.loop.top, ${dim}$${subcmd_name} ${sep}${no_ansi} USAGE${no_ansi_dim}: ${no_ansi}$${subcmd_name} ${bold}<subcommand>${no_ansi}${dim} [args..]) && nsalt=`echo "$${subcmd_ns}" | tr ' ' '|'` && last=$$(echo "$${subcmd_subs}" | awk '{print $$NF}') && for s in $${subcmd_subs}; do if grep -qE "^($${nsalt})[$${subcmd_sep}]$${s}/%" ${MAKEFILE_LIST} 2>/dev/null; then lbl="${bold_cyan}$${s}${no_ansi}${dim_ital} <arg> [args..]"; else lbl="${bold_cyan}$${s}"; fi; if [ "$${s}" = "$${last}" ]; then $(call log.loop.item.last, $${lbl}); else $(call log.loop.item, $${lbl}); fi; done )
+
+# Entrypoint body for a subcommand CLI.  All kwargs optional (key=val, like
+# `compose.import`); auto-detected when omitted (detection lives in `mk.subcommands`):
+#   namespace='<ns..>'  one OR MORE space-separated namespaces, searched in order like
+#                       an MRO (first match wins).  Defaults to `.<target-name>`.
+#   sep=<s>             separator between namespace and sub in a handler name (default `.`).
+#   subs='<a b ..>'     reflected from the `<ns><sep><sub>` handlers (source order)
+#   default=<sub>       the first reflected subcommand (the bare-form fallback)
+# So a handler is `<ns><sep><sub>[/%]` (e.g. `.greet.hello/%`).  NB: SINGLE-quote any
+# space-bearing value (`namespace`, `subs`) -- `mk.unpack.kwargs` mangles double-quoted
+# multi-word values.  Captures the CLI tail robustly, then does the ONE yield.
+define mk.subcommands.enter
+$(eval _subcmd_args:=$(if $(filter undefined,$(origin 1)),,$(1)))$(call mk.unpack.kwargs, ${_subcmd_args}, namespace, .${@})$(call mk.unpack.kwargs, ${_subcmd_args}, sep, .)$(call mk.unpack.kwargs, ${_subcmd_args}, subs,)$(call mk.unpack.kwargs, ${_subcmd_args}, default,)tail=`case "$${MAKE_CLI}" in \
+		*mk.supervisor.enter/*) echo "$${MAKE_CLI}" | awk -f <(${mk.def.read}/.awk.subcommands.tail) ;; \
+		*) echo "$${MAKE_CLI#*${@}}" ;; \
+	esac | xargs` \
+	&& $(call mk.yield, subcmd_name=${@} subcmd_ns=\"$(strip ${kwargs_namespace})\" subcmd_sep=$(strip ${kwargs_sep}) subcmd_default=$(strip ${kwargs_default}) subcmd_subs=\"$(strip ${kwargs_subs})\" subcmd_tail=\"$${tail}\" ${mk.subcommands.make} mk.subcommands)
+endef
+
+mk.subcommands:
+	@# Shared subcommand-dispatch engine (reusable; see `mk.subcommands.enter`).
+	@# Reads subcmd_name/subcmd_ns/subcmd_sep/subcmd_subs/subcmd_default/subcmd_tail from
+	@# the env and routes the first tail word to its handler.  A parametric handler
+	@# `<ns><sep><sub>/%` gets the next word as its stem (the rest in $${argv}); a
+	@# non-parametric `<ns><sep><sub>` gets all the remaining args in $${argv}.  A bare
+	@# first word that isn't a known sub routes to the default sub; empty/help/-h/--help
+	@# prints usage.  Never yields.
+	@#
+	@# subcmd_ns may be a SPACE-SEPARATED list of namespaces, searched in order like an
+	@# MRO (the first namespace that defines a handler for the sub wins).  subcmd_subs (the
+	@# union across namespaces) and subcmd_default are auto-detected when empty by reflecting
+	@# the `<ns><sep><sub>` handler targets in ${MAKEFILE_LIST} (parametric or not).
+	sub="`echo "$${subcmd_tail}" | cut -d' ' -f1`" \
+	&& rest="`echo "$${subcmd_tail}" | cut -d' ' -f2- -s`" \
+	&& [ -n "$${subcmd_subs}" ] || subcmd_subs=`for ns in $${subcmd_ns}; do grep -hoE "^$${ns}[$${subcmd_sep}][A-Za-z0-9_-]+(/%|:)" ${MAKEFILE_LIST} 2>/dev/null | sed -E "s|^$${ns}[$${subcmd_sep}]||;s|/%$$||;s|:$$||"; done | awk '!s[$$0]++' | xargs` \
+	&& [ -n "$${subcmd_default}" ] || subcmd_default=`echo "$${subcmd_subs}" | awk '{print $$1}'` \
+	&& if [ -z "$${sub}" ] || [ "$${sub}" = help ] || [ "$${sub}" = -h ] || [ "$${sub}" = --help ]; then \
+		${mk.subcommands.usage} ; \
+	else \
+		case " $${subcmd_subs} " in \
+			*" $${sub} "*) tsub="$${sub}"; targs="$${rest}" ;; \
+			*) tsub="$${subcmd_default}"; targs="$${subcmd_tail}" ;; \
+		esac \
+		&& handler="" && isparam=0 \
+		&& for ns in $${subcmd_ns}; do \
+			if grep -qE "^$${ns}[$${subcmd_sep}]$${tsub}/%" ${MAKEFILE_LIST} 2>/dev/null; then handler="$${ns}$${subcmd_sep}$${tsub}"; isparam=1; break; fi; \
+			if grep -qE "^$${ns}[$${subcmd_sep}]$${tsub}:" ${MAKEFILE_LIST} 2>/dev/null; then handler="$${ns}$${subcmd_sep}$${tsub}"; isparam=0; break; fi; \
+		done \
+		&& if [ -z "$${tsub}" ] || [ -z "$${handler}" ]; then \
+			$(call log.io, ${red}$${subcmd_name} ${sep}${no_ansi} unknown subcommand${no_ansi_dim}: ${no_ansi}$${sub}) ; ${mk.subcommands.usage} ; exit 1 ; \
+		elif [ "$${isparam}" = 1 ]; then \
+			arg1="`echo "$${targs}" | cut -d' ' -f1`" \
+			&& argv="`echo "$${targs}" | cut -d' ' -f2- -s`" \
+			&& argv="$${argv}" ${mk.subcommands.make} $${handler}/$${arg1} ; \
+		else \
+			argv="$${targs}" ${mk.subcommands.make} $${handler} ; \
+		fi ; \
+	fi
+
+# CMK-lang decorator form of `mk.subcommands.enter`: writing `ᝏsubcommands` (kwargs
+# optional, exactly like the macro) on the line ABOVE a target turns that target into
+# a subcommand CLI.  Unlike the bare macro, a *bare* `ᝏsubcommands` (no kwargs) defaults
+# to the tree-glyph namespaces `├`/`╰` (sep `┈`) -- handlers are `├┈<sub>` / `╰┈<sub>`;
+# pass kwargs to override.  The $(origin)/$(strip) guard keeps it warning-clean for any
+# arg-count.  See demos/cmk/subcommands.cmk.
+bind.subcommands=$(call mk.subcommands.enter,$(or $(strip $(if $(filter-out undefined,$(origin 1)),${1})),namespace='├ ╰' sep=┈))
+
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+## `cmk`: a convenient *public* subcommand front-end uniting several CMK workflows
+## (build / compile / run / doc), built as a thin client of the `mk.subcommands` engine
+## above.  The heavy lifting is delegated to existing internals (mk.pkg, mk.compiler[!],
+## mk.compile, mk.interpret/%); the `.cmk.*`/`_cmk.*` helpers below are internal.
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+# Generic, reusable: succeeds iff stdout is a terminal (i.e. NOT redirected).
+io.tty.stdout=[ -t 1 ]
+
+# Shared file-hygiene guards ($(1)=path).  guard.input fails; the warns continue.
+_cmk.guard.input=[ -f "$(1)" ] || { $(call log.io, ${red}cmk ${sep}${no_ansi} no such file${no_ansi_dim}: ${no_ansi}${underline}$(1)${no_ansi}); exit 1; }
+_cmk.warn.ext=case "$(1)" in *.cmk) true;; *) $(call log.io, ${yellow}cmk ${sep}${no_ansi_dim} note: ${no_ansi}${underline}$(1)${no_ansi_dim} has no .cmk extension);; esac
+_cmk.warn.output=([ -e "$(1)" ] && $(call log.io, ${yellow}cmk ${sep}${no_ansi_dim} overwriting ${no_ansi}${underline}$(1)) || true)
+
+cmk:
+	@# Public subcommand interface for CMK programs: build | compile | run | doc.
+	@# Bare `cmk <file>` is shorthand for `cmk run <file>`.  Files should end in `.cmk`.
+	@# A thin client of the reusable `mk.subcommands` engine.
+	@#
+	@# USAGE:
+	@#   ./compose.mk cmk build <file.cmk> [bin]     # package -> ./bin executable (mk.pkg)
+	@#   ./compose.mk cmk compile <file.cmk> [out]   # transpile: preview (tty) | full (out/redirect)
+	@#   ./compose.mk cmk run <file.cmk> [args..]    # compile + run
+	@#   ./compose.mk cmk <file.cmk> [args..]        # same as `cmk run`
+	@#   ./compose.mk cmk doc <file.cmk>             # add shebang + chmod +x + compile-check
+	@#
+	$(call mk.subcommands.enter, default=run)
+
+.cmk.build/%:
+	@# `cmk build` helper: package the given .cmk into a self-extracting executable.
+	$(call _cmk.guard.input,${*}) \
+	&& $(call _cmk.warn.ext,${*}) \
+	&& bin="$${argv:-$$(basename ${*} .cmk)}" \
+	&& $(call _cmk.warn.output,$${bin}) \
+	&& $(call log.io, ${dim}cmk build ${sep}${no_ansi} ${underline}${*}${no_ansi} ${dim}-> ${no_ansi}$${bin}) \
+	&& bin="$${bin}" ${mk.subcommands.make} mk.pkg/${*}
+
+.cmk.compile/%:
+	@# `cmk compile` helper: simple highlighted preview (tty), else full standalone.
+	$(call _cmk.guard.input,${*}) \
+	&& $(call _cmk.warn.ext,${*}) \
+	&& if [ -n "$${argv:-}" ]; then \
+		$(call _cmk.warn.output,$${argv}) \
+		&& $(call log.io, ${dim}cmk compile ${sep}${no_ansi} ${underline}${*}${no_ansi} ${dim}-> ${no_ansi}$${argv}) \
+		&& cat ${*} | ${mk.subcommands.make} mk.compiler! > $${argv} ; \
+	elif ${io.tty.stdout}; then \
+		$(call log.io, ${dim}cmk compile ${sep}${dim} preview ${sep} ${no_ansi}${underline}${*}) \
+		&& ${mk.subcommands.make} mk.compiler/${*} 2>/dev/null | style=monokai lexer=makefile ${make} stream.pygmentize ; \
+	else \
+		cat ${*} | ${mk.subcommands.make} mk.compiler! ; \
+	fi
+
+.cmk.run/%:
+	@# `cmk run` helper: compile then exec (no yield; the program self-supervises).
+	$(call _cmk.guard.input,${*}) \
+	&& $(call _cmk.warn.ext,${*}) \
+	&& $(call log.io, ${dim}cmk run ${sep}${no_ansi} ${underline}${*}) \
+	&& $(call io.mktemp) \
+	&& export __interpreting__=${*} \
+	&& cat ${*} | ${mk.subcommands.make} mk.compile > $${tmpf} \
+	&& chmod +x $${tmpf} \
+	&& CMK_SUPERVISOR=1 continuation="$${argv:-}" __interpreting__=${*} ${make} mk.interpret/$${tmpf}
+
+.cmk.doc/%:
+	@# `cmk doc` helper: add a mode-matching shebang (if missing), chmod +x, compile-check.
+	$(call _cmk.guard.input,${*}) \
+	&& $(call _cmk.warn.ext,${*}) \
+	&& cmkref="$(if $(strip ${docker.cmk.mount}),compose.mk,./compose.mk)" \
+	&& shebang="#!/usr/bin/env -S $${cmkref} cmk run" \
+	&& if head -1 ${*} | grep -q '^#!' ; then \
+		$(call log.io, ${dim}cmk doc ${sep}${dim} shebang already present ${sep} ${no_ansi}${underline}${*}) ; \
+	else \
+		$(call io.mktemp) \
+		&& { printf '%s\n' "$${shebang}" ; cat ${*} ; } > $${tmpf} \
+		&& cat $${tmpf} > ${*} \
+		&& $(call log.io, ${dim}cmk doc ${sep}${no_ansi} added shebang ${sep}${dim} $${shebang}) ; \
+	fi \
+	&& chmod +x ${*} \
+	&& $(call log.io, ${dim}cmk doc ${sep}${dim} compile-check ${sep} ${no_ansi}${underline}${*}) \
+	&& ( ${mk.subcommands.make} mk.compiler/${*} >/dev/null 2>/dev/null \
+		&& $(call log.io, ${dim}cmk doc ${sep} ${green}compiles ok) \
+		|| ( $(call log.io, ${red}cmk doc ${sep}${no_ansi} compile errors:) ; ${mk.subcommands.make} mk.compiler/${*} >/dev/null ; exit 1 ) )
 
 mk.let/%:
 	@# Dynamic target assignment.
@@ -6545,41 +6759,57 @@ block_mode == 1 { print $0 }
 block_mode == 0 { print $0 }
 endef
 define .awk.triplequote
-# Lower CMK triple-quote literals to a literal, %-safe printf:
-#   '''TEXT''' or """TEXT"""  ->  printf '%s' 'TEXT'  (multi-line: '%s\n%s..')
-# Content is single-quote-escaped (' -> '\'') so internal single/double quotes
-# and `%` survive verbatim.  Skipped inside define..endef, so polyglot blocks
-# (e.g. python '''docstrings''') pass through untouched.  Multi-line spans are
-# accumulated via getline until the matching same-delimiter closer.
+# Lower CMK triple-delimiter literals to a %-safe printf.  Two flavors:
+#   '''TEXT''' or """TEXT"""  ->  printf '%s' 'TEXT'   (LITERAL, single-quoted)
+#   ```TEXT```                ->  printf '%s' "TEXT"   (INTERPOLATING, double-quoted)
+# The literal form single-quote-escapes (' -> '\'') so internal quotes and `%`
+# survive verbatim; the backtick form double-quotes, so `cmds`, $(..), and $VARs
+# interpolate the standard way.  Skipped inside define..endef, so polyglot blocks
+# (e.g. python '''docstrings''') pass through.  Multi-line spans accumulate via
+# getline until the matching same-delimiter closer.  (Literal backticks in this
+# source are safe: it runs as `awk "$prog"`, whose expansion isn't re-scanned --
+# same reason $0/$i below work.)
 function sq(s,   n,p,i,r) {
     n = split(s, p, "'"); r = p[1]
     for (i = 2; i <= n; i++) r = r "'\\''" p[i]
     return "'" r "'" }
-function emit(content,   n,p,i,fmt,args) {
-    n = split(content, p, "\n"); fmt = "%s"; args = sq(p[1])
-    for (i = 2; i <= n; i++) { fmt = fmt "\\n%s"; args = args " " sq(p[i]) }
+function dq(s,   r) {
+    r = s; gsub(/\\/, "\\\\", r); gsub(/"/, "\\\"", r)
+    return "\"" r "\"" }
+function emit(content, interp,   n,p,i,fmt,args) {
+    n = split(content, p, "\n"); fmt = "%s"; args = (interp ? dq(p[1]) : sq(p[1]))
+    for (i = 2; i <= n; i++) { fmt = fmt "\\n%s"; args = args " " (interp ? dq(p[i]) : sq(p[i])) }
     return "printf '" fmt "' " args }
-BEGIN { in_def = 0; SQ = "'''"; DQ = "\"\"\"" }
+BEGIN { in_def = 0; SQ = "'''"; DQ = "\"\"\""; BT = "```" }
 /^define / { in_def = 1; print; next }
 /^endef[ \t]*$/ { in_def = 0; print; next }
 in_def { print; next }
 {
     rest = $0; out = ""
     while (1) {
-        a = index(rest, SQ); b = index(rest, DQ)
-        if (a == 0 && b == 0) { out = out rest; break }
-        if (b == 0 || (a != 0 && a < b)) { p = a; delim = SQ } else { p = b; delim = DQ }
+        a = index(rest, SQ); b = index(rest, DQ); g = index(rest, BT)
+        if (a == 0 && b == 0 && g == 0) { out = out rest; break }
+        p = 0
+        if (a != 0 && (p == 0 || a < p)) { p = a; delim = SQ; interp = 0 }
+        if (b != 0 && (p == 0 || b < p)) { p = b; delim = DQ; interp = 0 }
+        if (g != 0 && (p == 0 || g < p)) { p = g; delim = BT; interp = 1 }
         out = out substr(rest, 1, p - 1)
         after = substr(rest, p + 3)
         c = index(after, delim)
-        if (c > 0) { out = out emit(substr(after, 1, c - 1)); rest = substr(after, c + 3) }
+        if (c > 0) {
+            dc = substr(delim, 1, 1); rl = 0
+            while (substr(after, c + rl, 1) == dc) rl++
+            out = out emit(substr(after, 1, c - 1 + rl - 3), interp); rest = substr(after, c + rl) }
         else {
             content = after; closed = 0
             while ((getline nl) > 0) {
                 c = index(nl, delim)
-                if (c > 0) { content = content "\n" substr(nl, 1, c - 1); rest = substr(nl, c + 3); closed = 1; break }
+                if (c > 0) {
+                    dc = substr(delim, 1, 1); rl = 0
+                    while (substr(nl, c + rl, 1) == dc) rl++
+                    content = content "\n" substr(nl, 1, c - 1 + rl - 3); rest = substr(nl, c + rl); closed = 1; break }
                 content = content "\n" nl }
-            out = out emit(content)
+            out = out emit(content, interp)
             if (!closed) rest = "" } }
     print out }
 endef
@@ -6654,7 +6884,7 @@ flux.post/%:
 	esac
 
 define .awk.rewrite.targets.maybe 
-{ if ($0 ~ /help/ || $0 ~ /jb/ || $0 ~ /yq/ || $0 ~ /jq/ || $0 ~ /mk.include/ || $0 ~ /loadf/) {
+{ if ($0 ~ /help/ || $0 ~ /jb/ || $0 ~ /yq/ || $0 ~ /jq/ || $0 ~ /mk.include/ || $0 ~ /loadf/ || $0 ~ /cmk/) {
     print $0; next }
   if ($0 ~ /mk.interpret/ || $0 ~ /mk.compile/ || $0 ~ /mk.preprocess/) { print $0; next }
   result = ""

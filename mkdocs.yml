@@ -76,7 +76,9 @@ nav:
     - 'Obligatory AI Things': demos/ai.md
     - 'Theorem Proving': demos/lean.md
     - 'Underload Esolang': demos/underload.md
+    - 'Subcommands as OOP': demos/oop.md
   - Misc Features:
+      - 'Subcommands': subcommands.md
       - 'CLI Help': cli-help.md
       - 'Stacks & Stages': stages.md
       - 'Supervisors & Signals': signals.md
@@ -85,6 +87,7 @@ nav:
       - 'Language Overview': language.md
       - 'Compiler & Dialects': compiler.md
       - 'Quick Reference': cmk-quick-ref.md
+      - 'Demo Index': cmk-demos.md
       - 'Matrioshka Automata': matrioshka.md
     # - 'Theorem Proving': demos/lean.md
     # - 'Justfile Interoperability': demos/just.md

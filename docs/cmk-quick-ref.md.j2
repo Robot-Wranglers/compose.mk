@@ -6,7 +6,7 @@
 
 A one-page cheat-sheet of CMK-lang syntax.  Each entry links to the full
 explanation on the [Compiler &amp; Dialects]({{mkdocs.site_relative_url}}/compiler) page;
-see also the [CMK demo index]({{mkdocs.site_relative_url}}/compiler/#all-demos).
+see also the [CMK Demo Index]({{mkdocs.site_relative_url}}/cmk-demos).
 
 <table class=quickref>
   <thead>
@@ -56,6 +56,11 @@ see also the [CMK demo index]({{mkdocs.site_relative_url}}/compiler/#all-demos).
       <td><code>'''…'''</code> &nbsp; <code>"""…"""</code></td>
       <td><code>'''(Hi)S''' | this.eval</code></td>
       <td>Literal text, with no quoting/escaping hassle. <a href="{{mkdocs.site_relative_url}}/compiler/#triple-quote-literals">(detail)</a></td>
+    </tr>
+    <tr>
+      <td><code>```…```</code></td>
+      <td><code>```(`date`)```</code></td>
+      <td>Like triple-quote, but interpolating (<code>`cmds`</code>, <code>$vars</code>). <a href="{{mkdocs.site_relative_url}}/compiler/#triple-quote-literals">(detail)</a></td>
     </tr>
     <tr>
       <td><i>(Recipe Body)</i></td>

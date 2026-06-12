@@ -61,16 +61,18 @@ def test_demo_space_indented(run_demo):
 
 
 def test_demo_io_pushd(run_demo):
-  # `ᝏio.pushd(dir)` decorator: EVERY command in the target runs from `dir`
-  # (pwd is the subdir; the relative `marker.txt` resolves there), and because it
-  # uses bash `pushd`, the body can `popd` back to the caller's dir.
+  # `ᝏio.pushd(dir)` combined with `ᝏcompose.bind.target(svc)`: the target is
+  # dispatched into the debian container, and io.pushd on its in-container body
+  # runs every command from the pushed dir (pwd is the subdir; the relative
+  # `marker.txt` resolves there), then `popd` returns to the container workdir.
   r = run_demo("demos/cmk/io.pushd.cmk")
   assert r.ok, r.stderr
   assert (
-    "cwd=.tmp.pushd.demo" in r.stdout
-  )  # all commands ran in the pushed dir
+    "container=debian" in r.stdout
+  )  # ran inside the container (bind.target)
+  assert "cwd=.tmp.pushd.demo" in r.stdout  # io.pushd: commands ran in the dir
   assert "in-the-subdir" in r.stdout  # relative file resolved there
-  assert "after popd, cwd=" in r.stdout  # body popped back out
+  assert "after popd, cwd=" in r.stdout  # popped back out
 
 
 # More lightweight demos (no heavy interpreters: rag/ollama/lean/just excluded).

@@ -575,6 +575,52 @@ def test_compile_triplequote_skips_define_block(cmk):
   assert "x = '''doc'''" in r.stdout
 
 
+# --- triple-BACKTICK literals (```…```) -------------------------------------
+# Like triple-quote, but DOUBLE-quoted -> standard interpolation (`cmds`, $vars).
+
+
+def test_compile_triplebacktick_interpolating(cmk):
+  # the distinguishing behavior: DOUBLE-quoted printf (vs triple-quote's single).
+  r = cmk("mk.compile", stdin="```$X``` | this.t\n")
+  assert r.ok, r.stderr
+  assert "printf '%s' \"$X\" | ${make} t" in r.stdout
+
+
+def test_compile_triplebacktick_backtick_passthrough(cmk):
+  # a command-sub inside survives verbatim (interpolated by the shell at runtime).
+  r = cmk("mk.compile", stdin="```a`id`b```\n")
+  assert r.ok, r.stderr
+  assert "printf '%s' \"a`id`b\"" in r.stdout
+
+
+def test_compile_triplebacktick_escapes_double_quote(cmk):
+  # an internal " is escaped so the double-quoted string stays well-formed.
+  r = cmk("mk.compile", stdin='```say "hi"```\n')
+  assert r.ok, r.stderr
+  assert 'printf \'%s\' "say \\"hi\\""' in r.stdout
+
+
+def test_compile_triplebacktick_multiline(cmk):
+  r = cmk("mk.compile", stdin="x:\n\t```L1\nL2``` | this.t\n")
+  assert r.ok, r.stderr
+  assert 'printf \'%s\\n%s\' "L1" "L2" | ${make} t' in r.stdout
+
+
+def test_compile_triplebacktick_content_ends_with_backtick(cmk):
+  # The closer is the LAST 3 of a backtick run, so the content may end with a
+  # backtick (e.g. a command-sub right before the close): ````id```` -> "`id`".
+  r = cmk("mk.compile", stdin="````id````\n")
+  assert r.ok, r.stderr
+  assert "printf '%s' \"`id`\"" in r.stdout
+
+
+def test_compile_triplequote_still_literal(cmk):
+  # regression: the single-quoted (literal) forms are unchanged by the backtick add.
+  r = cmk("mk.compile", stdin="'''$X''' | this.t\n")
+  assert r.ok, r.stderr
+  assert "printf '%s' '$X' | ${make} t" in r.stdout
+
+
 # --- recipe-body joining (.awk.joinbody) ------------------------------------
 # The newline-separated lines of a recipe body are joined into ONE shell with
 # ` && \` (shared state, fail-fast).

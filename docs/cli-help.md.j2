@@ -24,6 +24,9 @@ $ ./compose.mk help/docker
 
 Under the hood, help uses a dockerized version of [mk.parse](https://github.com/mattvonrocketstein/mk.parse) and [charmbracelete/glow](https://github.com/charmbracelet/glow).  Because this uses containers, be advised that rendering help can be slow, especially the first time it runs.  See the [implementation details section](#implementation-details) for more about this, and other hints for granular access to the moving pieces involved here.
 
+!!! tip "Subcommand CLIs get their own help"
+    Tools built with the [subcommands interface]({{mkdocs.site_relative_url}}/subcommands) don't use this docker-backed help at all -- they generate their *own* usage listing (subcommands, and which ones accept arguments) on the fly, with no containers involved.  Running such a tool with no subcommand, or with `help`, prints it.
+
 ### Help For Project Makefiles
 <hr style="width:100%;border-bottom:3px solid black;">
 

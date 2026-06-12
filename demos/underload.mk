@@ -28,7 +28,7 @@ define ul.lexer
         else if (d == ")") { if (--depth == 0) break }
         body = body d
       }
-      print "ul.push/" body
+      print "stream.push.word/" body
     }
     else if (c == "~")  print "ul.swap"
     else if (c == ":")  print "ul.dup"
@@ -56,48 +56,44 @@ define underload_factorial_fxn
 (:((^:()~((:)*~^)a~*^!!()~^))~*()~^^)~(^a(*~^)*a~*()~^!()~^)a~**^!!^S
 endef
 
-# Underload push/pop helpers.
-# Just a thin layer on top of native compose.mk support.
-# See also: the docs for `io.stack.*`
-ul.pop  = `${io.stack.pop.word}`
-ul.push = ${jq} -n 'env.q' | ${io.stack.push}
-ul.push/%:; q="${*}" ${ul.push}
-ul.push/:;  q="" ${ul.push}
+# The underload stack maps directly onto the standard-lib stack helpers: a quotation
+# is popped with `io.stack.pop.word` (top as a raw word) and pushed with
+# `stream.push.word` (reads a raw word from stdin) -- no demo-specific wrappers.
 
 # Begin main underload command vocabulary.
 # Backend implementation for what the lexer generates
 ul.swap:
-	@# Swap operator:  "~"     
+	@# Swap operator:  "~"
 	@#   (x)(y) -> (y)(x)
-	y=${ul.pop} ; x=${ul.pop} \
-	; q="$${y}" ${ul.push} \
-	; q="$${x}" ${ul.push}
+	y=`${io.stack.pop.word}` ; x=`${io.stack.pop.word}` \
+	; printf '%s' "$${y}" | ${stream.push.word} \
+	; printf '%s' "$${x}" | ${stream.push.word}
 
 ul.dup:
-	@# Duplicate operator: ":" 
+	@# Duplicate operator: ":"
 	@#   (x) -> (x)(x)
-	x=${ul.pop} ; q="$${x}" ${ul.push} ; q="$${x}" ${ul.push}
+	x=`${io.stack.pop.word}` ; printf '%s' "$${x}" | ${stream.push.word} ; printf '%s' "$${x}" | ${stream.push.word}
 
 ul.discard: io.stack.discard
 	@# Discard operator: "!"
 	@#   (x) -> nil
 
 ul.cat:
-	@# Concat operator: "*" 
+	@# Concat operator: "*"
 	@#   (x)(y) -> (xy)
-	y=${ul.pop} \
-	; x=${ul.pop} \
-	; q="$${x}$${y}" ${ul.push}
+	y=`${io.stack.pop.word}` \
+	; x=`${io.stack.pop.word}` \
+	; printf '%s%s' "$${x}" "$${y}" | ${stream.push.word}
 
 ul.enclose:
-	@# Enclose operator: "a" 
+	@# Enclose operator: "a"
 	@#   (x) -> ((x))
-	q="(${ul.pop})" ${ul.push}
+	printf '(%s)' "`${io.stack.pop.word}`" | ${stream.push.word}
 
 ul.print:
 	@# Pop/print operator.  "S" 
 	@#  (x) -> ; pop x and output it
-	printf '%s' "${ul.pop}"
+	printf '%s' "`${io.stack.pop.word}`"
 
 ul.apply: flux.pipeline/ul.print,ul.eval
 	@# Apply Operator:  "^" 

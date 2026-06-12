@@ -1,0 +1,96 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+## Subcommands
+<hr style="width:100%;border-bottom:3px solid black;">
+
+`compose.mk` can turn any target into a **subcommand-style CLI** -- the
+`<prog> <subcommand> <args..>` shape you know from tools like `git` or `docker` --
+in a single line, with usage/help generated for free.
+
+The result is a normal entrypoint you invoke as `./yourtool.mk <subcommand> [args..]`
+(or, for a project Makefile, run under the interpreter).  The built-in
+[`cmk` CLI]({{mkdocs.site_relative_url}}/compiler) is itself built this way.
+
+### The Interface
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Two pieces: an **entrypoint** that calls `mk.subcommands.enter`, and one **handler
+target per subcommand**.
+
+```Makefile
+# the entrypoint -- one line makes `greet` a subcommand CLI
+greet:; $(call mk.subcommands.enter)
+
+# one handler per subcommand
+.greet.world:;     printf 'hello world\n'      # non-parametric: takes no argument
+.greet.hello/%:;   printf 'hello, %s!\n' "${*}" # parametric: `%` is the first argument
+```
+
+* A **handler** is named `.<namespace>.<subcommand>`.  The namespace defaults to the
+  entrypoint's name (`greet` above), so handlers live under `.greet.*`.
+* `.<ns>.<sub>` is **non-parametric** -- it takes no argument.
+* `.<ns>.<sub>/%` is **parametric** -- the next CLI word becomes its `%` stem, and any
+  further words arrive in the `argv` environment variable.
+* The subcommand list and the **bare-form default** (what `greet` with no subcommand,
+  or an unrecognized first word, falls back to) are detected automatically from your
+  handlers; usage/help is generated from them.
+
+Everything is optional and overridable via keyword arguments:
+
+| kwarg | meaning | default |
+| --- | --- | --- |
+| `namespace` | one or more (space-separated) namespaces to search | the target name |
+| `subs` | the subcommand list | reflected from the handlers |
+| `default` | the bare-form fallback subcommand | the first subcommand |
+| `sep` | separator between namespace and subcommand in a handler name | `.` |
+
+```Makefile
+# e.g. force a specific default
+greet:; $(call mk.subcommands.enter, default=hello)
+```
+
+### Example
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+A complete `greet` CLI -- two non-parametric subcommands (`world`, `me`) and one
+parametric (`hello`):
+
+{{site.embed_demo('demos/subcommands.mk', github=github, bottom_right=site.link_mirror('demos/cmk/subcommands.cmk'))}}
+
+Using it:
+
+```bash {.cli_example}
+# non-parametric subcommands
+$ ./demos/subcommands.mk greet world
+$ ./demos/subcommands.mk greet me
+
+# parametric subcommand (the word after `hello` is the argument)
+$ ./demos/subcommands.mk greet hello bob
+
+# no subcommand (or `help`) prints generated usage
+$ ./demos/subcommands.mk greet
+$ ./demos/subcommands.mk greet help
+```
+
+Generated usage lists each subcommand, marking the ones that accept an argument:
+
+```bash {.cli_output}
+greet // USAGE: greet <subcommand> [args..]
+  ├┈world
+  ├┈me
+  ╰┈hello <arg> [args..]
+```
+
+### CMK-lang Equivalent
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+In [CMK-lang]({{mkdocs.site_relative_url}}/compiler), the entrypoint is written as a
+**decorator** -- `ᝏsubcommands` on the line above the target -- instead of a `$(call ..)`
+recipe.  Keyword arguments are the same (e.g. `ᝏsubcommands(default=hello)`).
+
+{{site.embed_demo('demos/cmk/subcommands.cmk', type='cmk', github=github, bottom_right=site.link_mirror('demos/subcommands.mk'))}}
+
+!!! tip "See also"
+    The `namespace` keyword accepts *several* namespaces, searched in order -- which lets
+    you layer subcommands the way a class hierarchy layers methods.  See the
+    [Subcommands as OOP tutorial]({{mkdocs.site_relative_url}}/demos/oop) for that.
