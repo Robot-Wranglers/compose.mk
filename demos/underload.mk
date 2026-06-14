@@ -58,7 +58,7 @@ endef
 
 # The underload stack maps directly onto the standard-lib stack helpers: a quotation
 # is popped with `io.stack.pop.word` (top as a raw word) and pushed with
-# `stream.push.word` (reads a raw word from stdin) -- no demo-specific wrappers.
+# `stream.push.word` (reads a raw word from stdin), needing no demo-specific wrappers.
 
 # Begin main underload command vocabulary.
 # Backend implementation for what the lexer generates

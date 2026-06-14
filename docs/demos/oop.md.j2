@@ -4,7 +4,7 @@
 <hr style="width:100%;border-bottom:3px solid black;">
 
 The [`subcommands` interface]({{mkdocs.site_relative_url}}/subcommands) takes a
-`namespace` keyword -- and that keyword accepts **more than one namespace**,
+`namespace` keyword, and that keyword accepts **more than one namespace**,
 space-separated.  When you give it several, they're searched **in order**: the first
 namespace that defines a handler for a subcommand wins.
 
@@ -14,12 +14,12 @@ first, and you get **method override** (a derived class redefines a subcommand) 
 **inheritance** (subcommands only the base defines still resolve).
 
 !!! related_links "Related Links"
-    * [Subcommands]({{mkdocs.site_relative_url}}/subcommands) -- the basics this builds on.
+    * [Subcommands]({{mkdocs.site_relative_url}}/subcommands), the basics this builds on.
 
 ### A `pet` that is-a dog that is-a animal
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-The `pet` CLI below lists three namespaces -- `namespace='.puppy .dog .animal'` -- a
+The `pet` CLI below lists three namespaces (`namespace='.puppy .dog .animal'`), a
 class hierarchy from most-derived (`puppy`) to base (`animal`):
 
 * `speak` is defined in all three; the most-derived `.puppy` wins (**override**).

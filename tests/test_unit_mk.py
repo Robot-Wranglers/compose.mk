@@ -132,7 +132,7 @@ _SUBCMD_WRAPPER = (
 
 def _denv(tail, default="run", subs="echo run ping", ns=".t"):
   # subcmd_ns is the namespace MRO (space-separated); sep joins ns and sub, so a
-  # handler is `<ns><sep><sub>` -- here `.t` + `.` + `echo` = `.t.echo`.
+  # handler is `<ns><sep><sub>`, here `.t` + `.` + `echo` = `.t.echo`.
   return {
     "subcmd_name": "t",
     "subcmd_ns": ns,

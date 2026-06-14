@@ -1,12 +1,12 @@
 """End-to-end tests of the shipped `mk.subcommands` demo clients.
 
-Two *equivalent* zero-config clients of the reusable `mk.subcommands` engine -- a
+Two *equivalent* zero-config clients of the reusable `mk.subcommands` engine: a
 `greet` CLI with non-parametric (`world`, `me`) and parametric (`hello`) handlers,
 namespace/subcommands/default all auto-detected, with NO edit to compose.mk core:
 
-  * demos/subcommands.mk      -- plain make, `greet:; $(call mk.subcommands.enter)`
+  * demos/subcommands.mk      : plain make, `greet:; $(call mk.subcommands.enter)`
     (single default namespace `.greet`)
-  * demos/cmk/subcommands.cmk -- CMK-lang, the `ᝏsubcommands` decorator, demonstrating
+  * demos/cmk/subcommands.cmk : CMK-lang, the `ᝏsubcommands` decorator, demonstrating
     the namespace MRO (handlers split across the `├` and `╰` namespaces)
 
 Every test runs against BOTH (the `greet` fixture is parametrized), so the CMK
@@ -97,7 +97,7 @@ def test_demo_usage_marks_parametric(greet):
 
 def test_demo_zero_config_with_hooks_on(greet):
   # The reusability proof: with the pre/post-hook rewrite ON, `greet`'s goals are
-  # decorated -- yet robust capture recovers the tail with NO skip-list entry.
+  # decorated, yet robust capture recovers the tail with NO skip-list entry.
   r = greet("hello", "bob", CMK_DISABLE_HOOKS="0")
   assert r.ok, r.stderr
   assert "hello, bob!" in r.stdout
@@ -106,7 +106,7 @@ def test_demo_zero_config_with_hooks_on(greet):
 # --- OOP / MRO demos: namespace search-order simulates class inheritance ------
 # demos/oop.{mk,cmk}: a `pet` CLI with namespace MRO `.puppy .dog
 # .animal`.  `speak` is defined in all three (most-derived `.puppy` wins); `fetch`
-# only in `.dog`; `legs`/`describe` only in the base `.animal` -- both inherited.
+# only in `.dog`; `legs`/`describe` only in the base `.animal`, both inherited.
 
 
 @pytest.fixture(

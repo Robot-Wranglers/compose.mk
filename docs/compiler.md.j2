@@ -460,13 +460,13 @@ define-blocks, so a python `'''docstring'''` inside a [polyglot](#polyglot-examp
 is left untouched.
 
 When you *do* want interpolation, use the **triple-backtick** form ` ```…``` `
-instead.  It is the exact analog -- multi-line, define-inert -- but lowers to a
+instead.  It is the exact analog (multi-line, define-inert) but lowers to a
 **double-quoted** `printf`, so the content is interpolated the standard shell way:
 command-subs (`` `cmd` ``), `$(..)`, and `$VAR` all expand.  (Single quote =
 literal, double quote = interpolating, just like in shell.)  For example
 ` ```(`${io.stack.pop.word}`)``` ` wraps the popped value in literal parens.
-Content may begin or end with a backtick -- the closing delimiter is always the
-*last* three of a backtick run -- so ` ````cmd```` ` interpolates `` `cmd` `` and
+Content may begin or end with a backtick, since the closing delimiter is always the
+*last* three of a backtick run, so ` ````cmd```` ` interpolates `` `cmd` `` and
 prints it bare.  The only caveat mirrors triple-quote's: the body can't contain an
 internal run of three-or-more delimiter characters.
 

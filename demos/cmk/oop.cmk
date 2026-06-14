@@ -1,6 +1,6 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret!
 # demos/cmk/oop.cmk:
-#   CMK-lang equivalent of demos/oop.mk -- (ab)using the namespace MRO of
+#   CMK-lang equivalent of demos/oop.mk, (ab)using the namespace MRO of
 #   the `ᝏsubcommands` decorator to simulate OOP inheritance.  `pet` searches the
 #   namespaces in order (`.puppy`, `.dog`, `.animal`) like a method-resolution order:
 #   a more-derived "class" OVERRIDES the base; base-only subs are INHERITED.

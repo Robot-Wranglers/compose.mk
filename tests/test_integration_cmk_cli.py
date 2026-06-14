@@ -86,7 +86,7 @@ def test_compile_to_file(cmk, tmp_path):
   out = tmp_path / "out.mk"
   assert out.exists()
   body = out.read_text()
-  # full standalone (mk.compiler!): substantial, and self-contained -- it embeds
+  # full standalone (mk.compiler!): substantial, and self-contained, since it embeds
   # compose.mk and carries its own bash-polyglot shebang (a simple preview would
   # be a handful of lines with no shebang).
   assert len(body.splitlines()) > 1000
