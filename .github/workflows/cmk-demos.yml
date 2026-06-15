@@ -1,15 +1,15 @@
 # See also: https://docs.github.com/en/actions
-name: CMK Transpiler Demos
+#
+# On-demand full sweep of every CMK-lang demo (heavy/GUI/LLM demos included).
+# This is NOT a push/PR gate: the curated, asserted CMK-demo coverage runs on
+# push/PR via the pytest integration suite (integration-tests.yml ->
+# tests/test_integration_cmk.py).  Trigger this manually for the heavy/GUI/LLM
+# demos that pytest deliberately excludes.
+name: CMK Demos
 on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch: {}
   workflow_call: {}
-  push:
-    branches: [ "main" ]
-    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg', '.cmk']
-  pull_request:
-    branches: [ "main" ]
-    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg', '.cmk']
 permissions:
   contents: read
 jobs:
@@ -24,4 +24,4 @@ jobs:
       - name: Initialize
         run: make clean init
       - name: Run CMK Demos
-        run: make demos/cmk
+        run: make actions.demos.cmk

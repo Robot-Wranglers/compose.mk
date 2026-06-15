@@ -177,12 +177,14 @@ $ make clean build
 $ make demos
 ```
 
-You can also test just the [CMK-lang]({{mkdocs.site_relative_url}}/compiler) demos to exercise the features involving compilers, interpreters, and special syntax:
+To exercise the [CMK-lang]({{mkdocs.site_relative_url}}/compiler) features (compilers, interpreters, and special syntax), run the integration suite, which drives the CMK demos through the real interpreter with assertions:
 
 ```bash {.cli_example}
-# Run only  CMK-lang Demos
-$ make demos/cmk
+# Run the integration suite (covers the CMK-lang demos)
+$ make integration-test
 ```
+
+Any individual demo can also be run directly via its shebang, e.g. `./demos/cmk/underload.cmk`.
 
 ### Plugins, Forks, & Versioning
 <hr style="width:100%;border-bottom:3px solid black;">

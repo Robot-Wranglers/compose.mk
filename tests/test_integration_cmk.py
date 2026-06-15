@@ -2,13 +2,17 @@
 
 These exercise the `run_demo` fixture (conftest.py), which runs a real
 `demos/cmk/*.cmk` file through the actual `mk.interpret!` entrypoint
-(CMK_SUPERVISOR=1, cwd=repo) -- the same path as `make demos/cmk`, but
+(CMK_SUPERVISOR=1, cwd=repo), the same path the demo's shebang uses, but
 label/project-scoped so docker cleanup never touches the dev's state.
 
-The fixture generalizes to ANY demo; we don't run them all. The `bind*` demos
+This is the canonical push/PR gate for the CMK demos.  The heavy/GUI/LLM demos
+(lean, ollama, rag, xpra*, xephyr) are excluded here and run only via the
+on-demand `actions.demos.cmk` sweep (.github/workflows/cmk-demos.yml).
+
+The fixture generalizes to ANY demo; we don't run them all.  The `bind*` demos
 are the primary demonstration (file/target/script binding into containers);
 structured-io and container-dispatch add the JSON-IO and `namespace` dispatch
-idioms. All build/pull images, so they're [integration, needs_docker] and slow.
+idioms.  All build/pull images, so they're [integration, needs_docker] and slow.
 """
 
 import pytest
@@ -52,6 +56,13 @@ def test_demo_container_dispatch(run_demo):
   assert "Debian GNU/Linux" in r.stdout
 
 
+def test_demo_container_dispatch_2(run_demo):
+  # Container dispatch via the "namespace" invocation style (▰/svc/target).
+  r = run_demo("demos/cmk/container-dispatch-2.cmk")
+  assert r.ok, r.stderr
+  assert "Debian GNU/Linux" in r.stdout
+
+
 def test_demo_space_indented(run_demo):
   # Python-style SPACE-indented recipe bodies compile (spaces -> tab) and run.
   r = run_demo("demos/cmk/space-indented.cmk")
@@ -75,8 +86,10 @@ def test_demo_io_pushd(run_demo):
   assert "after popd, cwd=" in r.stdout  # popped back out
 
 
-# More lightweight demos (no heavy interpreters: rag/ollama/lean/just excluded).
-# These are jb/jq-light or host-only, exercising additional idioms.
+# More lightweight demos, exercising additional idioms.  (Heavy/GUI/LLM demos
+# stay out and run only via the on-demand sweep: lean, ollama, rag, xpra*,
+# xephyr.  The inlined-{compose,docker}file + user-sugar demos route output to
+# stderr and their sugar is already asserted by the sugar-block family below.)
 
 
 def test_demo_user_dialect(run_demo):
@@ -106,6 +119,63 @@ def test_demo_script_dispatch_host(run_demo):
   assert r.ok, r.stderr
   assert "multiline stuff" in r.stdout
   assert "Iteration 2" in r.stdout
+
+
+def test_demo_script_dispatch_custom(run_demo):
+  # script dispatch into a custom-built container; runs a script there + exports.
+  r = run_demo("demos/cmk/script-dispatch-custom.cmk")
+  assert r.ok, r.stderr
+  assert "variable exported: hello-world" in r.stdout
+
+
+def test_demo_script_dispatch_stock(run_demo):
+  # script dispatch into a stock image (debian); the script greets from inside.
+  r = run_demo("demos/cmk/script-dispatch-stock.cmk")
+  assert r.ok, r.stderr
+  assert "hello debian/buildd" in r.stdout
+
+
+def test_demo_import_file(run_demo):
+  # mk.import: pull targets/defs from another makefile, then run them.
+  r = run_demo("demos/cmk/import-file.cmk")
+  assert r.ok, r.stderr
+  assert "hello world foo=val1 bar=val2" in r.stdout
+
+
+def test_demo_example(run_demo):
+  # Minimal structured-IO example (🡄 emit | 🡆 consume) across targets.
+  r = run_demo("demos/cmk/example.cmk")
+  assert r.ok, r.stderr
+  assert "val" in r.stdout
+
+
+def test_demo_code_objects(run_demo):
+  # Embedded code-objects: preview + run inline code blocks across interpreters.
+  r = run_demo("demos/cmk/code-objects.cmk")
+  assert r.ok, r.stderr
+  assert "hello world 2" in r.stdout
+
+
+def test_demo_elixir(run_demo):
+  # Polyglot dispatch: an Elixir snippet runs in the elixir container.
+  r = run_demo("demos/cmk/elixir.cmk")
+  assert r.ok, r.stderr
+  assert "elixir World!" in r.stdout
+
+
+def test_demo_just(run_demo):
+  # Interop with `just`: recipes run via a justfile in the just container.
+  r = run_demo("demos/cmk/just.cmk")
+  assert r.ok, r.stderr
+  assert "This is a recipe!" in r.stdout
+
+
+def test_demo_platform_lme(run_demo):
+  # Multi-container platform bootstrap (terraform + ansible) emitting JSON logs.
+  r = run_demo("demos/cmk/platform-lme.cmk")
+  assert r.ok, r.stderr
+  assert "infra setup done" in r.stdout
+  assert "app setup done" in r.stdout
 
 
 def test_demo_underload(run_demo):
