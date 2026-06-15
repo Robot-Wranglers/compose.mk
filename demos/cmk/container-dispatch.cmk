@@ -1,0 +1,17 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+# demos/cmk/container-dispatch.cmk: 
+#   Demonstrates the container dispatch idiom using "namespace" style invocation.
+#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+#
+#   USAGE: ./demos/cmk/container-dispatch-2.cmk
+
+# Import the whole compose file (including "debian" container)
+compose.import(file=demos/data/docker-compose.yml namespace=▰)
+
+run: ▰/debian/self.run
+
+self.run:
+	source /etc/os-release && printf "$${PRETTY_NAME}\n"
+	uname -n -v
+
+__main__: run 

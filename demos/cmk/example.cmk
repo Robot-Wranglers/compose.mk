@@ -1,0 +1,12 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+# CMK-lang translation of demos/structured-io.mk
+
+emit: 
+	🡄 key=val
+
+consume:
+	🡆 .key
+
+__main__:
+	this.emit | this.consume
+	cmk.log.target(hello world!)

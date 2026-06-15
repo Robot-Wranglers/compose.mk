@@ -1,0 +1,26 @@
+#!/usr/bin/env -S ./compose.mk mk.interpret!
+# CMK-lang equivalent of demos/script-dispatch-host.mk.
+# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# See also: http://robot-wranglers.github.io/compose.mk/compiler
+#
+# USAGE: ./demos/cmk/script-dispatch-host.cmk
+
+# First we pick an image and interpreter for the language kernel.
+# Here, iex can work too, but there are minor differences.
+elixir.img=elixir:otp-27-alpine
+elixir.interpreter=elixir 
+elixir=${elixir.img},${elixir.interpreter}
+
+# Now define the elixir code
+define hello_world 
+import IO, only: [puts: 1]
+puts("elixir World!")
+System.halt(0)
+endef
+
+ᝏdocker.bind.script(img=${elixir.img} entrypoint=${elixir.interpreter})
+hello_world:
+
+# $(call docker.bind.container)
+# Now show three equivalent ways to run the code inside the container
+__main__: hello_world
