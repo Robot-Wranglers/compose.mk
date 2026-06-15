@@ -16,7 +16,7 @@ elixir.interpreter=elixir
 import IO, only: [puts: 1]
 puts("elixir World!")
 System.halt(0)
-⟧ with ${elixir.img}, ${elixir.interpreter} as container
+⟧ with (img=${elixir.img} entrypoint=${elixir.interpreter}) as container
 
 # Code bound to a containerized interpreter using variables.
 # In this case, you can accept user-overrides from env-vars.
@@ -24,13 +24,13 @@ export python_interpreter=python
 export python_img?=python:3.11-slim-bookworm
 ⟦ hello_world3
 print('hello world 2')
-⟧ with $${python_img}, $${python_interpreter} as container
+⟧ with (img=$${python_img} entrypoint=$${python_interpreter}) as container
 
 # Code bound to a target-as-interpreter.
 # Target must be parametric, then do something with the parameter!
 ⟦ hello_world2
 hello world2 !
-⟧ with my_interpreter as target
+⟧ with bind=my_interpreter as target
 
 # A custom interpreter, as used above.
 # This always takes a file argument as a parameter:

@@ -105,6 +105,98 @@ def test_stage_decorators_require_adjacent_target(cmk):
   assert "immediately above a target" in r.stderr
 
 
+def test_stage_decorators_postfix_after_body(cmk):
+  # `postfix_mode=&&` relocates the decorator to AFTER the body; the last body
+  # line gains a trailing `&&` so joinbody chains `body && decorator`.
+  r = cmk(
+    "mk.preprocess.decorators",
+    stdin="ᝏmark(postfix_mode=&&)\nt:\n\techo a\n\techo b\n",
+  )
+  assert r.ok, r.stderr
+  assert "t:\n\techo a\n\techo b &&\n\tᝏmark()" in r.stdout
+
+
+def test_stage_decorators_postfix_connectors(cmk):
+  # The kwarg value IS the shell connector: `;` (always) and `||` (on failure).
+  semi = cmk(
+    "mk.preprocess.decorators",
+    stdin="ᝏmark(postfix_mode=;)\nt:\n\techo body\n",
+  )
+  assert semi.ok, semi.stderr
+  assert "echo body ;\n\tᝏmark()" in semi.stdout
+  orr = cmk(
+    "mk.preprocess.decorators",
+    stdin="ᝏmark(postfix_mode=||)\nt:\n\techo body\n",
+  )
+  assert orr.ok, orr.stderr
+  assert "echo body ||\n\tᝏmark()" in orr.stdout
+
+
+def test_stage_decorators_postfix_strips_kwarg_from_args(cmk):
+  # `postfix_mode` is a compiler directive, stripped before the macro call; the
+  # decorator's real args survive untouched.
+  r = cmk(
+    "mk.preprocess.decorators",
+    stdin="ᝏmark(realarg, postfix_mode=&&)\nt:\n\techo b\n",
+  )
+  assert r.ok, r.stderr
+  assert "ᝏmark(realarg)" in r.stdout
+  assert "postfix_mode" not in r.stdout
+
+
+def test_stage_decorators_postfix_mixed_with_prefix(cmk):
+  # A target may carry both: prefix decorators stay at the head, postfix at the
+  # tail (`prefix && body || postfix`).
+  r = cmk(
+    "mk.preprocess.decorators",
+    stdin="ᝏpre(x)\nᝏpost(postfix_mode=||)\nt:\n\techo body\n",
+  )
+  assert r.ok, r.stderr
+  assert "t:\n\tᝏpre(x)\n\techo body ||\n\tᝏpost()" in r.stdout
+
+
+def test_stage_decorators_postfix_space_indented_body(cmk):
+  # Space-indented bodies work too: body lines are re-emitted verbatim (the
+  # indent stage normalises them later), only the decorator line gets a tab.
+  r = cmk(
+    "mk.preprocess.decorators",
+    stdin="ᝏmark(postfix_mode=;)\nt:\n    echo body\n",
+  )
+  assert r.ok, r.stderr
+  assert "    echo body ;\n\tᝏmark()" in r.stdout
+
+
+def test_stage_decorators_postfix_invalid_mode_errors(cmk):
+  # An unrecognised connector is a compile error.
+  r = cmk(
+    "mk.preprocess.decorators",
+    stdin="ᝏmark(postfix_mode=foo)\nt:\n\techo b\n",
+  )
+  assert not r.ok
+  assert "postfix_mode must be one of" in r.stderr
+
+
+def test_stage_decorators_postfix_default_mode(cmk):
+  # A `bind.<name>.postfix_mode := <conn>` companion declaration makes a BARE
+  # `ᝏ<name>` postfix without repeating the kwarg on every use.
+  r = cmk(
+    "mk.preprocess.decorators",
+    stdin="bind.g.postfix_mode := ||\nᝏg\nt:\n\techo body\n",
+  )
+  assert r.ok, r.stderr
+  assert "echo body ||\n\tᝏg()" in r.stdout
+
+
+def test_stage_decorators_postfix_explicit_overrides_default(cmk):
+  # An explicit kwarg still wins over the declared default.
+  r = cmk(
+    "mk.preprocess.decorators",
+    stdin="bind.g.postfix_mode := ||\nᝏg(postfix_mode=;)\nt:\n\techo body\n",
+  )
+  assert r.ok, r.stderr
+  assert "echo body ;\n\tᝏg()" in r.stdout
+
+
 def test_stage_dialect_glyph_substitutions(cmk):
   # Default dialect maps the inline glyphs (ᐉ -> .dispatch/, 🡄 -> ${jb}).
   r = cmk("mk.preprocess.dialect", stdin="r: svcᐉt\ne:\n\t🡄 k=v\n")
@@ -354,7 +446,9 @@ def test_compile_sugar_compose_string(cmk):
 def test_compile_sugar_docker_def(cmk):
   r = cmk("mk.compile", stdin="⫻ myimg\nFROM alpine\n⫻\n")
   assert r.ok, r.stderr
-  assert "docker.import.def" in r.stdout and "def=myimg" in r.stdout
+  # The `⫻` sugar lowers to `docker.import` (def=/file= routed internally);
+  # `docker.import.def` is now a deprecated alias.
+  assert "docker.import" in r.stdout and "def=myimg" in r.stdout
 
 
 def test_compile_sugar_code_import(cmk):
@@ -364,18 +458,100 @@ def test_compile_sugar_code_import(cmk):
 
 
 def test_compile_sugar_polyglot(cmk):
-  r = cmk("mk.compile", stdin="⟦ hw\ncode\n⟧ with img as container\n")
+  # The `with` clause is space-separated kwargs (the positional comma form is
+  # retired); they forward verbatim into the lowered polyglot.import call.
+  r = cmk("mk.compile", stdin="⟦ hw\ncode\n⟧ with img=alp entrypoint=sh as container\n")
   assert r.ok, r.stderr
   assert "polyglot" in r.stdout and "hw" in r.stdout
+  assert "img=alp entrypoint=sh" in r.stdout
+
+
+def test_compile_sugar_polyglot_parenthetical(cmk):
+  # An optional parenthetical may wrap the with-clause for readability:
+  # `with (kwargs) as X` lowers identically to `with kwargs as X`.
+  r = cmk("mk.compile", stdin="⟦ hw\ncode\n⟧ with (img=alp entrypoint=sh) as container\n")
+  assert r.ok, r.stderr
+  assert "img=alp entrypoint=sh" in r.stdout
+  assert "(img=alp" not in r.stdout  # the wrapping parens were stripped
 
 
 def test_compile_sugar_script_block(cmk):
   r = cmk(
     "mk.compile",
-    stdin="⨖ scr\necho hi\n⨖ with alpine as compose_context\n",
+    stdin="⨖ scr\necho hi\n⨖ with img=alpine as compose_context\n",
   )
   assert r.ok, r.stderr
   assert "scr:" in r.stdout and "call" in r.stdout
+  assert "img=alpine" in r.stdout
+
+
+def test_compile_advice_interrupted_next_line(cmk):
+  # "Interrupted advice": the `with .. as ..` trailer may spill onto the line
+  # AFTER the close marker (bare line-feed, no `\` needed).
+  r = cmk("mk.compile", stdin="⨖ scr\necho hi\n⨖\nwith img=alpine as compose_context\n")
+  assert r.ok, r.stderr
+  assert "scr:" in r.stdout and "img=alpine" in r.stdout
+  assert "compose_context" in r.stdout
+
+
+def test_compile_advice_interrupted_split(cmk):
+  # `with` on the close line, `as` continued on the next line.
+  r = cmk("mk.compile", stdin="⨖ scr\necho hi\n⨖ with img=alpine\nas compose_context\n")
+  assert r.ok, r.stderr
+  assert "scr:" in r.stdout and "img=alpine" in r.stdout
+  assert "compose_context" in r.stdout
+
+
+def test_compile_advice_interrupted_blank_then_advice(cmk):
+  # Blank line(s) between the close marker and the advice are skipped.
+  r = cmk("mk.compile", stdin="⨖ scr\necho hi\n⨖\n\nwith img=alpine as compose_context\n")
+  assert r.ok, r.stderr
+  assert "scr:" in r.stdout and "img=alpine" in r.stdout
+  assert "compose_context" in r.stdout
+
+
+def test_compile_advice_interrupted_does_not_eat_next_block(cmk):
+  # A non-advice line after a bare close (here the next block's open marker) is
+  # re-dispatched normally -- the second block must still open.
+  r = cmk(
+    "mk.compile",
+    stdin="⨖ a\necho hi\n⨖\n⨖ b\necho bye\n⨖ with img=alpine as compose_context\n",
+  )
+  assert r.ok, r.stderr
+  assert "define a" in r.stdout and "define b" in r.stdout
+  assert "a:;" in r.stdout and "b:;" in r.stdout
+
+
+def test_compile_advice_interrupted_keyword_guard(cmk):
+  # `with`/`as` matching is keyword-anchored: an ordinary target line after a
+  # bare close (e.g. `with_deps:`) is NOT mistaken for advice.
+  r = cmk("mk.compile", stdin="⨖ scr\necho hi\n⨖\nwith_deps: foo\n")
+  assert r.ok, r.stderr
+  assert "with_deps: foo" in r.stdout
+
+
+def test_compile_sugar_module(cmk):
+  # `⦖ NAME … ⦕` -> `define NAME … endef` + a chain to mk.import.module(def=NAME).
+  r = cmk("mk.compile", stdin="⦖ mymod\nFOO := 1\n⦕\n")
+  assert r.ok, r.stderr
+  assert "define mymod" in r.stdout
+  assert "endef" in r.stdout
+  assert "mk.import.module" in r.stdout and "def=mymod" in r.stdout
+
+
+def test_compile_sugar_module_as(cmk):
+  # `⦖ NAME … ⦕ as alias` -> the `as` clause becomes namespace=alias.
+  r = cmk("mk.compile", stdin="⦖ mod\nFOO := 1\n⦕ as alias\n")
+  assert r.ok, r.stderr
+  assert "def=mod" in r.stdout and "namespace=alias" in r.stdout
+
+
+def test_compile_sugar_module_with_as(cmk):
+  # `⦖ NAME … ⦕ with PRE as alias` -> with-clause -> preprocs=, as-clause ->
+  # namespace=.
+  r = cmk("mk.compile", stdin="⦖ mod\nFOO := 1\n⦕ with PRE as alias\n")
+  assert r.ok, r.stderr
+  assert "namespace=alias" in r.stdout and "preprocs=PRE" in r.stdout
 
 
 def test_compile_dispatch_glyph_and_call(cmk):

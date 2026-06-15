@@ -1,0 +1,22 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# module-system.cmk -- the generic MODULE core
+#
+# USAGE: ./demos/cmk/module-system.cmk
+
+⦖ MyModule
+var1:=val1
+
+target.simple: io.env/CMK_MODULE
+	@# A simple target in pure make, part of a module.
+	@# The `io.env/...` above demonstrates that is 
+	@# automatically injected into the current context.
+	$(call log.target, module=$${CMK_MODULE:-})
+
+target.cmk:
+	@# A CMK-Lang target.  By default modules are 
+	@# pure make but a preprocessor is setup below 
+	@# by using `with mk.compile`
+	"""hello compiler""" | this.stream.preview
+⦕
+
+__main__: MyModule.target.simple MyModule.target.cmk

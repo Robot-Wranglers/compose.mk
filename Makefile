@@ -16,7 +16,7 @@ export PROJECT_ROOT := $(shell dirname ${THIS_MAKEFILE})
 export MKDOCS_LISTEN_PORT=8005
 include compose.mk
 $(call mk.import.plugins, actions.mk docs.mk)
-$(call mk.import.plugin.maybe, local.mk)
+$(call mk.import.plugin, file=local.mk strict=0)
 $(call compose.import, file=demos/data/docker-compose.yml)
 
 __main__: init clean build test docs

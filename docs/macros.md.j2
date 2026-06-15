@@ -116,6 +116,11 @@ A map of the macro/function families.  Most members mirror a same-named target. 
       <td class="macro-list"><code>polyglot.import</code>, <code>polyglot.import.file</code>, <code>polyglot.bind.file</code></td>
       <td><a href="{{mkdocs.site_relative_url}}/demos/polyglots">Polyglots</a></td>
     </tr>
+    <tr><td colspan="2"><strong><code>declare.*</code>:</strong> Parse-time <em>declaration</em> namespace: verb-first aliases onto the <code>*.import</code> macros, plus unique members <code>declare.stack</code>/<code>declare.channel</code>.</td></tr>
+    <tr>
+      <td class="macro-list"><code>declare.module</code>, <code>declare.plugin</code>, <code>declare.compose</code>, <code>declare.container</code>, <code>declare.stack</code></td>
+      <td><a href="{{mkdocs.site_relative_url}}/reflection">Reflection</a></td>
+    </tr>
     <tr><td colspan="2"><strong><i>colors / glyphs</i>:</strong> ANSI color &amp; brand-glyph constants for log/output formatting.</td></tr>
     <tr>
       <td class="macro-list"><code>${red}</code>, <code>${dim}</code>, <code>${green}</code>, <code>${no_ansi}</code>, <code>${sep}</code>, <code>${GLYPH_MK}</code></td>
@@ -123,6 +128,11 @@ A map of the macro/function families.  Most members mirror a same-named target. 
     </tr>
   </tbody>
 </table>
+
+### `declare.*` Namespace
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+{{site.block_docs('DeclarationIndex', mkdocs)}}
 
 ### Worked examples
 <hr style="width:95%;border-bottom:1px dashed black;">

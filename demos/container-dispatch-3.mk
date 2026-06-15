@@ -16,9 +16,9 @@ __main__: build docs
 
 build: ▰/golang/self.code.gen
 self.code.gen:
-	echo "pretending to do stuff with golang"
+	echo "pretending to use golang"
 
 docs: 🜹/latex/self.docs.gen
 self.docs.gen:
-	echo "pretending to do stuff with LaTeX"
+	echo "pretending to use LaTeX"
 

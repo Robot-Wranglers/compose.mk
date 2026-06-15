@@ -1,141 +1,118 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# exceptions.cmk -- typed exceptions with a GLOBAL handler installed via the supervisor's
-# at-exit hook (no per-target try/except wrapping, no `finally`).
+# exceptions.cmk -- typed exceptions as a CUSTOMER of compose.mk's event
+# system (the `declare.channel` / Events stdlib).  An exception is just an EVENT
+# on the `fault` channel; the only things that make it an "exception":
+#   - emit also FAILS the caller (`exit 1`),
+#   - dispatch is deferred to AT-EXIT (vs Zahn's synchronous dispatch),
+#   - each event is shown with an FTA-kind glyph.
 #
-# Model: a target "raises" by pushing an exception TYPE onto a stack and failing.  If that
-# failure is swallowed (the tour does this), the type stays IN FLIGHT on the stack.  When the
-# run ends, the supervisor's at-exit hook (`exc.dispatch`, in CMK_AT_EXIT_TARGETS) DRAINS the
-# stack and routes each exception by type -- to a registered handler or the loud fallback.
-# Draining (rather than a single pop) means a handler that itself re-throws is dispatched too.
-# Cleanup is ALSO an at-exit hook (`exc.clean`), so there is no `finally` arm.
+# A target "raises" via `cmk.fault.throw(<type>, <k=v ...>)`: it emits
+# `{type, target, file, ...meta}` onto the channel and exits 1.  A
+# SWALLOWED failure leaves the event IN FLIGHT; at end of run the at-exit
+# `fault.dispatch.by_type` drains the channel and routes each by `.type` to
+# `fault/<Type>:` -- or the `fault/%:` fallback.  Routing
+# IS make's rule precedence (explicit beats pattern), so NO registry.
 #
-# The registry is dynamic and installed at PARSE TIME: each handler declares its type with a
-# `ᝏexc.handler(<Type>)` decorator; because the `<Type>` is static in the source, we reflect
-# every `<Type> -> <target>` pair and `$(eval)` an exported `CMK_EXC__<Type>` var per pair
-# (once, guarded).  Adding an exception type means writing a decorated handler -- nothing else.
-#
-# make flattens recipe exit codes to 2, so the exception TYPE travels out-of-band on the
-# stack; exit status is only the boolean "something is in flight".  No stdlib changes.
+# `kind` is drawn from Fault Tree Analysis's event taxonomy:
+#   - basic: a root component/tool failure (●)
+#   - external: an expected occurrence (⌂)
+#   - undeveloped: unknown / no info (◆)
+#   - conditioning: a gate / precondition (⬭)
 #
 # USAGE:
-#   ./demos/cmk/exceptions.cmk            # the tour: raise several; all dispatched at exit
-#   ./demos/cmk/exceptions.cmk demo.boom  # raise one UNCAUGHT -> loud fallback + nonzero exit
+#   ./demos/cmk/exceptions.cmk            # tour: dispatched at exit
+#   ./demos/cmk/exceptions.cmk demo.boom  # one UNCAUGHT -> nonzero exit
 
-# Per-run-unique stack name: keyed on the supervisor id (MAKE_SUPER), frozen + `export`ed under
-# an origin-guard so every sub-make in the run shares it; PPID fallback when unsupervised.  NB:
-# the filename must NOT contain `cmk.` (dot) -- the CMK compiler would mis-read `cmk.<x>.$(if
-# ...)` as a `cmk.NAME(...)` call -- so we use `cmk_`.  No `io.stack.reset` is needed anywhere:
-# the name is unique per run, the at-exit `exc.clean` removes it every run, and
-# `io.stack.require` re-creates an empty stack on first push.
-ifeq ($(origin CMK_EXC_STACK),undefined)
-export CMK_EXC_STACK := .tmp.cmk_exc_stack.$(if $(filter-out undefined,$(origin MAKE_SUPER)),${MAKE_SUPER},$(shell echo $$PPID))
-endif
+# Exceptions defer dispatch to AT-EXIT.  Register the drain FIRST, then construct
+# the channel: declare.channel generates fault.* and auto-registers fault.purge
+# -- which (via `+=`) thus lands AFTER the drain, so the stack is dispatched
+# before it is removed.
+export CMK_AT_EXIT_TARGETS += fault.dispatch.by_type
+$(call declare.channel,chan=fault)
 
-# Install BOTH at-exit hooks: dispatch the in-flight exceptions, then remove the stack file.
-# `+=` appends (keeps the default `flux.noop` and any caller-registered handler).  The
-# supervisor runs these unconditionally at exit (success, failure, or yield).
-export CMK_AT_EXIT_TARGETS += exc.dispatch exc.clean
+# fault.log: red fault logger (a red replacement-character glyph instead of
+# log.io's green I/O glyph).
+fault.log=$(call log, ${yellow}${bold}¿${no_ansi}${red} $(1))
 
-# raise = push the exception type onto the stack, then fail.
-exc.throw=printf '%s' "$(strip $(1))" | ${jq} -Rs . | $(call io.stack.push,${CMK_EXC_STACK}) && exit 1
+# fault.throw(<type>[,<k=v meta>]) -- raise: emit a typed fault onto the channel
+# (always recording the calling `target` and source `file`), then FAIL.
+# = fault.emit + `exit 1`.
+fault.throw=$(call fault.emit, type=$(strip $(1)) target=$(@) file=${__file__} $(if $(filter-out undefined,$(origin 2)),$(strip $(2)))) && exit 1
 
-# ── the handler registry (installed at PARSE TIME) ──────────────────────────────
-# `ᝏexc.handler(<Type>)` lowers to a leading recipe line that is (1) the static marker the
-# install reflection scans for and (2) a no-op at the handler's invocation.
-bind.exc.handler=true
+# fault.show -- per-event presentation shared by EVERY handler (each opens with
+# `$(call fault.show)`): emit the handler's trace line, then an FTA glyph chosen
+# from `.kind` plus a header.  Folding log.trace in here keeps the handlers
+# trace-logged without an explicit per-handler line.  (The dispatcher already
+# narrates the event JSON; $CMK_EVENT is exported by it.)
+fault.show=$(call log.trace, ${@}) ; case `echo "$${CMK_EVENT}" | ${jq.run} -r '.kind // "?"'` in basic) s=● ;; external) s=⌂ ;; undeveloped) s=◆ ;; conditioning) s=⬭ ;; *) s=• ;; esac ; $(call fault.log,$${s} Exception ${sep} ${bold}`echo "$${CMK_EVENT}" | ${jq.run} -r .type`)
 
-# Reflect `<Type> -> <target>` from every `bind.exc.handler,<Type>` line and `$(eval)` an
-# exported `CMK_EXC__<Type>` per pair, ONCE (guarded; sub-makes inherit).  The awk must contain
-# NO literal `)` -- make's `$(shell ...)` matches parens -- so the type is isolated by stripping
-# from the first non-word char via `[^A-Za-z0-9_]`.
-ifndef CMK_EXC_REGISTERED
-EXC_PAIRS := $(shell awk '/^[^\t #][^:=]*:/{t=$$0;sub(/:.*/,"",t)} /^\t.*bind\.exc\.handler,/{s=$$0;sub(/.*bind\.exc\.handler,/,"",s);sub(/[^A-Za-z0-9_].*/,"",s);print s":"t}' $(MAKEFILE_LIST))
-$(foreach p,${EXC_PAIRS},$(eval export CMK_EXC__$(word 1,$(subst :, ,${p})) := $(word 2,$(subst :, ,${p}))))
-export CMK_EXC_REGISTERED := 1
-endif
+# fault.guarded: a POSTFIX catch decorator (default mode `||`, so a bare
+# `ᝏfault.guarded` runs ONLY when the body FAILS); it captures the failed
+# subprocess's exit code and re-throws it as a typed SubprocessFault.
+# WARNING: bind.fault.guarded MUST stay a brace group -- `&&`/`||` are
+# equal-precedence, else the catch leaks onto the success path.
+bind.fault.guarded.postfix_mode := ||
+bind.fault.guarded={ rc=$$? ; $(call log.target,${dim}${yellow} caught abnormal exit ${sep} ${dim}code=$${rc} ${sep} ${dim}throw=SubprocessFault) ; $(call fault.throw,SubprocessFault,kind=external code=$${rc}) ; }
 
-# Typed handlers (each self-declares its type).  `exc.on.inner` re-throws, to show a handler
-# raising a new exception that the drain then dispatches.
-ᝏexc.handler(DivByZero)
-exc.on.divzero:
-	cmk.log.io(${yellow}caught DivByZero -> result 0)
+# ── handlers: `fault/<Type>:`, routed by make precedence ──────
+fault/DivZero:
+	@$(call fault.show)
+	cmk.fault.log(${yellow}caught DivZero)
 
-ᝏexc.handler(NotFound)
-exc.on.notfound:
-	cmk.log.io(${yellow}caught NotFound -> use default)
+fault/NotFound:
+	@$(call fault.show)
+	cmk.fault.log(${yellow}caught NotFound)
 
-ᝏexc.handler(Inner)
-exc.on.inner:
-	cmk.log.io(${yellow}caught Inner -> re-throw Wrapped)
-	cmk.exc.throw(Wrapped)
+fault/Inner:
+	@# a handler may itself raise; the drain then dispatches that too.
+	@$(call fault.show)
+	cmk.fault.log(${yellow}caught Inner ${sep} rethrow=Wrapped)
+	cmk.fault.throw(Wrapped, kind=conditioning)
 
-ᝏexc.handler(Wrapped)
-exc.on.wrapped:
-	cmk.log.io(${yellow}caught Wrapped (re-thrown by a handler))
+fault/Wrapped:
+	@$(call fault.show)
+	cmk.fault.log(${yellow}caught Wrapped (re-thrown by a handler))
 
-ᝏexc.handler(SubprocessFault)
-exc.on.fault:
-	cmk.log.io(${yellow}caught SubprocessFault (a raw fault re-thrown as an exception))
+fault/SubprocessFault:
+	@$(call fault.show)
+	cmk.log.target(${yellow}caught SubprocessFault ${sep}: unexpected tool exit)
 
-# fallback handler: no handler registered for this type -> log loudly.  It's a TARGET (not a
-# macro) so the dispatcher can route to it the SAME way it routes to real handlers -- via
-# `${make}` with the type as the stem.  No `exit` here: a handler invoked at supervisor-exit
-# can't change the process exit code anyway (that comes from the pipeline / pidfile), and the
-# drain swallows failures with `|| true`; an unhandled throw that wasn't swallowed already
-# failed the run.
-exc.unhandled/%:
-	cmk.log.io(${red}${bold}UNHANDLED EXCEPTION: ${*} (no handler registered))
+fault/%:
+	@# fallback: no handler for this type.  NB: no `exit` -- a handler
+	@# at supervisor-exit can't change the process code.
+	@$(call fault.show)
+	cmk.fault.log(${bold}UNHANDLED EXCEPTION: ${*} ${sep} no handler registered)
 
-# the GLOBAL handler (registered at-exit; MUST be a target -- it's a goal in
-# CMK_AT_EXIT_TARGETS, run in its own at-exit make process).  Drain the stack, routing each
-# exception uniformly via `${make} ${h:-exc.unhandled/<type>}`: the registered handler if the
-# registry has one, else the fallback target.  `|| true` keeps draining if a handler re-throws
-# (the new type lands back on the stack and is popped next).  The while-loop is one shell
-# command (`\`-continued) so the joinbody pass leaves it intact.
-exc.dispatch:
-	while e=`cmk.io.stack.pop_word(${CMK_EXC_STACK})` && [ -n "$${e}" ] && [ "$${e}" != null ]; do \
-		cmk.log.io(${red}Exception: $${e}) ; \
-		eval "h=\$$CMK_EXC__$${e}" ; \
-		${make} "$${h:-exc.unhandled/$${e}}" </dev/null || true ; \
-	done
-
-# cleanup (at-exit): remove the stack file.
-exc.clean:
-	rm -f ${CMK_EXC_STACK}
-
-# ── demo throwers (the `demo.*` namespace -- application code that raises; the exception
-#    machinery itself stays under `exc.*`).  Each narrates, then raises. ──
+# ── demo throwers (`demo.*` = app code that raises) ──────────────────
 demo.div:
-	cmk.log.io(${dim}op: divide -> raise DivByZero)
-	cmk.exc.throw(DivByZero)
+	cmk.log.target(div -> raise DivZero)
+	cmk.fault.throw(DivZero, kind=conditioning)
 
 demo.lookup:
-	cmk.log.io(${dim}op: lookup -> raise NotFound)
-	cmk.exc.throw(NotFound)
+	cmk.log.target(lookup -> raise NotFound)
+	cmk.fault.throw(NotFound, kind=external)
 
 demo.nested:
-	cmk.log.io(${dim}op: nested -> raise Inner (its handler re-throws Wrapped))
-	cmk.exc.throw(Inner)
+	cmk.log.target(raise Inner (its handler re-throws Wrapped))
+	cmk.fault.throw(Inner, kind=basic)
 
 demo.boom:
-	cmk.log.io(${dim}op: unknown -> raise BOOM (no handler))
-	cmk.exc.throw(BOOM)
+	cmk.log.target(raise BOOM (no handler))
+	cmk.fault.throw(BOOM, kind=undeveloped)
 
-# fault-vs-exception: a raw "subprocess fault" (a tool that just exits nonzero) is NOT an
-# exception -- it carries an exit code but no type, and leaves nothing on the stack.  `demo.guarded`
-# runs such a tool and, on failure, CATCHES the fault and RE-THROWS it as a typed exception
-# (after capturing the real exit code).  That is the bridge: fault (code, no type) -> exception
-# (type, dispatched).  Note we run the tool as a RAW subprocess so its exact code survives
-# (a `${make}` sub-make would flatten it to 2).
+ᝏfault.guarded
 demo.guarded:
-	cmk.log.io(${dim}op: guarded call to a flaky tool)
-	sh -c 'exit 3' || { rc=$$? ; cmk.log.io(${dim}  subprocess fault (rc=$${rc}) -> rethrow as SubprocessFault) ; cmk.exc.throw(SubprocessFault) ; }
+	@# A subprocess FAULT (nonzero exit, no type) bridged to a typed
+	@# fault: ᝏfault.guarded catches the body's failure and re-throws
+	@# it as a SubprocessFault.
+	@# NB: the tool runs as a RAW subprocess so its exact code survives.
+	cmk.log.target(simulating random command failure with exit code)
+	sh -c 'exit 3'
 
-# The tour: raise several exceptions, swallowing each failure (`|| true`) so every type stays
-# in flight; the at-exit hook drains and dispatches them all when the run ends.  Run a single
-# thrower as the goal (e.g. `demo.boom`) to let it propagate UNCAUGHT for a nonzero exit.
+# The tour: raise several, swallowing each failure (`|| true`) so every
+# event stays in flight; the at-exit hook drains and dispatches them all.
 __main__:
-	cmk.log.io(${bold}== typed exceptions via a global at-exit handler ==)
+	cmk.log.target(${bold} typed exceptions via a global at-exit handler)
 	this.demo.div </dev/null || true
 	this.demo.lookup </dev/null || true
 	this.demo.nested </dev/null || true

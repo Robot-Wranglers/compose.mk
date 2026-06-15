@@ -345,4 +345,14 @@ document.addEventListener('DOMContentLoaded', function () {
     while (document.getElementById(id)) { id += 'x'; }
     n.id = id;
   });
+
+  /* Smarter word-wrap for the families table's macro chips: insert a <wbr> break
+   * opportunity after each dot, so a long dotted name (e.g. compose.import.string)
+   * reflows at its dots instead of overflowing the column.  Chips are plain-text
+   * <code>, so rebuild from textContent (no existing markup to clobber). */
+  content.querySelectorAll('td.macro-list code').forEach(function (c) {
+    if (c.textContent.indexOf('.') !== -1) {
+      c.innerHTML = c.textContent.replace(/\./g, '.<wbr>');
+    }
+  });
 });

@@ -160,3 +160,52 @@ def test_io_mktemp_creates_and_scopes_tempfile(cmk, tmp_path):
   r = cmk("probe", makefile=_wrapper(tmp_path, body))
   assert r.ok, r.stderr
   assert "OK:./.tmp." in r.stdout
+
+
+def test_io_declare_stack_codegen_fresh(cmk, tmp_path):
+  # declare.stack code-gens an exported, per-run-unique stack-name var
+  # when the name is UNDEFINED (the macro wraps its own $(eval)).
+  body = (
+    "$(call declare.stack,MY_STACK)\n"
+    "probe:; @printf 'name=[%s]\\n' '$(MY_STACK)'\n"
+  )
+  r = cmk("probe", makefile=_wrapper(tmp_path, body))
+  assert r.ok, r.stderr
+  assert "name=[.tmp.MY_STACK." in r.stdout  # fresh, namespaced by the var
+
+
+def test_io_declare_stack_origin_guard_preserves(cmk, tmp_path):
+  # the origin-guard reuses an already-defined value (so sub-makes inherit one
+  # shared file) instead of generating a new name.
+  body = (
+    "MY_STACK := preset.json\n"
+    "$(call declare.stack,MY_STACK)\n"
+    "probe:; @printf 'name=[%s]\\n' '$(MY_STACK)'\n"
+  )
+  r = cmk("probe", makefile=_wrapper(tmp_path, body))
+  assert r.ok, r.stderr
+  assert "name=[preset.json]" in r.stdout
+
+
+# --- mk.include.file: include one explicit makefile, clean error if absent ----
+
+
+def test_mk_include_file_includes_present(cmk, tmp_path):
+  # mk.include.file includes a present makefile, so its definitions become
+  # available to the includer.
+  inc = tmp_path / "inc.mk"
+  inc.write_text("FROM_INC := yes\n")
+  body = (
+    f"$(call mk.include.file, {inc})\n"
+    "probe:; @printf 'FROM_INC=[%s]\\n' '$(FROM_INC)'\n"
+  )
+  r = cmk("probe", makefile=_wrapper(tmp_path, body))
+  assert r.ok, r.stderr
+  assert "FROM_INC=[yes]" in r.stdout
+
+
+def test_mk_include_file_missing_errors(cmk, tmp_path):
+  # A missing target fails cleanly (nonzero) rather than silently no-op'ing.
+  body = "$(call mk.include.file, /no/such/file.mk)\nprobe:; @true\n"
+  r = cmk("probe", makefile=_wrapper(tmp_path, body))
+  assert not r.ok

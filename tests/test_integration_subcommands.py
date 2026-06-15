@@ -81,7 +81,7 @@ def test_demo_unknown_subcommand_errors(greet):
   r = greet("zzz")
   assert not r.ok
   assert "unknown subcommand" in r.stderr.lower()
-  # throws the recognizable symbolic token (cf. CMK_PLUGIN_MISSING).
+  # throws the recognizable symbolic token (cf. CMK_INCLUDE_MISSING).
   assert "CMK_UNKNOWN_SUBCOMMAND" in r.stderr
 
 

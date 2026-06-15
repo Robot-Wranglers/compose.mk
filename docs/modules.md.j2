@@ -1,0 +1,131 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+## Modules
+<hr style="width:100%;border-bottom:3px solid black;">
+
+A **module** is a named bundle of make variables and targets, written in either plain Makefile or [CMK-Lang]({{mkdocs.site_relative_url}}/compiler), that you bring into scope with a single declaration.  Modules give you three things at once:
+
+* **Namespacing** -- every variable and target the module defines is prefixed with the module's name, so two modules (or a module and your project) never collide.
+* **Non-destructive import** -- the original source (an inline `define` block or a file on disk) is never mutated.  A namespaced, optionally-compiled *copy* is staged and included.
+* **An optional compile step** -- the module body is passed through a preprocessing pipeline (by default the [CMK compiler]({{mkdocs.site_relative_url}}/compiler)), which is what lets you embed CMK-Lang inside an otherwise-plain Makefile.
+
+There are two equivalent surfaces.  In CMK-Lang, the `⦖ … ⦕` block sugar:
+
+```cmk  {.language-cmk}
+⦖ MyModule
+var1 := val1
+greet:; @echo hello from ${CMK_MODULE}
+⦕
+```
+
+...and in plain Makefile (or via the [`declare.module`]({{mkdocs.site_relative_url}}/macros) alias), the bare call:
+
+```Makefile
+$(call mk.import.module, def=MyModule)
+```
+
+Both stage `MyModule` and make its members available as `MyModule.var1`, `MyModule.greet`, and so on.
+
+### Declaring a Module
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The `⦖ … ⦕` sugar accepts the usual [`with … as …` advice]({{mkdocs.site_relative_url}}/compiler/#foreign-code-objects):
+
+```cmk  {.language-cmk}
+⦖ MyModule
+.. body ..
+⦕ with <preprocs-pipeline> as <namespace>
+```
+
+* **`as <namespace>`** renames the module on import (the prefix applied to its members, and the value of `$(CMK_MODULE)` inside it).  When omitted, the namespace is the module's own name (or, for a file, its basename).
+* **`with <preprocs-pipeline>`** selects the compile pipeline for the body (see [Compilation Pipelines](#compilation-pipelines)).  When omitted, the body is compiled with the CMK compiler.
+
+The demo below defines a module with both a pure-make target and a CMK-Lang target, then runs them by their namespaced names:
+
+{{site.embed_demo('demos/cmk/module-system.cmk',
+    bottom_right=site.link_mirror('demos/module-system.mk',
+      base=mkdocs.site_relative_url+'/modules'),
+    github=github)}}
+
+### Namespacing
+<hr style="width:100%;border-bottom:3px solid black;">
+
+On import, every **module-level** variable assignment and target name is prefixed with the module's namespace, so `var1` becomes `MyModule.var1` and `greet` becomes `MyModule.greet`.  Recipes can read their own module identity at runtime from the injected `$(CMK_MODULE)` variable.
+
+Two things are deliberately left **un-namespaced**:
+
+* **Private members** -- any name beginning with `.` or `_` (for example a `._helper` target or `.PHONY`) stays verbatim and module-local.
+* **Nested `define … endef` bodies** -- their contents are literal text and are passed through untouched.
+
+Dependencies, values, and recipe bodies on the right-hand side are never rewritten -- only the declared names are.
+
+### Compilation Pipelines
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The `preprocs` argument (the `with` clause in the sugar) is a pipeline the module body is filtered through at import time.  Because CMK-Lang is a superset of Makefile, the default of `mk.compile` is safe for any body: pure-make lines compile to themselves, while CMK sugar is lowered.
+
+* **`preprocs=mk.compile`** *(default)* -- compile CMK-Lang to Makefile.
+* **`preprocs=stream.echo`** -- a verbatim passthrough (use only when the body is already plain Makefile).
+* **`preprocs=a:b:c`** -- a multi-stage pipeline, **colon-delimited**, run left to right (e.g. `stream.echo:mk.compile`).
+
+The pipeline only ever reads the source; the original `define`/file is left exactly as written.
+
+### Embedding CMK in Plain Makefiles
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Because the compile step happens at import time and operates on a copy, a **vanilla Makefile** -- run with stock `make -f`, no CMK shebang -- can embed CMK-Lang in a `define` block and have just that block compiled on import:
+
+{{site.embed_demo('demos/module-system.mk',
+    bottom_right=site.link_mirror('demos/cmk/module-system.cmk',
+      base=mkdocs.site_relative_url+'/modules'),
+    github=github)}}
+
+This is the plain-make mirror of the demo above: the `MyModule` body uses a `"""..."""` heredoc and the `this.` dialect, which are lowered by the default `mk.compile` pipeline even though the host Makefile itself is never compiled.
+
+### Importing from a File
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Instead of an inline `define`, a module can be an existing file:
+
+```Makefile
+$(call mk.import.module, file=path/to/module.mk namespace=mymod)
+```
+
+`def=` and `file=` are mutually exclusive (exactly one is required).  With `file=` and no `namespace=`, the module is named after the file's basename.
+
+### Partial Imports
+<hr style="width:100%;border-bottom:3px solid black;">
+
+By default the whole module is imported.  To bring in only part of one, add a `targets=` or `defs=` selector (mutually exclusive); each is a name or a glob (`*`/`?`):
+
+```Makefile
+# only the targets matching the glob (still namespaced + compiled)
+$(call mk.import.module, def=MyModule targets='build.*')
+
+# only the named define blocks
+$(call mk.import.module, file=lib.mk defs='helper_*')
+```
+
+The selector runs as the first stage of the staging pipeline (`select -> namespace -> compile`), so the chosen members are namespaced and compiled exactly as in a full import -- the rest are simply never brought into scope.  Selection is **by name only**: a selected target whose prerequisite is an unselected sibling is the caller's responsibility.
+
+### The Declaration Family
+<hr style="width:100%;border-bottom:3px solid black;">
+
+`mk.import.module` is one member of a broader **declaration** namespace -- parse-time verbs that code-generate make state before any recipe runs.  `declare.module` is the module entry; its siblings bring other kinds of things (single defines, targets, plugins, compose files, polyglots) into scope by the same convention.
+
+{{site.block_docs('DeclarationIndex', mkdocs)}}
+
+See the [Macros & Functions]({{mkdocs.site_relative_url}}/macros) page for the full declaration reference, and the [Compiler & Dialects]({{mkdocs.site_relative_url}}/compiler) page for the `⦖ … ⦕` sugar and `with … as …` advice.
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	{{macros.header_images([
+        ['declaring-a-module','basics'],
+        ['namespacing','code-dots'],
+        ['the-declaration-family','list-details'],
+    ], mkdocs)}}
+       addImageToHeader('modules','/{{mkdocs.config.site_name}}/img/basics.svg',style="margin-top:-10px;height:2.2em;")
+}, 100);});
+</script>

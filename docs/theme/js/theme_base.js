@@ -64,5 +64,28 @@ function addImageToHeader(headerId, imgSrc,style="") {
             // block.insertAdjacentHTML('beforebegin', '');
             const newDiv = new DOMParser().parseFromString('<div class=code_table_top_snippet><span class=code_table_1>&nbsp;&nbsp;&nbsp;EXAMPLE:</span><span class=code_table_2>&nbsp;&nbsp;</span><span class=code_table_3>&nbsp;&nbsp;</span></div>','text/html').body.firstChild;
             block.parentNode.insertBefore(newDiv, block);});
-                
+
+        // After a nav click (full page load), the RTD theme often leaves the
+        // active/expanded sidebar item scrolled out of view.  Smoothly nudge the
+        // sidebar so that item lands HALFWAY between its current spot and the
+        // vertical center of the sidebar viewport (a soft centering, keeping the
+        // item AND its just-expanded children on screen).
+        const side = document.querySelector('.wy-side-scroll') || document.querySelector('.wy-nav-side');
+        if (side) {
+            const currents = Array.from(side.querySelectorAll('li.current'));
+            // the deepest `.current` li is the active page's item
+            const active = currents.filter(li => !li.querySelector('li.current')).pop() || currents.pop();
+            const link = active && (active.querySelector('a') || active);
+            if (link) {
+                const r = link.getBoundingClientRect();
+                const elCenterInView = (r.top + r.bottom) / 2 - side.getBoundingClientRect().top;
+                const viewCenter = side.clientHeight / 2;
+                // shift = half the distance from the item's current position to center
+                let target = side.scrollTop + (elCenterInView - viewCenter) / 2;
+                target = Math.max(0, Math.min(target, side.scrollHeight - side.clientHeight));
+                const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                side.scrollTo({ top: target, behavior: reduce ? 'auto' : 'smooth' });
+            }
+        }
+
     }, 100);}); // Small delay to ensure ToC is already processed

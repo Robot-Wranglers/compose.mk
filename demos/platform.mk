@@ -31,11 +31,11 @@ platform.setup.basic: \
 # Note usage of `jb` to emit JSON, and `self.` prefix to hint 
 # these targets are "private" / not intended to run from the host. 
 self.infra.setup:
-	@# pretending to do stuff with terraform..
+	@# pretending to use terraform..
 	${jb} log="infra setup done" metric=123 \
 		event="terraform container task" 
 
 self.app.setup:
-	@# pretending to do stuff with ansible..
+	@# pretending to use ansible..
 	${jb} log="app setup done" metric=456 \
 		event="ansible container task"

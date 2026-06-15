@@ -190,17 +190,15 @@ def test_demo_underload(run_demo):
 
 def test_demo_flow_control(run_demo):
   # A demo-local trampoline (`fc.*`) generalizes the one-shot `mk.yield` into a
-  # resumable/schedulable runtime; four flow-control constructs ride on it (typed
-  # exceptions split out to exceptions.cmk).  Narration goes to stderr via log.io.
+  # resumable/schedulable runtime; three flow-control constructs ride on it (Zahn's
+  # construct + typed exceptions split out to zahn.cmk / exceptions.cmk).  Narration
+  # goes to stderr via log.io.
   r = run_demo("demos/cmk/flow_control.cmk")
   assert r.ok, r.stderr
   out = r.stderr
   assert (
     "channel: step-1 step-2 step-3" in out
   )  # trampoline resumes a fiber 3x
-  assert (
-    "zahn: found 4 at index 2" in out
-  )  # Zahn's construct (named-exit escape)
   assert "goto: backward-jump loop -> tick-3 tick-2 tick-1" in out  # goto
   assert (
     "computed-goto: sel=9 -> case-DEFAULT" in out
@@ -213,26 +211,85 @@ def test_demo_flow_control(run_demo):
 
 
 def test_demo_exceptions(run_demo):
-  # Typed exceptions on a stack, built on `flux.try.except.finally`: `throw` pushes a
-  # type + fails, `except` pops + routes by type via a handler registry, `finally`
-  # always runs.  The stack lets a handler re-throw: an inner handler throws Wrapped,
-  # caught by the outer try.  A type with no registered handler hits the loud default
-  # fallback.  Narration goes to stderr via log.io.  No stdlib changes.
+  # Typed exceptions on the `fault` event-channel: each raised target
+  # emits a structured event {type, target, file, ...meta}; the tour
+  # swallows the throws so they stay in flight, and the at-exit dispatcher
+  # drains + routes them.  Assert on the DATA the dispatcher narrates (a
+  # stable contract), NOT on handler log wording (fragile).
   r = run_demo("demos/cmk/exceptions.cmk")
   assert r.ok, (
     r.stderr
-  )  # the tour `|| true`s the intentional unhandled failure
+  )  # tour `|| true`s the throws -> dispatched at exit, clean 0
   out = r.stderr
-  assert "caught DivByZero -> result 0" in out  # typed-exception dispatch
-  assert "caught NotFound -> use default" in out
-  assert "inner caught DivByZero -> re-throw Wrapped" in out  # handler throws
-  assert "outer caught Wrapped" in out  # re-thrown exc caught by outer try
+  # every raised type is dispatched as an event object (incl. BOOM, which
+  # has no specific handler -> the `fault/%` fallback, and the
+  # fault->exception bridge's SubprocessFault)
+  for typ in (
+    "DivZero",
+    "NotFound",
+    "Inner",
+    "Wrapped",
+    "BOOM",
+    "SubprocessFault",
+  ):
+    assert f'"type": "{typ}"' in out, typ
+  # the FTA `kind` taxonomy is carried on the events
+  for kind in ("basic", "external", "undeveloped", "conditioning"):
+    assert f'"kind": "{kind}"' in out, kind
+  # implicit metadata: the raising target (incl. a re-throw recording the
+  # handler) and the source file.  (The SubprocessFault *type* above already
+  # proves the fault->exception bridge; its exact metadata fields are demo
+  # implementation detail, deliberately not pinned here.)
+  assert '"target": "demo.div"' in out
   assert (
-    "UNHANDLED EXCEPTION: BOOM" in out
-  )  # default fallback for an unknown type
+    '"target": "fault/Inner"' in out
+  )  # Wrapped re-raised by Inner
+  assert '"file": "' in out  # implicit ${__file__}
+
+
+def test_demo_events(run_demo):
+  # The event core demonstrated via a channel's NATIVE filter: inbox.login_events
+  # captures `<chan>.filter.field_equal/type,login` (ALL matches, newest-first,
+  # ONE jq pass over the backing array) and narrates them via stream.as.log
+  # (-> stderr).  Seeded alice/bob(logout)/carol/danny(suspend), so the logins
+  # are carol then alice.  (Zahn + exceptions are the dispatch-side customers, in
+  # their own demos.)
+  r = run_demo("demos/cmk/events.cmk")
+  assert r.ok, r.stderr
+  assert '"user":"carol"' in r.stderr  # newest login (filter, newest-first)
+  assert '"user":"alice"' in r.stderr  # ...and the older one (filter = all)
+
+
+def test_demo_zahn(run_demo):
+  # Zahn's construct (a CUSTOMER of the event core): a multi-exit SEARCH LOOP
+  # whose NAMED EXITS drive control flow.  first.match.field_equal emits a typed
+  # outcome (found{id}/exhausted) the dispatcher narrates as JSON (assert that
+  # DATA, not log wording), and the exit SELECTS the continuation, so the RESULT
+  # on stdout differs by outcome: found -> recover (`recovered=<id>`),
+  # exhausted -> commit (`committed`).
+  r = run_demo("demos/cmk/zahn.cmk")
+  assert r.ok, r.stderr
+  out = r.stderr
+  assert '"type": "found"' in out
+  assert '"id": "c"' in out  # newest status=error candidate (a/b/c)
+  assert '"type": "exhausted"' in out  # the no-match case (status=pending)
   assert (
-    "finally ran" in out
-  )  # finally always runs (even for the unhandled trial)
+    "recovered=c" in r.stdout
+  )  # found exit -> recover continuation (w/ id)
+  assert (
+    "committed" in r.stdout
+  )  # exhausted exit -> the DIFFERENT continuation
+
+
+def test_demo_module_system(run_demo):
+  # The `⦖ NAME … ⦕` module-sugar lowers to `define NAME … endef` + a chain to
+  # mk.import.module(def=NAME), which stages + imports the module: injects
+  # `export CMK_MODULE := NAME` (a make-var) and NAMESPACES the body, so the
+  # bare `target.simple` becomes `<NAME>.target.simple`.  The demo's module is
+  # `MyModule`, so `__main__: MyModule.target.simple` runs and reads module=MyModule.
+  r = run_demo("demos/cmk/module-system.cmk")
+  assert r.ok, r.stderr
+  assert "module=MyModule" in r.stderr
 
 
 # --- sugar-block family: functional runs (alpine / sh interpreter) -----------
@@ -253,12 +310,13 @@ def _run_cmk(cmk, project, src):
 
 
 def test_sugar_polyglot_block(cmk, project):
-  # `⟦…⟧ with <img>, <interp> as container`: the code-block runs in the
-  # interpreter container. alpine + sh runs a shell snippet.
+  # `⟦…⟧ with img=<img> entrypoint=<interp> as container`: the code-block runs
+  # in the interpreter container. alpine + sh runs a shell snippet.  The `with`
+  # clause is space-separated kwargs (the positional comma form is retired).
   r = _run_cmk(
     cmk,
     project,
-    "⟦ hw\necho POLYGLOT-OK\n⟧ with alpine:3.21.2, sh as container\n"
+    "⟦ hw\necho POLYGLOT-OK\n⟧ with img=alpine:3.21.2 entrypoint=sh as container\n"
     "__main__: hw\n",
   )
   assert r.ok, r.stderr
@@ -304,3 +362,42 @@ def test_sugar_compose_string_block(cmk, project):
   )
   assert r.ok, r.stderr
   assert "appsvc" in r.stdout
+
+
+# --- decorator postfix mode: end-to-end run (no docker) -----------------------
+
+
+def test_decorator_postfix_run(cmk, project):
+  # `postfix_mode=<conn>` relocates a decorator to AFTER the body, joined by the
+  # shell connector <conn>: `&&` runs it only after a passing body, `;` always,
+  # `||` only after a failing body.  Bodies `|| true`'d so the run stays green.
+  r = _run_cmk(
+    cmk,
+    project,
+    "bind.mark=printf '[mark:%s]\\n' \"$(1)\"\n"
+    "ᝏmark(and-ok, postfix_mode=&&)\n"
+    "t.and.ok:\n\tprintf '[body:and-ok]\\n'\n\ttrue\n"
+    "ᝏmark(and-fail, postfix_mode=&&)\n"
+    "t.and.fail:\n\tprintf '[body:and-fail]\\n'\n\tfalse\n"
+    "ᝏmark(semi, postfix_mode=;)\n"
+    "t.semi:\n\tprintf '[body:semi]\\n'\n\tfalse\n"
+    "ᝏmark(or-fail, postfix_mode=||)\n"
+    "t.or.fail:\n\tprintf '[body:or-fail]\\n'\n\tfalse\n"
+    "ᝏmark(or-ok, postfix_mode=||)\n"
+    "t.or.ok:\n\tprintf '[body:or-ok]\\n'\n\ttrue\n"
+    "__main__:\n"
+    "\tthis.t.and.ok </dev/null || true\n"
+    "\tthis.t.and.fail </dev/null || true\n"
+    "\tthis.t.semi </dev/null || true\n"
+    "\tthis.t.or.fail </dev/null || true\n"
+    "\tthis.t.or.ok </dev/null || true\n",
+  )
+  assert r.ok, r.stderr
+  out = r.stdout
+  assert "[mark:and-ok]" in out  # && + body succeeded -> runs
+  assert "[mark:and-fail]" not in out  # && + body failed -> skipped
+  assert "[mark:semi]" in out  # ; -> always runs (even on failure)
+  assert "[mark:or-fail]" in out  # || + body failed -> runs (a catch)
+  assert "[mark:or-ok]" not in out  # || + body succeeded -> skipped
+  # the postfix decorator runs AFTER its body
+  assert out.index("[body:and-ok]") < out.index("[mark:and-ok]")

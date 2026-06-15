@@ -454,6 +454,30 @@ def test_mk_import_def_defs_no_match(cmk, tmp_path):
   assert "no def matching" in r.stderr
 
 
+def test_mk_import_def_namespace(cmk, tmp_path):
+  # namespace=<ns> prefixes the top-level bind name (<ns>.<name>) across the
+  # selected set; the bare name is NOT defined.
+  _, con = _import_pair(
+    tmp_path,
+    _DEFS_SRC,
+    "$(call mk.import.def, file=SRCPATH defs='salute.*' namespace=myns)",
+  )
+  assert cmk("mk.def.read/myns.salute.a", makefile=con).stdout == "hello A\n"
+  assert cmk("mk.def.read/myns.salute.b", makefile=con).stdout == "hello B\n"
+  assert cmk("mk.def.read/salute.a", makefile=con).stdout.strip() == ""  # bare absent
+
+
+def test_mk_import_def_namespace_nested_verbatim(cmk, tmp_path):
+  # only the TOP-LEVEL define header is renamed; a nested define stays verbatim.
+  src_body = "define outer\nx:=1\ndefine inner\ny:=2\nendef\nendef"
+  _, con = _import_pair(
+    tmp_path, src_body, "$(call mk.import.def, file=SRCPATH def=outer namespace=ns)"
+  )
+  body = cmk("mk.def.read/ns.outer", makefile=con).stdout
+  assert "define inner" in body  # nested header untouched
+  assert "ns.inner" not in body
+
+
 # --- mk.import.target : import whole target(s) from another file ------------
 # Targets (unlike defines) are not introspectable via $(value), so the importer
 # extracts them textually and $(eval)s each as its own rule. The source below
@@ -601,6 +625,22 @@ def test_mk_import_target_never_overrides_local(cmk, tmp_path):
   assert a.stdout == "LOCAL\n"  # local override wins (foo.a import skipped)
   assert b.stdout == "bb\n"  # foo.b had no local def -> still imported
   assert "overriding recipe" not in a.stderr
+
+
+def test_mk_import_target_namespace(cmk, tmp_path):
+  # namespace=<ns> renames each imported target <ns>.<name>, so it runs under the
+  # prefix AND bypasses the never-override-local skip (a namespaced name can't
+  # collide -- here a LOCAL `greet` exists, yet the import still lands as ns.greet).
+  _, con = _import_pair(
+    tmp_path,
+    _TARGETS_SRC,
+    "$(call mk.import.target, file=SRCPATH target=greet namespace=myns)\n"
+    "greet:; @echo local-greet\n",
+  )
+  r = cmk("myns.greet", makefile=con)
+  assert r.ok, r.stderr
+  assert r.stdout.strip() == "hi world"  # the imported recipe, namespaced
+  assert cmk("greet", makefile=con).stdout.strip() == "local-greet"  # local intact
 
 
 # --- mk.kernel / mk.kernel.each : run a target-stream as an instruction set --

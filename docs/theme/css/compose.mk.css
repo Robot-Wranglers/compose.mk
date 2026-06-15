@@ -121,16 +121,20 @@ table.quickref a {
 
 /* Families table (docs/macros.md.j2): the "representative macros" cells hold a
  * comma-separated list of inline <code> chips.  The default `.rst-content code`
- * (white-space:pre-wrap; word-wrap:break-word) breaks names mid-token on narrow
- * screens (e.g. `bind.args.fr` / `om_json`).  Instead keep each name intact and
- * wrap BETWEEN names, at the commas, so the list reflows as whole chips. */
+ * (word-wrap:break-word) breaks names mid-token on narrow screens (e.g.
+ * `bind.args.fr` / `om_json`); pure `nowrap` instead lets a long name OVERFLOW
+ * the column.  Smarter: keep a name on one line when it fits, but reflow long
+ * dotted names at their DOTS -- theme_extra.js inserts a <wbr> after each `.`, so
+ * `compose.import.string` wraps as `compose.import.`/`string`.  overflow-wrap is
+ * the last-resort guard so nothing can overflow. */
 .rst-content table td.macro-list {
   white-space: normal;
   line-height: 2;
 }
 .rst-content table td.macro-list code {
-  white-space: nowrap;   /* never split a macro name across lines */
-  margin: 1px 0;         /* breathing room once chips wrap to several rows */
+  white-space: normal;        /* allow wrapping at the <wbr> dot-breaks */
+  overflow-wrap: break-word;  /* last-resort break so nothing overflows */
+  margin: 1px 0;              /* breathing room once chips wrap to several rows */
 }
 
 /* Consistent 1em gap below code blocks and CLI-output panels
@@ -236,3 +240,13 @@ html.writer-html5 .rst-content table.docutils.api_docs th {
 .rst-content dl dd {
   margin-bottom: 1em;
 }
+
+/* Scroll buffer below the left-nav: gives the auto-scroll (theme_base.js) room
+ * to lift an ACTIVE item that sits near the bottom -- with a long expansion --
+ * up into view, instead of the scroll clamping at the content's end and leaving
+ * it hidden.  `.wy-menu-vertical` is the last child of the `.wy-side-scroll`
+ * scroll container, so its padding reliably grows scrollHeight. */
+.wy-side-scroll .wy-menu-vertical {
+  padding-bottom: 50vh;
+}
+

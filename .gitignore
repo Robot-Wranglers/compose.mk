@@ -1,5 +1,8 @@
 .DS_Store
 .ssh/
+# boneyard: tabled candidates, not part of the project (no entrypoint runs them)
+demos/flux.candidates.mk
+tests/flux_candidates.py
 .idea/
 .vscode/
 .tmp.*.ipynb_checkpoints/

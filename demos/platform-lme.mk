@@ -20,13 +20,13 @@ self.logging:
 # 2. Metrics uses the `prometheus` container,
 metrics: ▰/prometheus/self.metrics
 self.metrics:
-	$(call log.target, pretending to do stuff with the promtool CLI)
+	$(call log.target, pretending to use the promtool CLI)
 	${stream.stdin} | ${jq} .metric
 
 # 3. Events uses the `datadog` container.
 events: ▰/datadog/self.events
 self.events:
-	$(call log.target, pretending to do stuff with the datadog CLI)
+	$(call log.target, pretending to use the datadog CLI)
 	${stream.stdin} | ${jq} .event
 
 # Bind all handlers into a single pipe

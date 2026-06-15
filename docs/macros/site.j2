@@ -38,10 +38,15 @@
 {% macro link_mirror(fname='',link='',base='')-%}{%set default_link=base+"#"+macros.normalize_fname(fname)%}Alternate Syntax: <a href="{{link or default_link}}">{%if fname.endswith('cmk')%}CMK-Lang{%else%}Plain Makefile{%endif%} Equivalent </a><small>✔️</small>{%- endmacro -%}
 
 
-{% macro block_docs(pattern, mkdocs, arg='') -%}
-{% for line in bash('pattern='+pattern+' ./compose.mk mk.parse.block/compose.mk').split('\n')%}
-{%if line.lstrip().startswith('##')%}<h4>{{line.lstrip().replace('##','')}}</h4><hr style="width:95%;border-bottom:1px dashed black;">
-{%endif%}{%endfor%}
+{# Renders the `## BEGIN: <pattern>` doc-block from compose.mk as markdown.
+   The cblock body (prose + any markdown table) is emitted verbatim; the caller
+   supplies the surrounding heading.  See e.g. the `DeclarationIndex` block.
+   NB: extracted with awk, NOT the dockerized `mk.parse.block` -- the docs render
+   runs inside a container with no nested docker, where mkparse returns "failed". #}
+{% macro block_docs(pattern, mkdocs=None, arg='') -%}
+{%- set cmd = 'awk \'/^## BEGIN: ' + pattern + '/{f=1;next} f{if($0~/^## END:/ || ($0!~/^## / && $0!="##"))exit;sub(/^## ?/,"");print}\' compose.mk' -%}
+{{ bash(cmd) }}
+<center><small><i>Generated from the `{{pattern}}` doc-block in `compose.mk`</i></small></center>
 {%- endmacro -%}
 
 {% macro inlined_help(target, mkdocs, arg='') -%}{{api_link(target,mkdocs,arg=arg)}}

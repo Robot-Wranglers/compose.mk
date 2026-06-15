@@ -8,12 +8,13 @@
 --ignore-dir=.tox
 --ignore-dir=.pytest_cache
 --ignore-dir=__pycache__
+# pip packaging build artifacts (a staged copy of compose.mk under scripts-*).
+--ignore-dir=via/pip/build
 --ignore-file=match:/[.]ipynb$/
 --ignore-file=match:/^[.]?coverage.*[.](json|md)$/
 # Rendered markdown is generated from `.md.j2` sources -- search only the source.
 # (`.md.j2` ends in `.j2`, so this `[.]md$` rule skips the rendered `.md` only.)
 --ignore-file=match:/[.]md$/
---ignore-file=match:/^[.]tmp[.]/
 --ignore-file=is:typescript
 --ignore-file=ext:pyc
 --ignore-file=ext:pdf

@@ -120,6 +120,7 @@ def cmk(tmp_path):
       argv,
       input=stdin,
       text=True,
+      errors="replace",
       capture_output=True,
       cwd=str(cwd or tmp_path),
       env=merged,
@@ -152,6 +153,7 @@ def _docker_root() -> str:
       ["docker", "info", "-f", "{{.DockerRootDir}}"],
       capture_output=True,
       text=True,
+      errors="replace",
     )
     return cp.stdout.strip() or "/"
   except Exception:
@@ -233,6 +235,7 @@ def _sweep_stale() -> None:
       ["docker", "network", "ls", "--format", "{{.Name}}"],
       capture_output=True,
       text=True,
+      errors="replace",
     ).stdout.split()
     _rm(["docker", "network", "rm"], [n for n in names if "cmktest" in n])
   except Exception:
@@ -293,6 +296,7 @@ def docker_cmk(tmp_path):
       stdout=subprocess.PIPE,
       stderr=subprocess.PIPE,
       text=True,
+      errors="replace",
       cwd=str(run_cwd),
       env=merged,
       start_new_session=True,
@@ -453,6 +457,7 @@ def run_demo(request, docker_cmk, tmp_path_factory):
       stdout=subprocess.PIPE,
       stderr=subprocess.PIPE,
       text=True,
+      errors="replace",
       cwd=str(REPO),
       env=merged,
       start_new_session=True,
@@ -507,6 +512,7 @@ def staged_global(tmp_path_factory):
       stdout=subprocess.PIPE,
       stderr=subprocess.PIPE,
       text=True,
+      errors="replace",
       cwd=str(ws),
       env=merged,
       start_new_session=True,
@@ -562,6 +568,7 @@ def tui():
       stdout=subprocess.PIPE,
       stderr=subprocess.STDOUT,
       text=True,
+      errors="replace",
       cwd=str(REPO),
       env=merged,
       start_new_session=True,

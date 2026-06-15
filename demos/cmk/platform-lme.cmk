@@ -24,11 +24,11 @@ platform.setup.basic: \
 # Two "private" targets below, bound to specific containers by the target above.
 # These emit JSON events using the arrow operator.
 self.infra.setup:
-	cmk.log.target(pretending to do stuff with terraform..)
+	cmk.log.target(pretending to use terraform..)
 	🡄 log="infra setup done" metric=123 \
 		event="terraform container task" 
 self.app.setup:
-	cmk.log.target(pretending to do stuff with ansible..)
+	cmk.log.target(pretending to use ansible..)
 	🡄 log="app setup done" metric=456 \
 		event="ansible container task"
 
@@ -44,12 +44,12 @@ self.logging:
 
 metrics: ▰/prometheus/self.metrics
 self.metrics:
-	cmk.log.target(pretending to do stuff with the promtool CLI)
+	cmk.log.target(pretending to use the promtool CLI)
 	🡆 .metric
 
 events: ▰/datadog/self.events
 self.events:
-	cmk.log.target(pretending to do stuff with the datadog CLI)
+	cmk.log.target(pretending to use the datadog CLI)
 	🡆 .event
 
 # Bind all handlers into a single pipe

@@ -259,6 +259,21 @@ The example below uses another form of **with .. as** and introduces different s
 
 Bound code uses the syntax **⟦ name ..body.. ⟧ with .. as ..**, whereas unbound code uses `🞹 name ..body.. 🞹`.  Note that both syntaxes **use unicode specials**, and should not be confused with normal square-brackets or asterisks!
 
+The **with ..** clause takes space-separated keyword arguments (e.g. `with img=.. entrypoint=..`), and the keywords may optionally be wrapped in parentheses for readability, as in `with (img=.. entrypoint=..) as ..`.
+
+The trailing **with .. as ..** clause (we call it "advice") need not sit on the same line as the closing marker.  It may stay inline, use a trailing `\` for a Makefile-style continuation, or simply spill onto the following line(s) -- a leading `with`/`as` line is picked up, an `as` may be continued on its own line, and blank lines in between are ignored.  All of these are equivalent:
+
+```
+⨖ with img=alpine as docker_context        # inline
+
+⨖ with img=alpine \                         # backslash-continued
+    as docker_context
+
+⨖                                           # spilled onto following lines
+with img=alpine
+as docker_context
+```
+
 {{site.embed_demo(
     'demos/cmk/code-objects.cmk', 
     bottom_right=site.link_mirror(

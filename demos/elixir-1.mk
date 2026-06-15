@@ -21,13 +21,13 @@ __main__: hello_world hello_world.ex
 
 # A decorator-style idiom:
 # Name the target, then get the target-body from spec.
-hello_world:; \
+hello_world:
 	$(call docker.bind.script, \
 		def=hello_world.ex img="${elixir.img}" \
 		entrypoint=${elixir.interpreter})
 
 # Alternate: Omit `def` argument if the target 
 # name matches the name of the code-block.
-hello_world.ex:; \
+hello_world.ex:
 	$(call docker.bind.script, \
 		img=${elixir.img} entrypoint=${elixir.interpreter})

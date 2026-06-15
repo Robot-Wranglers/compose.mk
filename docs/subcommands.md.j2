@@ -13,7 +13,7 @@ In yet another break with traditional `make`, we'll see that `compose.mk` *can* 
 
 **Caveats:** The subcommands-style interface approach is used for the built-in [`cmk` CLI]({{mkdocs.site_relative_url}}/compiler), so it's mature and tested.  Subcommand-style entrypoints do *not* require using the [CMK-language]({{mkdocs.site_relative_url}}/compiler), and it works with vanilla Makefile.  But for reasons related to [signals & supervisors]({{mkdocs.site_relative_url}}/signals) it *does require* using the `compose.mk` interpreter (notice the shebang in the example below).
 
-### The Interface
+### Interface / Contract
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 There are two pieces: an **entrypoint** that calls `mk.subcommands.enter`, and one **handler
@@ -86,7 +86,7 @@ $ ./demos/subcommands.mk greet help
 $ ./demos/subcommands.mk greet wrold      # -> unknown subcommand: wrold
 ```
 
-### The entrypoint body
+### Entrypoint Body
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 The entrypoint is usually just the lone `$(call mk.subcommands.enter ..)` line, but its

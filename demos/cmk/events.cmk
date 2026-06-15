@@ -1,0 +1,26 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# events.cmk -- demonstrates the generic EVENT SYSTEM core
+# (demos/cmk/events.mk): seed an `inbox` channel with events, then
+# filter for the logins.  See events.mk for the channel interface.
+#
+# Other customers of the same core:
+#   - demos/cmk/zahn.cmk       -- a multi-exit search loop
+#   - demos/cmk/exceptions.cmk -- typed exceptions (deferred dispatch)
+#
+# USAGE: ./demos/cmk/events.cmk   # filter a channel (find logins)
+
+cmk.declare.channel(chan=inbox)
+
+inbox.seed:
+	@# Pushes a few JSON events onto the channel (newest last).
+	this.inbox.emit("""type=login user=alice""")
+	this.inbox.emit("""type=logout user=bob""")
+	this.inbox.emit("""type=login user=carol""")
+	this.inbox.emit("""type=suspend user=danny""")
+
+inbox.login_events: 
+	@# Filters only the login events, newest-first.
+	logins ⇐ this.inbox.filter.field_equal/type,login
+	this.stream.as.log("""$${logins}""")
+	
+__main__: inbox.seed inbox.login_events
