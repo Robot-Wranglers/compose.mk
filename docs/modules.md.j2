@@ -106,7 +106,38 @@ $(call mk.import.module, def=MyModule targets='build.*')
 $(call mk.import.module, file=lib.mk defs='helper_*')
 ```
 
-The selector runs as the first stage of the staging pipeline (`select -> namespace -> compile`), so the chosen members are namespaced and compiled exactly as in a full import -- the rest are simply never brought into scope.  Selection is **by name only**: a selected target whose prerequisite is an unselected sibling is the caller's responsibility.
+The selector runs as the first stage of the staging pipeline (`select -> namespace -> header -> compile`), so the chosen members are namespaced and compiled exactly as in a full import -- the rest are simply never brought into scope.  Selection is **by name only**: a selected target whose prerequisite is an unselected sibling is the caller's responsibility.
+
+### Flat (root) Imports, and the Plugin Connection
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Each stage of that pipeline is independently optional, which means `mk.import.module` spans a full matrix of behaviours.  `flat=1` omits the namespace and `CMK_MODULE`-header stages, so the body lands in the **global namespace** (un-prefixed):
+
+```Makefile
+# compile an inline CMK-Lang block straight into the root namespace (no prefix)
+$(call mk.import.module, def=MyBlock flat=1)
+
+# flat + verbatim FILE -- this is just a plain include
+$(call mk.import.module, file=lib.mk flat=1 preprocs=stream.echo)
+```
+
+That last case -- flat, verbatim, a file -- is the spine's **fast-path**: there is nothing to transform, so the file is bound by a direct, copy-free `include` (with a correct self-referential `$(MAKEFILE_LIST)`).  It is exactly what the [`mk.include.*`]({{mkdocs.site_relative_url}}/macros) verbs lower to.  In other words, **a plugin is just a module with an empty pipeline** -- the two ends of one mechanism:
+
+|                | verbatim (`preprocs=stream.echo`) | compiled (`preprocs=mk.compile`) |
+|----------------|-----------------------------------|----------------------------------|
+| **flat** (`flat=1`)   | a plain include / plugin          | compile a block into root        |
+| **namespaced** | a namespaced verbatim include     | a module (the default)           |
+
+#### cmk-lang plugins
+
+The plugin verbs sit on the **flat** row and pick the *column by file extension*.  A plain `.mk` plugin takes the verbatim fast-path (a copy-free `include`); a `.cmk` plugin is **JIT-compiled** (lowered via `mk.compile`) and the staged result is included at root -- so a plugin can be written in CMK-Lang and is lowered at include time, whether you arrived via `make -f` or `cmk run`:
+
+```Makefile
+# extension decides: plain.mk -> fast include; hello.cmk -> compiled then included
+$(call mk.include.plugins, plain.mk hello.cmk)
+```
+
+`strict=0` makes a missing plugin a no-op for both extensions.  See the [plugin-system demo]({{mkdocs.site_relative_url}}/demos) (`demos/cmk/plugin-system.cmk`).
 
 ### The Declaration Family
 <hr style="width:100%;border-bottom:3px solid black;">

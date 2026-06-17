@@ -1,24 +1,30 @@
 #!/usr/bin/env -S make -f
 # module-system.mk -- plain-make MIRROR of demos/cmk/module-system.cmk.
+#
+# Defines a module, then imports it FOUR ways (the cmk's `⦖ .. ⦕ as Aliased` is the
+# `def=MyModule namespace=Aliased` call here).  The `"""..."""` report target is
+# CMK-Lang, lowered at import by the default `mk.compile` preproc -- i.e. CMK
+# embedded inside a plain Makefile.
 # USAGE: ./demos/module-system.mk
 
 include compose.mk
 
 define MyModule
-var1:=val1
-
-target.simple: io.env/CMK_MODULE
-	@# A simple target in pure make, part of a module.
-	@# The `io.env/...` above demonstrates that is
-	@# automatically injected into the current context.
-	$(call log.target, module=$${CMK_MODULE:-})
-
-target.cmk:
-	@# A CMK-Lang target.  By default modules are compiled, so the
-	@# `"""..."""` heredoc and `this.` dialect below are lowered.
-	"""hello compiler""" | this.stream.preview
+greet:; $(call log.target, hello)
+svc.up:; $(call log.target, starting)
+svc.down:; $(call log.target, stopping)
+report:
+	@# A CMK-Lang target -- the heredoc + `this.` dialect are lowered at import.
+	"""compiled report ok""" | this.stream.preview
 endef
 
-$(call mk.import.module, def=MyModule)
+$(call mk.import.module, def=MyModule namespace=Aliased)              # 4. aliased -- namespace != module
+$(call mk.import.module, def=MyModule targets=greet namespace=Part)   # 1. partial -- only `greet`
+$(call mk.import.module, def=MyModule targets='svc.*' namespace=Star) # 2. star    -- the `svc.*` glob
+$(call mk.import.module, def=MyModule flat=1)                         # 3. root    -- flat, no prefix
 
-__main__: MyModule.target.simple MyModule.target.cmk
+__main__: \
+	Aliased.report Aliased.greet \
+	Part.greet \
+	Star.svc.up Star.svc.down \
+	greet

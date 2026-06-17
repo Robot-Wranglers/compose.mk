@@ -101,6 +101,89 @@ def test_import_plugins_multiple(cmk, tmp_path):
   assert "A=[1] B=[2]" in r.stdout
 
 
+# --- cmk-lang plugins (.cmk -> JIT-compile then include) ----------------------
+# A plugin whose name ends in `.cmk` is LOWERED (mk.compile) at include time and
+# the staged result is included at root; a plain `.mk` plugin keeps the fast,
+# copy-free `include` (no staging). See _mk.include.plugins in compose.mk.
+
+# cmk-lang body using the `this.` dialect (this.X -> ${make} X): only valid AFTER
+# lowering, so a successful run proves the plugin was compiled, not copied.
+_CMK_PLUGIN = "plug.inner:; @echo LOWERED_OK\nplug.hello:\n\tthis.plug.inner\n"
+
+
+def test_include_plugin_cmk_is_lowered_and_staged(cmk, tmp_path):
+  _plugin(tmp_path / ".cmk", "greeter.cmk", _CMK_PLUGIN)
+  body = "$(call mk.include.plugin, greeter.cmk)\nprobe: plug.hello\n"
+  r = cmk("probe", makefile=_wrapper(tmp_path, body))
+  assert r.ok, r.stderr
+  assert "LOWERED_OK" in r.stdout
+  # the compile path stages a materialized module under CMK_MODULES_DIR (.cmk);
+  # a file-import's staged key carries a content digest -> `.tmp.module.greeter-<hash>.mk`
+  assert list((tmp_path / ".cmk").glob(".tmp.module.greeter-*.mk"))
+
+
+def test_include_plugin_mk_stays_fast_no_staging(cmk, tmp_path):
+  # A plain `.mk` plugin must NOT go through staging -- it keeps the verbatim
+  # `include` fast path, so no `.tmp.module.*` is materialized for it.
+  _plugin(tmp_path / ".cmk", "plain.mk", "PLAIN := yes\n")
+  body = (
+    "$(call mk.include.plugin, plain.mk)\n"
+    "probe:; @printf 'P=[%s]\\n' '$(PLAIN)'\n"
+  )
+  r = cmk("probe", makefile=_wrapper(tmp_path, body))
+  assert r.ok, r.stderr
+  assert "P=[yes]" in r.stdout
+  assert not list((tmp_path / ".cmk").glob(".tmp.module.*"))
+
+
+def test_include_plugins_mixed_mk_and_cmk(cmk, tmp_path):
+  # One call with both extensions: each binds via its own path.
+  _plugin(tmp_path / ".cmk", "plain.mk", "PLAIN := yes\n")
+  _plugin(tmp_path / ".cmk", "greeter.cmk", _CMK_PLUGIN)
+  body = (
+    "$(call mk.include.plugins, plain.mk greeter.cmk)\n"
+    "probe: plug.hello\n\t@printf 'P=[%s]\\n' '$(PLAIN)'\n"
+  )
+  r = cmk("probe", makefile=_wrapper(tmp_path, body))
+  assert r.ok, r.stderr
+  assert "LOWERED_OK" in r.stdout
+  assert "P=[yes]" in r.stdout
+
+
+def test_include_plugin_cmk_extension_variants(cmk, tmp_path):
+  # The cmk-lang (compile) path is taken for `.CMK` and the `.cmk.mk`
+  # double-extension too, not just lowercase `.cmk`. A plugin with cmk sugar
+  # under either spelling must lower and run.
+  _plugin(tmp_path / ".cmk", "up.CMK", _CMK_PLUGIN.replace("plug.", "up."))
+  _plugin(
+    tmp_path / ".cmk", "dbl.cmk.mk", _CMK_PLUGIN.replace("plug.", "dbl.")
+  )
+  body = (
+    "$(call mk.include.plugins, up.CMK dbl.cmk.mk)\n"
+    "probe: up.hello dbl.hello\n"
+  )
+  r = cmk("probe", makefile=_wrapper(tmp_path, body))
+  assert r.ok, r.stderr
+  # _CMK_PLUGIN's `this.` target echoes LOWERED_OK from each lowered plugin
+  assert r.stdout.count("LOWERED_OK") == 2
+
+
+def test_include_plugin_cmk_strict_missing_errors(cmk, tmp_path):
+  # Missing `.cmk` under the strict default fails like a missing `.mk` plugin.
+  body = "$(call mk.include.plugin, nope.cmk)\nprobe:; @true\n"
+  r = cmk("probe", makefile=_wrapper(tmp_path, body))
+  assert not r.ok
+  assert "CMK_INCLUDE_MISSING" in r.stderr
+
+
+def test_include_plugin_cmk_lenient_missing_tolerated(cmk, tmp_path):
+  # strict=0 makes an absent `.cmk` plugin a no-op (parity with `.mk`).
+  body = "$(call mk.include.plugin, file=nope.cmk strict=0)\nprobe:; @echo CONTINUED\n"
+  r = cmk("probe", makefile=_wrapper(tmp_path, body))
+  assert r.ok, r.stderr
+  assert "CONTINUED" in r.stdout
+
+
 # --- CMK_PLUGINS_DIR is configurable -----------------------------------------
 
 
@@ -281,8 +364,10 @@ def test_import_module_injects_cmk_module_for_file(cmk, tmp_path):
 
 
 def test_import_module_namespace_override_def(cmk, tmp_path):
-  # namespace= overrides the prefix AND CMK_MODULE (default would be the def
-  # name): vars land under `alias.`, not the def name, and $CMK_MODULE=alias.
+  # namespace= overrides the destination PREFIX (vars land under `alias.`, not the
+  # def name).  But CMK_MODULE is the module's own SOURCE identity (the def name),
+  # NOT the destination alias -- a module reads the same identity however it's
+  # imported.
   body = (
     "define modyool\n"
     "var1:=val1\n"
@@ -293,19 +378,21 @@ def test_import_module_namespace_override_def(cmk, tmp_path):
   )
   r = cmk("probe", makefile=_wrapper(tmp_path, body))
   assert r.ok, r.stderr
-  assert "alias=[val1] def=[] mod=[alias]" in r.stdout
+  assert "alias=[val1] def=[] mod=[modyool]" in r.stdout
 
 
 def test_import_module_namespace_override_file(cmk, tmp_path):
-  # namespace= also overrides for file= modules (default would be the basename).
+  # namespace= overrides the destination prefix for file= too; CMK_MODULE is the
+  # SOURCE identity (the basename `src`), not the destination alias.
   (tmp_path / "src.mk").write_text("var1:=v\n")
   body = (
     "$(call mk.import.module, file=src.mk namespace=alias)\n"
-    "probe:; @printf 'alias=[%s] base=[%s]\\n' '$(alias.var1)' '$(src.var1)'\n"
+    "probe:; @printf 'alias=[%s] base=[%s] mod=[%s]\\n' "
+    "'$(alias.var1)' '$(src.var1)' '$(CMK_MODULE)'\n"
   )
   r = cmk("probe", makefile=_wrapper(tmp_path, body))
   assert r.ok, r.stderr
-  assert "alias=[v] base=[]" in r.stdout
+  assert "alias=[v] base=[] mod=[src]" in r.stdout
 
 
 def test_import_module_nested_define_body_is_verbatim(cmk, tmp_path):
@@ -331,7 +418,9 @@ def test_import_module_nested_define_body_is_verbatim(cmk, tmp_path):
   assert "nsd=[]" in r.stdout  # NOT namespaced into mod.INNER
 
 
-def test_import_module_nested_define_outer_targets_still_namespaced(cmk, tmp_path):
+def test_import_module_nested_define_outer_targets_still_namespaced(
+  cmk, tmp_path
+):
   # Depth tracking must not over-reach: a module-level target declared AFTER a
   # nested define closes is still namespaced (the `endef` popped depth back to 0).
   body = (
@@ -403,7 +492,9 @@ def test_import_module_preprocs_is_a_swappable_pipeline(cmk, tmp_path):
   )
   assert r.ok, r.stderr
   staged = (moddir / ".tmp.module.pmod.mk").read_text()
-  assert '"""still-cmk-syntax"""' in staged  # stream.echo -> NOT lowered (verbatim)
+  assert (
+    '"""still-cmk-syntax"""' in staged
+  )  # stream.echo -> NOT lowered (verbatim)
   assert "printf '%s'" not in staged  # the heredoc was not compiled
 
 
@@ -428,7 +519,9 @@ def test_import_module_preprocs_pipeline_is_colon_delimited(cmk, tmp_path):
   )
   assert r.ok, r.stderr
   staged = (moddir / ".tmp.module.pmod.mk").read_text()
-  assert '"""compile-me"""' not in staged  # the colon-pipeline's mk.compile lowered it
+  assert (
+    '"""compile-me"""' not in staged
+  )  # the colon-pipeline's mk.compile lowered it
   assert "printf '%s'" in staged  # heredoc compiled to a printf
 
 
@@ -446,11 +539,17 @@ def test_import_module_partial_by_targets(cmk, tmp_path):
     "$(call mk.import.module, def=pm targets='keep.*')\n"
     "probe:; @${make} pm.keep.first\n"
   )
-  r = cmk("probe", env={"CMK_MODULES_DIR": str(moddir)}, makefile=_wrapper(tmp_path, body))
+  r = cmk(
+    "probe",
+    env={"CMK_MODULES_DIR": str(moddir)},
+    makefile=_wrapper(tmp_path, body),
+  )
   assert r.ok, r.stderr
   assert "kept" in r.stdout
   staged = (moddir / ".tmp.module.pm.mk").read_text()
-  assert "$(CMK_MODULE).keep.first" in staged  # selected + namespaced
+  assert (
+    "pm.keep.first" in staged
+  )  # selected + namespaced (literal dest prefix)
   assert "drop.second" not in staged  # not selected
 
 
@@ -465,7 +564,11 @@ def test_import_module_partial_by_defs(cmk, tmp_path):
     "$(call mk.import.module, def=pmd defs='salute')\n"
     "probe:; @true\n"
   )
-  r = cmk("probe", env={"CMK_MODULES_DIR": str(moddir)}, makefile=_wrapper(tmp_path, body))
+  r = cmk(
+    "probe",
+    env={"CMK_MODULES_DIR": str(moddir)},
+    makefile=_wrapper(tmp_path, body),
+  )
   assert r.ok, r.stderr
   staged = (moddir / ".tmp.module.pmd.mk").read_text()
   assert "define salute" in staged  # selected
@@ -484,3 +587,141 @@ def test_import_module_defs_and_targets_mutually_exclusive(cmk, tmp_path):
   r = cmk("probe", makefile=_wrapper(tmp_path, body))
   assert not r.ok
   assert "CMK_MODULE_ARGS" in r.stderr or "mutually exclusive" in r.stderr
+
+
+def test_import_module_flat_compiled_def(cmk, tmp_path):
+  # flat=1 omits the namespace + CMK_MODULE-header stages: the body lands in the
+  # GLOBAL namespace (un-prefixed), still compiled.
+  moddir = tmp_path / "modules"
+  body = (
+    "define flatmod\n"
+    "FLATV := flat-ok\n"
+    "endef\n"
+    "$(call mk.import.module, def=flatmod flat=1)\n"
+    "probe:; @printf 'bare=[%s] pref=[%s]\\n' '$(FLATV)' '$(flatmod.FLATV)'\n"
+  )
+  r = cmk(
+    "probe",
+    env={"CMK_MODULES_DIR": str(moddir)},
+    makefile=_wrapper(tmp_path, body),
+  )
+  assert r.ok, r.stderr
+  assert "bare=[flat-ok]" in r.stdout  # reachable un-namespaced (root)
+  assert "pref=[]" in r.stdout  # NOT prefixed
+  staged = (moddir / ".tmp.module.flatmod.mk").read_text()
+  assert "CMK_MODULE" not in staged  # no identity header injected
+  assert "$(CMK_MODULE)" not in staged  # no prefix applied
+
+
+def test_import_module_flat_verbatim_file_is_fast_path(cmk, tmp_path):
+  # flat + verbatim (stream.echo) + file = the fast-path: a direct, copy-free
+  # include with NO staged copy written.
+  moddir = tmp_path / "modules"
+  inc = tmp_path / "plug.mk"
+  inc.write_text("FROM_FLAT := yes\n")
+  body = (
+    f"$(call mk.import.module, file={inc} flat=1 preprocs=stream.echo)\n"
+    "probe:; @printf 'FROM_FLAT=[%s]\\n' '$(FROM_FLAT)'\n"
+  )
+  r = cmk(
+    "probe",
+    env={"CMK_MODULES_DIR": str(moddir)},
+    makefile=_wrapper(tmp_path, body),
+  )
+  assert r.ok, r.stderr
+  assert "FROM_FLAT=[yes]" in r.stdout
+  assert not (
+    moddir.exists() and list(moddir.glob(".tmp.module.*"))
+  )  # no staging
+
+
+def test_import_module_distinct_sources_to_shared_namespace(cmk, tmp_path):
+  # Two DIFFERENT modules imported to the SAME destination namespace must BOTH land:
+  # the staged file is keyed on <source>-<dest>, so they get distinct tmpfiles
+  # instead of colliding on one (which the include-once guard would then dedup-skip).
+  moddir = tmp_path / "modules"
+  body = (
+    "define Alpha\n"
+    "afromalpha := A\n"
+    "endef\n"
+    "define Beta\n"
+    "bfrombeta := B\n"
+    "endef\n"
+    "$(call mk.import.module, def=Alpha namespace=shared)\n"
+    "$(call mk.import.module, def=Beta namespace=shared)\n"
+    "probe:; @printf 'a=[%s] b=[%s]\\n' '$(shared.afromalpha)' '$(shared.bfrombeta)'\n"
+  )
+  r = cmk(
+    "probe",
+    env={"CMK_MODULES_DIR": str(moddir)},
+    makefile=_wrapper(tmp_path, body),
+  )
+  assert r.ok, r.stderr
+  assert "a=[A] b=[B]" in r.stdout  # both modules merged under `shared.`
+  keys = sorted(p.name for p in moddir.glob(".tmp.module.*.mk"))
+  assert keys == [".tmp.module.Alpha-shared.mk", ".tmp.module.Beta-shared.mk"]
+
+
+def test_import_module_file_basename_collision_distinct_content(cmk, tmp_path):
+  # Two DISTINCT files sharing a basename (foo.cmk) in different dirs must BOTH
+  # bind: a file-import's staged key is content-addressed, so they stage to
+  # distinct `.tmp.module.foo-<hash>.mk` files instead of the second silently
+  # overwriting + dedup-skipping the first.
+  moddir = tmp_path / "modules"
+  (tmp_path / "a").mkdir()
+  (tmp_path / "b").mkdir()
+  (tmp_path / "a" / "foo.cmk").write_text("FROMA := A\n")
+  (tmp_path / "b" / "foo.cmk").write_text("FROMB := B\n")
+  body = (
+    "$(call mk.import.module, file=a/foo.cmk flat=1)\n"
+    "$(call mk.import.module, file=b/foo.cmk flat=1)\n"
+    "probe:; @printf 'a=[%s] b=[%s]\\n' '$(FROMA)' '$(FROMB)'\n"
+  )
+  r = cmk(
+    "probe",
+    env={"CMK_MODULES_DIR": str(moddir)},
+    makefile=_wrapper(tmp_path, body),
+  )
+  assert r.ok, r.stderr
+  assert "a=[A] b=[B]" in r.stdout  # both bound -- no basename collision
+  # same basename, different content -> two distinct content-addressed staged files
+  staged = sorted(p.name for p in moddir.glob(".tmp.module.foo-*.mk"))
+  assert len(staged) == 2, staged
+
+
+def test_import_module_self_import_terminates(cmk, tmp_path):
+  # A module that imports ITSELF must NOT loop forever -- the include-once guard
+  # skips the re-entrant include of the staged copy so the import terminates.
+  moddir = tmp_path / "modules"
+  body = (
+    "define selfmod\n"
+    "$(call mk.import.module, def=selfmod)\n"  # re-imports itself
+    "selfv := self-ok\n"
+    "endef\n"
+    "$(call mk.import.module, def=selfmod)\n"
+    "probe:; @printf 'selfv=[%s]\\n' '$(selfmod.selfv)'\n"
+  )
+  # the short timeout is the real assertion: a regression would hang, not fail slow
+  r = cmk(
+    "probe",
+    env={"CMK_MODULES_DIR": str(moddir)},
+    makefile=_wrapper(tmp_path, body),
+    timeout=45,
+  )
+  assert r.ok, r.stderr
+  assert "selfv=[self-ok]" in r.stdout
+
+
+def test_include_plugin_dedups_double_import(cmk, tmp_path):
+  # The same plugin imported twice is deduped (include-once): the second include is
+  # skipped, so there is no `overriding recipe` churn (which recursion would spam).
+  _plugin(tmp_path / ".cmk", "dup.mk", "dtgt:; @echo dup-tgt\n")
+  body = (
+    "$(call mk.include.plugin, dup.mk)\n"
+    "$(call mk.include.plugin, dup.mk)\n"  # second time -> skipped
+    "probe: dtgt\n"
+  )
+  r = cmk("probe", makefile=_wrapper(tmp_path, body))
+  assert r.ok, r.stderr
+  assert "dup-tgt" in r.stdout
+  assert "overriding recipe" not in r.stderr  # dedup avoided the re-include

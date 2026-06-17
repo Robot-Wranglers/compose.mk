@@ -77,6 +77,32 @@ def test_mk_unpack_kwargs_missing_required_errors(cmk, tmp_path):
   assert not r.ok
 
 
+def test_mk_unpack_kwargs_duplicate_key_errors(cmk, tmp_path):
+  # STRICT: a key given more than once is a hard error (no silent last-wins),
+  # tagged with the CMK_UNPACKED_DUPLICATE_KWARG sentinel and surfacing the
+  # offending assignments. See mk.unpack.kwargs in compose.mk.
+  body = (
+    "$(call mk.unpack.kwargs, prefix=x a.mk prefix=y, prefix, DEF)\n"
+    "probe:; @true\n"
+  )
+  r = cmk("probe", makefile=_wrapper(tmp_path, body))
+  assert not r.ok
+  assert "CMK_UNPACKED_DUPLICATE_KWARG" in r.stderr
+  assert "prefix=x prefix=y" in r.stderr
+
+
+def test_mk_unpack_kwargs_prefix_key_not_a_false_duplicate(cmk, tmp_path):
+  # `def` and `defs` are distinct keys: the duplicate check matches the `key=`
+  # boundary, so `def=a defs=b` must NOT trip the strict guard.
+  body = (
+    "$(call mk.unpack.kwargs, def=a defs=b, def, DEF)\n"
+    "probe:; @printf '[%s]\\n' '$(kwargs_def)'\n"
+  )
+  r = cmk("probe", makefile=_wrapper(tmp_path, body))
+  assert r.ok, r.stderr
+  assert r.stdout.strip() == "[a]"
+
+
 # --- bind.posargs / _bind.posargs: positional `${*}` splitting ---------------
 
 

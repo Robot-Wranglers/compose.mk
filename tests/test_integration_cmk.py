@@ -241,9 +241,7 @@ def test_demo_exceptions(run_demo):
   # proves the fault->exception bridge; its exact metadata fields are demo
   # implementation detail, deliberately not pinned here.)
   assert '"target": "demo.div"' in out
-  assert (
-    '"target": "fault/Inner"' in out
-  )  # Wrapped re-raised by Inner
+  assert '"target": "fault/Inner"' in out  # Wrapped re-raised by Inner
   assert '"file": "' in out  # implicit ${__file__}
 
 
@@ -282,14 +280,35 @@ def test_demo_zahn(run_demo):
 
 
 def test_demo_module_system(run_demo):
-  # The `⦖ NAME … ⦕` module-sugar lowers to `define NAME … endef` + a chain to
-  # mk.import.module(def=NAME), which stages + imports the module: injects
-  # `export CMK_MODULE := NAME` (a make-var) and NAMESPACES the body, so the
-  # bare `target.simple` becomes `<NAME>.target.simple`.  The demo's module is
-  # `MyModule`, so `__main__: MyModule.target.simple` runs and reads module=MyModule.
+  # The demo defines one module (`⦖ .. ⦕ as Aliased`) and imports it FOUR ways:
+  # aliased (namespace != module name), partial (targets=greet), star (targets='svc.*'),
+  # and flat/root (flat=1).  Each imported target keeps its namespace in its NAME,
+  # and the CMK-Lang `report` target is lowered at import (preprocs=mk.compile).
+  # The bare `greet` in __main__ only exists if the flat/root import landed, so
+  # `r.ok` itself exercises that fourth case.
   r = run_demo("demos/cmk/module-system.cmk")
   assert r.ok, r.stderr
-  assert "module=MyModule" in r.stderr
+  out = r.stdout + r.stderr
+  assert "Aliased.greet" in out  # aliased: namespace != module name
+  assert "Part.greet" in out  # partial: only `greet` selected
+  assert (
+    "Star.svc.up" in out and "Star.svc.down" in out
+  )  # star: the `svc.*` glob
+  assert "compiled report ok" in out  # CMK-Lang `report`, lowered at import
+
+
+def test_demo_plugin_system(run_demo):
+  # Including PLUGINS where the file extension picks the binding: a plain `.mk`
+  # plugin is `include`d verbatim (fast), while a `.cmk` plugin is JIT-compiled
+  # (lowered via mk.compile) THEN included.  Running UNDER `cmk run` exercises the
+  # file-stage path through the cmk-run invocation (not just `make -f`).
+  r = run_demo("demos/cmk/plugin-system.cmk")
+  assert r.ok, r.stderr
+  out = r.stdout + r.stderr
+  assert "plain make plugin" in out  # .mk plugin: verbatim fast include
+  assert (
+    "hello from a compiled cmk plugin" in out
+  )  # .cmk plugin: lowered then included
 
 
 # --- sugar-block family: functional runs (alpine / sh interpreter) -----------

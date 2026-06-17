@@ -35,6 +35,6 @@ alt2:
 alt3:
 	@# Fully manual style, handling your own temp files,
 	@# and sticking to targets instead of using pipes
-	${mk.def.to.file}/hello_world/temp-file
+	${mk.def.to.file}/hello_world,temp-file
 	cmd=temp-file ${make} docker.image.run/${elixir}
 	rm -f temp-file

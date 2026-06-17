@@ -15,8 +15,8 @@ export SRC_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 export PROJECT_ROOT := $(shell dirname ${THIS_MAKEFILE})
 export MKDOCS_LISTEN_PORT=8005
 include compose.mk
-$(call mk.import.plugins, actions.mk docs.mk)
-$(call mk.import.plugin, file=local.mk strict=0)
+$(call mk.include.plugins, actions.mk docs.mk)
+$(call mk.include.plugin, file=local.mk strict=0)
 $(call compose.import, file=demos/data/docker-compose.yml)
 
 __main__: init clean build test docs

@@ -105,7 +105,9 @@ def cmk(tmp_path):
   the repo; pytest removes the dir afterwards.
   """
 
-  def run(*args, stdin="", env=None, cwd=None, makefile=None) -> Result:
+  def run(
+    *args, stdin="", env=None, cwd=None, makefile=None, timeout=None
+  ) -> Result:
     if args:
       _INVOKED_TARGETS.add(base_name(args[0]))
     merged = {**os.environ, **BASE_ENV, **(env or {})}
@@ -116,6 +118,8 @@ def cmk(tmp_path):
       if makefile
       else [str(COMPOSE_MK), *args]
     )
+    # `timeout` (seconds) bounds the run so a pathological hang (e.g. an import
+    # cycle that lost its guard) fails the test instead of stalling the suite.
     proc = subprocess.run(
       argv,
       input=stdin,
@@ -124,6 +128,7 @@ def cmk(tmp_path):
       capture_output=True,
       cwd=str(cwd or tmp_path),
       env=merged,
+      timeout=timeout,
     )
     return Result(proc.stdout, proc.stderr, proc.returncode)
 

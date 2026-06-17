@@ -524,7 +524,8 @@ target, so `this.foo(...)` is just sugar for the hand-written `... | this.foo`.
 demo:; this.eval('''(Hi)S''')          # -> '''(Hi)S''' | this.eval
 
 # tagged form (JS/Scala-style) -- same thing, no parens
-demo:; this.eval'''(Hi)S'''
+demo:; this.eval'''(Hi)S'''            # -> '''(Hi)S''' | this.eval   (literal)
+demo:; this.eval"""val=$$X"""          # -> """val=$$X""" | this.eval (interpolating)
 
 # unquoted -- the argument is run and its OUTPUT is piped (verbatim)
 demo:; this.eval(cat program.txt)      # -> cat program.txt | this.eval

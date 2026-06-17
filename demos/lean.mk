@@ -73,6 +73,6 @@ __main__: \
 lean.run.script/%:; lean_args="--run" ${make} lean.run.generic/${*}
 
 lean.run.generic/% lean.run.theorem/%:
-	${io.mktemp} && ${make} mk.def.to.file/${*}/$${tmpf} \
+	${io.mktemp} && ${make} mk.def.to.file/${*},$${tmpf} \
 	&& img=Lean cmd="$${lean_args:-} $${tmpf}" \
 		${make} mk.docker

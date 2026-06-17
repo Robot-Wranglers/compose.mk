@@ -460,7 +460,10 @@ def test_compile_sugar_code_import(cmk):
 def test_compile_sugar_polyglot(cmk):
   # The `with` clause is space-separated kwargs (the positional comma form is
   # retired); they forward verbatim into the lowered polyglot.import call.
-  r = cmk("mk.compile", stdin="⟦ hw\ncode\n⟧ with img=alp entrypoint=sh as container\n")
+  r = cmk(
+    "mk.compile",
+    stdin="⟦ hw\ncode\n⟧ with img=alp entrypoint=sh as container\n",
+  )
   assert r.ok, r.stderr
   assert "polyglot" in r.stdout and "hw" in r.stdout
   assert "img=alp entrypoint=sh" in r.stdout
@@ -469,7 +472,10 @@ def test_compile_sugar_polyglot(cmk):
 def test_compile_sugar_polyglot_parenthetical(cmk):
   # An optional parenthetical may wrap the with-clause for readability:
   # `with (kwargs) as X` lowers identically to `with kwargs as X`.
-  r = cmk("mk.compile", stdin="⟦ hw\ncode\n⟧ with (img=alp entrypoint=sh) as container\n")
+  r = cmk(
+    "mk.compile",
+    stdin="⟦ hw\ncode\n⟧ with (img=alp entrypoint=sh) as container\n",
+  )
   assert r.ok, r.stderr
   assert "img=alp entrypoint=sh" in r.stdout
   assert "(img=alp" not in r.stdout  # the wrapping parens were stripped
@@ -488,7 +494,10 @@ def test_compile_sugar_script_block(cmk):
 def test_compile_advice_interrupted_next_line(cmk):
   # "Interrupted advice": the `with .. as ..` trailer may spill onto the line
   # AFTER the close marker (bare line-feed, no `\` needed).
-  r = cmk("mk.compile", stdin="⨖ scr\necho hi\n⨖\nwith img=alpine as compose_context\n")
+  r = cmk(
+    "mk.compile",
+    stdin="⨖ scr\necho hi\n⨖\nwith img=alpine as compose_context\n",
+  )
   assert r.ok, r.stderr
   assert "scr:" in r.stdout and "img=alpine" in r.stdout
   assert "compose_context" in r.stdout
@@ -496,7 +505,10 @@ def test_compile_advice_interrupted_next_line(cmk):
 
 def test_compile_advice_interrupted_split(cmk):
   # `with` on the close line, `as` continued on the next line.
-  r = cmk("mk.compile", stdin="⨖ scr\necho hi\n⨖ with img=alpine\nas compose_context\n")
+  r = cmk(
+    "mk.compile",
+    stdin="⨖ scr\necho hi\n⨖ with img=alpine\nas compose_context\n",
+  )
   assert r.ok, r.stderr
   assert "scr:" in r.stdout and "img=alpine" in r.stdout
   assert "compose_context" in r.stdout
@@ -504,7 +516,10 @@ def test_compile_advice_interrupted_split(cmk):
 
 def test_compile_advice_interrupted_blank_then_advice(cmk):
   # Blank line(s) between the close marker and the advice are skipped.
-  r = cmk("mk.compile", stdin="⨖ scr\necho hi\n⨖\n\nwith img=alpine as compose_context\n")
+  r = cmk(
+    "mk.compile",
+    stdin="⨖ scr\necho hi\n⨖\n\nwith img=alpine as compose_context\n",
+  )
   assert r.ok, r.stderr
   assert "scr:" in r.stdout and "img=alpine" in r.stdout
   assert "compose_context" in r.stdout

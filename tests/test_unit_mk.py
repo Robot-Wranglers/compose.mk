@@ -464,14 +464,18 @@ def test_mk_import_def_namespace(cmk, tmp_path):
   )
   assert cmk("mk.def.read/myns.salute.a", makefile=con).stdout == "hello A\n"
   assert cmk("mk.def.read/myns.salute.b", makefile=con).stdout == "hello B\n"
-  assert cmk("mk.def.read/salute.a", makefile=con).stdout.strip() == ""  # bare absent
+  assert (
+    cmk("mk.def.read/salute.a", makefile=con).stdout.strip() == ""
+  )  # bare absent
 
 
 def test_mk_import_def_namespace_nested_verbatim(cmk, tmp_path):
   # only the TOP-LEVEL define header is renamed; a nested define stays verbatim.
   src_body = "define outer\nx:=1\ndefine inner\ny:=2\nendef\nendef"
   _, con = _import_pair(
-    tmp_path, src_body, "$(call mk.import.def, file=SRCPATH def=outer namespace=ns)"
+    tmp_path,
+    src_body,
+    "$(call mk.import.def, file=SRCPATH def=outer namespace=ns)",
   )
   body = cmk("mk.def.read/ns.outer", makefile=con).stdout
   assert "define inner" in body  # nested header untouched
@@ -640,7 +644,9 @@ def test_mk_import_target_namespace(cmk, tmp_path):
   r = cmk("myns.greet", makefile=con)
   assert r.ok, r.stderr
   assert r.stdout.strip() == "hi world"  # the imported recipe, namespaced
-  assert cmk("greet", makefile=con).stdout.strip() == "local-greet"  # local intact
+  assert (
+    cmk("greet", makefile=con).stdout.strip() == "local-greet"
+  )  # local intact
 
 
 # --- mk.kernel / mk.kernel.each : run a target-stream as an instruction set --
@@ -793,9 +799,37 @@ def test_mk_require_dir(cmk, tmp_path):
 
 def test_mk_def_to_file(cmk, tmp_path):
   mk = _wrapper(tmp_path, "define greeting\nhello world\nendef")
-  r = cmk("mk.def.to.file/greeting/out.txt", makefile=mk)
+  r = cmk("mk.def.to.file/greeting,out.txt", makefile=mk)
   assert r.ok, r.stderr
   assert (tmp_path / "out.txt").read_text().strip() == "hello world"
+
+
+def test_mk_def_to_file_default_name(cmk, tmp_path):
+  # one positional arg: the def name doubles as the output filename.
+  mk = _wrapper(tmp_path, "define greeting\nhello world\nendef")
+  r = cmk("mk.def.to.file/greeting", makefile=mk)
+  assert r.ok, r.stderr
+  assert (tmp_path / "greeting").read_text().strip() == "hello world"
+
+
+def test_mk_def_value_printf_preserves_specials(cmk, tmp_path):
+  # 2nd arg -> single-line, recipe-safe `printf` of the block; $, parens and
+  # quotes must survive both make and the shell intact.
+  body = "define prog\nreduce inputs as $x (0; . + $x)\nendef\n"
+  mk = _wrapper(tmp_path, body + "emit:; @$(call mk.def.value, prog, _)\n")
+  r = cmk("emit", makefile=mk)
+  assert r.ok, r.stderr
+  assert "reduce inputs as $x (0; . + $x)" in r.stdout
+
+
+def test_mk_def_value_printf_multiline(cmk, tmp_path):
+  # newlines in the block become a real newline in the emitted output (one
+  # printf line, so make never splits the recipe).
+  body = "define prog\nline one\nline two\nendef\n"
+  mk = _wrapper(tmp_path, body + "emit:; @$(call mk.def.value, prog, _)\n")
+  r = cmk("emit", makefile=mk)
+  assert r.ok, r.stderr
+  assert "line one\nline two" in r.stdout
 
 
 def test_mk_run(cmk, tmp_path):
