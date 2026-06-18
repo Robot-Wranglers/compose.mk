@@ -1,7 +1,6 @@
 #!/usr/bin/env -S make -f
-# demos/logging.mk: 
-#   Shows some of the compose.mk logging facilities.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# logging.mk:
+#   Some of the compose.mk logging facilities.
 #
 # USAGE: ./demos/logging.mk
 

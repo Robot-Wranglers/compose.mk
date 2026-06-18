@@ -1,9 +1,9 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# demos/cmk/container-dispatch-2.cmk: 
-#   Demonstrates the container dispatch idiom using "namespace" style invocation.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# container-dispatch-2.cmk:
+#   Container dispatch via explicit namespaced
+#   ("absolute path") invocation, for structuring calls across multiple containers.
 #
-#   USAGE: ./demos/cmk/container-dispatch-2.cmk
+# USAGE: ./demos/cmk/container-dispatch-2.cmk
 
 # Import the whole compose file (including "debian" container)
 compose.import(file=demos/data/docker-compose.yml namespace=▰)

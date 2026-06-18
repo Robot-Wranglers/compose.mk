@@ -1,5 +1,5 @@
 #!/usr/bin/env -S make -f
-# demos/itest.mk: 
+# itest.mk:
 #   Integration test-suite.  
 #   This isn't pretty or instructive like the other demos, 
 #   might contain WIP, and the main point is just increasing test coverage.
@@ -7,7 +7,7 @@
 #  This is integration'y because it actually uses external compose files
 #  and exercises the bridge / automation scaffolding generation.
 #
-#   USAGE: ./demos/itest.mk
+# USAGE: ./demos/itest.mk
 
 # Include compose.mk so we can use `compose.import` macro, and
 # otherwise exercise base-targets that are provided by the lib
@@ -21,18 +21,18 @@ $(call compose.import, file=demos/data/docker-compose.yml namespace=▰)
 
 __main__: flux.star/test
 	
-test.mk.assert_env_var:
+test.assert.env.var:
 	$(call log.test, Testing assert.env_var macros)
-	my_var=1; $(call mk.assert.env, my_var)
+	my_var=1; $(call assert.env, my_var)
 	$(call log.test, assert.env_var fails if env not set)
-	! $(call mk.assert.env, my_var) ${stderr_devnull}
+	! $(call assert.env, my_var) ${stderr_devnull}
 	$(call log.test, assert works for multiple vars)
-	another_var=2; my_var=1; $(call mk.assert.env, my_var another_var)
+	another_var=2; my_var=1; $(call assert.env, my_var another_var)
 	$(call log.test, assert fails for multiple vars when one is not set)
-	! ( another_var=2; my_var=1; $(call mk.assert.env, my_var another_var missing) ) ${stderr_devnull}
+	! ( another_var=2; my_var=1; $(call assert.env, my_var another_var missing) ) ${stderr_devnull}
 	$(call log.test, assert.env works as target for multiple vars when one is not set)
-	foo=1 bar=2 ./compose.mk mk.assert.env/foo,bar
-	! bar=2 ./compose.mk mk.assert.env/foo,bar ${stderr_devnull}
+	foo=1 bar=2 ./compose.mk assert.env/foo,bar
+	! bar=2 ./compose.mk assert.env/foo,bar ${stderr_devnull}
 
 test.compose.validate:
 	$(call log.test, Testing compose-file validation)

@@ -1,8 +1,7 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# Demonstrates building a self-contained ollama application with CMK-lang.
-#
-# This demo ships with the `compose.mk` repository.
-# (Not part of the test-suite since model requirements are ~5GB)
+# ollama.cmk:
+#   Build a self-contained Ollama application with CMK-lang.
+#   (Not in the default test-suite: model downloads are ~5GB.)
 #
 # See the main docs:
 #   https://robot-wranglers.github.io/compose.mk/demos/ai

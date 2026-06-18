@@ -1,11 +1,11 @@
 #!/usr/bin/env -S make -f
-# demos/stages-idiom.mk: 
+# stages-idiom.mk:
 #
 #   Demonstrating stages, stacks, and artifact-related features of compose.mk
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+#
 #   See the docs for more discussion: https://robot-wranglers.github.io/compose.mk/stages
 #
-#   USAGE: ./demos/stages-idiom.mk
+# USAGE: ./demos/stages-idiom.mk
 
 include compose.mk
 .DEFAULT_GOAL := validate

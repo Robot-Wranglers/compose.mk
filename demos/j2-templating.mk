@@ -1,7 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrates templating in jinja.
+# j2-templating.mk:
+#   Templating in jinja.
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # USAGE: ./demos/j2-templating.mk
 
 include compose.mk

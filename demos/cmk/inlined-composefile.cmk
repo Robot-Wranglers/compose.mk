@@ -1,5 +1,8 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# CMK-lang translation of demos/inlined-composefile.mk
+# inlined-composefile.cmk:
+#   Embed a docker-compose file inline; its services
+#   scaffold dispatch targets automatically.  Ported from demos/inlined-composefile.mk.
+#
 # USAGE: ./demos/cmk/inlined-composefile.cmk
 
 ⋘ inlined.services

@@ -189,6 +189,35 @@ risky:
 
 `flux.try.except.finally` does this for you automatically: when its `except` arm *recovers* (succeeds), it calls `mk.exit.clear` and the construct returns 0.  Only hand-rolled error handling (outside the `flux.try.*` family) that intends to recover needs to call `mk.exit.clear` explicitly.
 
+### Bootloader
+<hr style="width:100%;border-bottom:3px solid black;">
+<a name=bootloader></a>
+
+The supervisor doesn't only *wrap* `make` --- just before it runs your program it executes a small **bootloader**, and this is the single, header-free extension point for supervisor behavior.  Like everything else on this page the bootloader is a property of the **supervisor**, so it exists only for interpreter-style (supervised) invocations and never for `make -f compose.mk`.  It `source`s two kinds of script:
+
+* **Inlined loaders, from `compose.mk` itself.**  Each builtin piece of supervisor behavior is a `define _mk.supervisor.<name>` block in the source; the bootloader lifts that block's body out of the file and `source`s it in the supervisor's shell.  The core one is the trampoline dispatch loop that powers the [virtual machine]({{mkdocs.site_relative_url}}/runtime/#virtual-machine).  Adding supervisor behavior is just another `define` plus one load line --- no edit to the polyglot header.
+
+* **A user-defined script, via `CMK_BOOTLOADER`.**  Point `CMK_BOOTLOADER` at exactly one file and the supervisor `source`s it **first** --- at boot, before the trampoline runs the program.  Because it runs in the supervisor's own shell (not a subshell) it sees the pre-run state (`$_targets`, `$MAKE_SUPER`) and can **set up** the run (for example, install a TUI overlay), then reach the **end** of the run --- where the recovered exit code `$st` is final --- by registering an `EXIT` trap.  That makes it a clean place to bracket a whole run with setup/teardown.
+
+A few rules for user bootloaders:
+
+* It must **not** trap `INT`/`TERM` --- that would clobber the supervisor's own SIGINT handling.
+* If `CMK_BOOTLOADER` is set the file must exist (a missing file is fatal, and fails fast *before* any target runs).
+* Keep it **portable**: POSIX shell and tools that exist on Linux / OSX / Alpine-busybox.
+
+Set `CMK_BOOTLOADER_DISABLED=1` to skip the bootloader entirely and run targets directly.
+
+```bash {.cli_example}
+$ CMK_BOOTLOADER=demos/user-bootloader.sh CMK_SUPERVISOR=1 ./compose.mk flux.ok
+```
+```bash {.cli_output}
+user-bootloader: boot (targets=[flux.pre/flux.ok flux.ok flux.post/flux.ok])
+flux.ok // succeeding as requested!
+user-bootloader: exit (st=0)
+```
+
+See the {{macros.repo_link('demos/user-bootloader.sh', name='user-bootloader demo', github=github)}} for a minimal example that proves it loaded at both ends of the run.  The `__vm__` [control stack / virtual machine]({{mkdocs.site_relative_url}}/runtime/#virtual-machine) -- previously documented here -- now lives on the [Runtime]({{mkdocs.site_relative_url}}/runtime) page; its trampoline is one of the inlined loaders above.
+
 ### Implementation Details
 <hr style="width:100%;border-bottom:3px solid black;">
 

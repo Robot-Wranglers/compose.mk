@@ -1,7 +1,8 @@
 #!/usr/bin/env -S make -f
-# Implementing one esolang with another ;)
-# This is an interpreter/compiler for "Underload", which is a
-# stack-based concatenative esolang.  See also [1]
+# underload.mk:
+#   Implementing one esolang with another ;)
+#   This is an interpreter/compiler for "Underload", which is a
+#   stack-based concatenative esolang.  See also [1]
 #
 # USAGE:
 #   ./demos/underload.mk

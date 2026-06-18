@@ -8,7 +8,7 @@
 
 Features like [CLI help]({{mkdocs.site_relative_url}}/cli-help) and [automatically generated API docs]({{mkdocs.site_relative_url}}/api) require that `compose.mk` has at least *some* ability to parse its own contents.  
 
-And if we need that kind of ability, why not allow for parsing of other Makefiles?  As another applied example, see the [zero-config TUI documentation]({{mkdocs.site_relative_url}}/zero-config-tuis/), which makes use of {{site.api_link('mk.include',mkdocs,arg='fpath')}}.  
+And if we need that kind of ability, why not allow for parsing of other Makefiles?  As another applied example, see the [zero-config TUI documentation]({{mkdocs.site_relative_url}}/zero-config-tuis/), which makes use of {{site.api_link('include',mkdocs,arg='fpath')}}.  
 
 Most of the meta-tooling that's available is somewhere in the [`mk.*` target namespace]({{mkdocs.site_relative_url}}/api-mk).
 
@@ -96,7 +96,7 @@ $ ./compose.mk mk.get/stream.nl.to.comma
 ( cat /dev/stdin | awk 'BEGIN{ORS=","} {print}' | sed 's/,$//' )
 ```
 
-For a more practical example, see [this section]({{mkdocs.site_relative_url}}/compiler/#about-dialects) of the compiler docs.
+For a more practical example, see [this section]({{mkdocs.site_relative_url}}/dialects/#about-dialects) of the compiler docs.
 
 #### Pattern-Matching on Targets
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -129,7 +129,7 @@ To a certain extent, `compose.mk` can do *runtime* modification of `make` itself
 **Dynamic includes.** Suppose you want to script with `compose.mk`, but the project makefile does not `include compose.mk`.  You can mix together automation APIs like this:
 
 ```bash {.cli_example}
-$ ./compose.mk mk.include/demos/no-include.mk flux.timer/clean
+$ ./compose.mk include/demos/no-include.mk flux.timer/clean
 ```
 ``` bash {.cli_output}
 cleaning

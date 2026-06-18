@@ -6,41 +6,43 @@
 
 * [ansible-adhoc.mk](./ansible-adhoc.mk) (76 lines)
 
-* [ansible-playbook.mk](./ansible-playbook.mk) (45 lines)
+* [ansible-playbook.mk](./ansible-playbook.mk) (44 lines)
 
-* [bind-def-to-env.mk](./bind-def-to-env.mk) (21 lines)
+* [bind-def-to-env.mk](./bind-def-to-env.mk) (19 lines)
 
 * [bind-file.mk](./bind-file.mk) (15 lines)
 
-* [bind-script.mk](./bind-script.mk) (33 lines)
+* [bind-script.mk](./bind-script.mk) (31 lines)
 
-* [bind-target.mk](./bind-target.mk) (26 lines)
+* [bind-target.mk](./bind-target.mk) (24 lines)
 
-* [cli-help-shebang.mk](./cli-help-shebang.mk) (25 lines)
+* [call_stack.mk](./call_stack.mk) (63 lines)
 
-* [cli-help.mk](./cli-help.mk) (20 lines)
+* [cli-help-shebang.mk](./cli-help-shebang.mk) (24 lines)
+
+* [cli-help.mk](./cli-help.mk) (19 lines)
 
 * [code-objects-2.mk](./code-objects-2.mk) (36 lines)
 
 * [code-objects-3.mk](./code-objects-3.mk) (34 lines)
 
-* [code-objects.mk](./code-objects.mk) (25 lines)
+* [code-objects.mk](./code-objects.mk) (26 lines)
 
-* [container-dispatch-2.mk](./container-dispatch-2.mk) (23 lines)
+* [container-dispatch-2.mk](./container-dispatch-2.mk) (22 lines)
 
-* [container-dispatch-3.mk](./container-dispatch-3.mk) (23 lines)
+* [container-dispatch-3.mk](./container-dispatch-3.mk) (22 lines)
 
-* [container-dispatch-min.mk](./container-dispatch-min.mk) (12 lines)
+* [container-dispatch-min.mk](./container-dispatch-min.mk) (17 lines)
 
-* [container-dispatch.mk](./container-dispatch.mk) (22 lines)
+* [container-dispatch.mk](./container-dispatch.mk) (21 lines)
 
-* [counter-machine.mk](./counter-machine.mk) (49 lines)
+* [counter-machine.mk](./counter-machine.mk) (50 lines)
 
-* [dashboarding.mk](./dashboarding.mk) (24 lines)
+* [dashboarding.mk](./dashboarding.mk) (23 lines)
 
-* [docker.import.mk](./docker.import.mk) (25 lines)
+* [docker.import.mk](./docker.import.mk) (26 lines)
 
-* [double-dispatch.mk](./double-dispatch.mk) (21 lines)
+* [double-dispatch.mk](./double-dispatch.mk) (20 lines)
 
 * [elixir-1.mk](./elixir-1.mk) (33 lines)
 
@@ -50,27 +52,31 @@
 
 * [etl-json.mk](./etl-json.mk) (30 lines)
 
-* [exotic-targets.mk](./exotic-targets.mk) (24 lines)
+* [exotic-targets.mk](./exotic-targets.mk) (25 lines)
 
-* [extend-inlined-dockerfile.mk](./extend-inlined-dockerfile.mk) (36 lines)
+* [extend-inlined-dockerfile.mk](./extend-inlined-dockerfile.mk) (35 lines)
 
-* [flux.star.mk](./flux.star.mk) (13 lines)
+* [fault.mk](./fault.mk) (46 lines)
 
-* [guests.mk](./guests.mk) (40 lines)
+* [flux.candidates.mk](./flux.candidates.mk) (51 lines)
+
+* [flux.star.mk](./flux.star.mk) (14 lines)
+
+* [guests.mk](./guests.mk) (41 lines)
 
 * [import-file.mk](./import-file.mk) (21 lines)
 
-* [inlined-composefile.mk](./inlined-composefile.mk) (59 lines)
+* [inlined-composefile.mk](./inlined-composefile.mk) (58 lines)
 
-* [inlined-dockerfile.mk](./inlined-dockerfile.mk) (58 lines)
+* [inlined-dockerfile.mk](./inlined-dockerfile.mk) (57 lines)
 
-* [interpreter-2.mk](./interpreter-2.mk) (13 lines)
+* [interpreter-2.mk](./interpreter-2.mk) (14 lines)
 
-* [interpreter-3.mk](./interpreter-3.mk) (50 lines)
+* [interpreter-3.mk](./interpreter-3.mk) (51 lines)
 
 * [interpreter-4.mk](./interpreter-4.mk) (15 lines)
 
-* [interpreter.mk](./interpreter.mk) (19 lines)
+* [interpreter.mk](./interpreter.mk) (20 lines)
 
 * [io.mktemp.mk](./io.mktemp.mk) (32 lines)
 
@@ -78,23 +84,25 @@
 
 * [j2-templating.mk](./j2-templating.mk) (40 lines)
 
-* [julia.mk](./julia.mk) (77 lines)
+* [julia.mk](./julia.mk) (75 lines)
 
-* [just.mk](./just.mk) (83 lines)
+* [just.mk](./just.mk) (81 lines)
 
-* [kwarg-parsing-2.mk](./kwarg-parsing-2.mk) (13 lines)
+* [kwarg-parsing-2.mk](./kwarg-parsing-2.mk) (14 lines)
 
-* [kwarg-parsing-3.mk](./kwarg-parsing-3.mk) (26 lines)
+* [kwarg-parsing-3.mk](./kwarg-parsing-3.mk) (27 lines)
 
-* [kwarg-parsing.mk](./kwarg-parsing.mk) (20 lines)
+* [kwarg-parsing.mk](./kwarg-parsing.mk) (21 lines)
 
-* [lean.mk](./lean.mk) (78 lines)
+* [lean.mk](./lean.mk) (76 lines)
 
 * [local-interpreter.mk](./local-interpreter.mk) (22 lines)
 
-* [logging.mk](./logging.mk) (48 lines)
+* [logging.mk](./logging.mk) (47 lines)
 
-* [matrioshka.mk](./matrioshka.mk) (98 lines)
+* [matrioshka.mk](./matrioshka.mk) (96 lines)
+
+* [module-system.mk](./module-system.mk) (31 lines)
 
 * [no-include.mk](./no-include.mk) (20 lines)
 
@@ -102,39 +110,45 @@
 
 * [oop.mk](./oop.mk) (35 lines)
 
-* [parsing-parameters.mk](./parsing-parameters.mk) (20 lines)
+* [overlay.mk](./overlay.mk) (91 lines)
 
-* [partials.mk](./partials.mk) (20 lines)
+* [parsing-parameters.mk](./parsing-parameters.mk) (21 lines)
+
+* [partials.mk](./partials.mk) (21 lines)
 
 * [payload.mk](./payload.mk) (44 lines)
 
 * [platform-lme.mk](./platform-lme.mk) (37 lines)
 
-* [platform.mk](./platform.mk) (41 lines)
+* [platform.mk](./platform.mk) (40 lines)
+
+* [plugin-system.mk](./plugin-system.mk) (14 lines)
 
 * [r.mk](./r.mk) (36 lines)
 
-* [script-dispatch-custom.mk](./script-dispatch-custom.mk) (29 lines)
+* [repl.mk](./repl.mk) (24 lines)
+
+* [script-dispatch-custom.mk](./script-dispatch-custom.mk) (27 lines)
 
 * [script-dispatch-host.mk](./script-dispatch-host.mk) (23 lines)
 
-* [script-dispatch-stock.mk](./script-dispatch-stock.mk) (24 lines)
+* [script-dispatch-stock.mk](./script-dispatch-stock.mk) (22 lines)
 
-* [section-dividers.mk](./section-dividers.mk) (27 lines)
+* [section-dividers.mk](./section-dividers.mk) (28 lines)
 
-* [ski.mk](./ski.mk) (87 lines)
+* [ski.mk](./ski.mk) (86 lines)
 
-* [stage-wrapper.mk](./stage-wrapper.mk) (21 lines)
+* [stage-wrapper.mk](./stage-wrapper.mk) (20 lines)
 
 * [stages-idiom.mk](./stages-idiom.mk) (24 lines)
 
-* [stages.mk](./stages.mk) (52 lines)
+* [stages.mk](./stages.mk) (51 lines)
 
-* [stdlib-stream-io.mk](./stdlib-stream-io.mk) (39 lines)
+* [stdlib-stream-io.mk](./stdlib-stream-io.mk) (40 lines)
 
 * [structured-io-nushell.mk](./structured-io-nushell.mk) (37 lines)
 
-* [structured-io.mk](./structured-io.mk) (18 lines)
+* [structured-io.mk](./structured-io.mk) (19 lines)
 
 * [subcommands.mk](./subcommands.mk) (30 lines)
 
@@ -142,9 +156,11 @@
 
 * [tarski.mk](./tarski.mk) (113 lines)
 
-* [tinycc.mk](./tinycc.mk) (35 lines)
+* [tinycc.mk](./tinycc.mk) (34 lines)
 
-* [underload.mk](./underload.mk) (146 lines)
+* [underload.mk](./underload.mk) (147 lines)
 
 * [uv.mk](./uv.mk) (39 lines)
+
+* [vm.mk](./vm.mk) (93 lines)
 

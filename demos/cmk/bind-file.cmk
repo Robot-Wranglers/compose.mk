@@ -1,8 +1,10 @@
 #!/usr/bin/env -S ./compose.mk cmk run
+# bind-file.cmk:
+#   Bind an external script file to a target, run in a container.
 #
-# CMK-lang equivalent of demos/bind-script.mk.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/compiler
+# The `ᝏpolyglot.bind.file(...)` decorator binds the file + image + interpreter to
+# the target below it (here `__main__`), so running the demo runs the file.
+# Ported from demos/bind-file.mk.
 #
 # USAGE: ./demos/cmk/bind-file.cmk
 

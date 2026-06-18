@@ -136,17 +136,18 @@ def test_demo_script_dispatch_stock(run_demo):
 
 
 def test_demo_import_file(run_demo):
-  # mk.import: pull targets/defs from another makefile, then run them.
+  # import: pull targets/defs from another makefile, then run them.
   r = run_demo("demos/cmk/import-file.cmk")
   assert r.ok, r.stderr
   assert "hello world foo=val1 bar=val2" in r.stdout
 
 
 def test_demo_example(run_demo):
-  # Minimal structured-IO example (🡄 emit | 🡆 consume) across targets.
+  # The smallest useful CMK program: an entrypoint + a `cmk.log.target` line (logs
+  # to stderr).  The structured-IO 🡄/🡆 example now lives in structured-io.cmk.
   r = run_demo("demos/cmk/example.cmk")
   assert r.ok, r.stderr
-  assert "val" in r.stdout
+  assert "hello world" in r.stderr
 
 
 def test_demo_code_objects(run_demo):
@@ -179,7 +180,7 @@ def test_demo_platform_lme(run_demo):
 
 
 def test_demo_underload(run_demo):
-  # mk.import.def: the CMK port imports its lexer (`ul.lexer`) from the
+  # import.def: the CMK port imports its lexer (`ul.lexer`) from the
   # demos/underload.mk twin, then runs the esolang host-side (jq/awk/io.stack).
   r = run_demo("demos/cmk/underload.cmk")
   assert r.ok, r.stderr

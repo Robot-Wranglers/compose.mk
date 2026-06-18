@@ -1,8 +1,7 @@
 #!/usr/bin/env -S make -f
-# demos/stages.mk: 
-#   Demonstrating stages, stacks, and artifact-related features of compose.mk
+# stages.mk:
+#   Stages, stacks, and artifact-related features of compose.mk
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # See the docs for more discussion: https://robot-wranglers.github.io/compose.mk/stages
 # USAGE: ./demos/stages.mk
 

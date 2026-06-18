@@ -1,7 +1,8 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# zahn.cmk -- Zahn's construct as a customer of compose.mk's event system
-# (the `declare.channel` / Events stdlib): a multi-exit search loop whose
-# named exits drive control flow.
+# zahn.cmk:
+#   Zahn's construct as a customer of compose.mk's event system
+#   (the `declare.channel` / Events stdlib): a multi-exit search loop whose
+#   named exits drive control flow.
 #
 # zahn.scan seeds candidate events onto the `zahn` channel, takes the
 # first matching a (field,value), emits the typed outcome
@@ -14,11 +15,11 @@
 
 # Construct the zahn channel (declare.channel ships in compose.mk's stdlib;
 # see the Events doc-block there for the operators it generates).
-$(call declare.channel,chan=zahn)
+$(call declare.channel,namespace=zahn)
 
 zahn.seed:
 	@# a few candidate request events (newest last)
-	$(call log.trace, ${@})
+	cmk.log.trace(${@})
 	$(call zahn.emit, type=req id=a status=ok)
 	$(call zahn.emit, type=req id=b status=error)
 	$(call zahn.emit, type=req id=c status=error)
@@ -29,7 +30,7 @@ zahn.scan/%:
 	@# matching named exit below.  Candidates are PURGEd first, so the
 	@# drain sees only the outcome.
 	@# USAGE: this.zahn.seed && this.zahn.scan/status,error
-	$(call log.trace, ${@})
+	cmk.log.trace(${@})
 	cmk.log.target(${bold}scan ${sep} ${*})
 	m=`this.zahn.first.match.field_equal/${*}` \
 	&& this.zahn.purge \
@@ -43,27 +44,27 @@ zahn.scan/%:
 # ── the named exits: each routes to a different continuation
 zahn/found:
 	@# FOUND exit -> the recovery continuation, carrying the matched id.
-	$(call log.trace, ${@})
+	cmk.log.trace(${@})
 	v=`echo "$${CMK_EVENT}" | ${jq.run} -r .id` \
 	&& this.zahn.recover/$${v}
 
 zahn/exhausted:
 	@# EXHAUSTED exit -> the all-clear continuation (a DIFFERENT path).
-	$(call log.trace, ${@})
+	cmk.log.trace(${@})
 	this.zahn.commit
 
-zahn/%:; @$(call log.trace, ${@}) ; cmk.log.target(${red}zahn: unhandled exit ${*})
+zahn/%:; cmk.log.trace(${@}) ; cmk.log.target(${red}zahn: unhandled exit ${*})
 
 # Continuations -- reached only via their corresponding exit.
 zahn.recover/%:
 	@# the FOUND path: act on the failing request <id>.
-	$(call log.trace, ${@})
+	cmk.log.trace(${@})
 	cmk.log.target(${yellow}recover ${sep} retrying failed request ${bold}${*})
 	printf 'recovered=%s\n' "${*}"
 
 zahn.commit:
 	@# the EXHAUSTED path: nothing to recover -- proceed.
-	$(call log.trace, ${@})
+	cmk.log.trace(${@})
 	cmk.log.target(${green}commit ${sep} no failures detected)
 	printf 'committed\n'
 
@@ -75,16 +76,16 @@ zahn.commit:
 # (or the `%` fallback, for an uncaught type) runs before control returns.
 
 # throw <Type>, then catch it inline (emit onto the channel + dispatch now).
-zahn.raise/%:; @$(call log.trace, ${@}) ; this.zahn.emit.type/${*} </dev/null && this.zahn.dispatch.by_type
+zahn.raise/%:; cmk.log.trace(${@}) ; this.zahn.emit.type/${*} </dev/null && this.zahn.dispatch.by_type
 
 # a guarded computation: 42/<divisor>, raising DivByZero inline on a 0 divisor.
 zahn.divide/%:
-	@$(call log.trace, ${@})
-	@if [ "${*}" -eq 0 ]; then this.zahn.raise/DivByZero ; else printf 'divide: 42/%s = %s\n' "${*}" "$$(( 42 / ${*} ))" ; fi
+	cmk.log.trace(${@})
+	if [ "${*}" -eq 0 ]; then this.zahn.raise/DivByZero ; else printf 'divide: 42/%s = %s\n' "${*}" "$$(( 42 / ${*} ))" ; fi
 
 # the CATCH: a synchronous handler for DivByZero (uncaught types hit `zahn/%`).
 zahn/DivByZero:
-	@$(call log.trace, ${@})
+	cmk.log.trace(${@})
 	cmk.log.target(${yellow}caught DivByZero ${sep} recovered inline)
 
 # The tour: each scan takes a different named exit --
@@ -94,7 +95,7 @@ __main__:
 	this.zahn.scan/status,error
 	this.zahn.seed
 	this.zahn.scan/status,pending
-	cmk.log.target(${bold}── synchronous exceptions on the same primitives ──)
+	cmk.log.target(cmk.bold()── synchronous exceptions on the same primitives ──)
 	this.zahn.divide/7
 	this.zahn.divide/0
 	this.zahn.raise/Boom

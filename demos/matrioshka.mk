@@ -1,14 +1,12 @@
 #!/usr/bin/env -S make -f
-# demos/matrioshka.mk: 
+# matrioshka.mk:
 #   To demonstrate matrioshka-language features, we use `compose.mk`
 #   to embed a compose service, that embeds a docker container 
 #   description, where the container build and run stages both defer
 #   back to the matrioshka. This also demonstrates passing data between
 #   container layers using stage-stacks[1].
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # See the main docs: https://robot-wranglers.github.io/compose.mk/matrioshka
-# See also: https://robot-wranglers.github.io/compose.mk/stages
 #
 # USAGE: ./demos/matrioshka.mk
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demos make-targets in foreign languages, without a container.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.
-# See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
+# local-interpreter.mk:
+#   Make-targets in foreign languages, without a container.
+#
 # USAGE: ./demos/local-interpreter.mk
 
 include compose.mk

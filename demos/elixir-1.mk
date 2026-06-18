@@ -1,7 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrating polyglots using elixir
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
+# elixir-1.mk:
+#   Polyglots using elixir
+#
 # USAGE: ./demos/elixir-1.mk
 
 include compose.mk

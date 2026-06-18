@@ -1,6 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demos make-targets in foreign languages and shows them working with pipes.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# exotic-targets.mk:
+#   Make-targets in foreign languages and shows them working with pipes.
+#
 # USAGE: ./demos/exotic-targets.mk
 
 include compose.mk

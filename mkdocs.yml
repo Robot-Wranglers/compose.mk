@@ -76,16 +76,19 @@ nav:
     - 'Obligatory AI Things': demos/ai.md
     - 'Theorem Proving': demos/lean.md
     - 'Underload Esolang': demos/underload.md
+    - 'Event Loop': demos/event-loop.md
     - 'Object-oriented (ish)': demos/oop.md
   - Misc Features:
       - 'CLI Help': cli-help.md
       - 'Subcommands': subcommands.md
       - 'Stacks & Stages': stages.md
       - 'Supervisors & Signals': signals.md
+      - 'Runtime & Virtual Machine': runtime.md
       - 'Self Extracting Executables': demos/packaging.md
   - CMK Language:
       - 'Language Overview': language.md
-      - 'Compiler & Dialects': compiler.md
+      - 'Compiler Tutorial': compiler.md
+      - 'Dialects & Sugar': dialects.md
       - 'Modules': modules.md
       - 'Quick Reference': cmk-quick-ref.md
       - 'All Demos (Index)': cmk-demos.md

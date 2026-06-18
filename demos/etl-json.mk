@@ -1,7 +1,7 @@
 #!/usr/bin/env -S make -f
-# Describes a JSON-backed ETL pipeline with `compose.mk`
+# etl-json.mk:
+#   A JSON-backed ETL pipeline with `compose.mk`
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.
 # USAGE: ./demos/etl-json.mk
 
 include compose.mk

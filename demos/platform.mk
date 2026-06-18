@@ -1,10 +1,9 @@
 #!/usr/bin/env -S make -f
-# Demonstrating a way to organize platform lifecycle automation with `compose.mk`.
-# We use namespace-style dispatch here to run commands in docker-compose managed 
-# containers, and use `compose.mk` workflows to to describe data-flow.
+# platform.mk:
+#   A way to organize platform lifecycle automation with `compose.mk`.
+#   We use namespace-style dispatch here to run commands in docker-compose managed 
+#   containers, and use `compose.mk` workflows to to describe data-flow.
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/demos/platform
 # USAGE: ./demos/platform.mk
 
 include compose.mk

@@ -19,5 +19,5 @@
 # All of the demos get `help.local` just by using `include compose.mk`
 ./demos/container-dispatch.mk help.local
 
-# use `mk.include` reflection to generate help for a makefile with no `include compose.mk`
-./compose.mk mk.include/./demos/no-include.mk help.local
+# use `include` reflection to generate help for a makefile with no `include compose.mk`
+./compose.mk include/./demos/no-include.mk help.local

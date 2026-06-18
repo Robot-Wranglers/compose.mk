@@ -1,7 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrating guests, payloads, default services, and forks.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
+# payload.mk:
+#   Guests, payloads, default services, and forks.
+#
 # USAGE: ./demos/guests.mk
 
 include compose.mk

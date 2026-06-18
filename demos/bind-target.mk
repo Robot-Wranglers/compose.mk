@@ -1,10 +1,8 @@
 #!/usr/bin/env -S make -f
-# Demonstrating idiom for container-agnostic target dispatch,
-# where the target always run from the container, but does not 
-# care where it is called from.
-#
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/container-dispatch
+# bind-target.mk:
+#   Idiom for container-agnostic target dispatch,
+#   where the target always run from the container, but does not 
+#   care where it is called from.
 #
 # USAGE: ./demos/bind-target-2.mk
 

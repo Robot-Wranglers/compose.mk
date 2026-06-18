@@ -1,7 +1,8 @@
 #!/usr/bin/env -S make -f
-# Demonstrating "special guest" polyglots in awk/bash.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: 
+# guests.mk:
+#   "Special guest" polyglots in awk/bash.
+#
+#   See also: 
 #   * http://robot-wranglers.github.io/compose.mk/demos/polyglots
 #   * demos/script-dispatch-host.mk
 # USAGE: ./demos/guests.mk

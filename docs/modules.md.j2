@@ -21,7 +21,7 @@ greet:; @echo hello from ${CMK_MODULE}
 ...and in plain Makefile (or via the [`declare.module`]({{mkdocs.site_relative_url}}/macros) alias), the bare call:
 
 ```Makefile
-$(call mk.import.module, def=MyModule)
+$(call import.module, def=MyModule)
 ```
 
 Both stage `MyModule` and make its members available as `MyModule.var1`, `MyModule.greet`, and so on.
@@ -29,7 +29,7 @@ Both stage `MyModule` and make its members available as `MyModule.var1`, `MyModu
 ### Declaring a Module
 <hr style="width:100%;border-bottom:3px solid black;">
 
-The `⦖ … ⦕` sugar accepts the usual [`with … as …` advice]({{mkdocs.site_relative_url}}/compiler/#foreign-code-objects):
+The `⦖ … ⦕` sugar accepts the usual [`with … as …` trailer]({{mkdocs.site_relative_url}}/compiler/#foreign-code-objects):
 
 ```cmk  {.language-cmk}
 ⦖ MyModule
@@ -88,7 +88,7 @@ This is the plain-make mirror of the demo above: the `MyModule` body uses a `"""
 Instead of an inline `define`, a module can be an existing file:
 
 ```Makefile
-$(call mk.import.module, file=path/to/module.mk namespace=mymod)
+$(call import.module, file=path/to/module.mk namespace=mymod)
 ```
 
 `def=` and `file=` are mutually exclusive (exactly one is required).  With `file=` and no `namespace=`, the module is named after the file's basename.
@@ -100,10 +100,10 @@ By default the whole module is imported.  To bring in only part of one, add a `t
 
 ```Makefile
 # only the targets matching the glob (still namespaced + compiled)
-$(call mk.import.module, def=MyModule targets='build.*')
+$(call import.module, def=MyModule targets='build.*')
 
 # only the named define blocks
-$(call mk.import.module, file=lib.mk defs='helper_*')
+$(call import.module, file=lib.mk defs='helper_*')
 ```
 
 The selector runs as the first stage of the staging pipeline (`select -> namespace -> header -> compile`), so the chosen members are namespaced and compiled exactly as in a full import -- the rest are simply never brought into scope.  Selection is **by name only**: a selected target whose prerequisite is an unselected sibling is the caller's responsibility.
@@ -111,17 +111,17 @@ The selector runs as the first stage of the staging pipeline (`select -> namespa
 ### Flat (root) Imports, and the Plugin Connection
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Each stage of that pipeline is independently optional, which means `mk.import.module` spans a full matrix of behaviours.  `flat=1` omits the namespace and `CMK_MODULE`-header stages, so the body lands in the **global namespace** (un-prefixed):
+Each stage of that pipeline is independently optional, which means `import.module` spans a full matrix of behaviours.  `flat=1` omits the namespace and `CMK_MODULE`-header stages, so the body lands in the **global namespace** (un-prefixed):
 
 ```Makefile
 # compile an inline CMK-Lang block straight into the root namespace (no prefix)
-$(call mk.import.module, def=MyBlock flat=1)
+$(call import.module, def=MyBlock flat=1)
 
 # flat + verbatim FILE -- this is just a plain include
-$(call mk.import.module, file=lib.mk flat=1 preprocs=stream.echo)
+$(call import.module, file=lib.mk flat=1 preprocs=stream.echo)
 ```
 
-That last case -- flat, verbatim, a file -- is the spine's **fast-path**: there is nothing to transform, so the file is bound by a direct, copy-free `include` (with a correct self-referential `$(MAKEFILE_LIST)`).  It is exactly what the [`mk.include.*`]({{mkdocs.site_relative_url}}/macros) verbs lower to.  In other words, **a plugin is just a module with an empty pipeline** -- the two ends of one mechanism:
+That last case -- flat, verbatim, a file -- is the spine's **fast-path**: there is nothing to transform, so the file is bound by a direct, copy-free `include` (with a correct self-referential `$(MAKEFILE_LIST)`).  It is exactly what the [`include.*`]({{mkdocs.site_relative_url}}/macros) verbs lower to.  In other words, **a plugin is just a module with an empty pipeline** -- the two ends of one mechanism:
 
 |                | verbatim (`preprocs=stream.echo`) | compiled (`preprocs=mk.compile`) |
 |----------------|-----------------------------------|----------------------------------|
@@ -134,7 +134,7 @@ The plugin verbs sit on the **flat** row and pick the *column by file extension*
 
 ```Makefile
 # extension decides: plain.mk -> fast include; hello.cmk -> compiled then included
-$(call mk.include.plugins, plain.mk hello.cmk)
+$(call include.plugins, plain.mk hello.cmk)
 ```
 
 `strict=0` makes a missing plugin a no-op for both extensions.  See the [plugin-system demo]({{mkdocs.site_relative_url}}/demos) (`demos/cmk/plugin-system.cmk`).
@@ -142,11 +142,11 @@ $(call mk.include.plugins, plain.mk hello.cmk)
 ### The Declaration Family
 <hr style="width:100%;border-bottom:3px solid black;">
 
-`mk.import.module` is one member of a broader **declaration** namespace -- parse-time verbs that code-generate make state before any recipe runs.  `declare.module` is the module entry; its siblings bring other kinds of things (single defines, targets, plugins, compose files, polyglots) into scope by the same convention.
+`import.module` is one member of a broader **declaration** namespace -- parse-time verbs that code-generate make state before any recipe runs.  `declare.module` is the module entry; its siblings bring other kinds of things (single defines, targets, plugins, compose files, polyglots) into scope by the same convention.
 
 {{site.block_docs('DeclarationIndex', mkdocs)}}
 
-See the [Macros & Functions]({{mkdocs.site_relative_url}}/macros) page for the full declaration reference, and the [Compiler & Dialects]({{mkdocs.site_relative_url}}/compiler) page for the `⦖ … ⦕` sugar and `with … as …` advice.
+See the [Macros & Functions]({{mkdocs.site_relative_url}}/macros) page for the full declaration reference, and the [Compiler & Dialects]({{mkdocs.site_relative_url}}/compiler) page for the `⦖ … ⦕` sugar and `with … as …` trailer.
 
 <hr style="width:100%;border-bottom:3px solid black;">
 

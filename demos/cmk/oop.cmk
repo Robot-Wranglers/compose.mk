@@ -1,10 +1,9 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# demos/cmk/oop.cmk:
-#   CMK-lang equivalent of demos/oop.mk, (ab)using the namespace MRO of
-#   the `ᝏsubcommands` decorator to simulate OOP inheritance.  `pet` searches the
-#   namespaces in order (`.puppy`, `.dog`, `.animal`) like a method-resolution order:
-#   a more-derived "class" OVERRIDES the base; base-only subs are INHERITED.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.
+# oop.cmk:
+#   (Ab)use the namespace MRO of the `ᝏsubcommands` decorator to simulate
+#   OOP inheritance.  `pet` searches the namespaces in order (`.puppy`, `.dog`,
+#   `.animal`) like a method-resolution order: a more-derived "class" OVERRIDES the
+#   base; base-only subs are INHERITED.  Ported from demos/oop.mk.
 #
 # USAGE:
 #   ./demos/cmk/oop.cmk pet speak          # -> yip!   (.puppy override)

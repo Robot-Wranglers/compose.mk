@@ -7,21 +7,31 @@ Without real typing or great tools for static-analysis, `make` can benefit from 
 
 {#Unlike most of the standard library, this section is heavy on macros and light on targets, because re-using it outside of `make` isn't necessarily more readable than the shell equivalent would be.#}
 
+The precondition checks all live under the **`assert.*`** namespace and follow the same contract: they pass quietly when the condition holds and fail loudly (nonzero exit + a red log line) when it doesn't, so they compose naturally as recipe guards or target prerequisites.
+
 #### Environment Assertions
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-We've already met one method for asserting environment variables are set as part of the [argument-parsing support](#bind-from-environment), because anything that's mentioned without a default is considered required.  
+We've already met one method for asserting environment variables are set as part of the [argument-parsing support](#bind-from-environment), because anything that's mentioned without a default is considered required.
 
 See also:
 
-* {{site.api_link('mk.assert.env',mkdocs,arg='v1,v2..')}}, available as a target or a macro.
+* {{site.api_link('assert.env',mkdocs,arg='v1,v2..')}}, asserts one or more named variables are set + non-empty; available as a target or a macro.
+* {{site.api_link('assert.env.var',mkdocs,arg='v1')}}, the single-variable primitive `assert.env` is built on.
 
-#### Filesystem Assertions
+#### Tool Assertions
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 See also:
 
-* {{site.api_link('mk.require.tool',mkdocs,arg='tool-name')}}, basically a wrapper on `which`, and available as a target or a macro.
+* {{site.api_link('assert.tool.required',mkdocs,arg='tool-name')}}, asserts a CLI tool is on `PATH` (a wrapper on `which`); available as a target or a macro.  An optional second argument supplies a custom "how to install" message.  Handy as a prerequisite, e.g. `release: assert.tool.required/twine`.
+
+#### Stream Assertions
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+See also:
+
+* {{site.api_link('assert.stream.stdin.required',mkdocs)}}, asserts that `stdin` is an actual stream (not an interactive tty), for targets/macros that must consume piped input.
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

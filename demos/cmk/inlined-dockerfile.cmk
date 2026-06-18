@@ -1,5 +1,8 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# CMK-lang translation of demos/inlined-dockerfile.mk
+# inlined-dockerfile.cmk:
+#   Embed a Dockerfile inline; build/run targets are
+#   scaffolded for it.  Ported from demos/inlined-dockerfile.mk.
+#
 # USAGE: ./demos/cmk/inlined-dockerfile.cmk
 
 ⫻ Dockerfile.my_container

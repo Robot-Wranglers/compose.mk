@@ -1,6 +1,6 @@
 #!/usr/bin/env -S make -f
-# Demonstrates some nushell interoperability.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# structured-io-nushell.mk:
+#   Some nushell interoperability.
 #
 # USAGE: ./demos/structured-io-nushell.mk
 

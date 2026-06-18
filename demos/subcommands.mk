@@ -1,6 +1,6 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret
-# demos/subcommands.mk:
-#   A minimal subcommand CLI built on the reusable `mk.subcommands` engine.
+# subcommands.mk:
+#   A minimal subcommand CLI built on the reusable `cli.subcommands` engine.
 #
 # USAGE: (non-parametric subcommands)
 #   ./demos/subcommands.mk greet world       # -> hello world
@@ -21,7 +21,7 @@ include compose.mk
 # The whole CLI: one line, fully auto-detected. 
 # By default, namespaces come from the target name, and
 # subcommands are reflected from the `.greet.*` handlers below.
-greet:; $(call mk.subcommands.enter)
+greet:; $(call cli.subcommands.enter)
 .greet.world:; printf 'hello world\n'
 .greet.me:;    printf "hello $${USER}"
 .greet.hello/%:; printf 'hello, %s! (argv=%s)\n' "${*}" "$${argv:-}"

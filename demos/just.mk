@@ -1,8 +1,6 @@
 #!/usr/bin/env -S make -f
-# demos/just.mk: 
-#   Demonstrates some interoperability with `just`.
-#
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# just.mk:
+#   Some interoperability with `just`.
 #
 # USAGE: ./demos/just.mk
 # USAGE: ./demos/just.mk justfile.target.selector

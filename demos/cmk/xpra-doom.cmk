@@ -1,7 +1,7 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# Demonstrating GUI capabilities with dockerized XPra,
-# plus a dockerized app, served via HTTP / HTML5 and 
-# accessed via a host browser.
+# xpra-doom.cmk:
+#   GUI capabilities with dockerized XPra plus a dockerized app,
+#   served via HTTP / HTML5 and accessed from a host browser.
 #
 # USAGE: ./demos/cmk/xpra-doom.cmk serve
 

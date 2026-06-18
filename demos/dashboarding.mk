@@ -1,8 +1,7 @@
 #!/usr/bin/env -S make -f
-# demos/dashboarding.mk: 
+# dashboarding.mk:
 #   A very basic demo for getting started with custom TUIs.  
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # USAGE: ./demos/dashboarding.mk demo.ui
 
 

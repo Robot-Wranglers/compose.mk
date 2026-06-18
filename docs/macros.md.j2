@@ -59,7 +59,7 @@ xargs
 $ ./compose.mk mk.def.read/mk.unpack.kwargs
 ```
 
-{{site.api_link('mk.get', mkdocs)}} expands a name; {{site.api_link('mk.def.read', mkdocs)}} reads a define block.  Both are the reflection primitives that the importer macros (`mk.import.def` / `mk.import.target`) build on.
+{{site.api_link('mk.get', mkdocs)}} expands a name; {{site.api_link('mk.def.read', mkdocs)}} reads a define block.  Both are the reflection primitives that the importer macros (`import.def` / `import.target`) build on.
 
 ### Families
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -93,7 +93,7 @@ A map of the macro/function families.  Most members mirror a same-named target. 
     </tr>
     <tr><td colspan="2"><strong><code>mk.*</code>:</strong> Meta-tooling: reflection, kwargs, importing, assertions.</td></tr>
     <tr>
-      <td class="macro-list"><code>mk.get</code>, <code>mk.def.read</code>, <code>mk.unpack.kwargs</code>, <code>mk.import.def</code>, <code>mk.import.target</code>, <code>mk.assert.env</code></td>
+      <td class="macro-list"><code>mk.get</code>, <code>mk.def.read</code>, <code>mk.unpack.kwargs</code>, <code>import.def</code>, <code>import.target</code>, <code>assert.env</code></td>
       <td><a href="{{mkdocs.site_relative_url}}/reflection">Reflection</a></td>
     </tr>
     <tr><td colspan="2"><strong><code>flux.*</code>:</strong> Workflow / functional operators (pipelines, map/fold, retries).</td></tr>
@@ -131,8 +131,14 @@ A map of the macro/function families.  Most members mirror a same-named target. 
 
 ### `declare.*` Namespace
 <hr style="width:95%;border-bottom:1px dashed black;">
+<a name=declare-namespace></a>
 
 {{site.block_docs('DeclarationIndex', mkdocs)}}
+
+A name declared here (a channel, module, polyglot, or single-image container) also becomes a
+first-class **[receiver]({{mkdocs.site_relative_url}}/compiler/#receivers)** in CMK-lang: once
+declared, you can call its scaffolded targets anchorless, as `name.method[...]`, with no `this.`
+prefix.
 
 ### Worked examples
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -151,7 +157,7 @@ build:
 	@# ... real work ...
 ```
 
-**Keyword arguments:** `mk.unpack.kwargs` powers the `key=value` idiom used by `mk.import.def`, `compose.bind.*`, and friends (full treatment in
+**Keyword arguments:** `mk.unpack.kwargs` powers the `key=value` idiom used by `import.def`, `compose.bind.*`, and friends (full treatment in
 [Argument Parsing]({{mkdocs.site_relative_url}}/argument-parsing)):
 
 ```Makefile {.language-makefile}

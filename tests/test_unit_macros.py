@@ -103,6 +103,44 @@ def test_mk_unpack_kwargs_prefix_key_not_a_false_duplicate(cmk, tmp_path):
   assert r.stdout.strip() == "[a]"
 
 
+# --- mk.unpack.args: name -> `name=$(${*} field N)` positional binding --------
+
+
+def test_mk_unpack_args_binds_named_positionals(cmk, tmp_path):
+  # the normal contract: split `${*}` on commas into the named positionals.  A
+  # `/`-bearing target (no comma) round-trips fine -- it lands wholly in one field.
+  body = (
+    "unpack/%:; $(call mk.unpack.args, n target) && "
+    'printf \'n=[%s] target=[%s]\\n\' "$$n" "$$target"\n'
+  )
+  r = cmk("unpack/5,io.time.wait/1", makefile=_wrapper(tmp_path, body))
+  assert r.ok, r.stderr
+  assert r.stdout.strip() == "n=[5] target=[io.time.wait/1]"
+
+
+@pytest.mark.xfail(
+  reason=(
+    "mk.unpack.args binds each name to a SINGLE field via "
+    "`cut -d, -f<n>` (compose.mk:3877), so the LAST positional is truncated at "
+    "its first comma: `5,foo/a,b` yields target=`foo/a`, dropping `,b`.  A "
+    "trailing target that itself takes comma-args (e.g. `flux.loop/5,build/x,y`) "
+    "can't round-trip -- the flux.if.then/do.when/starmap family use an explicit "
+    "`cut -d, -f2-` for exactly this reason."
+  ),
+  strict=False,
+)
+def test_mk_unpack_args_trailing_comma_arg_preserved(cmk, tmp_path):
+  # the last name SHOULD absorb the rest of the comma-split (like `-f2-`), so a
+  # parametric target carrying its own comma-args survives as one value.
+  body = (
+    "unpack/%:; $(call mk.unpack.args, n target) && "
+    'printf \'n=[%s] target=[%s]\\n\' "$$n" "$$target"\n'
+  )
+  r = cmk("unpack/5,foo/a,b", makefile=_wrapper(tmp_path, body))
+  assert r.ok, r.stderr
+  assert r.stdout.strip() == "n=[5] target=[foo/a,b]"
+
+
 # --- bind.posargs / _bind.posargs: positional `${*}` splitting ---------------
 
 
@@ -213,16 +251,16 @@ def test_io_declare_stack_origin_guard_preserves(cmk, tmp_path):
   assert "name=[preset.json]" in r.stdout
 
 
-# --- mk.include.file: include one explicit makefile, clean error if absent ----
+# --- include.file: include one explicit makefile, clean error if absent ----
 
 
 def test_mk_include_file_includes_present(cmk, tmp_path):
-  # mk.include.file includes a present makefile, so its definitions become
+  # include.file includes a present makefile, so its definitions become
   # available to the includer.
   inc = tmp_path / "inc.mk"
   inc.write_text("FROM_INC := yes\n")
   body = (
-    f"$(call mk.include.file, {inc})\n"
+    f"$(call include.file, {inc})\n"
     "probe:; @printf 'FROM_INC=[%s]\\n' '$(FROM_INC)'\n"
   )
   r = cmk("probe", makefile=_wrapper(tmp_path, body))
@@ -232,6 +270,6 @@ def test_mk_include_file_includes_present(cmk, tmp_path):
 
 def test_mk_include_file_missing_errors(cmk, tmp_path):
   # A missing target fails cleanly (nonzero) rather than silently no-op'ing.
-  body = "$(call mk.include.file, /no/such/file.mk)\nprobe:; @true\n"
+  body = "$(call include.file, /no/such/file.mk)\nprobe:; @true\n"
   r = cmk("probe", makefile=_wrapper(tmp_path, body))
   assert not r.ok

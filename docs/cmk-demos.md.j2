@@ -4,7 +4,7 @@
 <hr style="width:100%;border-bottom:3px solid black;">
 <a name=all-demos></a>
 
-Every CMK demo that's featured elsewhere in these docs, cross-referenced to where it appears and to its plain-Makefile twin (where one exists).  The full set of sources lives in the {{macros.repo_link('demos/cmk', github=github)}} folder.  For how to run and compile these, see [About CMK Demos]({{mkdocs.site_relative_url}}/compiler/#about-cmk-demos) on the [Compiler &amp; Dialects]({{mkdocs.site_relative_url}}/compiler) page.
+Every CMK demo that's featured elsewhere in these docs, cross-referenced to where it appears and to its plain-Makefile twin (where one exists).  The full set of sources lives in the {{macros.repo_link('demos/cmk', github=github)}} folder.  For how to run and compile these, see [Running Demos]({{mkdocs.site_relative_url}}/compiler/#running-demos) on the [Compiler &amp; Dialects]({{mkdocs.site_relative_url}}/compiler) page.
 
 <table>
   <thead>
@@ -88,6 +88,11 @@ Every CMK demo that's featured elsewhere in these docs, cross-referenced to wher
       <td><a href="{{mkdocs.site_relative_url}}/demos/polyglots">Polyglots</a></td>
       <td>{{macros.repo_link('demos/code-objects.mk', name='code-objects.mk', github=github)}}</td>
     </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/event-loop.cmk', name='event-loop', github=github)}}</td>
+      <td><a href="{{mkdocs.site_relative_url}}/demos/event-loop">Event Loop</a></td>
+      <td><em>(none)</em></td>
+    </tr>
 
     <tr><td colspan=3><strong>Argument Parsing</strong></td></tr>
     <tr>
@@ -104,12 +109,12 @@ Every CMK demo that's featured elsewhere in these docs, cross-referenced to wher
     <tr><td colspan=3><strong>Extending CMK</strong></td></tr>
     <tr>
       <td>{{macros.repo_link('demos/cmk/user-dialect.cmk', name='user-dialect', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/compiler/#user-defined-dialects">User-Defined Dialects</a></td>
+      <td><a href="{{mkdocs.site_relative_url}}/dialects/#user-defined-dialects">User-Defined Dialects</a></td>
       <td>-</td>
     </tr>
     <tr>
       <td>{{macros.repo_link('demos/cmk/user-sugar.cmk', name='user-sugar', github=github)}}</td>
-      <td><a href="{{mkdocs.site_relative_url}}/compiler/#user-defined-sugar">User-Defined Sugar</a></td>
+      <td><a href="{{mkdocs.site_relative_url}}/dialects/#user-defined-sugar">User-Defined Sugar</a></td>
       <td>-</td>
     </tr>
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrating import shell-script to target.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
+# script-dispatch-host.mk:
+#   Import shell-script to target.
+#
 # USAGE: ./demos/script-dispatch-stock.mk
 
 include compose.mk

@@ -1,6 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrating a few macros for stream io.  Most of these are also available as targets.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# stdlib-stream-io.mk:
+#   A few macros for stream io.  Most of these are also available as targets.
+#
 # USAGE: ./demos/stdlib-stream-io.mk
 
 include compose.mk 

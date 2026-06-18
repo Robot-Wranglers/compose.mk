@@ -61,16 +61,16 @@ With the vanilla-Makefile version out of the way, here's a version showing off m
 
 **Single-sourcing / Imports:** we keep things DRY by pulling in shared components that we don't plan to change, i.e. pulling in shared definitions from the Makefile twin in the last section. See also the documentation for:
 
-* [`mk.import.def`]({{mkdocs.site_relative_url}}/macros)
-* [`mk.import.target`]({{mkdocs.site_relative_url}}/macros)
+* [`import.def`]({{mkdocs.site_relative_url}}/macros)
+* [`import.target`]({{mkdocs.site_relative_url}}/macros)
 
 **Triple-Quoted Inlines:** Are a form that CMK supports, with and without interpolation.
 See also the documentation [here]({{mkdocs.site_relative_url}}/compiler/#triple-quote-literals).
 
-**Callable Targets:** The `underload` VM reads its program from stdin, so the demos invoke
-it with the callable-target sugar `this.underload("""...""")` (which lowers to
-`"""...""" | this.underload`).  See also the documentation
-[here]({{mkdocs.site_relative_url}}/compiler/#callable-targets).
+**Call Forms:** The `underload` VM reads its program from stdin, so the demos invoke
+it with the `[stream]` call-form sugar `this.underload["""..."""]` (which lowers to
+`"""..." | this.underload`).  See also the documentation
+[here]({{mkdocs.site_relative_url}}/compiler/#call-forms).
 
 {{site.embed_demo('demos/cmk/underload.cmk',
     bottom_right=site.link_mirror(

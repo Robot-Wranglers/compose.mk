@@ -31,7 +31,7 @@ Well, pushing the boundaries of a simple toolchain <u>is</u> part of the goal.  
 
 Originally, `compose.mk` started as an experiment in basic docker-support for `make`, then became an experiment in dependency minimalism in general, *but it just never hit a wall*, and it seems like it ended up in a very interesting place.  
 
-Part of what `compose.mk` adds is various primitives and idioms that make `make` feel like a Real Language™.  Just in case the library offerings won't help with that.. then you can always opt in to [using a transpiler]({{mkdocs.site_relative_url}}/compiler) and even [redefining the syntax for your use-case]({{mkdocs.site_relative_url}}/compiler/#user-defined-extensions).
+Part of what `compose.mk` adds is various primitives and idioms that make `make` feel like a Real Language™.  Just in case the library offerings won't help with that.. then you can always opt in to [using a transpiler]({{mkdocs.site_relative_url}}/compiler) and even [redefining the syntax for your use-case]({{mkdocs.site_relative_url}}/dialects/#user-defined-extensions).
 
 You would think that minimalism cannot be compatible with **aggressively reusing available tools**.  But in the limit, scripting with `compose.mk` **feels like a genuinely new way to write glue code that pulls in foreign tools and code as first class objects** in a way that's more organized than adhoc.
 

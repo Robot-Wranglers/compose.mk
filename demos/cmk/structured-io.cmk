@@ -1,5 +1,7 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# CMK-lang translation of demos/structured-io.mk
+# structured-io.cmk:
+#   Emit and consume JSON with the 🡄 / 🡆 arrow operators.
+#   Ported from demos/structured-io.mk.
 
 emit: 
 	🡄 key=val

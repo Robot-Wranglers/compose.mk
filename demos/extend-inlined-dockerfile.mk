@@ -1,9 +1,8 @@
 #!/usr/bin/env -S make -f
-# demos/extend-inlined-dockerfile.mk: 
-#   Demonstrates extending an inlined container.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# extend-inlined-dockerfile.mk:
+#   Extending an inlined container.
 #
-#   USAGE: ./demos/extend-inlined-dockerfile.mk
+# USAGE: ./demos/extend-inlined-dockerfile.mk
 
 include demos/inlined-dockerfile.mk
 

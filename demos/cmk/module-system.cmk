@@ -1,5 +1,6 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# module-system.cmk -- the MODULE system and its import variations.
+# module-system.cmk:
+#   The MODULE system and its import variations.
 #
 # `⦖ MyModule .. ⦕ as Aliased` DEFINES a module and imports the whole thing under
 # a namespace that is NOT the module name (demo 4).  That same `MyModule` define is
@@ -7,12 +8,20 @@
 # NAME, so the run's log shows the imports plainly: `Aliased.greet`, `Part.greet`,
 # `Star.svc.up`, and a bare `greet` for the flat/root import.
 #
-# USAGE: ./demos/cmk/module-system.cmk
+# Once declared, a module namespace like `Aliased` is a first-class RECEIVER: its
+# targets are called anchorless (`Aliased.greet.to/world`, `Aliased.shout[...]`), with
+# no `this.` -- see `main2`.
+#
+# USAGE:
+#   ./demos/cmk/module-system.cmk          # the import variations (default)
+#   ./demos/cmk/module-system.cmk main2    # the same module, called first-class
 
 ⦖ MyModule
 greet:; $(call log.target, hello)
 svc.up:; $(call log.target, starting)
 svc.down:; $(call log.target, stopping)
+greet.to/%:; $(call log.target, hello ${*})
+shout:; ${stream.as.log}
 report:
 	@# A CMK-Lang target: the `"""..."""` heredoc + `this.` dialect are lowered
 	@# at import time by the default `mk.compile` preprocessor.
@@ -21,12 +30,19 @@ report:
 
 # `⦖ .. ⦕ as Aliased` defined `MyModule` and imported it WHOLE as `Aliased.*`
 # (demo 4: a namespace that is not the module name).  Three more imports follow:
-$(call mk.import.module, def=MyModule targets=greet namespace=Part)    # 1. partial -- only `greet`
-$(call mk.import.module, def=MyModule targets='svc.*' namespace=Star)  # 2. star    -- the `svc.*` glob
-$(call mk.import.module, def=MyModule flat=1)                          # 3. root    -- flat, no prefix
+$(call import.module, def=MyModule targets=greet namespace=Part)    # 1. partial -- only `greet`
+$(call import.module, def=MyModule targets='svc.*' namespace=Star)  # 2. star    -- the `svc.*` glob
+$(call import.module, def=MyModule flat=1)                          # 3. root    -- flat, no prefix
 
 __main__: \
 	Aliased.report Aliased.greet \
 	Part.greet \
 	Star.svc.up Star.svc.down \
 	greet
+
+# main2 -- the SAME module, used FIRST-CLASS.  Declaring `Aliased` registered it as a
+# RECEIVER, so its methods are CALLED with no `this.` anchor: the `/arg` and `[stream]`
+# (and `(args)`) call-forms apply to a module's targets exactly as to any other.
+main2:
+	Aliased.greet.to/world                  # /arg    -> ${make} Aliased.greet.to/world
+	Aliased.shout["""loud and clear"""]     # [stream] -> printf "..." | ${make} Aliased.shout

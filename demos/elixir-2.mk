@@ -1,7 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrating polyglots using elixir (low-level helpers)
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
+# elixir-2.mk:
+#   Polyglots using elixir (low-level helpers)
+#
 # USAGE: ./demos/elixir-1.mk
 
 include compose.mk

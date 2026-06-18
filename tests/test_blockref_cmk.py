@@ -1,16 +1,17 @@
-"""PROTOTYPE tests for the `⬦`/`⬥` block-reference glyph constructs.
+"""Tests for the `⬦`/`⬥` block-reference glyph constructs.
 
-This file is intentionally NOT named `test_*.py`, so it is excluded from the
-default suite discovery (see pytest.ini `python_files`).  Run it explicitly:
+The two glyphs lower (in the `.awk.blockref` compile stage, after `callform`):
+    ⬦NAME  ->  <($(call _mk.def.to.fd, NAME))   (stream FD; hollow = transient)
+    ⬥NAME  ->  $(call _mk.def.tmpfile, NAME)     (real local file; filled = on disk)
 
-    pytest tests/proto_blockref.py -q
-
-It reuses the shared `cmk` fixture from tests/conftest.py.
-
-The two glyphs lower (in the `.awk.blockref` compile stage, after `callable`):
-    ⬦NAME  ->  <($(call mk.def_to_fd, NAME))   (stream FD; hollow = transient)
-    ⬥NAME  ->  $(call mk.def.tmpfile, NAME)     (real local file; filled = on disk)
+Stage-level golden lowering and full `mk.compile` cases stay compile-only; the
+end-to-end cases compile AND run a tiny `.cmk` (locally, no docker) to prove the
+FD/file actually feeds a command.
 """
+
+import pytest
+
+pytestmark = pytest.mark.compiler
 
 SUP = {"CMK_SUPERVISOR": "1"}
 
@@ -21,20 +22,20 @@ SUP = {"CMK_SUPERVISOR": "1"}
 def test_stage_stream_glyph(cmk):
   r = cmk("mk.preprocess.blockref", stdin="x:; jq -f ⬦prog.jq\n")
   assert r.ok, r.stderr
-  assert "jq -f <($(call mk.def_to_fd, prog.jq))" in r.stdout
+  assert "jq -f <($(call _mk.def.to.fd, prog.jq))" in r.stdout
 
 
 def test_stage_file_glyph(cmk):
   r = cmk("mk.preprocess.blockref", stdin="y:; lean ⬥thm.lean\n")
   assert r.ok, r.stderr
-  assert "lean $(call mk.def.tmpfile, thm.lean)" in r.stdout
+  assert "lean $(call _mk.def.tmpfile, thm.lean)" in r.stdout
 
 
 def test_stage_multiple_glyphs_one_line(cmk):
   r = cmk("mk.preprocess.blockref", stdin="z:; run ⬦a then ⬥b end\n")
   assert r.ok, r.stderr
   assert (
-    "run <($(call mk.def_to_fd, a)) then $(call mk.def.tmpfile, b) end"
+    "run <($(call _mk.def.to.fd, a)) then $(call _mk.def.tmpfile, b) end"
     in r.stdout
   )
 
@@ -52,7 +53,7 @@ def test_stage_inert_inside_define(cmk):
   r = cmk("mk.preprocess.blockref", stdin=src)
   assert r.ok, r.stderr
   assert "inside ⬦keepme literal" in r.stdout
-  assert "mk.def_to_fd" not in r.stdout
+  assert "_mk.def.to.fd" not in r.stdout
 
 
 # --- full pipeline (mk.compile) --------------------------------------------
@@ -62,7 +63,7 @@ def test_compile_lowers_glyph_in_recipe(cmk):
   src = "define prog\n. + 1\nendef\nt:; jq -f ⬦prog\n"
   r = cmk("mk.compile", stdin=src)
   assert r.ok, r.stderr
-  assert "jq -f <($(call mk.def_to_fd, prog))" in r.stdout
+  assert "jq -f <($(call _mk.def.to.fd, prog))" in r.stdout
 
 
 # --- end-to-end (cmk run): the FD actually feeds a command -------------------
@@ -94,6 +95,18 @@ def test_e2e_file_glyph_yields_real_path(cmk, tmp_path):
   r = cmk("cmk", "run", "p.cmk", env=SUP)
   assert r.ok, r.stderr
   assert "abcde" in r.stdout
+
+
+def test_e2e_file_glyph_tmpfile_swept_at_end_of_run(cmk, tmp_path):
+  # ⬥ tmpfiles are run-id-scoped (.tmp.cmk.brf.*) and the supervisor teardown
+  # sweeps them, so nothing is left behind in the cwd after the run.
+  prog = "define blk\nabcde\nendef\n"
+  main = "__main__:; wc -c ⬥blk\n"
+  (tmp_path / "p.cmk").write_text(prog + main)
+  r = cmk("cmk", "run", "p.cmk", env=SUP)
+  assert r.ok, r.stderr
+  leftover = list(tmp_path.glob(".tmp.cmk.brf.*"))
+  assert not leftover, f"brf tmpfiles not cleaned up: {leftover}"
 
 
 # --- fidelity: backslash/quote-heavy block survives the round-trip ----------

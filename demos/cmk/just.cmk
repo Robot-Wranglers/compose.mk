@@ -1,9 +1,10 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# Demonstrates some interoperability with `just`.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# just.cmk:
+#   Interoperate with a Justfile from CMK.  Ported from demos/just.mk.
 #
-# USAGE: ./demos/just.mk
-# USAGE: ./demos/just.mk justfile.target.selector
+# USAGE:
+#   ./demos/cmk/just.cmk
+#   ./demos/cmk/just.cmk <justfile.target.selector>
 
 include compose.mk
 

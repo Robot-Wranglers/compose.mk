@@ -3,7 +3,7 @@
 ## Advanced TUIs 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-In the limit, `compose.mk` can help you to script *custom console applications* that potentially involve many containers, and by using [mk.self]({{mkdocs.site_relative_url}}/demos/packaging) you can "compile" them to stand-alone executables.  This works best for building things like dashboards, but it's even possible to build things that resemble **portable, project-specific IDEs**.
+In the limit, `compose.mk` can help you to script *custom console applications* that potentially involve many containers, and by using [mk.pkg]({{mkdocs.site_relative_url}}/demos/packaging) you can "compile" them to stand-alone executables.  This works best for building things like dashboards, but it's even possible to build things that resemble **portable, project-specific IDEs**.
 
 Extreme customization of the TUI isn't well documented yet, but this page has a few hints and an overview of existing examples.
 
@@ -61,7 +61,7 @@ You can setup a custom layout by just exporting a magic value for the `geometry`
 But the easiest way to get started with custom geometries is to do something like this:
 
 1. Setup your TUI initially to use the built-in spiral/horizontal/vertical layout that's closest to what you want.
-1. Start your app and manually rearrange the pane sizes to suit.  There's a few ways to do that, but you probably want `Alt` + arrows keys to resize existing panes. (See also the [tmux docs](https://github.com/tmux/tmux/wiki) and the [compose.mk keybindings overview](#/embedded-tui/#default-keybindings))
+1. Start your app and manually rearrange the pane sizes to suit.  There's a few ways to do that, but you probably want `Alt` + arrows keys to resize existing panes. (See also the [tmux docs](https://github.com/tmux/tmux/wiki) and the [compose.mk keybindings overview]({{mkdocs.site_relative_url}}/embedded-tui/#default-keybindings))
 1. Add new panes using the 'New Pane' button at the bottom of the TUI, or 
 1. Add new panes by right clicking an existing pane and choosing split-horizontal or split-vertical
 

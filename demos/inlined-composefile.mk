@@ -1,8 +1,7 @@
 #!/usr/bin/env -S make -f
-# demos/inlined-composefile.mk: 
-#   Demonstrates working with inlined compose-files via `_compose.import.string`,
+# inlined-composefile.mk:
+#   Working with inlined compose-files via `_compose.import.string`,
 #   which works exactly like `compose.import`, but accepts embedded data instead of files.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 #
 # USAGE: ./demos/inlined-composefile.mk
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# Demonstrating GUI capabilities with XPra and carbonyl, served via HTML5.
+# xpra-net.cmk:
+#   GUI capabilities with XPra and carbonyl, served via HTML5.
 #
 # USAGE: ./demos/cmk/xpra-net.cmk gui
 

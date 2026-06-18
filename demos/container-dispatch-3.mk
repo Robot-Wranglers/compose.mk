@@ -1,9 +1,8 @@
 #!/usr/bin/env -S make -f
-# demos/container-dispatch-3.mk: 
-#   Demonstrates the container dispatch idiom using "namespace" style invocation.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# container-dispatch-3.mk:
+#   The container dispatch idiom using "namespace" style invocation.
 #
-#   USAGE: ./demos/container-dispatch-3.mk
+# USAGE: ./demos/container-dispatch-3.mk
 
 include compose.mk
 

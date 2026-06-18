@@ -26,6 +26,11 @@ units unit-test:
 	@# Fast, no-docker unit tests (stream.* and friends).
 	tox -e unit
 
+plugins plugin-test:
+	@# The .cmk/ plugin suite -- every plugin imports cleanly + exposes its public surface, plus the
+	@# per-plugin behavior suites (repl/vm/polyglot).  Polyglot build+run cases need a docker daemon.
+	tox -e plugin
+
 smoke smoke-test:
 	@# Smoke tests — wrap tests/scripts/*.sh and assert clean exit (needs docker).
 	tox -e smoke

@@ -9,6 +9,8 @@ More specifically, `compose.mk` is a [matrioshka language]({{mkdocs.site_relativ
 
 The rest of this page focuses on other language-related features and serves as an alternate to the [main landing page]({{mkdocs.site_relative_url}}/overview). If you prefer overviews to focus less on applications and more on **theory, architecture, and patterns**, you've come to the right place.
 
+{%include "cmk-quick-version.md.j2"%}
+
 **Related Links:** See [here]({{mkdocs.site_relative_url}}/compiler/#basic-example), [here]({{mkdocs.site_relative_url}}/compiler/#compose-file-example), [here]({{mkdocs.site_relative_url}}/compiler/#dockerfile-example) if you're looking for concrete examples.  For a discussion more focused on patterns, see the [matrioshka automata page]({{mkdocs.site_relative_url}}/matrioshka) to learn about packing programs inside of programs.
 
 ### Language Properties
@@ -21,7 +23,7 @@ The rest of this page focuses on other language-related features and serves as a
 1. Very untyped, but some support for [structured data]({{mkdocs.site_relative_url}}/standard-lib#structured-io) and [file and stream kinds]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-stream-types-pipes)
 1. Supports extensible programming[^5]
     * via container support generally, but also 
-    * via [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [dynamically]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch) [assigned syntax]({{mkdocs.site_relative_url}}/compiler/#user-defined-extensions)
+    * via [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) and [dynamically]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch) [assigned syntax]({{mkdocs.site_relative_url}}/dialects/#user-defined-extensions)
 1. Supports functional programming[^6] and data flow programming[^7] 
     * via [flux]({{mkdocs.site_relative_url}}/standard-lib/#workflow-rationale) generally, especially via [flux workflows]({{mkdocs.site_relative_url}}/demos/workflows), [etc]({{mkdocs.site_relative_url}}/demos/platform)
     * and also via [other helpers]({{mkdocs.site_relative_url}}/standard-lib/#functional-style)

@@ -1,6 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrating parsing positional arguments in parametric targets.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# parsing-parameters.mk:
+#   Parsing positional arguments in parametric targets.
+#
 # USAGE: ./demos/parsing-parameters.mk
 
 include compose.mk

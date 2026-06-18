@@ -1,7 +1,8 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# exceptions.cmk -- typed exceptions as a CUSTOMER of compose.mk's event
-# system (the `declare.channel` / Events stdlib).  An exception is just an EVENT
-# on the `fault` channel; the only things that make it an "exception":
+# exceptions.cmk:
+#   Typed exceptions as a CUSTOMER of compose.mk's event
+#   system (the `declare.channel` / Events stdlib).  An exception is just an EVENT
+#   on the `fault` channel; the only things that make it an "exception":
 #   - emit also FAILS the caller (`exit 1`),
 #   - dispatch is deferred to AT-EXIT (vs Zahn's synchronous dispatch),
 #   - each event is shown with an FTA-kind glyph.
@@ -28,7 +29,7 @@
 # -- which (via `+=`) thus lands AFTER the drain, so the stack is dispatched
 # before it is removed.
 export CMK_AT_EXIT_TARGETS += fault.dispatch.by_type
-$(call declare.channel,chan=fault)
+$(call declare.channel,namespace=fault)
 
 # fault.log: red fault logger (a red replacement-character glyph instead of
 # log.io's green I/O glyph).
@@ -55,33 +56,34 @@ bind.fault.guarded.postfix_mode := ||
 bind.fault.guarded={ rc=$$? ; $(call log.target,${dim}${yellow} caught abnormal exit ${sep} ${dim}code=$${rc} ${sep} ${dim}throw=SubprocessFault) ; $(call fault.throw,SubprocessFault,kind=external code=$${rc}) ; }
 
 # ── handlers: `fault/<Type>:`, routed by make precedence ──────
-fault/DivZero:
-	@$(call fault.show)
-	cmk.fault.log(${yellow}caught DivZero)
-
-fault/NotFound:
-	@$(call fault.show)
-	cmk.fault.log(${yellow}caught NotFound)
-
-fault/Inner:
-	@# a handler may itself raise; the drain then dispatches that too.
-	@$(call fault.show)
-	cmk.fault.log(${yellow}caught Inner ${sep} rethrow=Wrapped)
-	cmk.fault.throw(Wrapped, kind=conditioning)
-
-fault/Wrapped:
-	@$(call fault.show)
-	cmk.fault.log(${yellow}caught Wrapped (re-thrown by a handler))
-
 fault/SubprocessFault:
-	@$(call fault.show)
+	$(call fault.show)
 	cmk.log.target(${yellow}caught SubprocessFault ${sep}: unexpected tool exit)
 
 fault/%:
 	@# fallback: no handler for this type.  NB: no `exit` -- a handler
 	@# at supervisor-exit can't change the process code.
-	@$(call fault.show)
+	$(call fault.show)
 	cmk.fault.log(${bold}UNHANDLED EXCEPTION: ${*} ${sep} no handler registered)
+
+fault/DivZero:
+	$(call fault.show)
+	cmk.fault.log(${yellow}caught DivZero)
+
+fault/NotFound:
+	$(call fault.show)
+	cmk.fault.log(${yellow}caught NotFound)
+
+fault/Inner:
+	@# a handler may itself raise; the drain then dispatches that too.
+	$(call fault.show)
+	cmk.fault.log(${yellow}caught Inner ${sep} rethrow=Wrapped)
+	cmk.fault.throw(Wrapped, kind=conditioning)
+
+fault/Wrapped:
+	$(call fault.show)
+	cmk.fault.log(${yellow}caught Wrapped (re-thrown by a handler))
+
 
 # ── demo throwers (`demo.*` = app code that raises) ──────────────────
 demo.div:

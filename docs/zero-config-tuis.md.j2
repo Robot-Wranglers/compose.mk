@@ -4,7 +4,7 @@
 
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Zero-config TUIs are part of what makes `compose.mk` useful in [tool mode]({{mkdocs.site_relative_url}}), especially as a quick option for interacting with third-party projects that you can't control and don't want to edit.  
+Zero-config TUIs are part of what makes `compose.mk` useful in [tool mode]({{mkdocs.site_relative_url}}/tool-overview), especially as a quick option for interacting with third-party projects that you can't control and don't want to edit.  
 
 Examples here all involve full-blown TUIs, i.e. multi-pane content with layouts that can be created with no code/config.  For something simpler that's still interactive, see also the [selector docs]({{mkdocs.site_relative_url}}/selector).
 
@@ -59,7 +59,7 @@ $ layout=spiral ./compose.mk loadf demos/data/docker-compose.yml \
 #### Working with Makefiles
 <hr style="width:100%;border-bottom:3px solid black;">
 
-**If your project has a Makefile,** the [selector docs]({{mkdocs.site_relative_url}}/selector/#interactive-target-selection) show how you can interactively select/run individual targets.  In a similar vein, **working with multiple targets and simple "dashboarding" across targets is also possible** with no special configuration.  This involves the {{site.api_link('mk.include', mkdocs)}} target, which effectively simulates a `include compose.mk` in your project Makefile *without actually adding one.*
+**If your project has a Makefile,** the [selector docs]({{mkdocs.site_relative_url}}/selector/#interactive-target-selection) show how you can interactively select/run individual targets.  In a similar vein, **working with multiple targets and simple "dashboarding" across targets is also possible** with no special configuration.  This involves the {{site.api_link('include', mkdocs)}} target, which effectively simulates a `include compose.mk` in your project Makefile *without actually adding one.*
 
 -------------------------------------
 
@@ -67,12 +67,12 @@ Consider the following vanilla Makefile, which does **not** include `compose.mk`
 
 {{site.embed_demo('demos/no-include.mk', github=github)}}
 
-Using `mk.include` by itself works in the way that you'd probably expect, but does nothing very interesting:
+Using `include` by itself works in the way that you'd probably expect, but does nothing very interesting:
 
 ```bash {.cli_example}
 # Roughly equivalent to `make -f demos/no-include.mk`
 $ ./compose.mk \
-    mk.include/demos/no-include.mk 
+    include/demos/no-include.mk 
 ```
 ```bash {.cli_output}
 cleaning
@@ -84,7 +84,7 @@ The interesting part is that using {{site.api_link('tux.open',mkdocs,arg='target
 
 ```bash {.cli_example}
 $ ./compose.mk \
-        mk.include/demos/no-include.mk \
+        include/demos/no-include.mk \
         tux.open/clean,build,test
 ```
 
@@ -98,7 +98,7 @@ Running `clean` and `build` in one step:
 
 ```bash {.cli_example}
 $ ./compose.mk \
-        mk.include/demos/no-include.mk \
+        include/demos/no-include.mk \
         flux.wrap/clean:build
 ```
 ```bash {.cli_output}
@@ -110,7 +110,7 @@ Looping the test-target forever:
 
 ```bash {.cli_example}
 $ ./compose.mk \
-        mk.include/demos/no-include.mk \
+        include/demos/no-include.mk \
         flux.loopf/test
 ```
 ```bash {.cli_output}
@@ -125,7 +125,7 @@ Putting it all together:
 ```bash {.cli_example}
 $ layout=horizontal \
     ./compose.mk \
-        mk.include/demos/no-include.mk \
+        include/demos/no-include.mk \
         tux.open/flux.loopf/test,flux.wrap/clean:build
 ```
 {{macros.img_link("zero-config-tui.gif", mkdocs, "90%", class="cli_output")}}

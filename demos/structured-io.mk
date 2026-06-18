@@ -1,6 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrates target input/output using JSON.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# structured-io.mk:
+#   Target input/output using JSON.
+#
 # USAGE: ./demos/structured-io.mk
 
 include compose.mk

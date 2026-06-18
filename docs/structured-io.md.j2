@@ -53,7 +53,7 @@ Inside a project Makefile, you can use direct calls to `compose.mk` as seen abov
 {{site.embed_demo('demos/structured-io.mk', 
     bottom_right=site.link_mirror(
         "demos/cmk/user-dialect.cmk",
-        link=mkdocs.site_relative_url+"/compiler/#user-defined-dialects"),
+        link=mkdocs.site_relative_url+"/dialects/#user-defined-dialects"),
     github=github)}}
 
 *Now `make emit | make consume` is doing basic IO with JSON,* and we haven't added any new dependencies.  To actually get assignments for input variables in a way that's more automatic, see also the [parsing-arguments section](#argument-parsing) which builds on this example.

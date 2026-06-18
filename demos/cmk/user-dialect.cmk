@@ -1,5 +1,7 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# Demonstrating user-defined extensions for the CMK -> Makefile compiler.
+# user-dialect.cmk:
+#   Define a custom `cmk_dialect` (per-file substitution rules)
+#   via a JSON hint, here remapping the JSON-arrow glyphs.
 #
 # cmk_dialect ::: [ 
 #  ["⏩️", "${stream.stdin} | ${jq} -r"],

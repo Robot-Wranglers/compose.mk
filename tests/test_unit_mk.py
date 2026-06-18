@@ -72,7 +72,7 @@ def test_hook_rewrite_skips_cmk(cmk):
   assert r.stdout.strip() == line
 
 
-# --- mk.subcommands engine: robust tail capture (.awk.subcommands.tail) ------
+# --- cli.subcommands engine: robust tail capture (.awk.subcommands.tail) ------
 # The capture awk recovers a dispatcher's CLI tail from a (possibly hook-decorated)
 # MAKE_CLI: drop up to & incl. `mk.supervisor.enter/<pid>`, drop flux.pre/* flux.post/*,
 # drop the leading namespace token. Unit-tested in isolation via the io.awk idiom
@@ -114,9 +114,41 @@ def test_subcommands_tail_empty(cmk):
   assert _tail(cmk, "cmk") == ""
 
 
-# --- mk.subcommands engine: routing ----------------------------------------
-# mk.subcommands never yields, so it runs fine WITHOUT the supervisor: invoke it
-# directly with the subcmd_* env a client's `mk.subcommands.enter` would set, over a
+# --- define-block SELECT (.awk.select.def) ---------------------------------
+# `mk.select.def/<spec>` emits, from a makefile stream on stdin, only the
+# `define <name>..endef` blocks whose name matches <spec> (a glob with `*`/`?`,
+# else an exact name). A selected block's NESTED inner defines pass through
+# verbatim (depth-tracked); non-matching blocks (and their nesting) are dropped.
+
+_DEFS = (
+  "define alpha\nA body\nendef\n"
+  "define beta\ndefine nested\nN\nendef\nB body\nendef\n"
+  "other:; echo hi\n"
+)
+
+
+def test_select_def_exact_with_nested(cmk):
+  r = cmk("mk.select.def/beta", stdin=_DEFS)
+  assert r.ok, r.stderr
+  # whole beta block incl. its nested define; alpha + the `other:` rule dropped.
+  assert r.stdout == "define beta\ndefine nested\nN\nendef\nB body\nendef\n"
+
+
+def test_select_def_glob(cmk):
+  r = cmk("mk.select.def/a*", stdin=_DEFS)
+  assert r.ok, r.stderr
+  assert r.stdout == "define alpha\nA body\nendef\n"
+
+
+def test_select_def_no_match_is_empty(cmk):
+  r = cmk("mk.select.def/zzz", stdin=_DEFS)
+  assert r.ok, r.stderr
+  assert r.stdout == ""
+
+
+# --- cli.subcommands engine: routing ----------------------------------------
+# cli.subcommands never yields, so it runs fine WITHOUT the supervisor: invoke it
+# directly with the subcmd_* env a client's `cli.subcommands.enter` would set, over a
 # wrapper with parametric (.t.echo/%, .t.run/%) and non-parametric (.t.ping) handlers
 # echoing the stem (${*}) and $argv.
 
@@ -145,7 +177,7 @@ def _denv(tail, default="run", subs="echo run ping", ns=".t"):
 
 def test_subcommands_routes_known_parametric_sub(cmk, tmp_path):
   w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
-  r = cmk("mk.subcommands", makefile=w, env=_denv("echo hi a b"))
+  r = cmk("cli.subcommands", makefile=w, env=_denv("echo hi a b"))
   assert r.ok, r.stderr
   # parametric sub -> .t.echo/<arg1>, remaining args in $argv.
   assert "echo hi [a b]" in r.stdout
@@ -153,7 +185,7 @@ def test_subcommands_routes_known_parametric_sub(cmk, tmp_path):
 
 def test_subcommands_routes_non_parametric_sub(cmk, tmp_path):
   w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
-  r = cmk("mk.subcommands", makefile=w, env=_denv("ping a b"))
+  r = cmk("cli.subcommands", makefile=w, env=_denv("ping a b"))
   assert r.ok, r.stderr
   # non-parametric sub -> .t.ping (no stem), ALL remaining args in $argv.
   assert "ping [a b]" in r.stdout
@@ -161,7 +193,7 @@ def test_subcommands_routes_non_parametric_sub(cmk, tmp_path):
 
 def test_subcommands_routes_bare_to_default(cmk, tmp_path):
   w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
-  r = cmk("mk.subcommands", makefile=w, env=_denv("myfile x"))
+  r = cmk("cli.subcommands", makefile=w, env=_denv("myfile x"))
   assert r.ok, r.stderr
   # unrecognized first word -> the PARAMETRIC default (`.t.run/%`): it becomes the
   # default's stem (the `cmk <file>` shorthand), the rest in $argv.
@@ -173,7 +205,7 @@ def test_subcommands_unknown_errors_when_default_nonparametric(cmk, tmp_path):
   # instead of silently running it -- a non-parametric default has no positional to
   # consume the word, so it's treated as a typo'd subcommand.
   w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
-  r = cmk("mk.subcommands", makefile=w, env=_denv("zzz", default="ping"))
+  r = cmk("cli.subcommands", makefile=w, env=_denv("zzz", default="ping"))
   assert not r.ok
   assert "unknown subcommand" in r.stderr.lower()
 
@@ -181,7 +213,7 @@ def test_subcommands_unknown_errors_when_default_nonparametric(cmk, tmp_path):
 def test_subcommands_help_prints_usage(cmk, tmp_path):
   w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
   for tail in ("help", "", "-h", "--help"):
-    r = cmk("mk.subcommands", makefile=w, env=_denv(tail))
+    r = cmk("cli.subcommands", makefile=w, env=_denv(tail))
     assert r.ok, r.stderr
     assert "usage" in r.stderr.lower()
     for sub in (
@@ -196,7 +228,7 @@ def test_subcommands_usage_marks_parametric(cmk, tmp_path):
   # the multi-line usage annotates parametric subs (.t.echo/%, .t.run/%) with `<arg>`
   # and leaves non-parametric (.t.ping) unannotated.
   w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
-  r = cmk("mk.subcommands", makefile=w, env=_denv("help"))
+  r = cmk("cli.subcommands", makefile=w, env=_denv("help"))
   assert r.ok, r.stderr
   lines = r.stderr.splitlines()
   echo_line = next(line for line in lines if "echo" in line)
@@ -208,7 +240,7 @@ def test_subcommands_usage_marks_parametric(cmk, tmp_path):
 def test_subcommands_usage_terminates_last_item(cmk, tmp_path):
   # the tree uses ├ for items and ╰ (terminator) for the LAST subcommand (ping).
   w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
-  r = cmk("mk.subcommands", makefile=w, env=_denv("help"))
+  r = cmk("cli.subcommands", makefile=w, env=_denv("help"))
   assert r.ok, r.stderr
   lines = r.stderr.splitlines()
   echo_line = next(line for line in lines if "echo" in line)
@@ -223,7 +255,7 @@ def test_subcommands_no_handlers_errors(cmk, tmp_path):
   # (subs reflect empty -> default empty -> error).
   w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
   r = cmk(
-    "mk.subcommands",
+    "cli.subcommands",
     makefile=w,
     env=_denv("whatever", default="", subs="", ns=".nope"),
   )
@@ -231,7 +263,7 @@ def test_subcommands_no_handlers_errors(cmk, tmp_path):
   assert "unknown subcommand" in r.stderr.lower()
 
 
-# --- mk.subcommands engine: namespace MRO ----------------------------------
+# --- cli.subcommands engine: namespace MRO ----------------------------------
 # subcmd_ns may be a space-separated list, searched in order; the first namespace
 # that defines a handler for the sub wins. `.u.extra` lives ONLY in the 2nd namespace.
 
@@ -239,7 +271,7 @@ def test_subcommands_no_handlers_errors(cmk, tmp_path):
 def test_subcommands_mro_searches_second_namespace(cmk, tmp_path):
   w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
   r = cmk(
-    "mk.subcommands",
+    "cli.subcommands",
     makefile=w,
     env=_denv("extra a b", subs="echo extra", ns=".t .u"),
   )
@@ -251,7 +283,7 @@ def test_subcommands_mro_reflects_union(cmk, tmp_path):
   # empty subs -> reflect the union across BOTH namespaces in the MRO.
   w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
   r = cmk(
-    "mk.subcommands",
+    "cli.subcommands",
     makefile=w,
     env=_denv("help", default="", subs="", ns=".t .u"),
   )
@@ -260,7 +292,7 @@ def test_subcommands_mro_reflects_union(cmk, tmp_path):
     assert sub in r.stderr
 
 
-# --- mk.subcommands engine: reflection (auto-detect subs + default) ---------
+# --- cli.subcommands engine: reflection (auto-detect subs + default) ---------
 # When subcmd_subs is empty, the engine reflects the `.<ns>.<sub>` handlers (both
 # parametric `/%` and non-parametric) from MAKEFILE_LIST (source order); when
 # subcmd_default is empty, it uses the first reflected sub. The wrapper declares
@@ -270,7 +302,7 @@ def test_subcommands_mro_reflects_union(cmk, tmp_path):
 def test_subcommands_reflects_subcommands(cmk, tmp_path):
   # subcmd_subs empty -> reflected (incl. the non-parametric .t.ping); ping routes.
   w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
-  r = cmk("mk.subcommands", makefile=w, env=_denv("ping a", subs=""))
+  r = cmk("cli.subcommands", makefile=w, env=_denv("ping a", subs=""))
   assert r.ok, r.stderr
   assert "ping [a]" in r.stdout
 
@@ -280,7 +312,7 @@ def test_subcommands_reflects_default_as_first_sub(cmk, tmp_path):
   # (echo); a bare arg routes to that default.
   w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
   r = cmk(
-    "mk.subcommands", makefile=w, env=_denv("myfile x", default="", subs="")
+    "cli.subcommands", makefile=w, env=_denv("myfile x", default="", subs="")
   )
   assert r.ok, r.stderr
   assert "echo myfile [x]" in r.stdout
@@ -288,7 +320,7 @@ def test_subcommands_reflects_default_as_first_sub(cmk, tmp_path):
 
 def test_subcommands_usage_lists_reflected_subs(cmk, tmp_path):
   w = _wrapper(tmp_path, _SUBCMD_WRAPPER)
-  r = cmk("mk.subcommands", makefile=w, env=_denv("help", default="", subs=""))
+  r = cmk("cli.subcommands", makefile=w, env=_denv("help", default="", subs=""))
   assert r.ok, r.stderr
   for sub in ("echo", "run", "ping"):  # reflected subcommands shown in usage
     assert sub in r.stderr
@@ -324,7 +356,7 @@ def test_mk_def_read(cmk, tmp_path):
   assert r.stdout == "hello world\n"
 
 
-# --- mk.import.def : import a define-block from another file ----------------
+# --- import.def : import a define-block from another file ----------------
 # A source block with the gotchas that broke the old mk.get-based importer: an
 # awk `$0`, an indented body, a blank line, and embedded double-quotes. These
 # round-trip only because the importer reads via mk.def.read ($(value), which
@@ -347,7 +379,7 @@ def _import_pair(tmp_path, source_body, consumer_body):
 def test_mk_import_def_fidelity(cmk, tmp_path):
   # the imported block is byte-identical to the source's own definition.
   src, con = _import_pair(
-    tmp_path, _AWK_BLOCK, "$(call mk.import.def, file=SRCPATH def=greet.awk)"
+    tmp_path, _AWK_BLOCK, "$(call import.def, file=SRCPATH def=greet.awk)"
   )
   want = cmk("mk.def.read/greet.awk", makefile=src)
   got = cmk("mk.def.read/greet.awk", makefile=con)
@@ -363,7 +395,7 @@ def test_mk_import_def_usable_via_io_awk(cmk, tmp_path):
   _, con = _import_pair(
     tmp_path,
     _AWK_BLOCK,
-    "$(call mk.import.def, file=SRCPATH def=greet.awk)\n"
+    "$(call import.def, file=SRCPATH def=greet.awk)\n"
     "use:; @printf 'world\\nthere\\n' | ${io.awk}/greet.awk",
   )
   r = cmk("use", makefile=con)
@@ -376,7 +408,7 @@ def test_mk_import_def_as_rename(cmk, tmp_path):
   src, con = _import_pair(
     tmp_path,
     _AWK_BLOCK,
-    "$(call mk.import.def, file=SRCPATH def=greet.awk as=greet.local)",
+    "$(call import.def, file=SRCPATH def=greet.awk as=greet.local)",
   )
   want = cmk("mk.def.read/greet.awk", makefile=src)
   got = cmk("mk.def.read/greet.local", makefile=con)
@@ -389,7 +421,7 @@ def test_mk_import_def_preserves_double_dollar(cmk, tmp_path):
   _, con = _import_pair(
     tmp_path,
     'define shouty\necho "home=$${HOME:-none}"\nendef',
-    "$(call mk.import.def, file=SRCPATH def=shouty)\ngo:; @${shouty}",
+    "$(call import.def, file=SRCPATH def=shouty)\ngo:; @${shouty}",
   )
   r = cmk("go", makefile=con, env={"HOME": "/x/y"})
   assert r.ok, r.stderr
@@ -397,11 +429,11 @@ def test_mk_import_def_preserves_double_dollar(cmk, tmp_path):
 
 
 def test_mk_include_def_positional_shim(cmk, tmp_path):
-  # the back-compat positional form: `mk.include.def, <name>, <file>`.
+  # the back-compat positional form: `include.def, <name>, <file>`.
   _, con = _import_pair(
     tmp_path,
     _AWK_BLOCK,
-    "$(call mk.include.def, greet.awk, SRCPATH)\n"
+    "$(call include.def, greet.awk, SRCPATH)\n"
     "use:; @printf 'X\\n' | ${io.awk}/greet.awk",
   )
   r = cmk("use", makefile=con)
@@ -409,7 +441,7 @@ def test_mk_include_def_positional_shim(cmk, tmp_path):
   assert r.stdout == "hi X\n"
 
 
-# --- mk.import.def : defs= (multiple) + wildcards ---------------------------
+# --- import.def : defs= (multiple) + wildcards ---------------------------
 # `defs="a b ..."` imports several define-blocks, each under its own name; a spec
 # with `*`/`?` is a glob matching every define whose name fits.
 _DEFS_SRC = (
@@ -423,7 +455,7 @@ def test_mk_import_def_defs_multiple(cmk, tmp_path):
   _, con = _import_pair(
     tmp_path,
     _DEFS_SRC,
-    "$(call mk.import.def, file=SRCPATH defs='salute.a salute.b')",
+    "$(call import.def, file=SRCPATH defs='salute.a salute.b')",
   )
   a = cmk("mk.def.read/salute.a", makefile=con)
   b = cmk("mk.def.read/salute.b", makefile=con)
@@ -436,7 +468,7 @@ def test_mk_import_def_defs_multiple(cmk, tmp_path):
 def test_mk_import_def_defs_wildcard(cmk, tmp_path):
   # the glob imports every matching define, and nothing else.
   _, con = _import_pair(
-    tmp_path, _DEFS_SRC, "$(call mk.import.def, file=SRCPATH defs='salute.*')"
+    tmp_path, _DEFS_SRC, "$(call import.def, file=SRCPATH defs='salute.*')"
   )
   assert cmk("mk.def.read/salute.a", makefile=con).stdout == "hello A\n"
   assert cmk("mk.def.read/salute.b", makefile=con).stdout == "hello B\n"
@@ -447,7 +479,7 @@ def test_mk_import_def_defs_wildcard(cmk, tmp_path):
 def test_mk_import_def_defs_no_match(cmk, tmp_path):
   # a glob that matches nothing is a hard error.
   _, con = _import_pair(
-    tmp_path, _DEFS_SRC, "$(call mk.import.def, file=SRCPATH defs='zzz*')"
+    tmp_path, _DEFS_SRC, "$(call import.def, file=SRCPATH defs='zzz*')"
   )
   r = cmk("flux.ok", makefile=con)
   assert not r.ok
@@ -460,7 +492,7 @@ def test_mk_import_def_namespace(cmk, tmp_path):
   _, con = _import_pair(
     tmp_path,
     _DEFS_SRC,
-    "$(call mk.import.def, file=SRCPATH defs='salute.*' namespace=myns)",
+    "$(call import.def, file=SRCPATH defs='salute.*' namespace=myns)",
   )
   assert cmk("mk.def.read/myns.salute.a", makefile=con).stdout == "hello A\n"
   assert cmk("mk.def.read/myns.salute.b", makefile=con).stdout == "hello B\n"
@@ -475,14 +507,14 @@ def test_mk_import_def_namespace_nested_verbatim(cmk, tmp_path):
   _, con = _import_pair(
     tmp_path,
     src_body,
-    "$(call mk.import.def, file=SRCPATH def=outer namespace=ns)",
+    "$(call import.def, file=SRCPATH def=outer namespace=ns)",
   )
   body = cmk("mk.def.read/ns.outer", makefile=con).stdout
   assert "define inner" in body  # nested header untouched
   assert "ns.inner" not in body
 
 
-# --- mk.import.target : import whole target(s) from another file ------------
+# --- import.target : import whole target(s) from another file ------------
 # Targets (unlike defines) are not introspectable via $(value), so the importer
 # extracts them textually and $(eval)s each as its own rule. The source below
 # covers the gotchas: a multi-line recipe, an escaped `$$`, a `%`-stem pattern
@@ -510,7 +542,7 @@ def test_mk_import_target_single(cmk, tmp_path):
   _, con = _import_pair(
     tmp_path,
     _TARGETS_SRC,
-    "$(call mk.import.target, file=SRCPATH target=twice)",
+    "$(call import.target, file=SRCPATH target=twice)",
   )
   r = cmk("twice", makefile=con)
   assert r.ok, r.stderr
@@ -522,7 +554,7 @@ def test_mk_import_target_preserves_double_dollar(cmk, tmp_path):
   _, con = _import_pair(
     tmp_path,
     _TARGETS_SRC,
-    "$(call mk.import.target, file=SRCPATH target=shouty)",
+    "$(call import.target, file=SRCPATH target=shouty)",
   )
   r = cmk("shouty", makefile=con, env={"HOME": "/x/y"})
   assert r.ok, r.stderr
@@ -534,7 +566,7 @@ def test_mk_import_target_multiple(cmk, tmp_path):
   _, con = _import_pair(
     tmp_path,
     _TARGETS_SRC,
-    '$(call mk.import.target, file=SRCPATH targets="greet twice")',
+    '$(call import.target, file=SRCPATH targets="greet twice")',
   )
   g = cmk("greet", makefile=con)
   t = cmk("twice", makefile=con)
@@ -549,7 +581,7 @@ def test_mk_import_target_pattern(cmk, tmp_path):
   _, con = _import_pair(
     tmp_path,
     _TARGETS_SRC,
-    "$(call mk.import.target, file=SRCPATH target=echo/%)",
+    "$(call import.target, file=SRCPATH target=echo/%)",
   )
   r = cmk("echo/world", makefile=con)
   assert r.ok, r.stderr
@@ -561,7 +593,7 @@ def test_mk_import_target_missing_file(cmk, tmp_path):
   _, con = _import_pair(
     tmp_path,
     _TARGETS_SRC,
-    "$(call mk.import.target, file=/no/such/file.mk target=twice)",
+    "$(call import.target, file=/no/such/file.mk target=twice)",
   )
   r = cmk("twice", makefile=con)
   assert not r.ok
@@ -573,7 +605,7 @@ def test_mk_import_target_missing_target(cmk, tmp_path):
   _, con = _import_pair(
     tmp_path,
     _TARGETS_SRC,
-    "$(call mk.import.target, file=SRCPATH target=nonesuch)",
+    "$(call import.target, file=SRCPATH target=nonesuch)",
   )
   r = cmk("nonesuch", makefile=con)
   assert not r.ok
@@ -589,7 +621,7 @@ def test_mk_import_target_wildcard(cmk, tmp_path):
   _, con = _import_pair(
     tmp_path,
     _GLOB_SRC,
-    "$(call mk.import.target, file=SRCPATH targets='foo.*')",
+    "$(call import.target, file=SRCPATH targets='foo.*')",
   )
   a = cmk("foo.a", makefile=con)
   b = cmk("foo.b", makefile=con)
@@ -605,7 +637,7 @@ def test_mk_import_target_wildcard_no_match(cmk, tmp_path):
   _, con = _import_pair(
     tmp_path,
     _GLOB_SRC,
-    "$(call mk.import.target, file=SRCPATH targets='zzz*')",
+    "$(call import.target, file=SRCPATH targets='zzz*')",
   )
   r = cmk("foo.a", makefile=con)
   assert not r.ok
@@ -620,7 +652,7 @@ def test_mk_import_target_never_overrides_local(cmk, tmp_path):
   _, con = _import_pair(
     tmp_path,
     _GLOB_SRC,
-    "$(call mk.import.target, file=SRCPATH targets='foo.*')\nfoo.a:\n\t@echo LOCAL\n",
+    "$(call import.target, file=SRCPATH targets='foo.*')\nfoo.a:\n\t@echo LOCAL\n",
   )
   a = cmk("foo.a", makefile=con)
   b = cmk("foo.b", makefile=con)
@@ -638,7 +670,7 @@ def test_mk_import_target_namespace(cmk, tmp_path):
   _, con = _import_pair(
     tmp_path,
     _TARGETS_SRC,
-    "$(call mk.import.target, file=SRCPATH target=greet namespace=myns)\n"
+    "$(call import.target, file=SRCPATH target=greet namespace=myns)\n"
     "greet:; @echo local-greet\n",
   )
   r = cmk("myns.greet", makefile=con)
@@ -725,22 +757,22 @@ def test_mk_vars_filter(cmk):
 
 
 def test_mk_assert_env_present(cmk):
-  r = cmk("mk.assert.env/FOO", env={"FOO": "1"})
+  r = cmk("assert.env/FOO", env={"FOO": "1"})
   assert r.ok, r.stderr
 
 
 def test_mk_assert_env_missing_fails(cmk):
-  r = cmk("mk.assert.env/DEFINITELY_UNSET_XYZ")
+  r = cmk("assert.env/DEFINITELY_UNSET_XYZ")
   assert not r.ok
 
 
 def test_mk_require_tool_present(cmk):
-  r = cmk("mk.require.tool/bash")
+  r = cmk("assert.tool.required/bash")
   assert r.ok, r.stderr
 
 
 def test_mk_require_tool_missing_fails(cmk):
-  r = cmk("mk.require.tool/nope-xyz123")
+  r = cmk("assert.tool.required/nope-xyz123")
   assert not r.ok
 
 
@@ -816,7 +848,7 @@ def test_mk_def_value_printf_preserves_specials(cmk, tmp_path):
   # 2nd arg -> single-line, recipe-safe `printf` of the block; $, parens and
   # quotes must survive both make and the shell intact.
   body = "define prog\nreduce inputs as $x (0; . + $x)\nendef\n"
-  mk = _wrapper(tmp_path, body + "emit:; @$(call mk.def.value, prog, _)\n")
+  mk = _wrapper(tmp_path, body + "emit:; @$(call _mk.def.value, prog, _)\n")
   r = cmk("emit", makefile=mk)
   assert r.ok, r.stderr
   assert "reduce inputs as $x (0; . + $x)" in r.stdout
@@ -826,7 +858,7 @@ def test_mk_def_value_printf_multiline(cmk, tmp_path):
   # newlines in the block become a real newline in the emitted output (one
   # printf line, so make never splits the recipe).
   body = "define prog\nline one\nline two\nendef\n"
-  mk = _wrapper(tmp_path, body + "emit:; @$(call mk.def.value, prog, _)\n")
+  mk = _wrapper(tmp_path, body + "emit:; @$(call _mk.def.value, prog, _)\n")
   r = cmk("emit", makefile=mk)
   assert r.ok, r.stderr
   assert "line one\nline two" in r.stdout

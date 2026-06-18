@@ -15,8 +15,8 @@ export SRC_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 export PROJECT_ROOT := $(shell dirname ${THIS_MAKEFILE})
 export MKDOCS_LISTEN_PORT=8005
 include compose.mk
-$(call mk.include.plugins, actions.mk docs.mk)
-$(call mk.include.plugin, file=local.mk strict=0)
+$(call include.plugins, actions.mk docs.mk)
+$(call include.plugin, file=local.mk strict=0)
 $(call compose.import, file=demos/data/docker-compose.yml)
 
 __main__: init clean build test docs
@@ -73,12 +73,16 @@ normalize: # NOP
 pygments.nord: pygments.css/nord-darker
 pygments.css/%:; pygmentize -S ${*} -f html 
 
-test: validate unit-test compiler-test docker-test integration-test demos smoke-test
+test: validate unit-test plugin-test compiler-test docker-test integration-test demos smoke-test
 	@#
 
 utest unit-test:
 	@# Runs the integration-test suite.
 	pushd tests && make init unit-test
+
+ptest plugin-test:
+	@# Runs the .cmk/ plugin suite (delegates to tests/).
+	pushd tests && make init plugin-test
 
 ctest compiler-test:
 	@# Runs the CMK compiler suite (pure; delegates to tests/).
@@ -108,7 +112,7 @@ installers-test:
 	@# Build+install the via/pip shim; verify a global on-PATH compose.mk.
 	pushd tests && make init installers-test
 
-ptest perf-test:
+perftest perf-test:
 	@# Cold-start perf benchmark (report-only; opt-in; delegates to tests/).
 	pushd tests && make init perf-test
 
@@ -140,3 +144,5 @@ actions.demos.cmk:
 
 serve: docs.serve
 	@# Runs the mkdocs server
+
+foo:; $(call assert.env.var, foooo)

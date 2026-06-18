@@ -1,12 +1,9 @@
 #!/usr/bin/env -S ./compose.mk cmk run
+# bind-target.cmk:
+#   Bind a public target to a private, container-run twin, using
+#   a decorator-style idiom.  Ported from demos/bind-target.mk.
 #
-# CMK-lang equivalent of demos/bind-target.mk & demos/bind-script.mk,
-# demonstrating some idioms similar to function-decorators.
-#
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/container-dispatch
-#
-# USAGE: ./demos/bind-target-2.mk
+# USAGE: ./demos/cmk/bind-target.cmk
 
 # Create scaffolding for debian container
 compose.import(file=demos/data/docker-compose.yml)

@@ -1,7 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrating working with tempfiles using io.mktemp.
-# Part of the `compose.mk` repo test-suite. 
-# See also: http://robot-wranglers.github.io/compose.mk/standard-lib
+# io.mktemp.mk:
+#   Working with tempfiles using io.mktemp.
+#
 # USAGE: ./demos/io.mktemp.mk
 
 include compose.mk

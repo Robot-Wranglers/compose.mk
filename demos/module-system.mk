@@ -1,5 +1,6 @@
 #!/usr/bin/env -S make -f
-# module-system.mk -- plain-make MIRROR of demos/cmk/module-system.cmk.
+# module-system.mk:
+#   Plain-make MIRROR of demos/cmk/module-system.cmk.
 #
 # Defines a module, then imports it FOUR ways (the cmk's `⦖ .. ⦕ as Aliased` is the
 # `def=MyModule namespace=Aliased` call here).  The `"""..."""` report target is
@@ -18,10 +19,10 @@ report:
 	"""compiled report ok""" | this.stream.preview
 endef
 
-$(call mk.import.module, def=MyModule namespace=Aliased)              # 4. aliased -- namespace != module
-$(call mk.import.module, def=MyModule targets=greet namespace=Part)   # 1. partial -- only `greet`
-$(call mk.import.module, def=MyModule targets='svc.*' namespace=Star) # 2. star    -- the `svc.*` glob
-$(call mk.import.module, def=MyModule flat=1)                         # 3. root    -- flat, no prefix
+$(call import.module, def=MyModule namespace=Aliased)              # 4. aliased -- namespace != module
+$(call import.module, def=MyModule targets=greet namespace=Part)   # 1. partial -- only `greet`
+$(call import.module, def=MyModule targets='svc.*' namespace=Star) # 2. star    -- the `svc.*` glob
+$(call import.module, def=MyModule flat=1)                         # 3. root    -- flat, no prefix
 
 __main__: \
 	Aliased.report Aliased.greet \

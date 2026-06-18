@@ -14,7 +14,7 @@ see also the [CMK Demo Index]({{mkdocs.site_relative_url}}/cmk-demos).
   </thead>
   <tbody>
     <tr>
-      <td><a href="{{mkdocs.site_relative_url}}/compiler/#dialects">Target Invocation</a></td>
+      <td><a href="{{mkdocs.site_relative_url}}/dialects/#dialects">Target Invocation</a></td>
       <td><code>this.</code><i>target</i></td>
       <td><code>this.build</code></td>
       <td>Recursive call to make.
@@ -24,7 +24,7 @@ see also the [CMK Demo Index]({{mkdocs.site_relative_url}}/cmk-demos).
       </td>
     </tr>
     <tr>
-      <td><a href="{{mkdocs.site_relative_url}}/compiler/#dialects">Target Dispatch
+      <td><a href="{{mkdocs.site_relative_url}}/dialects/#dialects">Target Dispatch
       <br/>Container Dispatch</a></td>
       <td><i>svc</i><code>ᐉ</code><i>target</i></td>
       <td><code><i>container</i> ᐉ <i>target_name<i></code></td>
@@ -34,13 +34,13 @@ see also the [CMK Demo Index]({{mkdocs.site_relative_url}}/cmk-demos).
       </td>
     </tr>
     <tr>
-      <td><a href="{{mkdocs.site_relative_url}}/compiler/#dialects">JSON Emit</a></td>
+      <td><a href="{{mkdocs.site_relative_url}}/dialects/#dialects">JSON Emit</a></td>
       <td><code>🡄</code> <i>k=v…</i></td>
       <td><code>🡄 name=$USER n=3</code></td>
       <td>Emit JSON from key=value pairs (<code>jb</code>).</td>
     </tr>
     <tr>
-      <td><a href="{{mkdocs.site_relative_url}}/compiler/#dialects">JSON Extract</a></td>
+      <td><a href="{{mkdocs.site_relative_url}}/dialects/#dialects">JSON Extract</a></td>
       <td><code>🡆</code> <i>.key</i></td>
       <td><code>🡆 .name</code></td>
       <td>Extract a field from JSON on stdin (<code>jq -r</code>).</td>
@@ -52,25 +52,37 @@ see also the [CMK Demo Index]({{mkdocs.site_relative_url}}/cmk-demos).
       <td>Capture a command's output into shell var <i>x</i>.</td>
     </tr>
     <tr>
-      <td><a href="{{mkdocs.site_relative_url}}/compiler/#dialects">Macro Invocation<br/>Function Calls</a></td>
+      <td><a href="{{mkdocs.site_relative_url}}/dialects/#dialects">Macro Invocation<br/>Function Calls</a></td>
       <td><code>cmk.</code><i>fn</i><code>(args)</code></td>
       <td><code>cmk.log.target(hi)</code></td>
       <td>Call a compose.mk function/macro (<code>$(call fn,args)</code>).</td>
     </tr>
     <tr>
-      <td><a href="{{mkdocs.site_relative_url}}/compiler/#callable-targets">Target Streams 
-      <br/> Callables
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#call-forms">Call Forms
+      <br/> Args &amp; Streams
       <br/> Tagged Strings
       </a></td>
-      <td><code>this.</code><i>t</i><code>(arg)</code> &nbsp; <code>this.</code><i>t</i><code>'''…'''</code></td>
-      <td><code>this.eval('''(Hi)S''')</code></td>
-      <td>Call a <i>target</i> by piping <i>arg</i> to its stdin (<code>arg | this.t</code>). Quoted = literal; unquoted = run &amp; pipe (single-line).</td>
+      <td><code>…</code><i>name</i><code>(args)</code><code>[stream]</code> &nbsp; <code>this.</code><i>t</i><code>'''…'''</code></td>
+      <td><code>this.eval["""(Hi)S"""]</code></td>
+      <td><code>(args)</code> = arguments, <code>[stream]</code> = stdin, for both <code>this.</code> and <code>cmk.</code> (either order). Tagged literal == a target's stdin.</td>
     </tr>
     <tr>
-      <td><a href="{{mkdocs.site_relative_url}}/compiler/#dialects">Import</a></td>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#receivers">Receiver</a></td>
+      <td><i>name</i><code>.</code><i>method</i><code>[stream]</code></td>
+      <td><code>inbox.emit["""hi"""]</code></td>
+      <td>Anchorless send to a <code>declare.*</code> name (channel/module/...): auto-<code>${make} </code>, no <code>this.</code> needed.</td>
+    </tr>
+    <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/compiler/#block-references">Block Reference</a></td>
+      <td><code>⬦</code><i>name</i> &nbsp; <code>⬥</code><i>name</i></td>
+      <td><code>jq -f ⬦prog.jq</code></td>
+      <td>Feed a <code>define</code>-block to a command: <code>⬦</code> = stream FD (<code>&lt;(…)</code>), <code>⬥</code> = real file.</td>
+    </tr>
+    <tr>
+      <td><a href="{{mkdocs.site_relative_url}}/dialects/#dialects">Import</a></td>
       <td><i>name</i><code>(args)</code></td>
       <td><code>compose.import(file=svc.yml)</code></td>
-      <td>Bare-call form of import statements (<code>compose.import</code>, <code>polyglot.import</code>, <code>mk.import.def</code>, <code>mk.import.target</code>, …).</td>
+      <td>Bare-call form of import statements (<code>compose.import</code>, <code>polyglot.import</code>, <code>import.def</code>, <code>import.target</code>, …).</td>
     </tr>
     <tr>
       <td><a href="{{mkdocs.site_relative_url}}/compiler/#triple-quote-literals">Literal</a></td>
@@ -103,31 +115,31 @@ see also the [CMK Demo Index]({{mkdocs.site_relative_url}}/cmk-demos).
       <td>Bind-declaration / decorator, above a target.</td>
     </tr>
     <tr>
-      <td><a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">Embed: Code</a></td>
+      <td><a href="{{mkdocs.site_relative_url}}/dialects/#about-sugar">Embed: Code</a></td>
       <td><code>⟦</code> <i>lang … </i><code>⟧</code></td>
       <td><code>⟦ python … ⟧</code></td>
       <td>Embedded polyglot code block.</td>
     </tr>
     <tr>
-      <td><a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">Embed: Script</a></td>
+      <td><a href="{{mkdocs.site_relative_url}}/dialects/#about-sugar">Embed: Script</a></td>
       <td><code>⨖</code> <i>… </i><code>⨖</code></td>
       <td><code>⨖ with … as … ⨖</code></td>
       <td>Script block dispatched into a container (with / as).</td>
     </tr>
     <tr>
-      <td><a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">Embed: Config</a></td>
+      <td><a href="{{mkdocs.site_relative_url}}/dialects/#about-sugar">Embed: Config</a></td>
       <td><code>🞹</code> <i>… </i><code>🞹</code></td>
       <td><code>🞹 mycode … 🞹</code></td>
       <td>Embedded compose-config code.</td>
     </tr>
     <tr>
-      <td><a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">Embed: Compose</a></td>
+      <td><a href="{{mkdocs.site_relative_url}}/dialects/#about-sugar">Embed: Compose</a></td>
       <td><code>⋘</code> <i>name … </i><code>⋙</code></td>
       <td><code>⋘ mylib … ⋙</code></td>
       <td>Embedded compose file; imports its services.</td>
     </tr>
     <tr>
-      <td><a href="{{mkdocs.site_relative_url}}/compiler/#about-sugar">Embed: Dockerfile</a></td>
+      <td><a href="{{mkdocs.site_relative_url}}/dialects/#about-sugar">Embed: Dockerfile</a></td>
       <td><code>⫻</code> <i>… </i><code>⫻</code></td>
       <td><code>⫻ FROM debian … ⫻</code></td>
       <td>Embedded Dockerfile.</td>

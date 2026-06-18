@@ -1,7 +1,7 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# demos/cmk/subcommands.cmk:
-#   A minimal subcommand CLI / CMK-lang equivalent of demos/subcommands.mk.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.
+# subcommands.cmk:
+#   A minimal subcommand CLI built with the `ᝏsubcommands`
+#   decorator.  Ported from demos/subcommands.mk.
 #
 # USAGE: (non-parametric subcommands)
 #   ./demos/cmk/subcommands.cmk greet world       # -> hello world

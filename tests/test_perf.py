@@ -40,12 +40,14 @@ is a report, not a PR gate).
 """
 
 import functools
+import json
 import os
 import re
 import shutil
 import statistics
 import subprocess
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -55,6 +57,15 @@ COMPOSE_MK = REPO / "compose.mk"
 
 # Sample count per benchmark (the task asks for 10; override for ad-hoc runs).
 SAMPLES = int(os.environ.get("CMK_PERF_SAMPLES", "10"))
+
+# Where time-stamped result JSON is persisted (one file per perf run). Mirrors the
+# coverage convention (dot-prefixed, under tests/, gitignored). Override the dir with
+# CMK_PERF_RESULTS_DIR. Each `_bench` appends a structured record to `_PERF_RESULTS`,
+# and a session finalizer writes them all to `<dir>/perf-<UTC-timestamp>.json`.
+PERF_RESULTS_DIR = Path(
+  os.environ.get("CMK_PERF_RESULTS_DIR", str(REPO / "tests" / ".perf-results"))
+)
+_PERF_RESULTS = []
 
 # Shared CMK source for the compile-only and compile+interpret benchmarks, so
 # their timings are directly comparable.
@@ -142,14 +153,49 @@ def _bench(
 
 
 def _report(label, times):
-  """Print a one-line summary (visible with pytest ``-s`` / ``--capture=no``)."""
+  """Print a one-line summary (visible with pytest ``-s`` / ``--capture=no``) AND
+  record a structured result for the session JSON (see `_persist_perf_results`)."""
+  rec = {
+    "label": label,
+    "n": len(times),
+    "min": min(times),
+    "median": statistics.median(times),
+    "mean": statistics.fmean(times),
+    "max": max(times),
+    "times": times,
+  }
+  _PERF_RESULTS.append(rec)
   print(
-    f"\n[perf] {label}: n={len(times)} "
-    f"min={min(times):.3f}s "
-    f"median={statistics.median(times):.3f}s "
-    f"mean={statistics.fmean(times):.3f}s "
-    f"max={max(times):.3f}s"
+    f"\n[perf] {label}: n={rec['n']} "
+    f"min={rec['min']:.3f}s "
+    f"median={rec['median']:.3f}s "
+    f"mean={rec['mean']:.3f}s "
+    f"max={rec['max']:.3f}s"
   )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _persist_perf_results():
+  """Persist every benchmark's result to a time-stamped JSON on completion.
+
+  Writes ``<PERF_RESULTS_DIR>/perf-<UTC-timestamp>.json`` (one file per run) iff any
+  benchmark actually ran, so a deselected/empty perf session leaves nothing behind.
+  These files are gitignored.
+  """
+  yield
+  if not _PERF_RESULTS:
+    return
+  now = datetime.now(timezone.utc)
+  PERF_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+  path = PERF_RESULTS_DIR / f"perf-{now.strftime('%Y%m%dT%H%M%SZ')}.json"
+  payload = {
+    "timestamp": now.isoformat(),
+    "host_make": _make_version(),
+    "samples": SAMPLES,
+    "results": _PERF_RESULTS,
+  }
+  path.write_text(json.dumps(payload, indent=2) + "\n")
+  print(f"\n[perf] wrote {len(_PERF_RESULTS)} result(s) -> {path}")
 
 
 @functools.lru_cache(maxsize=None)

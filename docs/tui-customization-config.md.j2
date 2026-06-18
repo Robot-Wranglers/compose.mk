@@ -20,5 +20,5 @@ As mentioned in the section above, at the most basic level the TUI just maps mak
 
 Beyond the simple examples of customization mentioned in the last section, more advanced use-cases are also supported.  In general, this is usually accomplished by creating custom targets for different parts of the TUI's bootstrap process, then [overriding an appropriate environment variable]({{mkdocs.site_relative_url}}/config#tui-environment-variables) to use the new target.
 
-Documentation for this process isn't great right now, but for a start, have a look at the differences between targets like [docker.commander]({{mkdocs.site_relative_url}}/api#dockercommander) vs the similar-but-different [k3d.commander]({{mkdocs.site_relative_url}}/api#k3dcommander).
+Documentation for this process isn't great right now, but for a start, have a look at the bootstrap targets behind [docker.commander]({{mkdocs.site_relative_url}}/api#dockercommander).
 

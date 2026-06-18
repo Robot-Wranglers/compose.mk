@@ -1,9 +1,9 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# CMK-lang equivalent of demos/script-dispatch-host.mk.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/compiler
+# elixir.cmk:
+#   Run an inline Elixir snippet inside a container via the
+#   `ᝏdocker.bind.script` polyglot idiom.
 #
-# USAGE: ./demos/cmk/script-dispatch-host.cmk
+# USAGE: ./demos/cmk/elixir.cmk
 
 # First we pick an image and interpreter for the language kernel.
 # Here, iex can work too, but there are minor differences.

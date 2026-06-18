@@ -1,9 +1,9 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# Demo: combine `ᝏio.pushd(dir)` with `ᝏcompose.bind.target(svc)` -- dispatch a
-# target INTO a tool-container, and (via io.pushd on its in-container body) run
-# every command there from `dir`, then `popd` back.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.
-# See also: http://robot-wranglers.github.io/compose.mk/container-dispatch
+# io.pushd.cmk:
+#   Combine `ᝏio.pushd(dir)` with `ᝏcompose.bind.target(svc)`:
+#   dispatch a target INTO a tool-container and (via io.pushd on its in-container
+#   body) run every command there from `dir`, then `popd` back.
+#
 # USAGE: ./demos/cmk/io.pushd.cmk
 
 # Scaffolding for the `debian` tool-container (ships make + bash).

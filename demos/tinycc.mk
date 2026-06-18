@@ -1,8 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrating compiled-language polyglots in `compose.mk`.
+# tinycc.mk:
+#   Compiled-language polyglots in `compose.mk`.
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
 # USAGE: ./demos/tinycc.mk
 
 include compose.mk

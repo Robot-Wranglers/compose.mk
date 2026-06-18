@@ -1,6 +1,7 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret
-# Demonstrating compose.mk as an alternate interpreter for make.
-# This is mostly used for inheriting signals/supervisors.  
+# interpreter-3.mk:
+#   Using compose.mk as an alternate interpreter for make.
+#   This is mostly used for inheriting signals/supervisors.  
 #
 # Main docs: https://robot-wranglers.github.io/compose.mk/signals/
 #

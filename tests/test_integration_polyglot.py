@@ -8,7 +8,7 @@ directly. Driven via the `project` fixture (docker-labeled, swept on teardown).
 
 import pytest
 
-pytestmark = [pytest.mark.integration, pytest.mark.needs_docker]
+pytestmark = [pytest.mark.integration, pytest.mark.needs_docker, pytest.mark.plugin]
 
 
 def test_polyglot_import_interpreter(project):

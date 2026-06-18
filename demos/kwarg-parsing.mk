@@ -1,6 +1,7 @@
 #!/usr/bin/env -S make -f
-# Building on demos/structured-io.mk to demonstrate parsing structured arguments.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# kwarg-parsing.mk:
+#   Building on demos/structured-io.mk to demonstrate parsing structured arguments.
+#
 # USAGE: ./demos/kwarg-parsing.mk
 
 include compose.mk

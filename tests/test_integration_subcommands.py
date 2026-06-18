@@ -1,10 +1,10 @@
-"""End-to-end tests of the shipped `mk.subcommands` demo clients.
+"""End-to-end tests of the shipped `cli.subcommands` demo clients.
 
-Two *equivalent* zero-config clients of the reusable `mk.subcommands` engine: a
+Two *equivalent* zero-config clients of the reusable `cli.subcommands` engine: a
 `greet` CLI with non-parametric (`world`, `me`) and parametric (`hello`) handlers,
 namespace/subcommands/default all auto-detected, with NO edit to compose.mk core:
 
-  * demos/subcommands.mk      : plain make, `greet:; $(call mk.subcommands.enter)`
+  * demos/subcommands.mk      : plain make, `greet:; $(call cli.subcommands.enter)`
     (single default namespace `.greet`)
   * demos/cmk/subcommands.cmk : CMK-lang, the `ᝏsubcommands` decorator, demonstrating
     the namespace MRO (handlers split across the `├` and `╰` namespaces)

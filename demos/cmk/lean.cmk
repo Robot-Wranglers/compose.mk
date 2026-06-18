@@ -1,10 +1,7 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# CMK-lang translation of demos/lean.mk
-#
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-#
-# See also: http://robot-wranglers.github.io/compose.mk/demos/lean
-#           http://robot-wranglers.github.io/compose.mk/demos/polyglots
+# lean.cmk:
+#   Drive the Lean 4 theorem prover from inline polyglot blocks.
+#   Ported from demos/lean.mk.
 #
 # USAGE: ./demos/cmk/lean.cmk
 

@@ -1,35 +1,26 @@
 {% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
-## Compiler & Dialects
+## CMK Language & Compiler
 <hr style="width:100%;border-bottom:3px solid black;">
 
-To avoid freaking out people who are just interested in [tools]({{mkdocs.site_relative_url}}/tool-mode) or [libraries]({{mkdocs.site_relative_url}}/standard-lib), the fact that [compose.mk is actually a programming language]({{mkdocs.site_relative_url}}/language#language-properties) isn't emphasized in most docs, and the shocking secret truth is safe to ignore.  
+Most documentation doesn't emphasize that `compose.mk` is actually *a programming language*.  The shocking secret truth is safe to ignore, and you don't need to care about this if you're only interested in [tools]({{mkdocs.site_relative_url}}/tool-mode) or a [standard-library]({{mkdocs.site_relative_url}}/standard-lib) for Makefiles.
 
-If you *are* interested though, this section is hands-on with the language itself, and enough details to extend it.
-
-!!! tip "Quick Version"
-    1. The `compose.mk` language is called **CMK** or **CMK-lang**.
-    1. Files use the `.cmk` extension by convention.
-    1. CMK is a superset of Makefile, compiled into legal classic Makefile.
-    1. Makefile is always valid CMK; the reverse might not be true.
-    1. The compiler is contained inside `compose.mk`, and there are no other tools.
-    1. The compiler is extensible, enabling new CMK dialects with user-defined config.
-
-Even quicker:
-
-> CMK = Makefile + compose.mk standard library + optional extra syntax
-
-Crucially, writing code in the CMK language **does not add new core capabilities** to the stuff that `compose.mk` already does *without* CMK.  
-
-At a high level, the point of CMK is to eliminate lots of pesky dollar-signs and curly brackets in pure Makefile, while it also **elevates various existing idioms to native syntax**.  That includes the support for [containers]({{mkdocs.site_relative_url}}/demos/matrioshka), [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots), and more.
-
-Whether you love `make` or passionately hate it, you'll probably agree that default syntax can be annoying.  Since `compose.mk` fixes most of the *other* problems with practical general-purpose usage, syntax is the main problem left!  This actually matters a lot, not just for adoption or usage as a daily driver, but because **notation is part of how we think.**[^1]
-
-This page is a walk-through in a tutorial mode.  Other pages you might be looking for instead:
+This section is hands-on with the language itself, and enough details to use it or to extend it.  Other pages you might be looking for instead:
 
 * [CMK Quick Reference]({{mkdocs.site_relative_url}}/cmk-quick-ref), a cheat-sheet of important CMK-lang syntax.
 * [CMK Demo Index]({{mkdocs.site_relative_url}}/cmk-demos): a single cross-referenced listing of every featured demo (and its plain-Makefile twin), see the .  Most CMK demos are direct ports from existing pure-Makefile demos that are twins.
 * CMK demos in the source tree @ {{macros.repo_link('demos/cmk', github=github)}}
+* [Language Classification/Properties]({{mkdocs.site_relative_url}}/language#language-properties)
+
+### Introduction 
+<hr style="width:100%;border-bottom:3px solid black;">
+
+{%include "cmk-quick-version.md.j2"%}
+Since CMK inherits all of the `compose.mk` standard library and primitives, it has the same native support for things like [workflows]({{mkdocs.site_relative_url}}/demos/workflows), [containers]({{mkdocs.site_relative_url}}/demos/matrioshka) and [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots).  But it also gets first-class [modules]({{mkdocs.site_relative_url}}/modules) and a simple-but-powerful [metaprogramming environment]({{mkdocs.site_relative_url}}/dialects).  
+
+Since CMK uses `compose.mk` as the *interpreter*, it also [extends make]({{mkdocs.site_relative_url}}/signals), [generalizes it]({{mkdocs.site_relative_url}}/language/#homoiconic), and adds new kinds of [patterns]({{mkdocs.site_relative_url}}/matrioshka).
+
+Writing code in the CMK language does not add new core capabilities to what `compose.mk` already does *without* CMK.  But by *elevating existing idioms to native syntax*, the payoff is actually huge, because notation is part of how we think.[^1]
 
 #### Running Demos 
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -46,7 +37,6 @@ $ ./compose.mk cmk run ./demos/cmk/example.cmk
 # Compile only, without running (highlighted preview to a terminal)
 $ ./compose.mk cmk compile ./demos/cmk/example.cmk
 ```
-
 That preview still requires an external `compose.mk` to access library functions.  But a stand-alone version with an *embedded* standard library is one step away: pass an output path, and `cmk compile` emits a self-contained, directly-runnable program:
 
 ```bash {.cli_example}
@@ -59,7 +49,7 @@ $ chmod +x ./example && ./example
 
 For all the nerds out there, yes, CMK -> Makefile is really *transpiling*.. a source-to-source transformation.  Thus "interpretation", which piggy-backs on `make`, is really transpilation + execution, and doesn't involve anything like bytecode and VM.
 
-If you were expecting "compilation" to create an executable artifact, that's calling "packaging".  See instead the docs for [self-extracting executables]({{mkdocs.site_relative_url}}/demos/packaging/#makeself-reference) and  [guests & forks]({{mkdocs.site_relative_url}}/standard-lib/#forks-guests-and-payloads).
+If you were expecting "compilation" to create an executable artifact, that's more like "packaging".  See instead the docs for [self-extracting executables]({{mkdocs.site_relative_url}}/demos/packaging/#makeself-reference) and  [guests & forks]({{mkdocs.site_relative_url}}/standard-lib/#forks-guests-and-payloads).
 
 ### Basic Example
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -76,76 +66,23 @@ Let's revisit the JSON emit/consume example that's part of the [structured IO do
 We'll get to the odd arrow syntax at the end of this section, but start with most basic stuff first. 
 
 **Running CMK programs:**
-:  This example runs via the **`cmk` subcommand** (its shebang is `#!/usr/bin/env -S ./compose.mk cmk run`).  `cmk run` compiles CMK -> Makefile and then executes the result, which is what lets us extend the base syntax and use the more exotic stuff you see in the rest of the file.  As with other demos, this one is **executable directly** as `./demos/cmk/structured-io.cmk`.  Unlike a plain-Makefile demo, it can't be run with `make -f ..`; use `./compose.mk cmk run ..` instead.
+:  This example runs via the **`cmk` subcommand** (its shebang is `#!/usr/bin/env -S ./compose.mk cmk run`).  `cmk run` compiles CMK -> Makefile and then executes the result, which is what lets us extend the base syntax and use the more exotic stuff you see in the rest of the file.  As with other demos, this one is executable directly.  Unlike a plain-Makefile demo, it *can't* be run with `make -f ..`.
 
 **Implied Include + Standard Library:**
 :  When using the interpreter, a line like `include compose.mk` is always implied, and this brings with it full access to the [standard library]({{mkdocs.site_relative_url}}/standard-lib).
 
 **Function Calls Rewritten:**
-:  Awkward stuff like `$(call log.target, ...)` can be written as `cmk.log.target(..)` instead.  That means cleaner [compose.import statements]({{mkdocs.site_relative_url}}/bridge/#other-import-statements), and cleaner versions of [many other macros]({{mkdocs.site_relative_url}}/macros).
+:  Awkward stuff like `$(call log.target, ...)` is rewritten as a function call `cmk.log.target(..)` instead.  Similarly, you get cleaner versions of [compose.import statements]({{mkdocs.site_relative_url}}/bridge/#other-import-statements), or any of the other [macros]({{mkdocs.site_relative_url}}/macros).
 
 **Recursive Calls Rewritten:**
-:  Awkward stuff like `${make} foo` can be written as `this.foo` instead.  Recursive invocation of the current context is common, and absolutely critical for code-reuse.[^3] The choice of `this` for a new keyword is actually configurable too.. we'll get to that in the next section.
+:  Awkward stuff like `${make} foo` can be written as `this.foo` instead.  Recursive invocation of the current context is common, and absolutely critical for code-reuse.[^3]  The choice of `this` for a new keyword is actually configurable too.. see [user-defined dialects]({{mkdocs.site_relative_url}}/dialects/#user-defined-extensions).
 
-Finally, **about that arrow syntax?**  These operators just help to make JSON IO feel more native, and are sugar to safely use `jq` and `jb` for parsing and pushing JSON, respectively, regardless of whether those tools are available on the host.  A hint about what's happening here: glancing at the [original code]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) that's "ported" to CMK-lang here, you'll notice the only "code transformation" we really need to get from **CMK -> Makefile** in this case involves very simple string substititions.
-
-Read on for a walk-through, including the specific substitions that enable the code above at the same time as explaining "dialects" in general.  For a one-page cheat-sheet of the syntax, see the [CMK Quick Reference]({{mkdocs.site_relative_url}}/cmk-quick-ref); for the full list of demos, see the [CMK Demo Index]({{mkdocs.site_relative_url}}/cmk-demos).
-
-### About Dialects
-<hr style="width:100%;border-bottom:3px solid black;">
-<a name=dialects></a>
-
-**A dialect is an array of paired substitition rules,** and during compilation these rules take effect everywhere, *except* for inside define-blocks or inside things that compile to define-blocks.  
-
-Using the [reflection capabilities]({{mkdocs.site_relative_url}}/standard-lib#reflection-support), we can show some info about the default dialect that the compiler supports like this:
-
-```bash {.cli_example}
-$ ./compose.mk mk.def.read/cmk.default.dialect
-[
-  ["🡆", "${stream.stdin} | ${jq} -r"],
-  ["🡄", "${jb}"],
-  ["this.", "${make} "]
-  ...
-]
-```
-
-**Matching/substitution for dialects is strict and simple.** Regexes are not supported, so a preference for unicode symbols is an easy way to guarantee that new keywords will not collide with any other usage.  Crucially, since substitution does not apply inside define-blocks, a new keyword like `this` cannot not effect [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) even if they also use the same keyword. You only need to think carefully about collision with shell-commands and their arguments that appear inside normal targets.
-
-Full dialect details are [available in the appendix](#appendix-default-dialect), but the rules shown above are the ones used in the [basic example](#basic-example) above.  All we've done so far is introduce new syntax for `jq`, `jb`, and calling `make` recursively.
-
------------
-
-It might not be obvious how useful and powerful that simple substition actually is here, so let's take a brief detour to peel back the layers.  Above is the dialect literal, but below you can see a first approximation of variable expansion.
-
-As discussed in [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics), we try to use local tools if available, and fall back to docker.  Expansion shows that working:
-
-```bash {.cli_example}
-$ ./compose.mk mk.get/cmk.default.dialect
-[
-  [
-    "🡆",
-    "cat /dev/stdin | /usr/bin/jq -r"
-  ],
-  [
-    "🡄",
-    "docker container run --rm ghcr.io/h4l/json.bash/jb:${JB_CLI_VERSION:-0.2.2}",
-  ],
-  [
-    "this.",
-    "make -rs --warn-undefined-variables -f ./compose.mk "
-  ],
-  ...
-]
-```
-
-One layer of expansion reveals that fallback works as advertised; in this case `compose.mk` knows that a local copy of `jq` is available already, but `jb` is missing and will have to use docker.
-
-It also reveals that there is actually yet another layer of expansion, where `JB_CLI_VERSION` has a default value for tool versions that supports user-override.  Therefore *besides* being visually easy to parse and clarifying intent, the **usage of the arrow operators results in portable code with no extra tool installation.**
+Finally, **about that arrow syntax?**  These operators help to make [structured IO]({{mkdocs.site_relative_url}}/standard-lib/#structured-io) feel more native, and are sugar to safely use `jq` and `jb` for parsing and pushing JSON, respectively, *regardless* of whether those tools are available on the host.  (A hint about what's happening here: glancing at the [original code]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) that's "ported" to CMK-lang here, you'll notice the only "code transformation" we really need to get from **CMK -> Makefile** in this case involves very simple string substititions.)
 
 ### Compose File Example
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Revisiting the code from the [inlined compose-file demo]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files), let's look at a CMK port.  
+Revisiting the code from the [inlined compose-file demo]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files), let's look at a CMK version.  
 
 Like the original demo, this embeds a compose file, creates target-scaffolding for the containers involved, and demonstrates task-dispatch for them.  But this time we introduce the **⋘ name ..body.. ⋙** syntax for compose files.  *(Unicode ahead: `⋘` isn't `<<<` !)*
 
@@ -224,28 +161,7 @@ Again we import services here instead of inlining them, but `compose.bind.target
 
 {% include "includes/args/compose.bind.target.md" %}
 
-### About Sugar
-<hr style="width:100%;border-bottom:3px solid black;">
-
-Under the hood, examples using **with/as** involve something slightly more complicated than the [dialects we saw earlier](#about-dialects), and this is called "sugar".
-
-**Sugar is an array of triples representing `[sugar_start, sugar_end, sugar_template]`**.  Similar to dialects, we can dump the default sugar for the compiler by using `mk.def.read`.  A complete reference for sugar is [in the appendix](#appendix-default-sugar), but the part that's relevant for inlined-compose files is this:
-
-```bash {.cli_example}
-$ ./compose.mk mk.def.read/cmk.default.sugar
-```
-```bash {.cli_output}
-[
-	["⋘","⋙","$(call compose.import.string, def=__NAME__ import_to_root=TRUE)"],
-    ...
-]
-```
-
-Sugar transforms CMK source towards legal Makefile define-blocks while **giving those blocks additional semantics**.  Since define-blocks have names, every sugar also requires a name.
-
-For the `sugar_template` element of the triple, we render it and add it after the define-block.  See the table below for an explanation of the variables that may appear inside this template.
-
-{% include "includes/sugar-template-vars.md" %}
+The **with/as** idiom above is powered by *sugar* -- a block-structured cousin of dialects that lowers source into Makefile define-blocks while giving them extra semantics.  The mechanics (and how to redefine them) live on the [Dialects &amp; Sugar]({{mkdocs.site_relative_url}}/dialects/#about-sugar) page.
 
 ### Polyglot Examples
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -261,18 +177,22 @@ Bound code uses the syntax **⟦ name ..body.. ⟧ with .. as ..**, whereas unbo
 
 The **with ..** clause takes space-separated keyword arguments (e.g. `with img=.. entrypoint=..`), and the keywords may optionally be wrapped in parentheses for readability, as in `with (img=.. entrypoint=..) as ..`.
 
-The trailing **with .. as ..** clause (we call it "advice") need not sit on the same line as the closing marker.  It may stay inline, use a trailing `\` for a Makefile-style continuation, or simply spill onto the following line(s) -- a leading `with`/`as` line is picked up, an `as` may be continued on its own line, and blank lines in between are ignored.  All of these are equivalent:
+The trailing **with .. as ..** clause (the "trailer") need not sit on the same line as the closing marker.  It may stay inline, use a trailing `\` for a Makefile-style continuation, or spill onto the following line(s).
 
-```
-⨖ with img=alpine as docker_context        # inline
+{# ```Makefile
+# inline
+⨖ with img=alpine as docker_context        
 
-⨖ with img=alpine \                         # backslash-continued
+# backslash-continued
+⨖ with img=alpine \                         
     as docker_context
 
-⨖                                           # spilled onto following lines
+# spilled onto following lines
+
+⨖                                           
 with img=alpine
 as docker_context
-```
+``` #}
 
 {{site.embed_demo(
     'demos/cmk/code-objects.cmk', 
@@ -281,13 +201,13 @@ as docker_context
       base=mkdocs.site_relative_url+'/demos/polyglots'),
     github=github)}}
 
-The eagle-eyed reader will have noticed that our friend **⨖ / with / as** is generic enough to already handle the use-case of working with polyglots by passing `img=.. entrypoint=..`.  Why add another syntax?
+Since our friend **⨖ / with / as** is generic enough to already handle the use-case of working with polyglots by passing `img=.. entrypoint=..`.  Why add another syntax?
 
 There are some differences, including the scaffolded `preview` target.  But the main difference is that this approach to polyglots is *intentionally* pretty minimal.
 
-* Using **`.. as target`** tends to result in designs that *could* use a container, but doesn't strictly require one, and usually makes things more friendly for composition.  And for example this allows you to use host tools if available and fall-back to containers, or make dynamic decisions about the image to use.
+* Using **`.. as target`** tends to result in designs that *could* use a container, but doesn't strictly require one, and usually makes things more friendly for composition.  That allows you to use host tools if available and fall-back to containers, or make dynamic decisions about the image to use.
 
-* Using **`.. as container`** only supports container/interpreter arguments.  Amongst other things, this disables support for environment-variable passthrough, and therefore encourages only pipe-based I/O if any is required.
+* Using **`.. as container`** only supports container/interpreter arguments.  That makes environment-variable passthrough more awkward, and therefore encourages only pipe-based I/O if any is required.
 
 #### Files as Targets with polyglot.import.file
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -386,44 +306,6 @@ Using stock images instead of inlined ones is similar to the last section, excep
 
 **Supported arguments** for `docker_context` are exactly the same as the ones we saw earlier with [`local_context`](#local-context-embedded-containers).
 
-### User-Defined Extensions
-<hr style="width:100%;border-bottom:3px solid black;">
-
-Both dialects and sugar can be defined at runtime on a per-file basis, basically allowing the code itself to describe aspects of the compiler that will be used on it.
-
-!!! info "Info"
-    File hints must occur after the shebang, before the first non-comment line, and must be legal JSON that specifies the full dialect/sugar to use.  This *overwrites* the default dialect/sugar, and does not append it!
-
-Minified JSON is optional, and everything between the first and second `:::` will be used, so multi-line JSON is allowed, but must remain comment-prefixed.
-
-#### User-Defined Dialects
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-User-defined dialects require a hint at the top of the file.  Building on the [basic example](#basic-example), here's an example that changes the default jq/jb JSON operators to use different characters.
-
-{{site.embed_demo(
-  'demos/cmk/user-dialect.cmk', 
-  github=github,
-  bottom_right=site.link_mirror(
-    'demos/structured-io.mk',
-    link=mkdocs.site_relative_url + '/standard-lib/#structured-io-basics'))}}
-
-To get the full current default dialect in a minified form that's ready for your own modifications, use `./compose.mk mk.def.read/cmk.default.dialect| jq -c`
-
-#### User-Defined Sugar
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-User-defined sugar requires a hint at the top of the file.  Building on the [compose file example](#compose-file-example), here's an example that changes that default syntax to use different characters.
-
-{{site.embed_demo(
-  'demos/cmk/user-sugar.cmk', 
-    github=github,
-  bottom_right=site.link_mirror(
-    'demos/inlined-composefile.mk',
-    base=mkdocs.site_relative_url + '/demos/matrioshka'))}}
-
-To get the full current default sugar in a minified form that's ready for your own modifications, use `./compose.mk mk.def.read/cmk.default.sugar | jq -c`
-
 ### Bind Declarations
 <hr style="width:100%;border-bottom:3px solid black;">
 
@@ -456,106 +338,230 @@ Bind-declarations can be stacked. For example, loading some variables from JSON 
 <hr style="width:100%;border-bottom:3px solid black;">
 <a name=assignment-operator></a>
 
-The `⇐` operator captures a command's output into a shell variable, i.e. the
-ubiquitous ``x=`cmd` `` idiom without the backtick noise.  `x ⇐ cmd` lowers to
-``x=`cmd` ``; the right-hand side runs through the dialect first (so `x ⇐ this.t`
-becomes ``x=`${make} t` ``), and is captured up to the next shell separator
-(`;`, `&&`, `||`), a trailing line-continuation, or end-of-line.  That means the
-rest of the line is preserved and you can write several assignments per line.
-Like the rest of the dialect, `⇐` is inert inside define-blocks.
+The `⇐` operator captures a command's output into a shell variable, i.e. the ubiquitous ``x=`cmd` `` idiom without the backtick noise.  Simple enough, but the useful part is that the right-hand side runs through the dialect first.  So for example:
 
-### Triple-Quote Literals
+```Makefile  {.language-makefile}
+
+# CMK Assignment:
+x ⇐ this.t  
+
+# Lowered to Makefile:
+x=`${make} t`
+```
+
+The whole RHS is captured up to the next shell separator (one of `;`, `&&`, `||`), a trailing line-continuation, or end-of-line.  As usual, `⇐` is inert inside define-blocks.
+
+### Triple-Quoted Forms
 <hr style="width:100%;border-bottom:3px solid black;">
 <a name=triple-quote-literals></a>
 
-CMK has three triple-delimiter literal forms.  Each emits its body as text via a
-`printf` (handy for feeding a snippet or whole program into a pipeline without the usual
-quoting/escaping hassle), each supports multi-line content, and each is **inert inside
-`define`-blocks** (so a python `'''docstring'''` inside a [polyglot](#polyglot-examples)
-is left untouched).  They differ only in *what gets interpolated*.  One caveat applies to
-all three: the body can't contain an internal run of three-or-more of its own delimiter
-character.
+CMK has 3 triple-quoted literal forms.  Each emits its own body as text (handy for feeding a snippet or whole program into a pipeline without the usual quoting/escaping hassle), each supports multi-line content, and each is **inert inside `define`-blocks** (so a python `'''docstring'''` inside a [polyglot](#polyglot-examples) is left untouched).  
 
-#### `'''…'''`: literal (to the shell)
+They differ only in *what gets interpolated*.  One caveat applies to all three: the body can't contain an internal run of three-or-more of its own delimiter character.
+
+#### Triple-Quote (Singles)
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-Lowers to a **single-quoted** `printf '%s' '…'`; internal quotes and `%` are taken
-literally.  "Literal" means literal *to the shell*: a `printf` in a recipe is still an
-ordinary make recipe, so the usual two-layer expansion applies:
+The form for `'''…'''` is literal (to the shell).  Internal quotes and `%` are taken literally.  However the usual two-layer expansion applies:
 
-* **Make** variables and functions DO expand (`${VAR}`, `$(VAR)`, `$(call …)`), because
-  make expands a recipe line *before* handing it to the shell.
-* **Shell** constructs do NOT: a shell variable `$$VAR`, a command-substitution
+* **Make** variables and functions DO expand (`${VAR}`, `$(VAR)`, `$(call …)`)
+* **Shell** constructs do NOT expand: a shell variable `$$VAR`, a command-substitution
   `` `cmd` ``, and `$$(…)` are passed through verbatim (the single quotes protect them).
 
 ```Makefile {.language-makefile}
-X := MAKEVAL
-demo:; '''mk=${X} sh=$${USER}'''    # -> mk=MAKEVAL sh=${USER}   (shell var stays literal)
+X := MAKE_VALUE
+demo:
+  '''mk=${X} sh=$${USER}'''
+  # output is mk=MAKE_VALUE sh=${USER} and the shell var stays literal
 ```
 
-#### `"""…"""` and ` ```…``` `: interpolating (shell too)
+**Lowering:** The compiler lowers this form as a **single-quoted** `printf '%s' '…'`.
+
+#### Triple-Quote (Backticks & Doubles)
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-These two are **equivalent**: both lower to a **double-quoted** `printf '%s' "…"`.  Use
-whichever doesn't clash with the body (`"""` if it contains backticks, ``` if it contains
-`"`).  On top of the make expansion above, the **shell** layer now interpolates as well:
-`$$VAR`, `` `cmd` ``, and `$$(…)` all expand at runtime.  (Single quote = literal, double
-quote = interpolating, just like in shell.)
+The forms for `"""…"""` and ` ```…``` ` are both interpolating.  These two are **equivalent**; just use whichever form doesn't clash with the body.  On top of the make expansion above, the **shell** layer now interpolates as well: `$$VAR`, `` `cmd` ``, and `$$(…)` all expand at runtime.  (Single quote = literal, double quote = interpolating, just like in shell.)
 
 ```Makefile {.language-makefile}
-X := MAKEVAL
-demo:; """mk=${X} sh=$${USER}"""    # -> mk=MAKEVAL sh=<value of $USER>
+X := MAKE_VALUE
+demo:
+  """mk=${X} sh=$${USER}"""
+   # output is mk=MAKE_VALUE sh=<value of $USER>
 ```
 
-` ```(`${io.stack.pop_word}`)``` ` wraps the popped value in literal parens.  Because the
-closing delimiter is the *last* three of a backtick run, the body may begin or end with a
-backtick: ` ````cmd```` ` interpolates `` `cmd` `` and prints it bare.
+**Lowering:**  Both of these triple-quote forms lower to a **double-quoted** `printf '%s' "…"`.  
 
-### Callable Targets
+### Call Forms
 <hr style="width:100%;border-bottom:3px solid black;">
-<a name=callable-targets></a>
+<a name=callable-targets></a> <a name=call-forms></a> <a name=call-form></a>
 
-Where `cmk.fn(args)` *calls a macro*, the `this.` forms below *call a target* by feeding
-its **stdin**: handy for any target that reads a stream.  All three lower to a pipe into the
-target, so `this.foo(...)` is just sugar for the hand-written `... | this.foo`.
+Call-forms use two kinds of "call anchors", or no anchor at all.  No-anchor is exactly the Receiver Form documented [elsewhere](#receivers).  
+
+#### About Call Anchors
+
+There are two call anchors because CMK treats both *targets* and *macros* callable, but these cases need to be differentiated.  Anchors are **not** keywords, because their actual value can be determined by [the dialect](#claude-link).  By default though, the convention is:
+
+* Targets anchor: **`this.<name>`**
+* Macro anchor: **`cmk.<name>`**
+
+Both anchors share a common grammar, which also comes in two flavors.
+
+* Argument Passing: **`<anchor>.<name>(<args>)` **
+* Stream Passing: **`<anchor>.<name>[<stream>]`**
+
+#### Lowering & Quick Examples
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 ```Makefile {.language-makefile}
-# call form -- feed a literal to a target that reads stdin
-demo:; this.eval('''(Hi)S''')          # -> '''(Hi)S''' | this.eval
 
-# tagged form (JS/Scala-style) -- same thing, no parens
-demo:; this.eval'''(Hi)S'''            # -> '''(Hi)S''' | this.eval   (literal)
-demo:; this.eval"""val=$$X"""          # -> """val=$$X""" | this.eval (interpolating)
+demo:
+  this.eval["""hello world"""]
+  # printf "hello world" | ${make} eval
 
-# unquoted -- the argument is run and its OUTPUT is piped (verbatim)
-demo:; this.eval(cat program.txt)      # -> cat program.txt | this.eval
-demo:; this.b(this.a)                  # chain targets: ${make} a | ${make} b
+demo:
+  this.eval'''hello world'''
+  # the "tagged string" form: same, no brackets
+
+demo:
+  this.b[this.a]
+  # chain: ${make} a | ${make} b
+
+demo:
+  cmk.render(name=app)["""$$PAYLOAD"""]   
+  # printf "$${PAYLOAD}" | $(call render,name=app)
 ```
 
-* The tag must be **`this.`-prefixed** (this is what distinguishes a *target* call from a
-  `cmk.fn(...)` *macro* call).  `this.` itself is just the default-dialect entry for
-  `${make} `, so a custom `cmk_dialect` can still redefine it.
-* The argument may be a [triple-quote / triple-backtick literal](#triple-quote-literals)
-  (call or tagged form) -- literal vs interpolating exactly as in that section -- or, in the
-  call form only, an **unquoted single-line** expression that is moved verbatim (so a
-  subshell `this.foo((echo a; echo b))` or a command works).
-* **Multi-line input requires triple-quotes**; unquoted arguments are single-line.
-* Only a `(` or triple-delimiter written **immediately** after the name is a call, so
-  ordinary shell parentheses are untouched: `this.b; (this.a)` and `this.foo (x)` (note the
-  space) stay plain shell.
+#### Callable Properties
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+The last example above shows that call forms can be combined, and expressed in either order, so that `anchor.name(..)[..]` is the same as `anchor.name[..](..)`.  Since this is unambiguous to the parser it's supported as a matter of convenience, but in actual fact *argument-passing* comes first.
+
+Argument passing is straight-forward.  A macro/function call-form supports comma-separated pos-args or keyword-arguments in the same way as the underlying function, whereas target call-form requires pos-args.
+
+Streams are more interesting.
+
+* Stream forms can be nested / composed to any depth, left-to-right.
+* Streams can be [triple-quote form](#triple-quote-literals) 
+* Streams support Via interpolating triple-quote form, streams support multi-line commands.
+* Streams can be a single-line command verbatim
+* Streams can be a [block-reference](#block-references), 
+
+### Receiver Form
+<hr style="width:100%;border-bottom:3px solid black;">
+<a name=receivers></a>
+
+The primary [call-form](#call-form) anchors are explicit.  A **receiver** is a more implicit third option: a name brought into scope by a [declaration]({{mkdocs.site_relative_url}}/macros/#declare-namespace).
+
+This form covers various first-class constructs like a [channel](#claude-link), a [module](#claude-link), a [polyglot](#claude-link), or a [container](#claude-link).   After declaration, the name is implied, but otherwise the standard call-form grammar applies.
+
+#### Lowering & Quick Example
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+```Makefile {.language-makefile}
+# creates a named stack, registers `inbox` as a receiver
+declare.channel(namespace=inbox)
+
+# -> printf "type=login user=alice" | ${make} inbox.emit
+inbox.emit["""type=login user=alice"""]
+
+# logins=`${make} inbox.filter.field_equal/type,login`
+logins ⇐ inbox.filter.field_equal/type,login
+```
+
+Since the declaration builds targets dynamically, the 2nd form above is just a small change over the target-calling form we've already met: `this.inbox.emit[...]`
+
+!!! tip "OOP?"
+    This resembles message-passing OOP since the *receiver* is the "object" a message is sent to and `receiver.method[...]` deliberately reads that way.  But it's simpler than that.  There are no instances, no inheritance, and no `self`.  
+    
+    A receiver is a compile-time **namespace**, not a runtime object, and the send is resolved by static name-rewriting rather than dynamic dispatch.  Any state involved lives *outside* the "object" (in this case a channel's queue is a stack-file, not a field of `inbox`).  Think *namespaced message-send syntax* rather than classes.. this gives the first-class look-and-feel without a real object model.
+
+A receiver-send fires **only** when all three hold, which is what keeps it from meddling with ordinary names:
+
+* The name was **declared** (an undeclared `foo.bar[...]` is left untouched),
+* It sits at a **word boundary** (the start of a recipe word, not mid-token), and
+* It is followed by a **call-suffix** -- `(`*args*`)`, `[`*stream*`]`, `/`*arg*, or an adjacent triple-quote.
+
+So a target *definition* (`inbox.seed:`), a parametric def (`inbox.scan/%:`), a bare prerequisite
+(`__main__: inbox.seed`), and anything inside a `define`-block are all left as-is. A legacy
+`this.inbox.emit[...]` still works and is never double-anchored.
+
+Receiver names are discovered from the file's own declarations by naming convention -- `namespace=`
+(channels, modules, imported defs/targets), `def=` (polyglots, single-image
+containers), and the `⟦`/`🞹`/`⫻`/`⦕ as` block-sugar. Multi-service compose files are the exception:
+their service names are only known at runtime, so they keep the explicit `<svc> ᐉ <target>` dispatch.
+
+{{site.embed_demo('demos/cmk/events.cmk', github=github)}}
+
+### Block References 
+<hr style="width:100%;border-bottom:3px solid black;">
+<a name=block-references></a>
+<a name=block-refs></a><a name=block-ref></a>
+<a name=blockrefs></a> <a name=blockref></a>
+
+A `define`-block keeps a snippet (a script, a program, a query) in one named place; a
+**block-ref glyph** then feeds that block straight into a command, with no temp-file dance.
+
+| Glyph | Reference | Becomes |
+| :-:   | --- | --- |
+| `⬦` *NAME* | a transient **stream FD** | process substitution  via `<(…)` |
+| `⬥` *NAME* | a real **local file** | a tmpfile path, materialized on disk |
+
+{{site.embed_demo('demos/cmk/blockrefs.cmk', github=github)}}
+
+Reach for `⬦` (hollow = ephemeral) when a tool can support a stream, because it saves you on disk IO.  Reach for `⬥` (filled = on disk) when it requires a real path.  As usual, both are inert inside `define`-blocks.
+
+!!! note "Tempfile Lifecycles"
+    The two glyphs have very different lifecycles.  The `⬦` form lowers to a process-substitution (`<(…)`): the shell owns the transient FD and tears it down automatically when the command exits, so there's nothing on disk to manage.  The `⬥` form lowers to a command-substitution that runs `mktemp` *every time the recipe line executes*, writes the block to that file, and substitutes the path into your command.  A new file is created per evaluation (so re-running a target, or referencing the same block twice, yields distinct paths).  These files land in a run-scoped scratch location (a `.tmp.cmk.brf.*` name keyed on the run id) and are **auto-removed at the end of the run** by the supervisor, so you don't have to manage them.  The manual `mk.clean` target is available as a backstop if a run is hard-killed before teardown.
 
 ### Recipe-Body Joining
 <hr style="width:100%;border-bottom:3px solid black;">
 <a name=recipe-body-joining></a>
 
-The newline-separated lines of a recipe body are joined into a single shell with
-` && ` connectors.  A body written one-statement-per-line therefore shares state
-(variables, `cd`) across its lines and stops on the first failure, which is what
-makes the [`⇐` operator](#assignment-operator) above useful on its own line.
-The joining is conservative and should not surprise recipes that already manage
-their own control-flow: a line that already ends in a connector (`&&`, `||`, `|`)
-just continues to the next, a line you split yourself with a trailing `\` stays
-one command, and `-`- or `+`-prefixed lines stand alone.
+The newline-separated lines of a recipe body are joined into a single shell with ` && ` connectors *by default*.  A body written one-statement-per-line therefore shares state (variables, `cd`) across its lines and stops on the first failure. The joining is conservative and should not surprise recipes that already manage their own control-flow: a line that already ends in a connector (`&&`, `||`, `|`) just continues to the next, a line you split yourself with a trailing `\` stays one command, and `-`- or `+`-prefixed lines stand alone.
+
+The ` && ` default is a *policy*, not a law: it is overridable per-file with the [`recipe_join` compiler pragma](#compiler-pragmas) below.
+
+### Compiler Pragmas
+<hr style="width:100%;border-bottom:3px solid black;">
+<a name=compiler-pragmas></a>
+
+[Dialects]({{mkdocs.site_relative_url}}/dialects/#about-dialects) and [sugar]({{mkdocs.site_relative_url}}/dialects/#about-sugar) let a file extend the *syntax* it's written in.  A **pragma** is the third member of that family: a leading-comment JSON hint that sets *per-program knobs* in-source, in lieu of piling environment variables onto the shebang:
+
+{{site.embed_demo('demos/cmk/pragma.cmk', github=github)}}
+
+Each key is normalized (lowercase convention; `.`/`-` fold to `_`) and exposed as a `CMK_PRAGMA_<NAME>` variable -- a namespace the compiler *alone* writes, so a pragma can never clobber an internal control variable.  Knobs resolve with precedence **pragma > environment > default**: a **scalar** *replaces* (the program's pragma wins over an invoker's env, with a warning), while an **array** *accumulates* like `+=` (e.g. `at_exit_targets` runs *in addition to* the framework's own cleanup).  Because a pragma sets make-time values, it cannot reconfigure the early supervisor/bootloader knobs (`CMK_SUPERVISOR`, `CMK_DISABLE_HOOKS`, ...) -- those stay on the shebang/environment.
+
+The original knob, **`recipe_join`**, selects the [recipe-body joining](#recipe-body-joining) connector:
+
+| value      | effect                                                                 |
+| ---------- | ---------------------------------------------------------------------- |
+| `&&`       | *(default)* fail-fast; the body shares one shell and stops on first error |
+| `;`        | run-all; the body still shares one shell but does not stop on failure  |
+| `none`     | no join -- each line becomes its own recipe-line (classic `make`), with **no shared shell state** |
+
+!!! warning "`recipe_join: none`"
+    With `none` there is no shared shell across recipe lines, so anything that relies on it stops working: `cd` between lines, the [`⇐` operator](#assignment-operator), and the `&&`-chained decorator forms.  Use it only when you specifically want classic per-line `make` semantics.
+
+#### Lifecycle / boot knobs
+
+A program's **before** and **after** hooks are a symmetric pair of list knobs: `bootloaders` run *before* make (sourced in the supervisor's shell, so they can register an `EXIT` trap or set up early state), and `at_exit_targets` run *after* (as make targets).  A bootloader is an inline named `define` -- pure bash, single `$` (it is `source`d, not run by make), distinct from a make target.  Two scalar toggles round it out: `hooks` (`off` disables target-rewriting) and `bootloader_disabled`.
+
+{{site.embed_demo('demos/cmk/pragma-boot.cmk', github=github)}}
+
+These boot knobs only take effect via `cmk run` (the path that owns both the source and the program's re-exec), and they are threaded into the canonical `CMK_DISABLE_HOOKS`/`CMK_BOOTLOADER*` env -- *not* the `CMK_PRAGMA_*` namespace -- because the bash header reads them before make exists.  The scalars are pragma-wins with a loud notice; the `bootloaders` list *appends* to any invoker-set `CMK_BOOTLOADER`.
+
+!!! warning "`bootloaders` source code"
+    A bootloader is sourced as shell at boot -- powerful, and the same surface the shebang already exposes, but less visible.  An invoker can always block it with `CMK_BOOTLOADER_DISABLED=1`.  The **supervisor** itself (`CMK_SUPERVISOR`) is the one boot knob a pragma can never set -- it must come up before anything can be read.
+
+#### Execution mode: `repl`
+
+Where `recipe_join` declares how a program *compiles* and the boot knobs declare how it *boots*, the **`repl`** pragma declares how it *runs*: a program's **default action** becomes an interactive REPL over its own target namespace, rather than a single pass of `__main__`.  Set `repl: true` and `cmk run <file>` launches the harness; at launch it lists the program's own (local) target namespace, and typing a target name (one of those, or anything in the core namespace) runs it -- `python -i` / `irb`, for a `.cmk`.  The eval loop is the generic core dispatcher `mk.repl.kernel`, so this needs **no** import, `host_only`, or launcher in the program -- just the pragma:
+
+{{site.embed_demo('demos/cmk/repl.cmk', github=github)}}
+
+The object form `repl: { read: <t>, eval: <t>, print: <t>, exit_after: 1 }` wires the harness's three regions (a scrolling **print** stream, the **eval** input sink, and a one-line **read** mode-line) to the program's own targets -- the reflective overlay in `demos/cmk/overlay.cmk` is just this.  An explicit `cmk run <file> <target>` **bypasses** the mode and runs that target (like `python script.py` vs bare `python`), and `cmk repl <file>` **forces** the mode on *any* program -- even one with no pragma -- as a universal interactive shell over its targets.  Like the boot knobs, this only applies via `cmk run` / `cmk repl` (the runtime owns the harness); the harness itself is the `tux.repl` plugin, built on first use.
+
+This completes the **dialect + sugar + pragma** triad.  A natural next step (not yet implemented) is bundling all three under one named language, selectable in a single line -- the way Racket's `#lang` names a whole language -- so a project-specific DSL can be reused across files without repeating its hints.
 
 ### Indentation
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -570,16 +576,17 @@ The rules, like Python's, are about *consistency*:
 * It is an **error** to mix tabs and spaces *within one indent* ("mixed mode"), or to use inconsistent amounts of space-indentation in one body ("mismatched").  The compiler stops with a clear message, much like Python's `TabError` / `IndentationError`.
 
 Indentation is normalized as the **last** preprocessing step, after [sugar
-blocks](#about-sugar) have been lowered.  See the {{macros.repo_link('demos/cmk/space-indented.cmk', name='space-indented demo', github=github)}}.
+blocks]({{mkdocs.site_relative_url}}/dialects/#about-sugar) have been lowered.  See the {{macros.repo_link('demos/cmk/space-indented.cmk', name='space-indented demo', github=github)}}.
 
 ### Status Info, Limitations, & Other Advice
 <hr style="width:100%;border-bottom:3px solid black;">
 
-Compilation and interpreted CMK is even more experimental than the rest of the project!  However if you're nervous about upstream changes due to depending on the default dialect, one option is to just [make it the user-defined default](#user-defined-dialect).  
+The CMK compiler is largely *vibe-coded awk*, but the test suite is massive, and the specifications, language-semantics, compiler-stages, and the general design is carefully crafted by a real human.  [Please report bugs]({{github.repo_url}}/issues), but not until you've **[confirmed you're using GNU awk!]({{mkdocs.site_relative_url}}/quickstart/#compatibility-notes)**.
 
-That said, everything that's documented here is stable and unlikely to change.  Mainly *experimental* just means that testing so far is limited, [so please report bugs]({{github.repo_url}}/issues), but not until you've **[confirmed you're using GNU awk!]({{mkdocs.site_relative_url}}/quickstart/#compatibility-notes)**.
+Everything that's documented here is stable and unlikely to change.  Per the rest of the design philosophy, the goal is to [freeze CMK after it's **useful** and **capable of being extended**]({{mkdocs.site_relative_url}}/but-why#forever-development-considered-harmful) and most future changes are probably optimizations rather than extensions.
 
-Per the rest of the design philosophy, the goal is to [freeze CMK after it's **useful** and **capable of being extended**]({{mkdocs.site_relative_url}}/but-why#forever-development-considered-harmful) and most future changes are probably optimizations rather than extensions.  See also the docs re: [Forks & Versioning]({{mkdocs.site_relative_url}}/quickstart/#forks-versioning) 
+[make it the user-defined default]({{mkdocs.site_relative_url}}/dialects/#user-defined-dialects). 
+  See also the docs re: [Forks & Versioning]({{mkdocs.site_relative_url}}/quickstart/#forks-versioning) 
 
 {#
 and [Contributing]({{mkdocs.site_relative_url}}/contributing).
@@ -593,7 +600,7 @@ Luckily, the target-language *(i.e. Makefile)* has almost no syntax itself and i
 
 **For the actual code-generation,** it's tempting to reach for any number of cool parser libraries, but you can probably tell based on the dialect/sugar specifications that what we need is very simple and closer to a regex.  We also want to avoid fancy tools that might require a dockerized toolchain, and even though it's just glorified string manipulation, `make` itself is not really up to the challenge.  The only tool for the job that's as fast and ubiquitous as `make` is `awk`, but this is still pretty daunting!
 
-In an ironic twist, the requirement that [dialects](#about-dialects) and [sugar](#about-sugar) should be extensible actually makes it easier to see a solution.  The compilation pipeline basically works as follows:
+In an ironic twist, the requirement that [dialects]({{mkdocs.site_relative_url}}/dialects/#about-dialects) and [sugar]({{mkdocs.site_relative_url}}/dialects/#about-sugar) should be extensible actually makes it easier to see a solution.  The compilation pipeline basically works as follows:
 
 1. One static `awk` script for dialects, accepting a single pair as arguments
 1. One static `awk` script for sugar, accepting a single triplet as arguments 
@@ -608,27 +615,7 @@ Crazy?  Sure!  But also very clean in a specific way: *hopefully* the gnarly awk
 
 Other related documentation includes: The [more basic interpreter usage]({{mkdocs.site_relative_url}}/signals/#inheritance-interpreters), which allows for inheritance of the entire `compose.mk` standard library and signals, but skips compilation and does **not** allow syntactic extensions.  The [packaging support]({{mkdocs.site_relative_url}}/demos/packaging) generates executables, but *isn't* compilation.  And there's also [a few thoughts about style]({{mkdocs.site_relative_url}}/style).
 
-*Data below is rendered from the latest source code.*
-
-#### Appendix: Default Dialect
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-```bash {.cli_example}
-$ ./compose.mk mk.def.read/cmk.default.dialect
-```
-```json {.cli_output}
-{{bash('./compose.mk mk.def.read/cmk.default.dialect')}}
-```
-
-#### Appendix: Default Sugar
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-```bash {.cli_example}
-$ ./compose.mk mk.def.read/cmk.default.sugar
-```
-```json {.cli_output}
-{{bash('./compose.mk mk.def.read/cmk.default.sugar')}}
-```
+The live default dialect and sugar are dumped from source on the [Dialects &amp; Sugar appendix]({{mkdocs.site_relative_url}}/dialects/#appendix).
 
 ### References
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -643,9 +630,6 @@ $ ./compose.mk mk.def.read/cmk.default.sugar
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
 {{macros.header_images([
       ['appendix','implementation'],
-      ['about dialects','implementation'],
-      ['about sugar','implementation'],
-      ['user defined extensions','user'],
       ['bind declarations','bind'],
       ['basic example','basics'],
       ['compose file example','basics'],

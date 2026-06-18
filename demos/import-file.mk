@@ -1,7 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrating importing a file directly to a target.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
+# import-file.mk:
+#   Importing a file directly to a target.
+#
 # USAGE: ./demos/import-file.mk
 
 include compose.mk

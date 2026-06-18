@@ -1,10 +1,8 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# Demonstrates doing some LLM stuff with compose.mk, using docker-compose, 
-# ollama and langchain.  This includes a small RAG pipeline, and 
-# also demonstrates tool-usage.  No host dependencies, no host ports.
-#
-# This demo ships with the `compose.mk` repository, but does NOT 
-# run as part of the default test-suite (model requirements are ~5GB).
+# rag.cmk:
+#   A small RAG pipeline (docker-compose + ollama + langchain), including
+#   tool-use.  No host dependencies, no host ports.
+#   (Not in the default test-suite: model downloads are ~5GB.)
 #
 # See the main docs:
 #   https://robot-wranglers.github.io/compose.mk/demos/ai

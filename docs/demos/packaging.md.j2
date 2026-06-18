@@ -121,7 +121,7 @@ val
 Under the hood this bundles `compose.mk` plus your `.cmk` and sets the entrypoint to re-interpret the bundled source, so the freed binary **transpiles the CMK on each run** (you'll see the compiler's progress before your output).  Passing a `.mk` file instead works the same way, with the makefile's default goal as the entrypoint.
 
 !!! note "Bundling dependencies"
-    A self-contained `.cmk`/`.mk` needs nothing extra.  If yours pulls in sibling files (a relative `include`, or `mk.import.*` of another file), add them to the archive with `archive=`, e.g. `archive=demos ./compose.mk mk.pkg/demos/cmk/underload.cmk`.
+    A self-contained `.cmk`/`.mk` needs nothing extra.  If yours pulls in sibling files (a relative `include`, or `import.*` of another file), add them to the archive with `archive=`, e.g. `archive=demos ./compose.mk mk.pkg/demos/cmk/underload.cmk`.
 
 ### Makeself Reference
 <hr style="width:100%;border-bottom:3px solid black;">

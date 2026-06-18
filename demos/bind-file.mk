@@ -1,7 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrating binding a file directly to a target.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
+# bind-file.mk:
+#   Binding a file directly to a target.
+#
 # USAGE: ./demos/r.mk
 
 include compose.mk

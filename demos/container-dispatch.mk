@@ -1,9 +1,8 @@
 #!/usr/bin/env -S make -f
-# demos/container-dispatch.mk: 
-#   Demonstrates the container dispatch idiom.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# container-dispatch.mk:
+#   The container dispatch idiom.
 #
-#   USAGE: ./demos/container-dispatch.mk
+# USAGE: ./demos/container-dispatch.mk
 
 include compose.mk
 

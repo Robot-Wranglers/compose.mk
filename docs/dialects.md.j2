@@ -1,0 +1,176 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+## Dialects & Sugar
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The [language overview]({{mkdocs.site_relative_url}}/language) mentions how CMK-lang supports macros, DSLs, and extensible programming.  This page takes a closer look at that sort thing with a guided tour of **dialects and sugar**.  For our purposes here, 
+
+* **Dialects** are simple *paired* rewrites.
+* **Sugar** are *block-structured* rewrites that add semantics.
+
+This kind of substitution machinery is already the magic behind the CMK-lang compiler, but since you can extend and override it with *user-defined config* that lives inside the file that you're parsing.. this becomes a kind of lightweight a metaprogramming environment.
+
+{# , and an appendix that dumps the live defaults. #}
+
+If it seems like you're looking for another page and not this one, consider visiting: 
+
+* [CMK compiler]({{mkdocs.site_relative_url}}/compiler) main page.
+* [CMK Quick Reference]({{mkdocs.site_relative_url}}/cmk-quick-ref) for a one-pager cheat-sheet of syntax.
+
+### About Dialects
+<hr style="width:100%;border-bottom:3px solid black;">
+<a name=dialects></a>
+
+**A dialect is an array of paired substitition rules,** and during compilation these rules take effect everywhere, *except* for inside define-blocks or inside things that compile to define-blocks.
+
+Using the [reflection capabilities]({{mkdocs.site_relative_url}}/standard-lib#reflection-support), we can show some info about the default dialect that the compiler supports like this:
+
+```bash {.cli_example}
+$ ./compose.mk mk.def.read/cmk.default.dialect
+[
+  ["🡆", "${stream.stdin} | ${jq} -r"],
+  ["🡄", "${jb}"],
+  ["this.", "${make} "]
+  ...
+]
+```
+
+**Dialect substitution is literal.** Each pattern is matched as plain text, never a regex, so a `.` is just a dot and a keyword can never accidentally match more than it spells. Preferring unicode symbols is still a good habit, since it guarantees a new keyword won't collide with anything else in your source. (Sugar markers, [covered below](#about-sugar), are the deliberate exception: those *are* regexes.)
+
+**Isolation Property:**  Since substitution does not apply inside define-blocks, a new keyword like `this` cannot not effect [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots) even if they also use the same keyword.  You only need to think carefully about collision with shell-commands and their arguments that appear inside normal targets.  If you want to use [CMK Modules]({{mkdocs.site_relative_url}}/modules) you can even avoid that.
+
+Full dialect details are available in the [appendix of this page](#appendix-default-dialect), but the rules shown above are the ones used in the [basic example]({{mkdocs.site_relative_url}}/compiler/#basic-example).  All we've done so far is introduce new syntax for `jq`, `jb`, and calling `make` recursively.
+
+-----------
+
+It might not be obvious how useful and powerful simple substition actually is here, so let's take a brief detour to peel back the layers.  Above is the dialect literal that only does a find/replace on your behalf, **but** it's stacked on top of other templating and macros.  Below you can see a first approximation of variable expansion.
+
+As discussed in [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics), we try to use local tools if available, and fall back to docker.  Expansion shows that working:
+
+```bash {.cli_example}
+$ ./compose.mk mk.get/cmk.default.dialect
+[
+  [
+    "🡆",
+    "cat /dev/stdin | /usr/bin/jq -r"
+  ],
+  [
+    "🡄",
+    "docker container run --rm ghcr.io/h4l/json.bash/jb:${JB_CLI_VERSION:-0.2.2}",
+  ],
+  [
+    "this.",
+    "make -rs --warn-undefined-variables -f ./compose.mk "
+  ],
+  ...
+]
+```
+
+One layer of expansion reveals that fallback works as advertised; in this case `compose.mk` knows that a local copy of `jq` is available already, but `jb` is missing and will have to use docker.
+
+It also reveals that there is actually yet another layer of expansion, where `JB_CLI_VERSION` has a default value for tool versions that supports user-override.  Therefore *besides* being visually easy to parse and clarifying intent, the **usage of the arrow operators results in portable code with no extra tool installation.**
+
+### About Sugar
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Under the hood, examples using **with/as** involve something slightly more complicated than the [dialects we saw earlier](#about-dialects), and this is called "sugar".
+
+**Sugar is an array of triples representing `[sugar_start, sugar_end, sugar_template]`**.  Similar to dialects, we can dump the default sugar for the compiler by using `mk.def.read`.  A complete reference for sugar is [in the appendix](#appendix-default-sugar), but the part that's relevant for inlined-compose files is this:
+
+```bash {.cli_example}
+$ ./compose.mk mk.def.read/cmk.default.sugar
+```
+```bash {.cli_output}
+[
+	["⋘","⋙","$(call compose.import.string, def=__NAME__ import_to_root=TRUE)"],
+    ...
+]
+```
+
+Sugar transforms CMK source towards legal Makefile define-blocks while **giving those blocks additional semantics**.  Since define-blocks have names, every sugar also requires a name.
+
+For the `sugar_template` element of the triple, we render it and add it after the define-block.  See the table below for an explanation of the variables that may appear inside this template.
+
+{% include "includes/sugar-template-vars.md" %}
+
+**Sugar markers are regexes.** Unlike [dialect patterns](#about-dialects), which match literally, the `sugar_start`/`sugar_end` delimiters are matched as regular expressions against each line. That is by design, and it is what makes sugar a small block-grammar rather than a fixed-token matcher: one rule can open a whole *family* of blocks and *anchor* them. For example `^@@` opens any line that begins with `@@` (so a stray `@@` mid-recipe is left alone), `^(NOTE|WARN)` opens on either keyword, and `:::\s*note` tolerates optional whitespace. The trade-off is that a literal `.` / `(` / `*` in a marker is special, so -- as with dialects -- unicode glyphs make the safest delimiters whenever you do not actually want regex behavior.
+
+### User-Defined Extensions
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Both dialects and sugar can be defined at runtime on a per-file basis, basically allowing the code itself to describe aspects of the compiler that will be used on it.
+
+!!! info "Info"
+    File hints must occur after the shebang, before the first non-comment line, and must be legal JSON that specifies the full dialect/sugar to use.  This *overwrites* the default dialect/sugar, and does not append it!
+
+Minified JSON is optional, and everything between the first and second `:::` will be used, so multi-line JSON is allowed, but must remain comment-prefixed.
+
+#### User-Defined Dialects
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+User-defined dialects require a hint at the top of the file.  Building on the [basic example]({{mkdocs.site_relative_url}}/compiler/#basic-example), here's an example that changes the default jq/jb JSON operators to use different characters.
+
+{{site.embed_demo(
+  'demos/cmk/user-dialect.cmk',
+  github=github,
+  bottom_right=site.link_mirror(
+    'demos/structured-io.mk',
+    link=mkdocs.site_relative_url + '/standard-lib/#structured-io-basics'))}}
+
+To get the full current default dialect in a minified form that's ready for your own modifications, use `./compose.mk mk.def.read/cmk.default.dialect| jq -c`
+
+#### User-Defined Sugar
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+User-defined sugar requires a hint at the top of the file.  Building on the [compose file example]({{mkdocs.site_relative_url}}/compiler/#compose-file-example), here's an example that changes that default syntax to use different characters.
+
+{{site.embed_demo(
+  'demos/cmk/user-sugar.cmk',
+    github=github,
+  bottom_right=site.link_mirror(
+    'demos/inlined-composefile.mk',
+    base=mkdocs.site_relative_url + '/demos/matrioshka'))}}
+
+The markers above are glyphs, but since sugar delimiters are regexes you can also build a *fenced* syntax that opens a family of blocks and anchors them to the start of a line.  This example adds a `@@<name> ... @@end` python-block syntax, where one rule serves every block name and the `^` anchor keeps a stray `@@` inside a recipe inert:
+
+{{site.embed_demo(
+  'demos/cmk/user-sugar-regex.cmk',
+  github=github)}}
+
+To get the full current default sugar in a minified form that's ready for your own modifications, use `./compose.mk mk.def.read/cmk.default.sugar | jq -c`
+
+### Appendix
+<hr style="width:100%;border-bottom:3px solid black;">
+
+*Data below is rendered from the latest source code.*
+
+#### Appendix: Default Dialect
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+```bash {.cli_example}
+$ ./compose.mk mk.def.read/cmk.default.dialect
+```
+```json {.cli_output}
+{{bash('./compose.mk mk.def.read/cmk.default.dialect')}}
+```
+
+#### Appendix: Default Sugar
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+```bash {.cli_example}
+$ ./compose.mk mk.def.read/cmk.default.sugar
+```
+```json {.cli_output}
+{{bash('./compose.mk mk.def.read/cmk.default.sugar')}}
+```
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+{{macros.header_images([
+      ['about dialects','implementation'],
+      ['about sugar','implementation'],
+      ['user defined extensions','user'],
+      ['appendix','implementation'],
+    ], mkdocs)}}
+}, 100);});
+</script>

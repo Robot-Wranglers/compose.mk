@@ -9,6 +9,8 @@ Heavier pieces deferred: mk.compile!/mk.interpret (embed/run), curated .cmk/.mk
 behavioral twins, and full golden snapshots.
 """
 
+from pathlib import Path
+
 import pytest
 
 pytestmark = pytest.mark.compiler
@@ -74,6 +76,17 @@ def test_stage_minify_preserves_define_block(cmk):
   )
   assert r.ok, r.stderr
   assert "foo \\\nbar" in r.stdout  # continuation preserved in the block
+
+
+def test_stage_minify_preserves_nested_define_block(cmk):
+  # `.awk.zip.linefeeds` depth-tracks: a NESTED define's inner endef must not
+  # re-enable zipping for the rest of the OUTER body (continuation stays raw).
+  r = cmk(
+    "mk.preprocess.minify",
+    stdin="define outer\ndefine inner\ni\nendef\nfoo \\\nbar\nendef\n",
+  )
+  assert r.ok, r.stderr
+  assert "foo \\\nbar" in r.stdout  # not zipped: still inside outer define
 
 
 def test_stage_decorators_relocate_above_target(cmk):
@@ -491,8 +504,8 @@ def test_compile_sugar_script_block(cmk):
   assert "img=alpine" in r.stdout
 
 
-def test_compile_advice_interrupted_next_line(cmk):
-  # "Interrupted advice": the `with .. as ..` trailer may spill onto the line
+def test_compile_trailer_interrupted_next_line(cmk):
+  # "Interrupted trailer": the `with .. as ..` trailer may spill onto the line
   # AFTER the close marker (bare line-feed, no `\` needed).
   r = cmk(
     "mk.compile",
@@ -503,7 +516,7 @@ def test_compile_advice_interrupted_next_line(cmk):
   assert "compose_context" in r.stdout
 
 
-def test_compile_advice_interrupted_split(cmk):
+def test_compile_trailer_interrupted_split(cmk):
   # `with` on the close line, `as` continued on the next line.
   r = cmk(
     "mk.compile",
@@ -514,8 +527,8 @@ def test_compile_advice_interrupted_split(cmk):
   assert "compose_context" in r.stdout
 
 
-def test_compile_advice_interrupted_blank_then_advice(cmk):
-  # Blank line(s) between the close marker and the advice are skipped.
+def test_compile_trailer_interrupted_blank_then_trailer(cmk):
+  # Blank line(s) between the close marker and the trailer are skipped.
   r = cmk(
     "mk.compile",
     stdin="⨖ scr\necho hi\n⨖\n\nwith img=alpine as compose_context\n",
@@ -525,8 +538,8 @@ def test_compile_advice_interrupted_blank_then_advice(cmk):
   assert "compose_context" in r.stdout
 
 
-def test_compile_advice_interrupted_does_not_eat_next_block(cmk):
-  # A non-advice line after a bare close (here the next block's open marker) is
+def test_compile_trailer_interrupted_does_not_eat_next_block(cmk):
+  # A non-trailer line after a bare close (here the next block's open marker) is
   # re-dispatched normally -- the second block must still open.
   r = cmk(
     "mk.compile",
@@ -537,21 +550,21 @@ def test_compile_advice_interrupted_does_not_eat_next_block(cmk):
   assert "a:;" in r.stdout and "b:;" in r.stdout
 
 
-def test_compile_advice_interrupted_keyword_guard(cmk):
+def test_compile_trailer_interrupted_keyword_guard(cmk):
   # `with`/`as` matching is keyword-anchored: an ordinary target line after a
-  # bare close (e.g. `with_deps:`) is NOT mistaken for advice.
+  # bare close (e.g. `with_deps:`) is NOT mistaken for the trailer.
   r = cmk("mk.compile", stdin="⨖ scr\necho hi\n⨖\nwith_deps: foo\n")
   assert r.ok, r.stderr
   assert "with_deps: foo" in r.stdout
 
 
 def test_compile_sugar_module(cmk):
-  # `⦖ NAME … ⦕` -> `define NAME … endef` + a chain to mk.import.module(def=NAME).
+  # `⦖ NAME … ⦕` -> `define NAME … endef` + a chain to import.module(def=NAME).
   r = cmk("mk.compile", stdin="⦖ mymod\nFOO := 1\n⦕\n")
   assert r.ok, r.stderr
   assert "define mymod" in r.stdout
   assert "endef" in r.stdout
-  assert "mk.import.module" in r.stdout and "def=mymod" in r.stdout
+  assert "import.module" in r.stdout and "def=mymod" in r.stdout
 
 
 def test_compile_sugar_module_as(cmk):
@@ -626,13 +639,66 @@ def test_compile_call_sugar(cmk):
   assert "$(call compose.import" in r.stdout and "file=x.yml" in r.stdout
 
 
-def test_compile_inlines_import_target(cmk, tmp_path):
-  # `mk.import.target(s)(..)` is resolved + INLINED at compile-time (the block is
-  # baked into the output), not deferred to a runtime `$(call mk.import.*)`.
-  (tmp_path / "src.mk").write_text("greet:\n\t@echo hi\n")
-  r = cmk("mk.compile", stdin="mk.import.targets(file=src.mk target=greet)\n")
+def test_compile_call_sugar_nested(cmk):
+  # the generic `cmk.NAME(args)` lowering (.awk.cmk.call) recurses on balanced args.
+  r = cmk("mk.compile", stdin="x:\n\tcmk.a(cmk.b(z))\n")
   assert r.ok, r.stderr
-  assert "$(call mk.import" not in r.stdout  # not deferred to runtime
+  assert "$(call a,$(call b,z))" in r.stdout
+
+
+def test_compile_call_sugar_balanced_inner_parens(cmk):
+  # inner `(`/`)` that are NOT a call are spanned as ordinary balanced text.
+  r = cmk("mk.compile", stdin="x:\n\tcmk.a(f(1,2))\n")
+  assert r.ok, r.stderr
+  assert "$(call a,f(1,2))" in r.stdout
+
+
+def test_compile_call_sugar_no_paren_fallback(cmk):
+  # `cmk.NAME` with no immediately-following `(` is left verbatim (not a call).
+  r = cmk("mk.compile", stdin="x:; cmk.foo bar baz\n")
+  assert r.ok, r.stderr
+  assert "cmk.foo bar baz" in r.stdout
+  assert "$(call foo" not in r.stdout
+
+
+def test_compile_import_sugar_longest_match(cmk):
+  # the import-name sugar (.awk.cmk.imports) must longest-match, so
+  # `compose.import.string(` lowers as that name -- not `compose.import` + `.string(`.
+  r = cmk("mk.compile", stdin="x:\n\tcompose.import.string(k=1)\n")
+  assert r.ok, r.stderr
+  assert "$(call compose.import.string,k=1)" in r.stdout
+
+
+def test_compile_import_sugar_unbalanced_paren_verbatim(cmk):
+  # .awk.cmk.lower fallback: a trigger with an unbalanced `(` is re-emitted
+  # verbatim (no partial `$(call ...)`), at the stage level.
+  r = cmk("mk.preprocess.imports", stdin="x:; compose.import(a, b\n")
+  assert r.ok, r.stderr
+  assert "compose.import(a, b" in r.stdout
+  assert "$(call" not in r.stdout
+
+
+def test_imports_sugar_inert_in_nested_define(cmk):
+  # .awk.cmk.defskip depth-tracks, so a NESTED define's body passes through
+  # verbatim -- the inner endef must NOT prematurely re-enable sugar lowering.
+  src = (
+    "top:; compose.import(z)\n"
+    "define outer\ndefine inner\nX\nendef\ncompose.import(b)\nendef\n"
+  )
+  r = cmk("mk.preprocess.imports", stdin=src)
+  assert r.ok, r.stderr
+  assert "$(call compose.import,z)" in r.stdout  # top-level: lowered
+  assert "compose.import(b)" in r.stdout  # inside nested define: verbatim
+  assert "$(call compose.import,b)" not in r.stdout
+
+
+def test_compile_inlines_import_target(cmk, tmp_path):
+  # `import.target(s)(..)` is resolved + INLINED at compile-time (the block is
+  # baked into the output), not deferred to a runtime `$(call import.*)`.
+  (tmp_path / "src.mk").write_text("greet:\n\t@echo hi\n")
+  r = cmk("mk.compile", stdin="import.targets(file=src.mk target=greet)\n")
+  assert r.ok, r.stderr
+  assert "$(call import" not in r.stdout  # not deferred to runtime
   assert "greet:" in r.stdout  # block inlined verbatim
   assert "@echo hi" in r.stdout
 
@@ -646,9 +712,9 @@ def test_compile_inlines_import_def(cmk, tmp_path):
   (tmp_path / "src.mk").write_text(
     f"include {compose_mk}\ndefine greeting\nhello world\nendef\n"
   )
-  r = cmk("mk.compile", stdin="mk.import.def(file=src.mk def=greeting)\n")
+  r = cmk("mk.compile", stdin="import.def(file=src.mk def=greeting)\n")
   assert r.ok, r.stderr
-  assert "$(call mk.import" not in r.stdout
+  assert "$(call import" not in r.stdout
   assert "define greeting" in r.stdout
   assert "hello world" in r.stdout
 
@@ -819,31 +885,33 @@ def test_compile_triplequote_still_literal(cmk):
   assert "printf '%s' '$X' | ${make} t" in r.stdout
 
 
-# --- callable targets: this.NAME(...) / this.NAME'''...''' (.awk.callable) ----
-# The `callable` stage runs AFTER dialect (so `this.NAME` is already `${make} NAME`)
-# and BEFORE triplequote; it relocates a target's argument into a stdin pipe and never
-# lowers the literal itself.  Happy-path tests go through full `mk.compile`; error cases
-# use the standalone stage target (`mk.preprocess.callable`, fed the post-dialect
-# `${make} ` form) so the nonzero exit is observable -- the full pipe masks a mid-stage
-# failure (same convention as the indent-stage tests below).
+# --- callable targets: this.NAME[stream] / this.NAME'''...''' (.awk.callform) --
+# Phase-1 grammar: a target's `[stream]` is its stdin and `(args)` is its `/`-suffix
+# arguments (the OLD paren-as-stream form `this.NAME(stream)` was DROPPED -- a target's
+# `(...)` is now ALWAYS args).  The `callform` stage runs AFTER dialect (so `this.NAME`
+# is already `${make} NAME`) and the tagged `this.NAME'''...'''` form is split into the
+# `tagged` stage just ahead of it; neither lowers the literal itself (triplequote does,
+# later).  Happy-path tests go through full `mk.compile`; error cases use the standalone
+# stage target (`mk.preprocess.callform`, fed the post-dialect `${make} ` form) so the
+# nonzero exit is observable -- the full pipe masks a mid-stage failure.
 
 
 def test_callable_quoted_call(cmk):
-  r = cmk("mk.compile", stdin="x:\n\tthis.eval('''(Hi)S''')\n")
+  r = cmk("mk.compile", stdin="x:\n\tthis.eval['''(Hi)S''']\n")
   assert r.ok, r.stderr
   assert "printf '%s' '(Hi)S' | ${make} eval" in r.stdout
 
 
 def test_callable_quoted_call_doublequote(cmk):
   # `"""…"""` is interpolating, so it lowers to a double-quoted printf.
-  r = cmk("mk.compile", stdin='x:\n\tthis.eval("""(Hi)S""")\n')
+  r = cmk("mk.compile", stdin='x:\n\tthis.eval["""(Hi)S"""]\n')
   assert r.ok, r.stderr
   assert "printf '%s' \"(Hi)S\" | ${make} eval" in r.stdout
 
 
 def test_callable_quoted_call_backtick_interpolates(cmk):
   # the ``` delimiter is interpolating: lowers to a DOUBLE-quoted printf.
-  r = cmk("mk.compile", stdin="x:\n\tthis.eval(```$X```)\n")
+  r = cmk("mk.compile", stdin="x:\n\tthis.eval[```$X```]\n")
   assert r.ok, r.stderr
   assert "printf '%s' \"$X\" | ${make} eval" in r.stdout
 
@@ -861,28 +929,28 @@ def test_callable_tagged_backtick(cmk):
 
 
 def test_callable_unquoted_pipes_command(cmk):
-  # unquoted arg is moved verbatim (its stdout is piped in).
-  r = cmk("mk.compile", stdin="x:\n\tthis.eval(cat f)\n")
+  # unquoted stream is moved verbatim (its stdout is piped in).
+  r = cmk("mk.compile", stdin="x:\n\tthis.eval[cat f]\n")
   assert r.ok, r.stderr
   assert "cat f | ${make} eval" in r.stdout
 
 
 def test_callable_chaining(cmk):
-  # this.b(this.a) -> ${make} a | ${make} b (inner already lowered by dialect).
-  r = cmk("mk.compile", stdin="x:\n\tthis.b(this.a)\n")
+  # this.b[this.a] -> ${make} a | ${make} b (inner already lowered by dialect).
+  r = cmk("mk.compile", stdin="x:\n\tthis.b[this.a]\n")
   assert r.ok, r.stderr
   assert "${make} a | ${make} b" in r.stdout
 
 
 def test_callable_multiline_quoted(cmk):
-  r = cmk("mk.compile", stdin="x:\n\tthis.eval('''L1\nL2''')\n")
+  r = cmk("mk.compile", stdin="x:\n\tthis.eval['''L1\nL2''']\n")
   assert r.ok, r.stderr
   assert "printf '%s\\n%s' 'L1' 'L2' | ${make} eval" in r.stdout
 
 
 def test_callable_subshell_arg(cmk):
-  # a subshell argument is spanned by balanced parens and piped verbatim.
-  r = cmk("mk.compile", stdin="x:\n\tthis.foo((echo a; echo b))\n")
+  # a subshell stream is spanned by balanced brackets and piped verbatim.
+  r = cmk("mk.compile", stdin="x:\n\tthis.foo[(echo a; echo b)]\n")
   assert r.ok, r.stderr
   assert "(echo a; echo b) | ${make} foo" in r.stdout
 
@@ -910,7 +978,7 @@ def test_callable_bare_this_unchanged(cmk):
 
 
 def test_callable_skips_define_block(cmk):
-  # inert inside define..endef (dialect/callable/triplequote all skip it).
+  # inert inside define..endef (dialect/callform/triplequote all skip it).
   r = cmk("mk.compile", stdin="define blk\nthis.t('''x''')\nendef\n")
   assert r.ok, r.stderr
   assert "this.t('''x''')" in r.stdout
@@ -926,23 +994,23 @@ def test_callable_defers_dispatch_form(cmk):
 
 
 def test_callable_error_unterminated_unquoted(cmk):
-  r = cmk("mk.preprocess.callable", stdin="x:\n\t${make} t(a b\n")
+  r = cmk("mk.preprocess.callform", stdin="x:\n\t${make} t[a b\n")
   assert not r.ok
-  assert "compose.mk (cmk:callable) error:" in r.stderr
+  assert "compose.mk (cmk:callform) error:" in r.stderr
   assert "unterminated" in r.stderr
   assert "at line" in r.stderr
 
 
 def test_callable_error_unterminated_literal(cmk):
-  r = cmk("mk.preprocess.callable", stdin="x:\n\t${make} t('''oops\n")
+  r = cmk("mk.preprocess.callform", stdin="x:\n\t${make} t['''oops\n")
   assert not r.ok
   assert "unterminated triple-quoted literal" in r.stderr
 
 
 def test_callable_error_mixed_content(cmk):
-  r = cmk("mk.preprocess.callable", stdin="x:\n\t${make} t('''a''' more)\n")
+  r = cmk("mk.preprocess.callform", stdin="x:\n\t${make} t['''a''' more]\n")
   assert not r.ok
-  assert "expected ')'" in r.stderr
+  assert "expected ']'" in r.stderr
 
 
 # --- recipe-body joining (.awk.joinbody) ------------------------------------
@@ -955,6 +1023,49 @@ def test_compile_joinbody_basic(cmk):
   assert r.ok, r.stderr
   assert "cmd1 && \\\n" in r.stdout
   assert "\tcmd2" in r.stdout
+
+
+# --- recipe_join compiler pragma (cmk_pragma) -------------------------------
+# `# cmk_pragma ::: { "recipe_join": ... } :::` overrides the forced ` && `
+# recipe-join connector: `&&` (default), `;` (run-all), or `none` (no join).
+
+
+def test_pragma_recipe_join_default_is_and(cmk):
+  # No pragma -> the default ` && \` connector (regression guard).
+  r = cmk("mk.compile", stdin="x:\n\tcmd1\n\tcmd2\n")
+  assert r.ok, r.stderr
+  assert "cmd1 && \\\n" in r.stdout
+
+
+def test_pragma_recipe_join_semicolon(cmk):
+  src = '# cmk_pragma ::: { "recipe_join": ";" } :::\nx:\n\tcmd1\n\tcmd2\n'
+  r = cmk("mk.compile", stdin=src)
+  assert r.ok, r.stderr
+  assert "cmd1 ; \\\n" in r.stdout
+  assert "cmd1 && \\" not in r.stdout
+
+
+def test_pragma_recipe_join_none(cmk):
+  # `none` emits each line as its own recipe-line: no connector, no continuation.
+  src = '# cmk_pragma ::: { "recipe_join": "none" } :::\nx:\n\tcmd1\n\tcmd2\n'
+  r = cmk("mk.compile", stdin=src)
+  assert r.ok, r.stderr
+  assert "\tcmd1\n\tcmd2" in r.stdout
+  assert "cmd1 && \\" not in r.stdout
+  assert "cmd1 ; \\" not in r.stdout
+
+
+def test_pragma_coexists_with_dialect(cmk):
+  # A pragma hint and a dialect hint in the same header both apply (the dialect
+  # parser is marker-aware, so the pragma's JSON is not mistaken for a dialect).
+  src = (
+    '# cmk_dialect ::: [ ["this.","${make} "] ] :::\n'
+    '# cmk_pragma ::: { "recipe_join": ";" } :::\n'
+    "x:\n\tthis.y\n\tcmd2\n"
+  )
+  r = cmk("mk.compile", stdin=src)
+  assert r.ok, r.stderr
+  assert "${make} y ; \\\n" in r.stdout  # dialect + pragma both applied
 
 
 def test_compile_joinbody_keeps_trailing_connector(cmk):
@@ -997,6 +1108,51 @@ def test_compile_joinbody_skips_define_block(cmk):
   assert r.ok, r.stderr
   assert "l1\nl2" in r.stdout
   assert "l1 && \\" not in r.stdout
+
+
+def test_joinbody_skips_nested_define_block(cmk):
+  # `.awk.joinbody` depth-tracks: an inner endef must not re-enable joining for the
+  # rest of the OUTER body (the tab-led lines stay raw, not ` && \`-chained).
+  r = cmk(
+    "io.awk/.awk.joinbody",
+    stdin="define outer\ndefine inner\ni\nendef\n\tline1\n\tline2\nendef\n",
+  )
+  assert r.ok, r.stderr
+  assert "line1 && \\" not in r.stdout  # inside outer define: not joined
+  assert "\tline1\n\tline2" in r.stdout
+
+
+def test_compile_joinbody_strips_inline_comment(cmk):
+  # a trailing `# comment` on a recipe line is stripped BEFORE the ` && ` join, so it
+  # cannot swallow the rest of the joined body.
+  r = cmk("mk.compile", stdin="x:\n\techo one  # a comment\n\techo two\n")
+  assert r.ok, r.stderr
+  assert "echo one && \\" in r.stdout
+  assert "echo two" in r.stdout
+  assert "# a comment" not in r.stdout
+
+
+def test_compile_joinbody_inline_comment_drops_full_comment_line(cmk):
+  # a recipe line that is ONLY a comment vanishes (does not become an empty `&&` arm).
+  r = cmk(
+    "mk.compile", stdin="x:\n\techo one\n\t# just a comment\n\techo two\n"
+  )
+  assert r.ok, r.stderr
+  assert "echo one && \\" in r.stdout
+  assert "echo two" in r.stdout
+  assert "just a comment" not in r.stdout
+
+
+def test_compile_joinbody_preserves_quoted_and_shell_hash(cmk):
+  # `#` inside quotes / `$(...)` / a shell `${V#x}` is NOT a comment and must survive.
+  r = cmk(
+    "mk.compile",
+    stdin='x:\n\techo "a # b"  # strip\n\tv=abc; echo $${v#a}  # strip\n\techo end\n',
+  )
+  assert r.ok, r.stderr
+  assert 'echo "a # b" && \\' in r.stdout
+  assert "echo $${v#a} && \\" in r.stdout
+  assert "# strip" not in r.stdout
 
 
 # --- python-style indentation: space OR tab recipe bodies (mk.preprocess.indent) --
@@ -1042,6 +1198,17 @@ def test_indent_stage_skips_define_block(cmk):
   assert "    raw spaces" in r.stdout  # NOT rewritten to a tab
 
 
+def test_indent_stage_skips_nested_define_block(cmk):
+  # Depth-tracked: a NESTED define's inner endef must not re-enable indent
+  # rewriting for the rest of the OUTER body (space-indent stays raw).
+  r = cmk(
+    "mk.preprocess.indent",
+    stdin="define outer\ndefine inner\ni\nendef\n    raw spaces\nendef\n",
+  )
+  assert r.ok, r.stderr
+  assert "    raw spaces" in r.stdout  # still inside outer define: verbatim
+
+
 def test_indent_mixed_tabs_and_spaces_errors(cmk):
   # A single indent that mixes a tab and spaces is rejected ("mixed mode").
   r = cmk("mk.preprocess.indent", stdin="x:\n\t  cmd\n")
@@ -1054,3 +1221,97 @@ def test_indent_mismatched_spaces_errors(cmk):
   r = cmk("mk.preprocess.indent", stdin="x:\n    cmd1\n  cmd2\n")
   assert not r.ok
   assert "inconsistent indentation" in r.stderr
+
+
+# --- generic CMK_PRAGMA_* namespace (pragma -> compiled-output env injection) ---
+# A pragma key `foo` is normalized (upcase, ./- -> _) and injected as `export CMK_PRAGMA_FOO := ..`
+# at the top of the compiled output; consumers read it back via the cmk.pragma/cmk.pragma.append
+# resolvers (pragma > env > default).  The compiler ONLY ever writes the CMK_PRAGMA_ namespace.
+
+COMPOSE_MK = Path(__file__).resolve().parent.parent / "compose.mk"
+
+
+def test_pragma_injects_namespaced_var_and_joins(cmk):
+  src = '# cmk_pragma ::: { "recipe_join": ";", "vm_legacy": "1" } :::\nx:\n\tc1\n\tc2\n'
+  r = cmk("mk.compile", stdin=src)
+  assert r.ok, r.stderr
+  assert "export CMK_PRAGMA_RECIPE_JOIN := ;" in r.stdout
+  assert "export CMK_PRAGMA_VM_LEGACY := 1" in r.stdout
+  assert "c1 ; \\\n" in r.stdout  # recipe_join still drives the joinbody
+
+
+def test_pragma_key_normalization(cmk):
+  # dotted / hyphen / mixed-case keys all fold to the same CMK_PRAGMA_ var.
+  for key in ("recipe.join", "recipe-join", "RECIPE_JOIN"):
+    src = '# cmk_pragma ::: { "%s": ";" } :::\nx:; @true\n' % key
+    r = cmk("mk.compile", stdin=src)
+    assert r.ok, r.stderr
+    assert "export CMK_PRAGMA_RECIPE_JOIN := ;" in r.stdout, key
+
+
+def test_pragma_uppercase_key_warns(cmk):
+  src = '# cmk_pragma ::: { "VM_LEGACY": "1" } :::\nx:; @true\n'
+  r = cmk("mk.compile", stdin=src, env={"CMK_COMPILER_VERBOSE": "1"})
+  assert r.ok, r.stderr
+  assert "prefer lowercase" in r.stderr
+  assert "export CMK_PRAGMA_VM_LEGACY := 1" in r.stdout  # still normalizes
+
+
+def test_pragma_array_value_space_joined(cmk):
+  src = '# cmk_pragma ::: { "at_exit_targets": ["a.x","b.y"] } :::\nx:; @true\n'
+  r = cmk("mk.compile", stdin=src)
+  assert r.ok, r.stderr
+  assert "export CMK_PRAGMA_AT_EXIT_TARGETS := a.x b.y" in r.stdout
+
+
+def test_pragma_cannot_clobber_internal_vars(cmk):
+  # A key named after an internal var lands in CMK_PRAGMA_, NEVER the bare CMK_ var.
+  src = '# cmk_pragma ::: { "internal": "1", "host": "0" } :::\nx:; @true\n'
+  r = cmk("mk.compile", stdin=src)
+  assert r.ok, r.stderr
+  assert "export CMK_PRAGMA_INTERNAL := 1" in r.stdout
+  assert "export CMK_PRAGMA_HOST := 0" in r.stdout
+  assert "export CMK_INTERNAL :=" not in r.stdout
+  assert "export CMK_HOST :=" not in r.stdout
+
+
+def test_pragma_no_pragma_no_injection(cmk):
+  # A file with no pragma header injects nothing and keeps the default && join.
+  r = cmk("mk.compile", stdin="x:\n\tc1\n\tc2\n")
+  assert r.ok, r.stderr
+  assert "CMK_PRAGMA_" not in r.stdout
+  assert "c1 && \\\n" in r.stdout
+
+
+def _probe(tmp_path):
+  mk = tmp_path / "probe.mk"
+  mk.write_text(
+    "include %s\n"
+    "probe:; @printf 'S=[%%s] L=[%%s]\\n' '$(call cmk.pragma, foo, def)' '$(call cmk.pragma.append, bar, def)'\n"
+    % COMPOSE_MK
+  )
+  return mk
+
+
+def test_resolver_scalar_precedence_and_warning(cmk, tmp_path):
+  mk = _probe(tmp_path)
+  # default
+  r = cmk("probe", makefile=mk)
+  assert "S=[def]" in r.stdout, r.stdout
+  # env only
+  r = cmk("probe", makefile=mk, env={"CMK_FOO": "envv"})
+  assert "S=[envv]" in r.stdout
+  # pragma wins + supersession warning
+  r = cmk("probe", makefile=mk, env={"CMK_FOO": "envv", "CMK_PRAGMA_FOO": "pragv"})
+  assert "S=[pragv]" in r.stdout
+  assert "supersedes env CMK_FOO=envv" in r.stderr
+  # pragma only -> no warning (no invoker env)
+  r = cmk("probe", makefile=mk, env={"CMK_PRAGMA_FOO": "pragv"})
+  assert "S=[pragv]" in r.stdout
+  assert "supersedes" not in r.stderr
+
+
+def test_resolver_list_accumulates(cmk, tmp_path):
+  mk = _probe(tmp_path)
+  r = cmk("probe", makefile=mk, env={"CMK_BAR": "a", "CMK_PRAGMA_BAR": "b"})
+  assert "L=[a b]" in r.stdout, r.stdout  # BOTH contribute (no winner)

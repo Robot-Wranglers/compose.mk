@@ -1,10 +1,10 @@
 #!/usr/bin/env -S make -f
-# Building a custom automation API with `compose.mk`.  
-# Here we build a wrapper around a containerized ansible, 
-# exposing a new, opinionated interface that is is versioned,
-# slim, stateless, and defaults to JSON IO.
+# ansible-adhoc.mk:
+#   Building a custom automation API with `compose.mk`.  
+#   Here we build a wrapper around a containerized ansible, 
+#   exposing a new, opinionated interface that is is versioned,
+#   slim, stateless, and defaults to JSON IO.
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # USAGE: ./demos/ansible-adhoc.mk
 
 include compose.mk

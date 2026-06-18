@@ -1,12 +1,7 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# CMK-lang translation of demos/structured-io.mk
+# example.cmk:
+#   The smallest useful CMK program: an entrypoint and a log line.
+#
+# USAGE: ./demos/cmk/example.cmk
 
-emit: 
-	🡄 key=val
-
-consume:
-	🡆 .key
-
-__main__:
-	this.emit | this.consume
-	cmk.log.target(hello world!)
+__main__:; cmk.log.target(hello world)

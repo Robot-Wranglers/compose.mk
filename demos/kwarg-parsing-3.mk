@@ -1,6 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrating using `mk.unpack.kwargs`. 
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# kwarg-parsing-3.mk:
+#   Using `mk.unpack.kwargs`. 
+#
 # USAGE: ./demos/kwarg-parsing-3.mk
 
 include compose.mk

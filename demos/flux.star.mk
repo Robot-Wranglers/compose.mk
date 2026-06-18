@@ -1,6 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrates pattern matching on target-names.
-# Part of the `compose.mk` repo, runs as part of the test-suite.
+# flux.star.mk:
+#   Pattern matching on target-names.
+#
 # USAGE: ./demos/flux.star.mk
 
 include compose.mk

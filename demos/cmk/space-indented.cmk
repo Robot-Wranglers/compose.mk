@@ -1,8 +1,9 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# Demo: CMK target bodies may use python-style SPACE indentation, not just tabs.
-# The compiler normalizes a consistently space-indented body to the leading tab
-# Make needs (and errors on mixed tabs+spaces or mismatched indentation).
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.
+# space-indented.cmk:
+#   CMK target bodies may use python-style SPACE indentation,
+#   not just tabs.  The compiler normalizes a consistently space-indented body to the
+#   leading tab Make needs (and errors on mixed tabs+spaces or mismatched indentation).
+#
 # USAGE: ./demos/cmk/space-indented.cmk
 
 __main__:

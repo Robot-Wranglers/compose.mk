@@ -1,0 +1,28 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# golang-lambda.cmk: a client of the polyglot.golang.cmk plugin.
+#   A target whose recipe is a Go program: cmk.polyglot.golang.lambda(..) expands to a shell string
+#   that cross-builds the inline Go (from the block-refs below) into the cache on first use, then
+#   execs it.  Here declare.polyglot.golang wires the whole `hello` namespace in one line.
+#
+#   USAGE:  ./demos/cmk/golang-lambda.cmk              # builds (once) + runs: "hello world"
+#           ./demos/cmk/golang-lambda.cmk hello/you    # runs: "hello you" (arg forwarded)
+
+$(call include.plugins, polyglot.golang.cmk)
+
+define hello.main.go
+package main
+import ( "fmt"; "os" )
+func main() { who := "world"; if len(os.Args) > 1 { who = os.Args[1] }; fmt.Printf("hello %s, from polyglot.golang!\n", who) }
+endef
+
+define hello.go.mod
+module hello
+go 1.24
+endef
+
+# One line declares the whole namespace: a `<namespace>.lambda` var (deferred), a `<namespace>` target
+# that runs it, and a `<namespace>/%` target that forwards its stem to the binary's argv.  The
+# declare.* generator lives in the polyglot.golang.cmk plugin.
+$(call declare.polyglot.golang, namespace=hello src=hello.main.go mod=hello.go.mod name=hello)
+
+__main__:  hello hello/10

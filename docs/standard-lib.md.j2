@@ -5,14 +5,27 @@
 
 {#A Standard Library for Makefiles#}
 
-!!! note "Roadmap"
-    Because `make` has never really had a standard library[^1], there's lots of pretty basic stuff that is conspicuously missing.  This includes things like [logging and colored output](#logging-facilities), but also the kind of [online help]({{mkdocs.site_relative_url}}/cli-help) that can list and inspect automation that's already been defined.  
+**In library-mode,** `compose.mk` is used as an `include` in a project Makefile (see the [installation docs]({{mkdocs.site_relative_url}}/quickstart) for more details).  After including `compose.mk`, you can access a huge library of make-targets and macros.  
+
+This page focuses on **reusable static targets**, as opposed to [scaffolded](({{mkdocs.site_relative_url}}/bridge) or [otherwise dynamic]{{mkdocs.site_relative_url}}/demos/polyglots/#foreign-code-as-first-class) targets.  Macros/functions are a different thing, [covered here]({{mkdocs.site_relative_url}}/macros).
+
+What's really interesting about targets is that they do double duty as a structured API that's both **internal and external**.
+
+> Internal, in the sense that you can use them as part of normal prereqs inside your project Makefile.  External, in the sense that you can call them as goals, driving `compose.mk` from another scripting context.
+
+Because `make` has never really had a standard library[^1], there's lots of pretty basic stuff that is conspicuously missing.  For quick examples of the boring simple stuff:
+
+* [Logging and colored output](#logging-facilities) 
+* [Online help]({{mkdocs.site_relative_url}}/cli-help) for listing and inspecting available automation
+* [Simple Assertions](#assertion-support)
+
+{# !!! note "In the Right Place?"
     
-    This page has a tutorial-style introduction to some of the more interesting capabilities.  *(If you're looking for something more like reference material, [the full target API]({{mkdocs.site_relative_url}}/api) is generated from source.)*
+  Reference vs tutorial? This is a tutorial.  See instead the full [target API]({{mkdocs.site_relative_url}}/api), generated from source.
 
-**In library-mode,** `compose.mk` is used as an `include` from your project Makefile (see the [installation docs]({{mkdocs.site_relative_url}}/quickstart) for more details).  After including `compose.mk`, you'll have access to a a library of make-targets and macros.  In a few cases, `compose.mk` supports "scaffolded" target that are dynamic, but that is [documented]({{mkdocs.site_relative_url}}/bridge) [elsewhere]({{mkdocs.site_relative_url}}/demos/polyglots/#foreign-code-as-first-class).  Code style considerations for both the internal library and external extensions is documented somewhat [here]({{mkdocs.site_relative_url}}/style)
-
-Most of what `compose.mk` offers is in the form of **reusable static targets, which you can directly use from the command line**, or **use as part of normal tasks/prereqs inside your project Makefile**.  
+  Dynamic vs static?  This stuff is static.  Many kinds of targets are actually  dynamically too, but that is [documented]({{mkdocs.site_relative_url}}/bridge) [elsewhere]().  
+  
+  Code-style considerations for both the internal library and external extensions are documented somewhat [here]({{mkdocs.site_relative_url}}/style). #}
 
 
 {#In addition to static targets, `compose.mk` can create dynamic targets with the *`compose.import`* macro.  This can be [used with *multiple* compose files ]({{mkdocs.site_relative_url}}/bridge/#other-import-statements), and [supports target namespacing]({{mkdocs.site_relative_url}}/macro-arguments).#}

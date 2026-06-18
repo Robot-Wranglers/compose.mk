@@ -1,5 +1,6 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# Demonstrating GUI capabilities with XPra and i3, served via HTML5.
+# xpra.cmk:
+#   GUI capabilities with XPra and i3, served via HTML5.
 #
 # USAGE: ./demos/cmk/xpra.cmk serve
 

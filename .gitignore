@@ -35,6 +35,7 @@ __pycache__/
 .pytest_cache/
 tests/.coverage*.json
 tests/coverage*.md
+tests/.perf-results/
 tests/fixtures/**/compose.mk
 justfile
 img/

@@ -1,6 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrates importing a docker image, then using scaffolded targets
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.
+# docker.import.mk:
+#   Importing a docker image, then using scaffolded targets
+#
 # USAGE: demos/docker.import.mk
 
 include compose.mk

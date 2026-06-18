@@ -16,14 +16,14 @@ In yet another break with traditional `make`, we'll see that `compose.mk` *can* 
 ### Interface / Contract
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-There are two pieces: an **entrypoint** that calls `mk.subcommands.enter`, and one **handler
+There are two pieces: an **entrypoint** that calls `cli.subcommands.enter`, and one **handler
 target per subcommand**.
 
 ```Makefile
 #!/usr/bin/env -S ./compose.mk mk.interpret
 
 # Entrypoint: one line makes `greet` a subcommand CLI
-greet:; $(call mk.subcommands.enter)
+greet:; $(call cli.subcommands.enter)
 
 # Plus one handler per subcommand.  
 # Zero-arguments or parametrics are both allowed.
@@ -43,7 +43,7 @@ greet:; $(call mk.subcommands.enter)
   shorthand work).  If the default is non-parametric, an unrecognized word is an
   "unknown subcommand" error.
 
-For `mk.subcommands.enter`, arguments are optional and overridable via keyword arguments:
+For `cli.subcommands.enter`, arguments are optional and overridable via keyword arguments:
 
 | kwarg | meaning | default |
 | --- | --- | --- |
@@ -54,7 +54,7 @@ For `mk.subcommands.enter`, arguments are optional and overridable via keyword a
 
 ```Makefile
 # e.g. force a specific default
-greet:; $(call mk.subcommands.enter, default=hello)
+greet:; $(call cli.subcommands.enter, default=hello)
 ```
 
 !!! tip "See also"
@@ -89,7 +89,7 @@ $ ./demos/subcommands.mk greet wrold      # -> unknown subcommand: wrold
 ### Entrypoint Body
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-The entrypoint is usually just the lone `$(call mk.subcommands.enter ..)` line, but its
+The entrypoint is usually just the lone `$(call cli.subcommands.enter ..)` line, but its
 recipe body is ordinary and can do more:
 
 * **Docstring.**  A `@#` docstring on the entrypoint target is surfaced as a description at

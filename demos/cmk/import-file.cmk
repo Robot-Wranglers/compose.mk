@@ -1,8 +1,7 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-#
-# CMK-lang equivalent of demos/import-file.mk.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/compiler
+# import-file.cmk:
+#   Import an external script file as a new, namespaced target.
+#   Ported from demos/import-file.mk.
 #
 # USAGE: ./demos/cmk/import-file.cmk
 

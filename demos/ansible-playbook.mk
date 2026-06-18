@@ -1,8 +1,7 @@
 #!/usr/bin/env -S make -f
-# demos/ansible-playbook.mk: 
-#   Demonstrates passing embedded-data into an embedded-container.
+# ansible-playbook.mk:
+#   Passing embedded-data into an embedded-container.
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 # USAGE: ./demos/ansible-playbook.mk
 
 include compose.mk

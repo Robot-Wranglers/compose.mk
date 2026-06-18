@@ -1,14 +1,19 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# Showing user-defined rules for CMK -> Makefile transpilation.
-# You can define cmk_dialect and cmk_sugar individually or together.
-#   
-# cmk_dialect ::: [
-#   ["cmk.io.","${make} io."], 
+# user-sugar.cmk:
+#   Define custom `cmk_dialect` and/or `cmk_sugar` rules per-file.
+#   You can define cmk_dialect and cmk_sugar individually or together.
+#   A user dialect OVERRIDES the default (it does not merge), so it must list
+#   every rule it relies on -- here the default `cmk.`/`this.` rules are repeated
+#   alongside the new `cmk.io.` rule (which must precede the broader `cmk.`).
+#
+#   cmk_dialect ::: [
+#   ["cmk.io.","${make} io."],
+#   ["cmk.","؆"],
 #   ["this.","${make} "]
-# ] :::
-# cmk_sugar ::: [
+#   ] :::
+#   cmk_sugar ::: [
 #   ["𒀹","𒀺","$(call compose.import.string, def=__NAME__ import_to_root=TRUE)"]
-# ] :::
+#   ] :::
 #
 # USAGE: ./demos/cmk/user-sugar.cmk
 

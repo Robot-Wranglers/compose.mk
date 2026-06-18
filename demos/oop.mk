@@ -1,5 +1,5 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret
-# demos/oop.mk:
+# oop.mk:
 #   (Ab)using the subcommand-namespace MRO to simulate OOP inheritance.  The `pet`
 #   CLI searches its namespaces in order (`.puppy`, then `.dog`, then `.animal`),
 #   exactly like a method-resolution order: a sub defined in a more-derived "class"
@@ -30,6 +30,6 @@ include compose.mk
 
 # the MRO, most-derived first.  `pet speak` resolves to `.puppy.speak`; `pet fetch`
 # falls through to `.dog.fetch`; `pet legs`/`pet describe` fall through to `.animal.*`.
-pet:; $(call mk.subcommands.enter, namespace='.puppy .dog .animal')
+pet:; $(call cli.subcommands.enter, namespace='.puppy .dog .animal')
 
 __main__: pet

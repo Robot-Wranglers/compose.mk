@@ -1,8 +1,8 @@
 #!/usr/bin/env -S make -f
-# Demonstrates building a highly customized and self-contained console app,
-# where all the application components bootstrap themselves on demand.
+# notebooking.mk:
+#   Building a highly customized and self-contained console app,
+#   where all the application components bootstrap themselves on demand.
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.
 # See the main docs: https://robot-wranglers.github.io/compose.mk/demos/notebooking
 #
 # USAGE: ./demos/notebooking.mk lab.tui

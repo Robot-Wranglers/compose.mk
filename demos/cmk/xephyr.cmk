@@ -1,5 +1,6 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# Demonstrating compose.mk GUI capabilities with Xephyr and i3 window manager.
+# xephyr.cmk:
+#   GUI capabilities with Xephyr and the i3 window manager.
 #
 # USAGE: ./demos/cmk/xephyr.cmk gui
 
@@ -84,7 +85,7 @@ xephyr.init: xephyr.require xephyr.start
 
 xephyr.require:
 	@# Assert Xephyr is available or fail with error message
-	cmk.require.tool(Xephyr, Try installing package 'xserver-xephyr' to continue.)
+	cmk.assert.tool.required(Xephyr, Try installing package 'xserver-xephyr' to continue.)
 
 xephyr.start:
 	@# Start Xephyr in the background.

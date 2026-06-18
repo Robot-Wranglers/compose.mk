@@ -1,0 +1,22 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# blockrefs.cmk:
+#   The two block-reference glyphs: ⬦ (stream FD) and ⬥ (real file).
+#
+# A define-block keeps a snippet in one named place; a block-ref then drops it onto
+# a command line with no temp-file juggling.  `⬦NAME` becomes a process-substituted
+# FD `<(...)` for tools that read a stream; `⬥NAME` materializes a real, seekable
+# file on disk for tools that need an actual path.
+#
+# USAGE: ./demos/cmk/blockrefs.cmk
+
+define greeting
+hello from a block
+endef
+
+# ⬦ : an ephemeral stream FD -- ideal for `-f`/stdin-style consumers.
+via.stream:; cat ⬦greeting
+
+# ⬥ : a real file on disk -- ideal for tools that must open or seek a path.
+via.file:; wc -c ⬥greeting
+
+__main__: via.stream via.file

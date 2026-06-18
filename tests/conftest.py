@@ -76,6 +76,14 @@ BASE_ENV = {
   "TRACE": "0",
   "GITHUB_ACTIONS": "false",
 }
+# Selectively neutralize an inherited `-w`/print-directory (e.g. when the whole test
+# run is itself launched from a `make` target, which exports MAKEFLAGS=w/MAKELEVEL):
+# APPEND `--no-print-directory` to the inherited MAKEFLAGS (last-wins overrides `-w`,
+# preserves the user's other flags) rather than clobbering it.  Keeps `Entering/Leaving
+# directory` out of captured stdout for the `make -f wrapper` (include-path) tests.
+BASE_ENV["MAKEFLAGS"] = (
+  os.environ.get("MAKEFLAGS", "") + " --no-print-directory"
+).strip()
 
 
 @dataclass

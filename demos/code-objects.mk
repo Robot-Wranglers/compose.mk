@@ -1,6 +1,7 @@
 #!/usr/bin/env -S make -f
-# Demonstrating first-class support for foreign code-blocks in `compose.mk`.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+# code-objects.mk:
+#   First-class support for foreign code-blocks in `compose.mk`.
+#
 # USAGE: ./demos/code-objects.mk
 
 include compose.mk
