@@ -1,4 +1,4 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 
 ## Quickstart
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -230,7 +230,7 @@ $ ./compose.mk docker.stat
 <hr style="width:100%;border-bottom:3px solid black;">
 
 [^1]: For example, remote controlling the TUI relies on docker-sockets.  Also [tool wrappers]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) fall back to docker, so using them with [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) means docker-in-docker.
-[^3]: Linuxifing for macos with gnu utilities: [gist://skyzyx](https://gist.github.com/skyzyx/3438280b18e4f7c490db8a2a2ca0b9da) [github://pkill37/linuxify](https://github.com/pkill37/linuxify)
+[^3]: Linuxifing for macos with gnu utilities: {{ tufte.gist(link='https://gist.github.com/skyzyx/3438280b18e4f7c490db8a2a2ca0b9da', label='skyzyx')|trim }} {{ tufte.github('pkill37/linuxify')|trim }}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

@@ -130,6 +130,21 @@ $ layout=horizontal \
 ```
 {{macros.img_link("zero-config-tui.gif", mkdocs, "90%", class="cli_output")}}
 
+#### Interactive REPL
+<hr style="width:100%;border-bottom:3px solid black;">
+
+!!! warning "Non-core"
+    REPL support is **not** part of core `compose.mk`; it requires the non-core `repl` plugin (`tux.repl`), built on first-use.  See it in the [plugin index]({{mkdocs.site_relative_url}}/plugins/overview/#plugin-index), and the [plugin overview]({{mkdocs.site_relative_url}}/plugins/overview) for how plugins load.
+
+Beyond dashboards, you can drop into an interactive **REPL** over a project's targets with no setup.  With a file, it opens a shell over *that program's* target namespace; with no file, it's a plain shell over the core namespace:
+
+```bash {.cli_example}
+$ ./compose.mk cmk repl                         # a shell over the core namespace
+$ ./compose.mk cmk repl demos/cmk/overlay.cmk   # a shell over a program's targets
+```
+
+A program can also *default* to the REPL (so a bare `cmk run <file>` launches it) via the `repl` pragma; see the [compiler docs]({{mkdocs.site_relative_url}}/compiler) for that and the underlying `tux.repl` harness.
+
 #### Next Steps
 <hr style="width:100%;border-bottom:3px solid black;">
 

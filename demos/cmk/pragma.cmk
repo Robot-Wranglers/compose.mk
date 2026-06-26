@@ -1,0 +1,15 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# pragma.cmk: per-program knobs set IN-SOURCE via the compiler pragma -- no env vars on the shebang.
+#   recipe_join=;          -> the recipe body is joined with `;`, so it RUNS ALL lines (a failing line
+#                             does not abort the rest, unlike the default `&&`).
+#   at_exit_targets=[..]   -> a list knob: the named target runs at exit, IN ADDITION to whatever
+#                             cleanup the framework already registered (it ACCUMULATES, not replaces).
+# cmk_pragma ::: { "recipe_join": ";", "at_exit_targets": ["pragma.cleanup"] } :::
+
+__main__:
+	@echo "step 1"
+	@false                       # under the default `&&` this would abort the body here ...
+	@echo "step 3 still runs (recipe_join=;)"
+
+pragma.cleanup:
+	@echo "pragma.cleanup ran at exit (at_exit_targets)"

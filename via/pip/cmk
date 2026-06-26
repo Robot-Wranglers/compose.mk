@@ -1,9 +1,32 @@
 #!/usr/bin/env bash
-# `cmk`: a short alias for `compose.mk`.  It execs the sibling `compose.mk`
-# (installed in the same bin/ by this shim) BY ITS REAL NAME -- the CMK compiler
-# derives CMK_SRC from finding the literal "compose.mk" on the command line, so
-# `mk.interpret!`/`mk.compile` must run as `compose.mk`, not `cmk`.  Falls back to
-# a PATH lookup if the sibling isn't found.
+# `cmk`: the short entrypoint for the CMK language frontend -- it is exactly
+# `compose.mk cmk` (the `cli.cmk` subcommand dispatcher: run | repl | build |
+# compile | doc | cli).  So `cmk run foo.cmk`, `cmk repl`, `cmk foo.cmk`
+# (== `cmk run foo.cmk`) all work, mirroring `python script.py`.
+#
+# It execs the sibling `compose.mk` (installed in the same bin/ by this shim) BY
+# ITS REAL NAME and injects the `cmk` subcommand as the first argument -- the CMK
+# compiler derives CMK_SRC from finding the literal "compose.mk" on the command
+# line, so the compile path must run as `compose.mk`, not `cmk`.  Falls back to a
+# PATH lookup if the sibling isn't found.
+#
+# Note: this is NOT a generic alias for the whole `compose.mk` tool -- for core
+# tool-mode targets (e.g. `flux.ok`, `mk.interpret!`) call `compose.mk` directly.
 here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd 2>/dev/null)" || here=""
-if [ -n "$here" ] && [ -x "$here/compose.mk" ]; then exec "$here/compose.mk" "$@"; fi
-exec compose.mk "$@"
+
+# Plugin resolution.  compose.mk resolves plugins from CMK_PLUGINS_DIR, a ':'-separated
+# search path (default `.cmk`, cwd-relative).  For a GLOBAL install that default finds
+# nothing, so append the plugins bundled alongside this install (<bin>/../share/compose.mk/
+# cmk, laid down by setup.py).  ADDITIVE: a project-local ./.cmk stays FIRST (it wins for
+# name collisions + remains the writable/staging dir, mountable under container-dispatch)
+# and the bundled set fills the gaps.  An explicit CMK_PLUGINS_DIR is left untouched.
+if [ -z "${CMK_PLUGINS_DIR:-}" ] && [ -n "$here" ]; then
+  bundled="$(dirname -- "$here")/share/compose.mk/cmk"
+  if [ -d "$bundled" ]; then
+    if [ -d "./.cmk" ]; then export CMK_PLUGINS_DIR=".cmk:$bundled"
+    else                     export CMK_PLUGINS_DIR="$bundled"; fi
+  fi
+fi
+
+if [ -n "$here" ] && [ -x "$here/compose.mk" ]; then exec "$here/compose.mk" cmk "$@"; fi
+exec compose.mk cmk "$@"

@@ -1,0 +1,64 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+### Golang Polyglot
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+{{macros.admonition("warning", "Non-core", "This is the non-core `polyglot.golang.cmk` plugin, and it needs a docker daemon (the Go toolchain runs in a container; nothing is installed on the host).")}}
+
+`polyglot.golang.cmk` lets you embed **inline Go** in a `compose.mk`/CMK program: it cross-builds the
+source in a dockerized Go toolchain, caches the resulting binary per-host, and execs it.  No Go
+install is required on the host, and a clean (cache-hit) run just execs the cached binary.
+
+```make
+$(call include.plugins, polyglot.golang.cmk)
+```
+
+#### How it works
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The Go source and `go.mod` are provided as CMK **block-refs** (defines).  On first use the plugin:
+
+1. cross-compiles for the host (`GOOS`/`GOARCH` auto-detected, env-overridable) inside the toolchain
+   image, then chowns the output back to the host UID;
+2. caches the binary at `${CMK_XDG_CACHE}/<hash>/<name>`, keyed by a checksum of the **source + module**
+   content -- so editing either triggers a clean rebuild, and an unchanged program is a cache HIT;
+3. execs it, forwarding any arguments.
+
+#### Public surface
+<hr style="width:100%;border-bottom:3px solid black;">
+
+| Symbol | Purpose |
+| --- | --- |
+| `declare.polyglot.golang(namespace=<ns> src= mod= ..)` | generate a `<ns>` (run) target and a `<ns>/%` (run with the stem as argv) target |
+| `polyglot.golang.lambda(src= mod= [name=] [base=] [args=])` | build-if-needed, then exec |
+| `polyglot.golang.ensure(<src>,<mod>,<name>,<base>)` | build-if-absent (a cache HIT just logs) |
+| `polyglot.golang.base` | the toolchain image (default `golang:1.24-bookworm`, overridable) |
+
+#### Example
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Declare a namespace over an inline Go program, then call it like any other target -- the stem after the
+slash is passed through as argv:
+
+```make
+$(call include.plugins, polyglot.golang.cmk)
+$(call declare.polyglot.golang, namespace=golang src=main.go mod=go.mod)
+
+__main__: golang golang/hello
+
+define main.go
+package main
+import ( "fmt"; "os" )
+func main(){ if len(os.Args)>1 { fmt.Println("hi", os.Args[1]) } else { fmt.Println("hi") } }
+endef
+
+define go.mod
+module poly
+go 1.24
+endef
+```
+
+See `demos/cmk/golang-lambda.cmk` in the source tree for a worked example.
+
+<hr style="width:100%;border-bottom:3px solid black;">

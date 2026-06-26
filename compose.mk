@@ -421,8 +421,8 @@ docker.run.base:=docker run --rm -i -v $${DOCKER_HOST_WORKSPACE:-$${PWD}}:/works
 ## | ---------------------- | ----------------------------------------------------------------------|
 ## | CMK_COMPOSE_FILE       | *Temporary file used for the embedded-TUI*                            |
 ## | CMK_LOG_IMPORTS        | Defaults is 0.  Controls module-level logging                         |
-## | CMK_PLUGINS_DIR        | Defaults to ".cmk".  This controls how `include.plugin` macros work|
-## | CMK_MODULES_DIR        | Defaults to CMK_PLUGINS_DIR.  Where `import.module` stages modules  |
+## | CMK_PLUGINS_DIR        | ':'-separated plugin search PATH for `include.plugin`; default ".cmk"|
+## | CMK_MODULES_DIR        | Single writable staging dir (1st CMK_PLUGINS_DIR element by default)|
 ## | CMK_XDG_CACHE          | XDG cache dir for compose.mk host artifacts (built binaries, etc)      |
 ## | CMK_COMPILER_VERBOSE   | 1 if debugging-messages from compilation are allowed                  |
 ## | CMK_DIND               | *Determines whether docker-in-docker is allowed*                      |
@@ -1993,7 +1993,7 @@ io.stack.reset:; @$(call io.stack.reset)
 ## object `{type, ...meta}`.  `$(call declare.channel, namespace=<n>)` constructs
 ## channel <n> plus the operators below, each prefixed with the channel name.
 ##
-## | operator on channel `<n>`         | does                                 |
+## | Operator on channel `<n>`         | Action                               |
 ## |-----------------------------------|--------------------------------------|
 ## | `<n>.emit`                        | push an event (macro; kwargs/stdin)  |
 ## | `<n>.emit.type/<type>`            | push; type from stem, meta on stdin  |
@@ -2184,7 +2184,7 @@ assert.stream.stdin.required=if ${io.tty.stdin}; then $(call log.target, ${red}n
 # AVAILABLE in CMK_PLUGINS_DIR, else logs + exits 1.  The availability fallback is what makes it usable by
 # code that COMPILES a plugin rather than importing it (e.g. the repl harness in `_cmk.repl.launch`), where
 # the plugin is never in the registry.  (Parse-time registry-only assert is `__plugins__.assert`.)
-assert.plugin=$(if $(call __plugins__.has,$(strip ${1})),true,{ [ -f "${CMK_PLUGINS_DIR}/$(strip ${1})" ] || { $(call log.io, ${red}assert.plugin ${sep}${no_ansi} plugin not available${no_ansi_dim}: ${no_ansi}${bold}$(strip ${1})${no_ansi} ${dim}(checked ${CMK_PLUGINS_DIR}/)) ; exit 1 ; } ; })
+assert.plugin=$(if $(call __plugins__.has,$(strip ${1})),true,{ [ -n "$(call cmk.plugin.find,${1})" ] || { $(call log.io, ${red}assert.plugin ${sep}${no_ansi} plugin not available${no_ansi_dim}: ${no_ansi}${bold}$(strip ${1})${no_ansi} ${dim}(searched ${CMK_PLUGINS_DIR})) ; exit 1 ; } ; })
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## END: assert.* targets
@@ -2730,6 +2730,33 @@ mk.repl.kernel:
 	@# namespace from CMK_REPL_TARGETS (scraped from the source by the runtime; see `_cmk.repl.launch`).
 	{ [ -z "$${CMK_REPL_TARGETS:-}" ] || { printf 'local targets:\n' ; for t in $${CMK_REPL_TARGETS}; do printf '  %s\n' "$$t" ; done ; printf '\036\n' ; } ; } ; trap ':' INT ; while IFS= read -r w; do [ -z "$$w" ] && continue ; printf '%s\n' "$$w" | ${__interpreting__} mk.kernel.each 2>&1 | grep -avE '✱|flux[.]timer|cmk run|deduplicated|__main__|minify decorators|blockref triplequote|starting interpreter|mk[.]interpret|mk[.]src|Generating source' || true ; printf '\036\n' ; done
 
+mk.repl.modeline:
+	@# Default `read` target for the tux.repl mode-line (the env-driven REPL status line): emit one
+	@# JSON object per line (~1Hz) and let the Go wrapper own all styling/glyphs/truncation -- this
+	@# only supplies DATA.  This is the runtime successor to (and generalization of) the demo-local
+	@# `overlay.read`: it ALWAYS emits a runtime fingerprint (cli/lvl/bin/plugins/modules), and NESTS
+	@# a `vm` sub-object reflecting the live __vm__ control stack ONLY when virtual-machine.cmk is imported (a
+	@# make-time __plugins__.has gate -- so stale .tmp.* files from a prior non-vm run are ignored)
+	@# AND a frames file exists; otherwise `vm` is null and the Go side renders just the diagnostics.
+	@#   cli   -- the REPL'd program's CLI, bridged in as CMK_REPL_CLI by the launcher (falls back to
+	@#            this read child's own MAKE_CLI, which is just `... mk.repl.modeline`).
+	@#   vm    -- {chain,ip,k,e}: chain = the frames' goals + the top frame's pending continuation,
+	@#            ip = the innermost goal (the bold instruction pointer), k = stack depth, e = env.
+	@# One jq call per tick (jq.run prefers a LOCAL jq; --slurpfile of /dev/null yields [] when a file
+	@# is absent).  The trailing printf is a belt-and-suspenders fallback so a jq hiccup still emits
+	@# VALID JSON (keeping the Go parser on its happy path).
+	@np=`echo $${__plugins__} | wc -w | tr -d ' '`; nm=`echo $${__modules__} | wc -w | tr -d ' '`; \
+	bin=`basename "$${CMK_BIN:-compose.mk}"`; cli="$${CMK_REPL_CLI:-$${MAKE_CLI}}"; \
+	while true; do f=; e=; \
+	  $(if $(call __plugins__.has,virtual-machine.cmk),f=`ls .tmp.CONTROL_STACK_FRAMES.* 2>/dev/null | head -1`; e=`ls .tmp.cmk.vmenv.* 2>/dev/null | head -1`;,:;) \
+	  ${jq.run} -nc --arg cli "$$cli" --arg bin "$$bin" --argjson lvl "$${MAKE_LEVEL:-0}" \
+	    --argjson np "$$np" --argjson nm "$$nm" \
+	    --slurpfile fr "$${f:-/dev/null}" --slurpfile ev "$${e:-/dev/null}" \
+	    '($$fr[0]//null) as $$frames | ($$ev[0]//{}) as $$env | {cli:$$cli,lvl:$$lvl,bin:$$bin,plugins:$$np,modules:$$nm,vm:(if ($$frames|type)=="array" and ($$frames|length)>0 then {chain:(($$frames|map(.goal))+(($$frames[-1].cont//"")|split(" ")|map(select(length>0))))|join(" "),ip:($$frames[-1].goal//""),k:($$frames|length),e:$$env} else null end)}' 2>/dev/null \
+	    || printf '{"cli":"%s","lvl":0,"bin":"%s","plugins":%s,"modules":%s,"vm":null}\n' "$$cli" "$$bin" "$${np:-0}" "$${nm:-0}"; \
+	  sleep 1; \
+	done
+
 mk.src:
 	@# Returns source-code for this make-context (excluding compose.mk).
 	@# This effectively flattens includes, basically concatenating 
@@ -3134,10 +3161,35 @@ _registry.assert.fail=$(call log.import.error,${red}$(1) not loaded: ${bold}$(2)
 __plugins__.assert=$(if $(call __plugins__.has,${1}),,$(call _registry.assert.fail,plugin,$(firstword ${1})))
 __modules__.assert=$(if $(call __modules__.has,${1}),,$(call _registry.assert.fail,module,$(firstword ${1})))
 
+# CMK_PLUGINS_DIR is a ':'-separated search PATH for plugin/include LOOKUP (like
+# $PATH): `include.plugin`/`assert.plugin` try each element, first existing wins.
+# Default `.cmk`.  Element 0 is ALSO the single WRITABLE staging dir (CMK_MODULES_DIR)
+# and must be a working-dir-relative dir so container-dispatch -- which bind-mounts
+# CWD->/workspace and does NOT forward CMK_PLUGINS_DIR -- can see it; absolute elements
+# are host-side lookup fallbacks only.  (Path elements may not contain spaces.)
 export CMK_PLUGINS_DIR?=.cmk
-# Where `import.module` STAGES + imports materialized modules (the
-# `.tmp.module.*` files).  Defaults to CMK_PLUGINS_DIR.
-export CMK_MODULES_DIR?=${CMK_PLUGINS_DIR}
+# Where `import.module` STAGES + imports materialized modules (the `.tmp.module.*`
+# files).  A SINGLE writable dir -- the FIRST element of CMK_PLUGINS_DIR by default
+# (never the whole colon-path), which keeps the just-staged re-include and mk.clean
+# single-dir and the staging dir container-mountable.
+export CMK_MODULES_DIR?=$(firstword $(subst :, ,${CMK_PLUGINS_DIR}))
+# _mk.path.split(<path>) -- split a ':'-separated search path into space-joined dirs.
+_mk.path.split=$(subst :, ,$(1))
+# _mk.path.resolve(<prefix>,<file>) -- resolve <file> against a (possibly ':'-path)
+# <prefix> to a SINGLE path:
+#   * absolute <file> (/...)   -> used as-is;
+#   * single-element <prefix>  -> <prefix>/<file>, with NO $(wildcard) probe (so a
+#     just-staged module file -- a wildcard-cache miss this run -- re-includes by its
+#     literal path exactly as before);
+#   * multi-element <prefix>   -> first EXISTING <dir>/<file> across the path, else a
+#     <first-element>/<file> fallback (so the strict-missing error + mkdir still name
+#     a sensible dir).  Pure make builtins -- no $(shell), no per-parse fork.
+_mk.path.resolve=$(strip $(if $(filter /%,$(strip $(2))),$(strip $(2)),$(if $(filter 1,$(words $(call _mk.path.split,$(1)))),$(strip $(1))/$(strip $(2)),$(firstword $(wildcard $(foreach d,$(call _mk.path.split,$(1)),$(strip $(d))/$(strip $(2)))) $(firstword $(call _mk.path.split,$(1)))/$(strip $(2))))))
+# cmk.plugin.find(<name>) -- RECIPE-time bash: echo the first <dir>/<name> on the
+# CMK_PLUGINS_DIR search path that exists (empty if none).  IFS=: is subshell-local +
+# POSIX-portable (busybox/macOS).  Use this anywhere bash needs to locate a plugin file
+# (the raw ${CMK_PLUGINS_DIR}/<name> breaks once the value holds a colon).
+cmk.plugin.find=$(shell n='$(strip $(1))'; p="$$CMK_PLUGINS_DIR"; IFS=:; for d in $$p; do [ -f "$$d/$$n" ] && { printf '%s' "$$d/$$n"; break; }; done)
 # File EXTENSIONS that mark a plugin as cmk-lang (the JIT-compile path).  Covers
 # the `.cmk` and `.CMK` spellings plus the `.cmk.mk`/`.CMK.mk` double-extension (a
 # `.mk` tail so editors/tooling treat it as a makefile, the inner `.cmk` marking
@@ -3165,7 +3217,7 @@ $(call mk.unpack.kwargs, ${1}, prefix, ${CMK_PLUGINS_DIR})
 $(call mk.unpack.kwargs, ${1}, strict, 1)
 $(eval _mkip_files:=$(filter-out strict=% prefix=%,$(patsubst file=%,%,$(shell echo "$(strip ${1})"))))
 $(if $(filter-out ${_mk.cmk.exts},${_mkip_files}),$(call _include.set, prefix=$(strip ${kwargs_prefix}) strict=$(strip ${kwargs_strict}) $(filter-out ${_mk.cmk.exts},${_mkip_files})))
-$(foreach _mkip_c,$(filter ${_mk.cmk.exts},${_mkip_files}),$(call _include.cmk.one,$(if $(filter /%,${_mkip_c}),${_mkip_c},$(strip ${kwargs_prefix})/${_mkip_c}),$(strip ${kwargs_strict}),${_mkip_c}))
+$(foreach _mkip_c,$(filter ${_mk.cmk.exts},${_mkip_files}),$(call _include.cmk.one,$(call _mk.path.resolve,${kwargs_prefix},${_mkip_c}),$(strip ${kwargs_strict}),${_mkip_c}))
 $(if ${_mkip_files},$(eval __plugins__:=$(sort ${__plugins__} ${_mkip_files})))
 endef
 # _include.cmk.one(<resolved-path>,<strict>,<orig-token>) -- bind ONE cmk-lang
@@ -3189,12 +3241,12 @@ ${nl}
 $(call mk.unpack.kwargs, ${1}, file, ${1})
 $(call mk.unpack.kwargs, ${1}, strict, 1)
 $(call mk.unpack.kwargs, ${1}, prefix, ${CMK_PLUGINS_DIR})
-$(eval _mk_plug:=$(if $(filter /%,$(strip ${kwargs_file})),$(strip ${kwargs_file}),${kwargs_prefix}/${kwargs_file}))
+$(eval _mk_plug:=$(call _mk.path.resolve,${kwargs_prefix},${kwargs_file}))
 $(call log.import.part1, include ${sep} ${dim}strict=${ital}${kwargs_strict} ${sep} ${dim_ital}${kwargs_file} )
 ifneq ($(filter $(abspath ${_mk_plug}),$(abspath ${MAKEFILE_LIST})),)
 $(call log.import.part2, ${dim}${_mk_plug}${no_ansi} (already included -- skipping))
 else
-$(shell ls ${kwargs_prefix} 2>/dev/null > /dev/null || mkdir -p ${kwargs_prefix})
+$(shell d=$(firstword $(call _mk.path.split,${kwargs_prefix})); ls $$d 2>/dev/null > /dev/null || mkdir -p $$d)
 ifeq ($(shell ${trace_maybe} && ls ${_mk_plug} 2>/dev/null >/dev/null && echo 0 || echo 1),1)
 ifeq (${kwargs_strict},1)
 $(call log.import.part2, ${GLYPH_XXX}${_mk_plug}${no_ansi} (missing))
@@ -3308,7 +3360,17 @@ _mk.hash.file=$(shell cksum < "$(1)" | awk '{printf "%07x",$$1%268435456}')
 # module's OWN identity injected as CMK_MODULE (<source> and <dest> differ under a
 # `namespace=` override).  ${4} select-stage is prepended for partial/star imports.
 # ${5}=flat: when 1, OMIT the namespace+header stages (a root/flat import).
-_mk.module.stage=$(shell mkdir -p ${CMK_MODULES_DIR})$(shell cat ${2} | CMK_INTERNAL=1 make -f $(firstword $(filter %compose.mk,${MAKEFILE_LIST})) flux.column/$(if $(strip ${4}),$(strip ${4}):)$(if $(filter 1,$(strip ${5})),,_mk.module.namespace/${7}:_mk.module.header/${6}:)$(or $(strip ${3}),mk.compile) > ${CMK_MODULES_DIR}/.tmp.module.${1}.mk.out && mv ${CMK_MODULES_DIR}/.tmp.module.${1}.mk.out ${CMK_MODULES_DIR}/.tmp.module.${1}.mk 2>/dev/null; true)
+# MEMOIZED: the staged `.mk` is regenerated only when ABSENT/empty or OLDER than its
+# source.  The CMK runtime parses a program in several re-exec'd `make` processes per
+# run (supervisor re-exec + the `mk.interpret` trampoline + GNU make's restart), and
+# each parse re-evaluates the parse-time `$(shell)` below -- so without this guard a
+# single `.cmk` plugin is recompiled once PER parse (5x+ for one include).  The
+# from_file key is content-addressed (`<basename>-<cksum>`), so a staged file's
+# existence means THIS exact source was already lowered; the `-nt` check is the
+# belt-and-suspenders staleness guard that also forces a recompile for the def path
+# (whose `.raw` is rewritten each parse).  Atomic `.out`->mv preserved, so a present
+# `.mk` is always a complete, successful compile.
+_mk.module.stage=$(shell mkdir -p ${CMK_MODULES_DIR})$(shell _o=${CMK_MODULES_DIR}/.tmp.module.${1}.mk; if [ -s "$$_o" ] && [ "$$_o" -nt "${2}" ]; then true; else cat ${2} | CMK_INTERNAL=1 make -f $(firstword $(filter %compose.mk,${MAKEFILE_LIST}) ${MAKEFILE}) flux.column/$(if $(strip ${4}),$(strip ${4}):)$(if $(filter 1,$(strip ${5})),,_mk.module.namespace/${7}:_mk.module.header/${6}:)$(or $(strip ${3}),mk.compile) > $$_o.out && mv $$_o.out $$_o 2>/dev/null; fi; true)
 # _mk.module.from_def(<def-name>,<dest-ns>,...) / _mk.module.from_file(<path>,<dest-ns>,...)
 # -- ${1} is the content source (def name to $(value), or file to read) AND the
 # CMK_MODULE identity; ${2} is the destination namespace (prefix).  The staged file
@@ -3319,7 +3381,13 @@ _mk.module.stage=$(shell mkdir -p ${CMK_MODULES_DIR})$(shell cat ${2} | CMK_INTE
 # which is already unique per make run, so it needs no digest.)
 # _mk.assert.define(<name>): parse-time guard -- errors unless a `define <name>` is in scope.
 _mk.assert.define=$(if $(call mk.var.undefined,${1}),$(error import.module: no such define: $(strip ${1}) [CMK_MODULE_MISSING]))
-_mk.module.from_def=$(call _mk.assert.define,${1})$(shell mkdir -p ${CMK_MODULES_DIR})$(eval _mk_mod_k:=$(call _mk.module.key,${1},${2}))$(file > ${CMK_MODULES_DIR}/.tmp.module.${_mk_mod_k}.raw,$(value ${1}))$(call _mk.module.stage,${_mk_mod_k},${CMK_MODULES_DIR}/.tmp.module.${_mk_mod_k}.raw,${3},${4},${5},${1},${2})$(call _include, prefix=${CMK_MODULES_DIR} strict=1 file=.tmp.module.${_mk_mod_k}.mk)
+# IDEMPOTENT `.raw` write: the def value is written to a `.raw.new` and promoted only
+# when it DIFFERS from the existing `.raw` -- so an unchanged def re-import (the common
+# re-parse case) leaves the `.raw` mtime untouched, which lets `_mk.module.stage`'s
+# `-nt` memoization SKIP the recompile.  An unconditional `$(file >)` would bump the
+# mtime every parse and defeat that cache (as the from_file content-hash key already
+# avoids).  `cmp` is POSIX (coreutils/busybox/BSD), so no platform split.
+_mk.module.from_def=$(call _mk.assert.define,${1})$(shell mkdir -p ${CMK_MODULES_DIR})$(eval _mk_mod_k:=$(call _mk.module.key,${1},${2}))$(file > ${CMK_MODULES_DIR}/.tmp.module.${_mk_mod_k}.raw.new,$(value ${1}))$(shell _r=${CMK_MODULES_DIR}/.tmp.module.${_mk_mod_k}.raw; if cmp -s "$$_r.new" "$$_r"; then rm -f "$$_r.new"; else mv "$$_r.new" "$$_r"; fi)$(call _mk.module.stage,${_mk_mod_k},${CMK_MODULES_DIR}/.tmp.module.${_mk_mod_k}.raw,${3},${4},${5},${1},${2})$(call _include, prefix=${CMK_MODULES_DIR} strict=1 file=.tmp.module.${_mk_mod_k}.mk)
 _mk.module.from_file=$(if $(wildcard ${1}),,$(error import.module: no such file: ${1} [CMK_MODULE_MISSING]))$(eval _mk_mod_k:=$(call _mk.module.key,$(basename $(notdir ${1})),${2})-$(call _mk.hash.file,${1}))$(call _mk.module.stage,${_mk_mod_k},${1},${3},${4},${5},$(basename $(notdir ${1})),${2})$(call _include, prefix=${CMK_MODULES_DIR} strict=1 file=.tmp.module.${_mk_mod_k}.mk)
 # _mk.module.from_def_flat(<def-name>) -- the DEF analogue of the file FAST-PATH: a
 # flat (root) + verbatim (preprocs=stream.echo) import of an IN-SCOPE define whose
@@ -3497,6 +3565,36 @@ define .awk.docstring
 BEGIN{gsub(/[.+*?^$()\[\]{}|\/\\]/,"\\\\&",t);pat="^" t "[ \t]*:"} FNR==1{c=0} !c&&$0~pat{c=1;next} c&&/^\t@#/{l=$0;sub(/^\t@#[ ]?/,"",l);print l;next} c{c=0}
 endef
 
+# Fast, define-aware enumeration of a makefile's PUBLIC target base-names -- the single
+# source of truth behind `cli.completion.*` AND the repl's local-target banner (tux.repl.cmk).
+# A pure single-pass awk scan (no make/Docker re-exec, unlike mkparse/_help_gen/mk.targets),
+# so it is cheap enough for shell tab-completion.  Mirrors tests/_targets.py: skips
+# `define..endef` bodies (which embed Dockerfiles/awk/heredocs whose lines look like targets),
+# matches `^<names>:` (rejecting `:=`/`::` and recipe/comment/indented lines), splits
+# multi-target lines, and drops private (leading `.`/`_`) + leftover-pattern (`%`) names.
+# Parametric `foo/%` collapses to base `foo` by default; pass `-v param=keep` to emit `foo/%`
+# verbatim (the repl wants the arg-hint; completion wants the bare base).  POSIX-awk only
+# (index/substr/split) so it runs under gawk/BSD-awk/busybox.
+define .awk.completion.scan
+/^define[ \t]/      { ind=1; next }
+/^endef([ \t]|$)/   { ind=0; next }
+ind                 { next }
+/^[ \t#]/           { next }
+{
+  ci=index($0,":"); if (ci==0) next
+  head=substr($0,1,ci-1); rest=substr($0,ci)
+  if (rest ~ /^:[=:]/) next
+  if (head !~ /^[A-Za-z0-9._%\/! -]+$/) next
+  n=split(head,toks,/[ \t]+/)
+  for (i=1;i<=n;i++){ t=toks[i]; if(t=="") continue
+    s=index(t,"/"); base=(s>0)?substr(t,1,s-1):t
+    c=substr(base,1,1); if(c=="."||c=="_"||c=="-") continue
+    if(index(base,"%")>0||base=="") continue
+    out=(param=="keep")?t:base
+    if(!(seen[out]++)) print out }
+}
+endef
+
 # Optimized internal-recursion prefix for dispatch/transform sub-makes: mark internal
 # + skip re-installing the target-rewrite/at-exit hooks and the SIGINT supervisor.  The
 # client keeps the real supervisor at the top level; a handler that execs a program
@@ -3529,11 +3627,18 @@ _cli.subcommands.error=( $(call log.io, ${red}$${subcmd_name} ${sep}${no_ansi} $
 # So a handler is `<ns><sep><sub>[/%]` (e.g. `.greet.hello/%`).  NB: SINGLE-quote any
 # space-bearing value (`namespace`, `subs`); `mk.unpack.kwargs` mangles double-quoted
 # multi-word values.  Captures the CLI tail robustly, then does the ONE yield.
+# NESTING: a non-parametric handler may ITSELF be a `cli.subcommands.enter` (a sub-group),
+# so `prog a b c` threads a->b->c.  A DISPATCHED handler (the engine runs it via
+# `_cli.subcommands.make`, i.e. CMK_INTERNAL=1) reads its remaining words from `$$argv` -- that
+# is how the engine forwards them, and the handler's own command line is just its name.  A
+# TOP-LEVEL entry (CMK_INTERNAL=0: the supervisor's `cmk`/`greet`, or a program goal) uses the
+# MAKE_CLI parse instead -- crucial because `cmk run` LEAKS the program continuation into `$$argv`,
+# which must NOT be mistaken for a forwarded subcommand tail.
 define cli.subcommands.enter
-$(eval _subcmd_args:=$(if $(filter undefined,$(origin 1)),,$(1)))$(call mk.unpack.kwargs, ${_subcmd_args}, namespace, .${@})$(call mk.unpack.kwargs, ${_subcmd_args}, sep, .)$(call mk.unpack.kwargs, ${_subcmd_args}, subs,)$(call mk.unpack.kwargs, ${_subcmd_args}, default,)$(call mk.unpack.kwargs, ${_subcmd_args}, optional,)tail=`case "$${MAKE_CLI}" in \
+$(eval _subcmd_args:=$(if $(filter undefined,$(origin 1)),,$(1)))$(call mk.unpack.kwargs, ${_subcmd_args}, namespace, .${@})$(call mk.unpack.kwargs, ${_subcmd_args}, sep, .)$(call mk.unpack.kwargs, ${_subcmd_args}, subs,)$(call mk.unpack.kwargs, ${_subcmd_args}, default,)$(call mk.unpack.kwargs, ${_subcmd_args}, optional,)tail=`if [ "$${CMK_INTERNAL:-0}" = 1 ] && [ -n "$${argv:-}" ]; then echo "$${argv:-}"; else case "$${MAKE_CLI}" in \
 		*mk.supervisor.enter/*) echo "$${MAKE_CLI}" | awk -f <(${mk.def.read}/.awk.subcommands.tail) ;; \
 		*) _t="$${MAKE_CLI#*${@}}"; [ "$${_t}" = "$${MAKE_CLI}" ] && echo "" || echo "$${_t}" ;; \
-	esac | xargs` \
+	esac; fi | xargs` \
 	&& $(call mk.yield, subcmd_name=${@} subcmd_ns=\"$(strip ${kwargs_namespace})\" subcmd_sep=$(strip ${kwargs_sep}) subcmd_default=$(strip ${kwargs_default}) subcmd_subs=\"$(strip ${kwargs_subs})\" subcmd_optional=\"$(strip ${kwargs_optional})\" subcmd_tail=\"$${tail}\" ${_cli.subcommands.make} cli.subcommands)
 endef
 
@@ -3613,7 +3718,7 @@ _cmk.warn.output=([ -e "$(1)" ] && $(call log.io, ${yellow}cmk ${sep}${no_ansi_d
 # $(1)=tux.repl kwarg tail (`eval=.. [read=.. print=.. exit_after=..]`; NO runner -- the plugin pins it).
 # $(2)=the PROGRAM SOURCE (the plugin scrapes the launch-banner's LOCAL target namespace from it).
 # `tmpf` must already hold the compiled PROGRAM (the runner).
-_cmk.repl.launch=$(call assert.plugin, tux.repl.cmk) && export CMK_REPL_RUNNER="$${tmpf}" CMK_REPL_SOURCE="$(strip $(2))" CMK_REPL_KWARGS="$(1)" && tmpf2=$$(TMPDIR=`pwd` mktemp ./.tmp.cmk.repl.XXXXXXXXX) && trap "rm -f $${tmpf} $${tmpf2}" EXIT && $(call log.io, ${dim}cmk ${sep}${no_ansi} repl ${sep}${dim} launching harness ${sep} ${no_ansi}$(1)) && { cat ${CMK_PLUGINS_DIR}/tux.repl.cmk ; printf '\n__main__: tux.repl.run\n' ; } | ${_cli.subcommands.make} mk.compile > $${tmpf2} && chmod +x $${tmpf2} && CMK_INTERNAL=0 CMK_SUPERVISOR=1 ${make} mk.interpret/$${tmpf2}
+_cmk.repl.launch=$(call assert.plugin, tux.repl.cmk) && export CMK_REPL_RUNNER="$${tmpf}" CMK_REPL_SOURCE="$(strip $(2))" CMK_REPL_KWARGS="$(1)" CMK_REPL_CLI="$${MAKE_CLI}" && tmpf2=$$(TMPDIR=`pwd` mktemp ./.tmp.cmk.repl.XXXXXXXXX) && trap "rm -f $${tmpf} $${tmpf2}" EXIT && $(call log.io, ${dim}cmk ${sep}${no_ansi} repl ${sep}${dim} launching harness ${sep} ${no_ansi}$(1)) && { cat "$(call cmk.plugin.find,tux.repl.cmk)" ; printf '\n__main__: tux.repl.run\n' ; } | ${_cli.subcommands.make} mk.compile > $${tmpf2} && chmod +x $${tmpf2} && CMK_INTERNAL=0 CMK_SUPERVISOR=1 ${make} mk.interpret/$${tmpf2}
 
 cli.cmk:; $(call cli.subcommands.enter, namespace=cli.cmk default=run optional=repl)
 	@# Public subcommand interface for CMK programs: build | compile | run | repl | doc.  The canonical
@@ -3625,6 +3730,81 @@ cmk:; $(call cli.subcommands.enter, namespace=cli.cmk default=run optional=repl)
 	@# `cmk <file>` is shorthand for `cmk run <file>`; files should end in `.cmk`.
 	@# `cmk repl [<file>]` opens an interactive shell over a program's target namespace (or, with no
 	@# file, a simple shell over the core namespace).
+
+# `cmk cli` -- a NESTED subcommand group (a handler that is itself a `cli.subcommands.enter`,
+# see the nesting note there) for shell integration:
+#   cmk cli complete [file]   emit a self-contained bash completion script (eval it)
+#   cmk cli init     [file]   install that script into the user's bash-completion dir
+#   cmk cli targets  [file]   the underlying target enumerator (debug primitive)
+# `file` defaults to the interpreted program (`$$__interpreting__`) else `${CMK_SRC}`, so a
+# `cmk run` program inherits this: `./your.cmk cmk cli complete` emits completion for itself.
+# See `.awk.completion.scan` for the (fast, define-aware) enumerator shared with the repl.
+cli.cmk.cli:; $(call cli.subcommands.enter, namespace=cli.cmk.cli default=complete optional='complete init targets')
+	@# Shell-integration subcommands: complete | init | targets.  See `cmk cli <sub> help`.
+
+cli.cmk.cli.complete:
+	@# Emit a self-contained bash tab-completion script (stdout); eval it:
+	@#   eval "$$(./compose.mk cmk cli complete)"   # registers compose.mk, ./compose.mk, cmk
+	@#   eval "$$(./your.cmk   cmk cli complete)"   # a cmk-run program (inherited; registers itself)
+	@# Optional first arg = a makefile to complete (default: interpreted program else CMK_SRC).
+	@# Bakes a stdlib target snapshot + embeds the scanner for a live scan of the typed file, so
+	@# one function (keyed on $$COMP_WORDS[0]) serves every registered command.  zsh: first run
+	@# `autoload -U +X bashcompinit && bashcompinit`.  Static scan: eval-generated/imported
+	@# targets are not seen (completion is a convenience, not authoritative).
+	@#
+	@# QUERY MODE (CMK_COMPLETE_QUERY=1): instead of the script, read a LINE buffer on stdin and
+	@# print the target names that complete its last word (one per line) -- used by the repl's
+	@# Tab handler (the Go wrapper pipes the input buffer through and applies the result).
+	case "$${CMK_COMPLETE_QUERY:-0}" in \
+	1) buf="`cat`" \
+		&& case "$${buf}" in *' '|'') word='' ;; *) word="`printf '%s' "$${buf}" | awk '{print $$NF}'`" ;; esac \
+		&& file="$${__interpreting__:-${CMK_SRC}}" \
+		&& { awk -f <(${mk.def.read}/.awk.completion.scan) ${CMK_SRC} 2>/dev/null ; \
+		     { [ -f "$${file}" ] && [ "$${file}" != "${CMK_SRC}" ] && awk -f <(${mk.def.read}/.awk.completion.scan) "$${file}" 2>/dev/null ; } || true ; } \
+		   | sort -u | awk -v w="$${word}" 'w==""||index($$0,w)==1' ;; \
+	*) cmd="`echo "$${argv:-}" | cut -d' ' -f1`" \
+		&& cmd="$${cmd:-$${__interpreting__:-${CMK_SRC}}}" \
+		&& base="`basename "$${cmd}"`" \
+		&& stdlib="`awk -f <(${mk.def.read}/.awk.completion.scan) ${CMK_SRC} 2>/dev/null | sort -u | tr '\n' ' '`" \
+		&& scanner="`${mk.def.read}/.awk.completion.scan`" \
+		&& printf '%s\n' '# compose.mk bash completion (generated)' \
+		&& printf '_CMK_STDLIB_TARGETS=%s\n' "\"$${stdlib}\"" \
+		&& printf '%s\n' "read -r -d '' _CMK_SCAN_AWK <<'CMK_AWK_EOF'" \
+		&& printf '%s\n' "$${scanner}" \
+		&& printf '%s\n' 'CMK_AWK_EOF' \
+		&& printf '%s\n' '_cmk_complete() {' \
+		&& printf '%s\n' '  local cur file extra words' \
+		&& printf '%s\n' '  cur="$${COMP_WORDS[COMP_CWORD]}"; file="$${COMP_WORDS[0]}"; extra=""' \
+		&& printf '%s\n' '  [ -f "$$file" ] && [ -r "$$file" ] && extra="$$(awk "$$_CMK_SCAN_AWK" "$$file" 2>/dev/null)"' \
+		&& printf '%s\n' '  words="$$_CMK_STDLIB_TARGETS $$extra"' \
+		&& printf '%s\n' '  COMPREPLY=( $$(compgen -W "$$words" -- "$$cur" | sort -u) ); return 0' \
+		&& printf '%s\n' '}' \
+		&& printf 'complete -F _cmk_complete -o default %s %s\n' "$${base}" "./$${base}" \
+		&& { [ "$${base}" = "compose.mk" ] && printf 'complete -F _cmk_complete -o default cmk\n' || true; } ;; \
+	esac
+
+cli.cmk.cli.init:
+	@# Install bash completion for a program into the user's bash-completion dir, idempotently
+	@# (one file; NO shell-rc edits).  Optional first arg = makefile (default: interpreted program
+	@# else CMK_SRC).  Activate by reloading the shell (or `source` the file); undo by deleting it.
+	@#   ./compose.mk cmk cli init            # completion for compose.mk + cmk
+	@#   ./your.cmk    cmk cli init           # completion for your program (inherited)
+	cmd="`echo "$${argv:-}" | cut -d' ' -f1`" \
+	&& cmd="$${cmd:-$${__interpreting__:-${CMK_SRC}}}" \
+	&& base="`basename "$${cmd}"`" \
+	&& dir="$${XDG_DATA_HOME:-$${HOME}/.local/share}/bash-completion/completions" \
+	&& mkdir -p "$${dir}" && dest="$${dir}/$${base}" \
+	&& argv="$${cmd}" CMK_INTERNAL=1 ${make} cli.cmk.cli.complete > "$${dest}" \
+	&& $(call log.io, ${dim}cmk cli init ${sep}${no_ansi} installed completion for ${ital}$${base}${no_ansi} ${sep} ${dim}$${dest}) \
+	&& $(call log.io, ${dim}cmk cli init ${sep}${no_ansi} reload your shell to activate ${sep} ${dim}undo: rm $${dest})
+
+cli.cmk.cli.targets:
+	@# Debug primitive: print public target base-names (define/endef-aware) for a makefile.
+	@# Optional first arg = file (default: interpreted program else CMK_SRC).
+	@#   ./compose.mk cmk cli targets   |   ./your.cmk cmk cli targets
+	f="`echo "$${argv:-}" | cut -d' ' -f1`" \
+	&& f="$${f:-$${__interpreting__:-${CMK_SRC}}}" \
+	&& awk -f <(${mk.def.read}/.awk.completion.scan) "$${f}" 2>/dev/null | sort -u
 
 cli.cmk.build/%:
 	@# `cmk build` helper: package the given .cmk into a self-extracting executable.
@@ -4084,7 +4264,7 @@ while [ -n "$next" ]; do
   cmk_hop=$((cmk_hop+1))
   if [ "$cmk_hop" -gt "$cmk_hopmax" ]; then printf 'compose.mk: trampoline hop limit %s exceeded\n' "$cmk_hopmax" >/dev/stderr; st=70; break; fi
   rm -f -- "$cmk_mbox" 2>/dev/null || true
-  ${_make_} mk.supervisor.enter/${MAKE_SUPER} $next 2> >(sed '/^make.*:.*mk.interrupt\/SIGINT.*Killed/,/^make:.*Error.*/d' >/dev/stderr)
+  ${_make_} mk.supervisor.enter/${MAKE_SUPER} $next 2> >(awk '{ if (match($0, /make(\[[0-9]+\])?: \*\*\* \[/) && RSTART>1) { print substr($0,1,RSTART-1); print substr($0,RSTART) } else print }' | sed '/^make.*:.*mk.interrupt\/SIGINT.*Killed/,/^make:.*Error.*/d' >/dev/stderr)
   st=$?
   if grep -q '^CONT=' "$cmk_mbox" 2>/dev/null; then
     raw="$(sed -n 's/^CONT=//p' "$cmk_mbox" | tail -1)"
@@ -4244,8 +4424,16 @@ define mk.yield
 	&& eval $${yield_to} \
 	; rc=$$? ; if [ $${rc} -eq 0 ]; then echo 0 > .tmp.mk.super.$${MAKE_SUPER}; \
 		elif [ ! -f .tmp.mk.super.$${MAKE_SUPER} ]; then echo $${rc} > .tmp.mk.super.$${MAKE_SUPER}; fi \
-	; ${mk.interrupt}
+	; case "$${CMK_SUPERVISOR:-1}" in \
+		0) exit $${rc} ;; \
+		*) ${mk.interrupt} ;; \
+	esac
 endef
+# ^ The interrupt unwinds the SUPERVISOR's make stack after `eval` ran the continuation.
+# With NO supervisor (CMK_SUPERVISOR=0 -- e.g. a NESTED `cli.subcommands.enter` dispatched via
+# `_cli.subcommands.make`), there is nothing to signal: `mk.interrupt` would just log "Supervisor
+# is disabled" and exit 1 (noise + a spurious error).  So we skip it and propagate `rc` directly;
+# the real top-level yield still fires its own interrupt to unwind the whole stack once.
 
 # CMK_SUPERVISOR_STEP_HOOK: optional target fired by the supervisor's trampoline loop
 # once per CONTINUING step (default flux.noop, a no-op).  The loop double-gates it (only
@@ -4304,9 +4492,9 @@ mk.exit.code/%:; [ -z "$${MAKE_SUPER}" ] || echo "${*}" > .tmp.mk.super.$${MAKE_
 mk.exit.code=([ -z "$${MAKE_SUPER}" ] || echo "${1}" > .tmp.mk.super.$${MAKE_SUPER}) ; exit ${1}
 
 #░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## Control stack + `__vm__` CEK machine: EXTRACTED to the `.cmk/__vm__.mk` plugin (bodies are
+## Control stack + `__vm__` CEK machine: EXTRACTED to the `.cmk/virtual-machine.cmk` plugin (bodies are
 ## pure-make jq/awk, imported VERBATIM).  Consumers import it explicitly:
-##     $(call include.plugins, __vm__.mk)
+##     $(call include.plugins, virtual-machine.cmk)
 ## (and `$(call declare.cmk.virtual_machine, exclude=..)` for the opt-in reflective env).
 ## See demos/call_stack.mk, demos/vm.mk, demos/cmk/overlay.cmk.
 #░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -5081,9 +5269,20 @@ flux.stage.stack:
 	@# USAGE: ( generic )
 	@#  ./compose.mk flux.stage.stack/
 	@#
-	$(call log.flux,  flux.stage.stack ${sep} ) 
+	$(call log.flux,  flux.stage.stack ${sep} )
 	$(call io.stack, ${flux.stage.file})
-flux.stage.stack=$(call io.stack, ${flux.stage.file})
+
+# Recipe-body shorthands for the stage operators: `${flux.stage.<op>}/<stage>` is just
+# terser than spelling out `${make} flux.stage.<op>/<stage>` (and reads better in a recipe).
+# Each expands to the sub-make invocation, so `${@}` (current target name) is a tidy stage.
+# NB `flux.stage.file` stays a PATH var (`.flux.stage.${*}`), so it is intentionally absent.
+flux.stage.enter=${make} flux.stage.enter
+flux.stage.exit=${make} flux.stage.exit
+flux.stage.push=${make} flux.stage.push
+flux.stage.pop=${make} flux.stage.pop
+flux.stage.stack=${make} flux.stage.stack
+flux.stage.clean=${make} flux.stage.clean
+flux.stage.wrap=${make} flux.stage.wrap
 
 flux.stage.wrap:
 	@# Like `flux.stage.wrap/<stage>/<target>`, but taking args from env
@@ -7268,7 +7467,7 @@ endef
 ## | declare.compose     | compose.import    | file=<docker-compose.yml> [namespace=]   |
 ## | declare.polyglot    | polyglot.import   | a polyglot (foreign-language) block      |
 ## | declare.polyglots   | polyglots.import  | many polyglot blocks                     |
-## | declare.cmk.virtual_machine | .cmk/__vm__.mk plugin | the reflective __vm__ env: prefix=<p> \| exclude=<prefixes> |
+## | declare.cmk.virtual_machine | .cmk/virtual-machine.cmk plugin | the reflective __vm__ env: prefix=<p> \| exclude=<prefixes> |
 ## END: DeclarationIndex
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 declare.module=${import.module}
@@ -7812,7 +8011,8 @@ function lower_calls(text,   result, pos, hit, name, lit, astart, args, paren, c
 			result = result substr(text, pos, hit - 1)
 			pos = pos + hit - 1 + length(TRIG_PREFIX)
 			lit = TRIG_PREFIX; name = ""
-			while (pos <= length(text) && substr(text, pos, 1) != "(") { name = name substr(text, pos, 1); pos++ } }
+			while (pos <= length(text) && substr(text, pos, 1) ~ /[A-Za-z0-9._-]/) { name = name substr(text, pos, 1); pos++ }
+			if (substr(text, pos, 1) != "(") { result = result lit name; continue } }
 		else {
 			bpos = 0
 			for (p = pos; p <= length(text) && bpos == 0; p++) {

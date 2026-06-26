@@ -1,0 +1,52 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+## Runtime
+<hr style="width:100%;border-bottom:3px solid black;">
+
+!!! danger "Advanced topic"
+    New users can safely skip this.  The runtime layer is built on the [supervisor]({{mkdocs.site_relative_url}}/signals), so it only applies to interpreter-style (supervised) invocations.
+
+This page covers the **core** runtime model: how a supervised program treats the work it has *left to do* as a steerable **continuation**, plus the plugin-independent primitives `compose.mk` ships for transferring control over it.  The full, structured control-stack / CEK virtual machine built on top of these is the [`__vm__` plugin]({{mkdocs.site_relative_url}}/plugins/cmk-virtual-machine).
+
+### Continuations
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The goals *after* the current target on the command line are the **continuation** -- what's left to do.  `compose.mk` exposes that command line as `MAKE_CLI`, so a recipe can read, and re-shape, its own remaining goals.  This is the substrate everything else here is built on: a control transfer is just *"replace the continuation and re-enter."*
+
+### Flat dispatch (the trampoline)
+<hr style="width:100%;border-bottom:3px solid black;">
+<a name=flat-dispatch></a>
+
+`mk.trampoline` is the core transfer primitive: it re-dispatches the next continuation at **top level**, through the [supervisor]({{mkdocs.site_relative_url}}/signals)'s trampoline loop (one of its [inlined bootloaders]({{mkdocs.site_relative_url}}/signals/#bootloader)).  Because every transfer re-enters flat, iterative control flow runs at **constant process depth** -- an unbounded loop does not stack up make processes.
+
+!!! note "Jumps are flat"
+    Earlier versions ran the continuation inline and *then* interrupted, so successive jumps **nested** make processes (a long loop would stack up).  The trampoline now re-dispatches every transfer at top level, so iterative loops run at constant depth.
+
+Two related core primitives round out the picture; both are documented with the supervisor on the [Signals]({{mkdocs.site_relative_url}}/signals) page:
+
+* `mk.yield` -- the older, process-oriented escape: it runs its target inline and then interrupts the make stack (so repeated use *nests*).  Setting `CMK_VM_LEGACY=1` routes the virtual machine back through it instead of the trampoline.
+* `mk.exit.code` -- record-and-continue exit: stash an exact exit code out-of-band, then unwind *normally* so `flux.*.finally` and other cleanup arms still run.
+
+All of these require an interpreter-style (supervised) invocation; `cmk run`, or an `mk.interpret` shebang, provides one.
+
+### Virtual machine (plugin)
+<hr style="width:100%;border-bottom:3px solid black;">
+<a name=virtual-machine></a>
+<a name=control-stack></a>
+
+The ergonomic, structured API over this substrate is basically a small CEK Machine[^1].  It is larger, optional, and not required for any normal operation so it is provided [by the plugin system]({{mkdocs.site_relative_url}}/plugins/overview).  Facilities are roughly a "control stack" with machinery like:
+
+* `peek`/`goto`/`call`
+* `return`/`yield`/`fork`, 
+* a reflective environment, 
+* backtraces, reusable coroutines 
+
+See also the [VM module docs]({{mkdocs.site_relative_url}}/plugins/cmk-virtual-machine) for the operator table and worked push / goto / call-return / coroutine / generator examples.
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+    addImageToHeader('runtime','/{{mkdocs.config.site_name}}/img/makefile.png',style="height:2.2em;")
+}, 100);});
+</script>
+
+[^1]: {{ tufte.wiki('CEK_Machine')|trim }}

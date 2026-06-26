@@ -18,9 +18,16 @@ pip install "git+https://github.com/robot-wranglers/compose.mk.git@<ref>#subdire
 compose.mk flux.ok                 # tool mode
 compose.mk mk.interpret! foo.cmk   # run a .cmk anywhere (CMK_SUPERVISOR=1)
 
-cmk flux.ok                        # `cmk` is a short alias for `compose.mk`
-cmk mk.interpret! foo.cmk          # (a tiny wrapper that execs `compose.mk`)
+# `cmk` is the short CMK-language frontend -- exactly `compose.mk cmk`
+# (the run | repl | build | compile | doc | cli dispatcher):
+cmk foo.cmk                        # == `cmk run foo.cmk` (like `python foo.py`)
+cmk run foo.cmk extra.target       # compile + run, passing extra make targets
+cmk repl [foo.cmk]                 # interactive REPL over a program's namespace
+cmk build foo.cmk                  # package a .cmk into a self-extracting binary
 ```
+
+`cmk` is **not** a generic alias for the whole tool -- for core tool-mode
+targets (`flux.ok`, `mk.interpret!`, ...) call `compose.mk` directly.
 
 In a project Makefile (library mode):
 
@@ -29,6 +36,26 @@ _cmk := $(shell which compose.mk)
 $(if $(_cmk),,$(error compose.mk not on PATH))
 include $(_cmk)
 ```
+
+## Bundled plugins
+
+The install also ships the stdlib CMK plugins (the repo-root `.cmk/` submodule:
+`tux.repl.cmk`, `polyglot.golang.cmk`, `virtual-machine.cmk`, ...) into
+`<prefix>/share/compose.mk/cmk/`, so plugin-dependent features (`cmk repl`, the
+polyglot bridges) work from any directory. `setup.py` *copies* them in at build
+time (not a symlink) so the sdist/wheel stays self-contained even when the
+submodule isn't checked out at install time.
+
+Plugin-dir precedence used by the `cmk` wrapper:
+
+1. an explicit `CMK_PLUGINS_DIR` (env) — always wins;
+2. a project-local `./.cmk` — a project's own plugins override the bundled set;
+3. the bundled `<prefix>/share/compose.mk/cmk/` — the global fallback.
+
+Note: this fallback is wired into the `cmk` wrapper only; calling the installed
+`compose.mk` *directly* keeps the stock cwd-relative `./.cmk` default. There is
+no plugin *search-path* (resolution is a single dir), so (2) and (3) don't merge
+— a local `./.cmk` shadows the bundled set rather than augmenting it.
 
 ## Notes / limitations
 

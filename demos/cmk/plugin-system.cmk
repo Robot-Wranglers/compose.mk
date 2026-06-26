@@ -1,0 +1,16 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# plugin-system.cmk:
+#   Including PLUGINS, where the file EXTENSION picks the binding:
+#
+#   *.mk   -> verbatim `include` (fast, copy-free) -- plain-make plugins stay simple
+#   *.cmk  -> JIT-compiled (lowered via mk.compile) THEN included -- cmk-lang plugins
+#
+# Both are loaded in ONE `include.plugins` call from a shared `prefix=`.  The
+# `.cmk` plugin is lowered at include time whether this driver is run via `cmk run`
+# (as here) or `make -f` (see the demos/plugin-system.mk mirror).
+#
+# USAGE: ./demos/cmk/plugin-system.cmk
+
+$(call include.plugins, plain.mk hello.cmk prefix=demos/cmk/plugins )
+
+__main__: plugin.plain plugin.hello

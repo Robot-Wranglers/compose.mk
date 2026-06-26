@@ -1,0 +1,97 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+### CMK Virtual Machine
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+!!! note "Non-core"
+    This is the non-core `virtual-machine.cmk` plugin (extracted from the core).  It runs supervised, so it needs a `cmk run` / `mk.interpret` invocation, and it builds on the core [runtime]({{mkdocs.site_relative_url}}/runtime) continuation/trampoline substrate.
+
+The goals **after** the current target on the command line are the *continuation* (what is left to do).
+The `virtual-machine.cmk` plugin exposes that continuation as a small **CEK machine** bound to the live make
+process:
+
+* **C** -- the current goal (the pending goals, read from the command line),
+* **E** -- an environment of bindings,
+* **K** -- a tree of saved `{continuation, environment}` frames.
+
+It is an instance of a generic, source-agnostic `control_stack` algebra, realized over the live make
+process: every transfer re-dispatches **flat** through the supervisor's trampoline, so even an unbounded
+goto-loop runs at constant process depth (no nesting).
+
+```make
+$(call include.plugins, virtual-machine.cmk)
+```
+
+#### Operators
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Use these **inline in a recipe**, where `${@}` is the current target:
+
+| operator | C/E/K | effect |
+| --- | --- | --- |
+| `${__vm__.peek}` / `.rest` / `.depth` | C read | inspect pending goals (top / below-top / count) |
+| `$(call __vm__.push, <g>)` | C xfer | run `<g>` next, then resume (subroutine, implicit return) |
+| `$(call __vm__.drop)` | C xfer | skip the next pending goal |
+| `$(call __vm__.goto, <g>)` | C xfer | tail-jump to `<g>`, keeping the goals after it |
+| `$(call __vm__.replace, <gs>)` | C xfer | replace the whole continuation |
+| `$(call __vm__.getenv, <k>)` / `$(call __vm__.setenv, <k>, <v>)` | E | read / bind one env key |
+| `$(call __vm__.call, <g>)` / `$(call __vm__.return)` | K xfer | call saves `{goal,cont,env}` + jumps; return pops + resumes |
+| `$(call __vm__.yield, <v>)` | K xfer | generator yield: bind `<v>` as `yielded` in the caller env, then return |
+| `$(call __vm__.fork, "<a b>")` | K | record a branching frame and run the branches via `flux.pipeline` |
+| `${make} __vm__.backtrace` | K read | print the full control tree (K frames + live continuation) |
+
+#### Reflective environment
+<hr style="width:100%;border-bottom:3px solid black;">
+
+By default E is explicit (`setenv`/`getenv`).  Opting in to a **reflective** environment makes E
+reflect the live shell env instead, so a goal uses plain `export <var>` and reads it first-class:
+
+```make
+$(call declare.cmk.virtual_machine, exclude=MAKE CMK MFLAGS)   # env minus a machinery baseline
+# (or: prefix=_cmk__  -- an allowlist that captures only that prefix)
+```
+
+With the policy declared, the `ᝏ__vm__.env.load` decorator re-hydrates E at a goal's entry, so the body
+never calls `setenv`/`getenv`.  Reflection is **dormant** (zero cost, nothing created) unless declared.
+
+#### Coroutines
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The companion `coroutines.cmk` plugin packages the common pattern -- a self-re-entering goal that advances
+a `phase` through the reflective env until done -- as a reusable, importable coroutine:
+
+```make
+$(call include.plugins, coroutines.cmk)
+__main__: coroutines.demo
+```
+
+Two knobs let a consumer tune it (e.g. an overlay/TUI): `coroutines.wait` (per-phase `io.wait` pacing)
+and `coroutines.dump_env` (print the persisted reflective env when finished).
+
+Every transfer goes through the [supervisor]({{mkdocs.site_relative_url}}/signals) and re-dispatches
+**flat** through its [trampoline]({{mkdocs.site_relative_url}}/runtime) (the core `mk.trampoline`
+primitive), so even an unbounded `goto`-loop runs at constant process depth -- no nesting:
+
+```bash {.cli_example}
+# the pending goals A,B after `peek` ARE the control stack:
+$ ./demos/call_stack.mk peek A B
+top=A rest=[B] depth=2
+
+# a goto-loop that runs FLAT -- MAKELEVEL is constant, the loop does not nest processes:
+$ ./demos/vm.mk count/3
+count 3 (MAKELEVEL=3)
+count 2 (MAKELEVEL=3)
+count 1 (MAKELEVEL=3)
+count 0 (MAKELEVEL=3)
+done
+```
+
+#### Worked examples
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The source tree ships several demos: `demos/call_stack.mk` (push/goto/call/return), `demos/vm.mk`
+(call/return, ping-pong, generators, fork + backtrace), `demos/cmk/vm-coroutines.cmk` (a reflective
+coroutine), and `demos/cmk/overlay.cmk` (the same coroutine as a live REPL overlay).
+
+<hr style="width:100%;border-bottom:3px solid black;">

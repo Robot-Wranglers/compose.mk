@@ -1,0 +1,15 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# vm-coroutines.cmk: __vm__ coroutines over a REFLECTIVE environment, in CMK-lang.
+#
+# The coroutine is the shared `coroutines.cmk` plugin: it imports virtual-machine.cmk, OPTS IN to the
+# reflective env with an explicit `$(call declare.cmk.virtual_machine, ..)`, and -- via the
+# `ᝏ__vm__.env.load` decorator -- re-hydrates E at entry so the body is plain `export phase=N`
+# + the call-form `cmk.__vm__.goto(..)`, reading `$phase` first-class (no setenv/getenv).
+# This demo just imports it and turns on the done-phase env dump so you can SEE the persisted
+# E (the exclude policy => no prefix, and E reflects ONLY the coroutine's own `export`s).
+#
+# USAGE:  ./demos/cmk/vm-coroutines.cmk
+$(call include.plugins, coroutines.cmk)
+coroutines.dump_env := 1
+
+__main__: coroutines.demo

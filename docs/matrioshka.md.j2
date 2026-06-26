@@ -1,4 +1,4 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 
 ## Matrioshka Automata
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -113,7 +113,7 @@ For an advanced example in service of a more conventional use-case, you might wa
 <hr style="width:100%;border-bottom:3px solid black;">
 
 [^1] via the [esolangs wiki](https://esolangs.org/wiki/Matrioshka_language)
-[^2]: [wiki://Here Document](https://en.wikipedia.org/wiki/Here_document)
+[^2]: {{ tufte.wiki('Here_document')|trim }}
 [^3]: sibling project @ [k8s-tools]({{jinja.vars.k8stools_docs_url}})
 
 <script>

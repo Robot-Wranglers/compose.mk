@@ -89,4 +89,8 @@ docs/README.md
 docs/admon.md docs/advanced-tuis.md docs/api.md docs/argument-parsing.md docs/assertions.md docs/badges.md docs/bonus.md docs/bridge.md docs/but-why.md docs/cli-help.md docs/compiler.md docs/compose.mk.md docs/config.md docs/container-dispatch.md docs/container-support.md docs/contributing.md docs/embedded-tui.md docs/features.md docs/functional.md docs/guis.md docs/index.md docs/io.mktemp.md docs/language.md docs/limitations.md docs/loadf.md docs/logging.md docs/low-config-tuis.md docs/macro-arguments.md docs/matrioshka.md docs/multiple-compose-files.md docs/overview.md docs/quickstart.md docs/raw-docker.md docs/README.md docs/reflection.md docs/selector.md docs/signals.md docs/stages.md docs/standard-lib.md docs/structured-io.md docs/style.md docs/tool-overview.md docs/tui-customization-config.md docs/user-input.md docs/workflow-support.md docs/zero-config-tuis.md
 via/pip/build/
 via/pip/*.egg-info/
+via/pip/dist/
+via/pip/_plugins/
 docs/*.md
+TODO.md
+docs/plugins/*.md

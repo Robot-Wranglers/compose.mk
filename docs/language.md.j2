@@ -1,4 +1,4 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 
 ## Language Overview
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -82,17 +82,17 @@ This example is simplistic, but there are other ways that `compose.mk` can [act 
 ### References
 <hr style="width:100%;border-bottom:3px solid black;">
 
-[^1]: [wiki://Incremental_computing](https://en.wikipedia.org/wiki/Incremental_computing)
-[^2]:  [wiki://Directed_acyclic_graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph)
-[^3]:  [wiki://Tacit_programming](https://en.wikipedia.org/wiki/Tacit_programming)
-[^4]:  [wiki://Reflective_programming](https://en.wikipedia.org/wiki/Reflective_programming)
-[^5]:  [wiki://Extensible_programming](https://en.wikipedia.org/wiki/Extensible_programming)
-[^6]:  [wiki://Functional_programming](https://en.wikipedia.org/wiki/Functional_programming)
-[^7]:  [wiki://Dataflow_programming](https://en.wikipedia.org/wiki/Dataflow_programming)
-[^8]:  [wiki://Concatenative_programming_language](https://en.wikipedia.org/wiki/Concatenative_programming_language)
-[^9]:  [wiki://Stack-oriented_programming](https://en.wikipedia.org/wiki/Stack-oriented_programming)
-[^10]: [wiki://Aspect-oriented_programming](https://en.wikipedia.org/wiki/Aspect-oriented_programming)
-[^11]: [wiki://Smalltalk/Image-based_persistence](https://en.wikipedia.org/wiki/Smalltalk#Image-based_persistence)
+[^1]: {{ tufte.wiki('Incremental_computing')|trim }}
+[^2]:  {{ tufte.wiki('Directed_acyclic_graph')|trim }}
+[^3]:  {{ tufte.wiki('Tacit_programming')|trim }}
+[^4]:  {{ tufte.wiki('Reflective_programming')|trim }}
+[^5]:  {{ tufte.wiki('Extensible_programming')|trim }}
+[^6]:  {{ tufte.wiki('Functional_programming')|trim }}
+[^7]:  {{ tufte.wiki('Dataflow_programming')|trim }}
+[^8]:  {{ tufte.wiki('Concatenative_programming_language')|trim }}
+[^9]:  {{ tufte.wiki('Stack-oriented_programming')|trim }}
+[^10]: {{ tufte.wiki('Aspect-oriented_programming')|trim }}
+[^11]: {{ tufte.wiki('Smalltalk#Image-based_persistence')|trim }}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

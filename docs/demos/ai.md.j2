@@ -1,4 +1,4 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 
 ## Obligatory AI Things
 <hr style="width:100%;border-bottom:3px solid black;">
@@ -323,7 +323,7 @@ You can download the agent [here]({{mkdocs.site_relative_url}}/artifacts/docs.ag
 [^2]: [langchain intro](https://python.langchain.com/docs/introduction/)
 [^3]: See the compose file for hints about enabling GPUs
 [^4]: See [https://github.com/Mozilla-Ocho/llamafile](https://github.com/Mozilla-Ocho/llamafile), and the [RAG demo](https://github.com/Mozilla-Ocho/llamafile-rag-example)
-[^5]: [wiki://bekenstein-bound](https://en.wikipedia.org/wiki/Bekenstein_bound)
+[^5]: {{ tufte.wiki('Bekenstein_bound')|trim }}
 [^6]: [https://frinklang.org/](https://frinklang.org/)
 [^7]: Was gonna check the work but I'm a concept guy, please invest in our new advanced data storage/snack company.  Extensive research suggests that we do need spherical bananas, but we feel we are close to a breakthrough.
 

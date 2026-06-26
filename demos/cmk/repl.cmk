@@ -1,0 +1,21 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# cmk_pragma ::: { "repl": true } :::
+#
+# repl.cmk: a bare REPL via REPL-as-execution-mode -- the `repl` pragma above is the WHOLE wiring.
+#
+#   `cmk run` sees the pragma and launches the interactive harness over THIS file's target namespace
+#   instead of running once: NO tux.repl import, NO host_only, NO __main__ boilerplate (contrast the
+#   old macro form).  The runtime owns the harness; the file owns only its targets.  Type a target name
+#   (a demo.* below, or any core target like `flux.ok`, `io.time.wait/2`) and it runs; ctrl-d exits.
+#   The default eval is the generic core dispatcher `mk.repl.kernel` (python -i / irb, for a .cmk).
+#
+#   USAGE:  ./demos/cmk/repl.cmk            # launches the REPL (needs a terminal)
+#           ./compose.mk cmk repl <file>    # the same harness over ANY program, pragma or not
+
+# The program's own targets (the whole core namespace -- flux.*, io.*, ... -- is available too).  Note
+# there is NO repl machinery here: no tux.repl import, no host_only, no launcher.  __main__ is the normal
+# non-interactive entrypoint; the `repl` pragma makes the interactive REPL the DEFAULT action for a bare
+# `cmk run`, while any explicit target (including `__main__`) bypasses the mode and just runs.
+__main__: demo.hello
+demo.hello:; cmk.log.target(hello from the repl demo)
+demo.wait: io.time.wait/1

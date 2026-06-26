@@ -64,9 +64,15 @@ greet:; $(call cli.subcommands.enter, default=hello)
 <hr style="width:95%;border-bottom:1px dashed black;">
 
 A complete `greet` CLI, with two non-parametric subcommands (`world`, `me`) and one
-parametric (`hello`):
+parametric (`hello`).  It is shown as **twins** -- the same CLI as a plain `Makefile` and as a
+[CMK-lang]({{mkdocs.site_relative_url}}/compiler) program (toggle the tabs):
 
-{{site.embed_demo('demos/subcommands.mk', github=github, bottom_right=site.link_mirror('demos/cmk/subcommands.cmk'))}}
+{{site.embed_mirror('demos/subcommands.mk', 'demos/cmk/subcommands.cmk', github=github, default='left')}}
+
+!!! note "CMK-lang form"
+    Toggle the **CMK-lang** tab above to see the same CLI in [CMK-lang]({{mkdocs.site_relative_url}}/compiler):
+    the entrypoint becomes a **decorator** -- `ᝏsubcommands` on the line above the target, instead of the
+    `$(call cli.subcommands.enter ..)` recipe.  Keyword arguments are identical (e.g. `ᝏsubcommands(default=hello)`).
 
 Using it:
 
@@ -109,12 +115,3 @@ greet // USAGE: greet <subcommand> [args..]
   ├┈me
   ╰┈hello <arg> [args..]
 ```
-
-### CMK-lang Equivalent
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-In [CMK-lang]({{mkdocs.site_relative_url}}/compiler), the entrypoint can be written as a
-**decorator** (`ᝏsubcommands` on the line above the target) instead of a `$(call ..)`
-recipe.  Keyword arguments are the same (e.g. `ᝏsubcommands(default=hello)`).
-
-{{site.embed_demo('demos/cmk/subcommands.cmk', type='cmk', github=github, bottom_right=site.link_mirror('demos/subcommands.mk'))}}

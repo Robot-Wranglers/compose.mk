@@ -1,0 +1,43 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# cmk_pragma ::: { "repl": { "eval": "overlay.eval", "print": "overlay.print", "exit_after": 1 } } :::
+# overlay.cmk: the __vm__ control-stack overlay, via REPL-as-execution-mode (the object `repl` pragma).
+#
+#   The pragma above selects the 3-region tux.repl harness and wires its regions to THIS file's targets:
+#     * print = overlay.print (= coroutines.demo) -- the reflective __vm__ coroutine, streamed up top.
+#     * read  = (DEFAULTED) the core `mk.repl.modeline` -- the diagnostic + __vm__ stack-summary
+#               mode-line.  No `read=` in the pragma: this file inherits the runtime default, which
+#               folds in (and generalizes) what the old demo-local `overlay.read` did.
+#     * eval  = overlay.eval -- reads target-names typed into the REPL and dispatches each; output
+#               streams back into the panel (read-eval-PRINT).  exit_after=1 -> the overlay shuts down
+#               gracefully once coroutines.demo (the print stream) finishes.
+#   Contrast the old macro form: NO tux.repl import, NO host_only, NO declare/launcher target -- the
+#   RUNTIME owns the harness, this file owns only its targets.  `cmk run` with no target launches it;
+#   an explicit target (e.g. `overlay.cmk coroutines.demo`) bypasses the mode and just runs that target.
+#
+#   The coroutine itself is no longer inlined here: it is the shared `coroutines.cmk` plugin (a
+#   REFLECTIVE __vm__ coroutine, built on virtual-machine.cmk).  This overlay just imports it and sets the
+#   pacing knob (`coroutines.wait := 1`) so each phase lingers (io.wait/1) for the live overlay.
+#   CAVEAT: overlay.read globs the cwd state files (.tmp.CONTROL_STACK_FRAMES.* / .tmp.cmk.vmenv.*),
+#   which works because coroutines.demo (print) is the SOLE producer of __vm__ frames.
+#
+#   ./demos/cmk/overlay.cmk                  # the REPL overlay (needs a tty; auto-builds the wrapper once)
+#   ./demos/cmk/overlay.cmk coroutines.demo  # just runs the coroutine inline (no TUI)
+
+# The shared coroutine plugin (which transitively imports virtual-machine.cmk + declares the reflective env).
+# Imported in BOTH host and the harness children (the eval child dispatches coroutines.demo), so NOT
+# host_only.  `coroutines.wait := 1` -> each phase waits a second, pacing the live overlay.
+$(call include.plugins, coroutines.cmk)
+coroutines.wait := 1
+
+__main__: coroutines.demo
+
+# ── the three tux.repl region targets ────────────────────────────────────────
+# print: the program whose stdout/stderr fill the scrolling panel.
+overlay.print: coroutines.demo
+
+# eval: a stdin sink; each line (one word = a target name) is dispatched as a fresh supervised run
+# of THIS file (${__interpreting__}), so its output streams back to the panel.  Fresh process per
+# word avoids the nested-cmk-run deadlock.  `trap : INT` keeps the read-loop alive when the wrapper
+# sends ctrl-c (SIGINT) to this process group: the current dispatch dies, the loop reads the next.
+overlay.eval:
+    trap ':' INT ; while IFS= read -r w; do [ -z "$$w" ] && continue ; ${__interpreting__} "$$w" 2>&1 | grep -avE '✱|flux[.]timer|cmk run|deduplicated|__main__|minify decorators|blockref triplequote' || true ; printf '\036\n' ; done

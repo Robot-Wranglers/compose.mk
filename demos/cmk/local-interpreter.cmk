@@ -1,0 +1,23 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# local-interpreter.cmk:
+#   CMK-lang port of demos/local-interpreter.mk -- make-targets in foreign
+#   languages, WITHOUT a container.  Same idea, idiomatic CMK: the script is a
+#   `🞹 ..code.. 🞹` polyglot code-block (instead of a `define`), then dispatched
+#   to a LOCAL interpreter with `polyglot.dispatch/<interpreter>,<block>`.
+#
+# USAGE: ./demos/cmk/local-interpreter.cmk
+
+# Look, here's a simple python program, as a code-block:
+🞹 script.py
+import sys
+print('python world')
+print('dollar signs are safe: $')
+🞹
+
+# Minimal boilerplate to run the block, using a specific interpreter (python3).
+# No container here, so this requires that the interpreter is actually available.
+__main__: polyglot.dispatch/python3,script.py
+
+# Multiple mappings for script/interpreter can co-exist, and using a more
+# specific interpreter is just mentioning it.
+demo.python39: polyglot.dispatch/python3.9,script.py

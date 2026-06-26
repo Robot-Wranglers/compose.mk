@@ -14,23 +14,58 @@
 ```
 </details>{{macros.code_table_bottom(fname, bottom_middle=bottom_middle,bottom_right=bottom_right, title=title, link_prefix=link_prefix, type=type, github=github, class=class)}}<a id="{{link_prefix}}_bottom"></a><br/>{%- endmacro -%}
 
+{# embed_mirror: like `embed_demo`, but for a TWIN pair -- e.g. a plain `Makefile` and
+   its `CMK-lang` equivalent.  Instead of embedding one and LINKING to the other (the
+   `embed_demo(..., bottom_right=link_mirror(..))` pattern), it embeds BOTH in a single
+   widget with a CSS-only tab toggle; `default` ('left'|'right', or 'cmk'|'mk') picks the
+   pane shown first.  Styling/markup contract lives in `.code_mirror` (compose.mk.css).
+   `left`/`right` are the two file paths (order = tab order). #}
+{% macro embed_mirror(left, right, github={}, default='left', type_left='Makefile', type_right='cmk', class='', see_also='', see_also_text='See also')-%}
+{%- set gid = 'mirror_' + macros.normalize_fname(left) + '__' + macros.normalize_fname(right) -%}
+{%- set label_left = 'CMK-lang' if left.endswith('.cmk') else 'Plain Makefile' -%}
+{%- set label_right = 'CMK-lang' if right.endswith('.cmk') else 'Plain Makefile' -%}
+{%- set right_default = default in ['right', right] or (default == 'cmk' and right.endswith('.cmk')) or (default == 'mk' and right.endswith('.mk')) -%}
+<div class="code_mirror {{class}}" id="{{gid}}">
+<input type="radio" class="mirror_toggle mirror_toggle_L" name="{{gid}}" id="{{gid}}__L"{% if not right_default %} checked{% endif %}>
+<input type="radio" class="mirror_toggle mirror_toggle_R" name="{{gid}}" id="{{gid}}__R"{% if right_default %} checked{% endif %}>
+<div class="mirror_tabs" role="tablist">
+<label class="mirror_tab mirror_tab_L" for="{{gid}}__L" role="tab">{{label_left}}</label>
+<label class="mirror_tab mirror_tab_R" for="{{gid}}__R" role="tab">{{label_right}}</label>
+</div>
+<div class="mirror_pane mirror_pane_L" role="tabpanel">
+{{ embed_demo(left, github=github, type=type_left) | trim }}
+</div>
+<div class="mirror_pane mirror_pane_R" role="tabpanel">
+{{ embed_demo(right, github=github, type=type_right) | trim }}
+</div>
+{%- if see_also %}
+<div class="mirror_see_also">See also: <a href="{{see_also}}">{{see_also_text}}</a></div>
+{%- endif %}
+</div>
+{%- endmacro -%}
+
 
 # API links
 {#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
 
 {% macro api_link(target, mkdocs, arg='',style="") -%}{%set link=target.replace('-','').replace('.','').replace('/','').replace('&lt;','').replace('&gt;','').replace('<','').replace('>','')%}{%if arg%}{%set name=target.replace('/&lt;arg','').replace('&gt;','').replace('/<arg','').replace('>','') + '/&lt;'+arg+'&gt;'%}{%set link=link+'arg' if not link.endswith('arg') else link %}{%else%}{%set name=target%}{%endif%} <a style="{{style}}" href="{{mkdocs.site_relative_url}}/api/#{{link}}" >{{name}}</a>{%- endmacro -%}
 
+{# Related-API widget: a self-contained card linking into the main /api docs.  Instead of
+   a one-row-per-target table (sparse + unwieldy), it reflects the matching targets from
+   compose.mk and renders them as a single WRAPPED, comma-separated list of links, under an
+   `<icon> Related API` header plus a caption naming the filter that generated it.  Styling
+   lives in `.related_api` (compose.mk.css); the markup is kept blank-line-free so
+   python-markdown passes the whole div through as one raw-HTML block. #}
 {% macro api_link_many(target_fam, mkdocs, arg='', exclude='None') -%}
-<div class="docutils api_table">
-<table class="docutils api_docs"><tr><th align=left><strong> <svg  xmlns="http://www.w3.org/2000/svg"  width="20"  height="20"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-map-2"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 18.5l-3 -1.5l-6 3v-13l6 -3l6 3l6 -3v7.5" /><path d="M9 4v13" /><path d="M15 7v5.5" /><path d="M21.121 20.121a3 3 0 1 0 -4.242 0c.418 .419 1.125 1.045 2.121 1.879c1.051 -.89 1.759 -1.516 2.121 -1.879z" /><path d="M19 18v.01" /></svg> Related API</strong></th></tr>
-{%for target_f in target_fam %}
-{% set targets=bash('mk.parse targets compose.mk --names-only --prefix '+target_f) %}
-{%if not targets%}<tr><td><small>No targets found for target-family: `{{target_f}}`</small></td></tr>
-{%else%}
-
-{% set targets=targets.split('\n') %}
-{%for target in targets %} {% set target=target.strip().replace('%','&lt;arg&gt;') %}{%if target and not target.startswith(exclude)%}
-<tr><td>{{api_link(target, mkdocs, arg=arg, style="color=black")}}</td></tr>{%endif%}{%endfor%}{%endif%}{%endfor%}</table></div>
+{%- set ns = namespace(links=[]) -%}
+{%- for target_f in target_fam -%}
+{%- set targets = bash('mk.parse targets compose.mk --names-only --prefix '+target_f) -%}
+{%- if targets -%}{%- for target in targets.split('\n') -%}
+{%- set target = target.strip().replace('%','&lt;arg&gt;') -%}
+{%- if target and not target.startswith(exclude) -%}{%- set _ = ns.links.append(api_link(target, mkdocs, arg=arg)|trim) -%}{%- endif -%}
+{%- endfor -%}{%- endif -%}
+{%- endfor -%}
+<div class="related_api"><div class="related_api_header"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-map-2"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 18.5l-3 -1.5l-6 3v-13l6 -3l6 3l6 -3v7.5" /><path d="M9 4v13" /><path d="M15 7v5.5" /><path d="M21.121 20.121a3 3 0 1 0 -4.242 0c.418 .419 1.125 1.045 2.121 1.879c1.051 -.89 1.759 -1.516 2.121 -1.879z" /><path d="M19 18v.01" /></svg><span>Related API</span></div><div class="related_api_filter">reflected from <code>compose.mk</code> by prefix {% for tf in target_fam %}<code>{{tf}}</code>{{ ", " if not loop.last else "" }}{% endfor %}{% if exclude and exclude != 'None' %} <span class="related_api_excl">(excluding <code>{{exclude}}</code>)</span>{% endif %}</div>{% if ns.links %}<div class="related_api_links">{{ ns.links|join(', ') }}</div>{% else %}<div class="related_api_empty">No targets matched.</div>{% endif %}</div>
 {%- endmacro -%}
 
 # CMK-Specific

@@ -150,6 +150,8 @@
 
 * [structured-io.mk](./structured-io.mk) (19 lines)
 
+* [subcommands-nested.mk](./subcommands-nested.mk) (26 lines)
+
 * [subcommands.mk](./subcommands.mk) (30 lines)
 
 * [tag-system.mk](./tag-system.mk) (39 lines)

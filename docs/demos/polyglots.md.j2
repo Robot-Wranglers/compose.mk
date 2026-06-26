@@ -28,12 +28,14 @@ There are a few ways to express simple polyglots where you want to *assume the i
 
 Use `polyglot.dispatch/<interpreter>,<def_block_name>` for arbitrary interpreters like this:
 
-{{site.embed_demo(
-    'demos/local-interpreter.mk', 
-    bottom_right=site.link_mirror(
-      'demos/cmk/code-objects.cmk',
-      link=mkdocs.site_relative_url+'/compiler/#polyglot-examples'),
-    github=github)}}
+The plain-Makefile form is shown by default; toggle the tab for the **CMK-lang** twin -- a direct port that runs the same script with a local interpreter, using a `🞹 ..code.. 🞹` polyglot code-block instead of a `define`:
+
+{{site.embed_mirror(
+    'demos/local-interpreter.mk',
+    'demos/cmk/local-interpreter.cmk',
+    github=github, default='left',
+    see_also=mkdocs.site_relative_url+'/compiler/#polyglot-examples',
+    see_also_text='the full CMK-lang polyglot idioms')}}
 
 Note that the polyglot execution inherits the environment from `make`, so that passing data with environment variables is pretty easy.  For shell and awk, see also the [section for special guests](#special-guests).
 

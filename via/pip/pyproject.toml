@@ -14,7 +14,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "compose-mk"
-version = "0.0.0"
+# Version is computed at build time by setup.py (`_version()`): the `VERSION` env var if
+# set, else the current git tag (`git describe`), else `0.0.0`.  So `pip install
+# "git+...@v1.2.3#subdirectory=via/pip"` and `VERSION=1.2.3 python -m build` both stamp 1.2.3.
+dynamic = ["version"]
 description = "compose.mk: polyglot Make/bash automation lib + CMK language, installed on PATH"
 requires-python = ">=3.8"
 

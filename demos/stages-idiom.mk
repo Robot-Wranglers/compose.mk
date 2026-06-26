@@ -8,7 +8,8 @@
 # USAGE: ./demos/stages-idiom.mk
 
 include compose.mk
-.DEFAULT_GOAL := validate
+
+__main__: validate
 
 # Wrap targets with entry/exit as an explicit context-manager
 validate: \
@@ -18,7 +19,7 @@ validate: \
 	flux.stage.exit/VALIDATION
 
 project.scan:
-	echo '["results"]' | ./compose.mk flux.stage.push/VALIDATION
+	echo '["results"]' | ${flux.stage.push}/VALIDATION
 
 project.analyze:
-	echo '["other results"]' | ./compose.mk flux.stage.push/VALIDATION
+	echo '["other results"]' | ${flux.stage.push}/VALIDATION

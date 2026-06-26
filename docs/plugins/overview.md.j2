@@ -1,0 +1,107 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+### Plugin System
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Since [forever-development is considered harmful]({{mkdocs.site_relative_url}}/but-why#forever-development-considered-harmful), the plugin-system for `compose.mk` is based around a simple idea.
+
+> A flexible "core" system + modules is the right design for most things.  
+
+In fact, the plugin-system *is* a sophisticated approach to module-management.  
+
+* *The simple case:* nothing is very different from vanilla Makefile `include`, and this is just a way to divide up behaviour.  
+
+* *The more interesting case:* plugins / modules can use **just-in-time compilation**, so that components which are *written in [CMK-lang]({{mkdocs.site_relative_url}}/compiler)* can be used (*=imported*) into classic Makefiles.
+
+
+Especially thanks to JIT compilation, the difference between modules vs plugins or user-defined vs "official" plugins is just a matter of terminology.  A good rule of thumb is that:
+
+**Plugins inject content into existing namespaces.**  See for example the [repl plugin]({{mkdocs.site_relative_url}}/zero-config-tuis), which depends on other plugins, but ultimately extends the [TUI capabilities]({{mkdocs.site_relative_url}}/embedded-tui) and the [`tux.*` namespace]({{mkdocs.site_relative_url}}/api/#api-tux).
+
+**Modules create new namespaces.** See for example the [CMK VM plugin]({{mkdocs.site_relative_url}}/plugins/cmk-virtual-machine).
+
+**Official Plugins** are tracked in an external repo[^1], but also exist as a git submodule in the [core repo]({{github.repo_url}}).  Important official plugins are also tested by the main test-suite.
+
+**User-defined Plugins** are defined somewhere on the [plugins search path](#where-plugins-are-found).
+
+### Plugin API & Usage
+
+{{site.api_link('include.plugins', mkdocs)}} macro.  
+
+
+```make
+# in a Makefile or a .cmk program
+$(call include.plugins, virtual-machine.cmk)
+$(call include.plugins, polyglot.golang.cmk coroutines.cmk)
+```
+
+#### How plugins bind
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The file **extension** decides how a plugin binds:
+
+| Extension | Binds by | Notes |
+| --- | --- | --- |
+| `*.mk` | verbatim `include` (fast, copy-free) | pure-make plugins stay simple |
+| `*.cmk` (and `.cmk.mk`/`.CMK`) | JIT-compiled (lowered) then included | a CMK-lang plugin, transpiled at include time |
+
+`strict=1` (the default) errors on a missing plugin; `strict=0` logs and continues, which is handy
+for conditional features:
+
+```make
+$(call include.plugins, optional.cmk strict=0)
+```
+
+#### Where plugins are found
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Plugins resolve from [`CMK_PLUGINS_DIR`]({{mkdocs.site_relative_url}}/config#general-environment-variables),
+a **`:`-separated search path** (like `$PATH`) whose default
+is the project-local `.cmk` directory.  Each element is tried in order and the first match wins, so a
+project-local `.cmk` can override or extend a globally-installed set of plugins.  The **first** element
+is also the single writable staging dir ([`CMK_MODULES_DIR`]({{mkdocs.site_relative_url}}/config#general-environment-variables)) and stays working-directory-relative, so
+plugins remain visible under [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch)
+(which bind-mounts the working directory).  An absolute path may be passed explicitly:
+
+```make
+$(call include.plugins, prefix=path/to/plugins plain.mk hello.cmk)
+```
+
+The demo below loads a `.mk` and a `.cmk` plugin from one `prefix=` in a single call -- the `.mk` is
+`include`d verbatim, the `.cmk` is lowered first.  It is shown as **twins**: the same program as a
+CMK-lang driver and as a plain-`make` mirror (toggle the tabs).
+
+{{site.embed_mirror('demos/cmk/plugin-system.cmk', 'demos/plugin-system.mk', github=github, default='left')}}
+
+#### Idempotent loading
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The import family keeps registries of what has loaded (`__plugins__` / `__modules__`), both **exported**
+so a re-parsing child process inherits "what the parent already loaded".  Use `require` for an
+idempotent, child-safe import (it skips a plugin already in the registry), and `assert` as a dependency
+guard:
+
+```make
+$(call __plugins__.require, virtual-machine.cmk)   # import once; a no-op if already loaded
+$(call __plugins__.assert, virtual-machine.cmk)    # error unless it is loaded
+```
+
+### Plugin Index
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The plugins that ship under `.cmk/` are indexed below, generated directly from each plugin's
+header.  Recall from [How plugins bind](#how-plugins-bind) that a `.cmk` plugin is JIT-compiled
+at include-time while a `.mk` plugin is `include`d verbatim.  Each is also described in the
+[`.cmk` repo's README](https://github.com/robot-wranglers/.cmk/blob/main/README.md).
+
+{% set _pages = {'virtual-machine.cmk': 'plugins/cmk-virtual-machine', 'polyglot.golang.cmk': 'plugins/golang', 'tux.repl.cmk': 'zero-config-tuis'} %}
+{% set _idx = bash('for p in $(ls .cmk/*.mk .cmk/*.cmk 2>/dev/null | sort); do f=${p##*/}; [ "$f" = compose.mk ] && continue; desc=$(awk -v f="$f" \'BEGIN{re="^#+ *" f ":"} function emit(s){sub(/^ +/,"",s);sub(/ +$/,"",s);p=index(s,". ");if(p>0)s=substr(s,1,p);print s;done=1;exit} !s && $0~re{s=1;sub(re" *","");acc=$0;if(acc~/[.]( |$)/)emit(acc);next} s{if($0!~/^#/)emit(acc);l=$0;sub(/^#+ */,"",l);if(l~/^[░#]*$/)next;acc=(acc==""?l:acc" " l);if(acc~/[.]( |$)/)emit(acc)} END{if(!done&&s)emit(acc)}\' "$p"); echo "$f|$desc"; done') %}
+| Plugin | Binds | Description |
+| --- | --- | --- |
+{% for row in _idx.strip().split('\n') %}{% set _p = row.split('|') %}{% set _name = _p[0] %}{% set _desc = (_p[1] if _p|length > 1 else '')|trim %}{% set _bind = 'JIT (`.cmk`)' if _name.endswith('.cmk') else 'include (`.mk`)' %}| {% if _name in _pages %}[`{{_name}}`]({{mkdocs.site_relative_url}}/{{_pages[_name]}}){% else %}`{{_name}}`{% endif %} | {{_bind}} | {{_desc}} |
+{% endfor %}
+
+<hr style="width:100%;border-bottom:3px solid black;">
+
+[^1]: The official plugins live in their own repository at <https://github.com/robot-wranglers/.cmk>, vendored here as the `.cmk` git submodule.

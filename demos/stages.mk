@@ -1,51 +1,36 @@
 #!/usr/bin/env -S make -f
 # stages.mk:
-#   Stages, stacks, and artifact-related features of compose.mk
+#   A worked example of stages & stacks in compose.mk -- naming a stage, pushing
+#   and reading JSON, popping a value back off, and cleaning up on exit.  A stage is
+#   just a file-backed JSON stack (`.flux.stage.<name>`), handy for passing structured
+#   values between targets or across the steps of a pipeline.
 #
-# See the docs for more discussion: https://robot-wranglers.github.io/compose.mk/stages
+#   See the docs for more discussion: https://robot-wranglers.github.io/compose.mk/stages
+#
 # USAGE: ./demos/stages.mk
 
 include compose.mk
 
-# disable gum usage by overriding the default target for printing banners
+# Draw banners with the plain built-in instead of the (dockerized) gum default.
 export banner_target?=io.print.banner
 
-__main__: flux.star/test.stage
+__main__: demo.stage
 
-test.stage.basic:
-	@# Note that ${@} is shorthand for "current target name"-- 
-	@# we use that for the stage name everywhere
-	$(call log.test, declare a stage & get stage name back)
-	./compose.mk flux.stage/${@} flux.stage 
+# `${@}` is shorthand for "the current target name".  Using it as the stage name is a
+# tidy convention -- a family of targets that share a name-prefix then share one stack.
+demo.stage:
+	$(call log.io, ${@} ${sep} a fresh stage can report its own name)
+	${flux.stage.enter}/${@} flux.stage
 
-	$(call log.test, stage stack should exist still with legal JSON if not explicitly exited)
-	ls .flux.stage.${@} && cat .flux.stage.${@} | ${jq} -e .
-	
-	$(call log.test, exiting the stage removes the stack file)
-	${make} flux.stage.exit/${@}
-	! ls .flux.stage.${@} 2>/dev/null
-	
-	$(call log.test, using a stage by pushing data causes stack to exist)
-	${jb} one=1 | ./compose.mk flux.stage.push/${@} 
-	ls .flux.stage.${@} 2>/dev/null
-	${jb} two=2 | ./compose.mk flux.stage.push/${@} 
-	
-	$(call log.test, getting the whole stack is possible and returns JSON)
-	./compose.mk flux.stage.stack/${@} | ${jq} -e .
-	${make} flux.stage.exit/${@}
-	
-	$(call log.test, testing popping JSON data off the stack)
-	${jb} foo=bar | ./compose.mk flux.stage.push/${@} 
-	./compose.mk flux.stage.stack/${@} | ${jq} .
-	./compose.mk flux.stage.pop/${@} | ${stream.peek} | ${jq} -e -r .foo
-	
-	${make} flux.stage.exit/${@}
+	$(call log.io, ${@} ${sep} push two JSON objects onto the stage stack)
+	${jb} one=1 | ${flux.stage.push}/${@}
+	${jb} two=2 | ${flux.stage.push}/${@}
 
-test.stage.empty:
-	$(call log.test, popping an empty stack is also allowed)
-	./compose.mk flux.stage.pop/${@}
-	./compose.mk flux.stage.pop/${@}
-	./compose.mk flux.stage.pop/${@}
-	./compose.mk flux.stage.pop/${@}
-	${make} flux.stage.exit/${@}
-	./compose.mk flux.stage.pop/${@}
+	$(call log.io, ${@} ${sep} read the whole stack back as JSON)
+	${flux.stage.stack}/${@} | ${jq} .
+
+	$(call log.io, ${@} ${sep} pop the top value off (LIFO) and pull a field from it)
+	${flux.stage.pop}/${@} | ${jq} -r .two
+
+	$(call log.io, ${@} ${sep} exit the stage to clean up its stack file)
+	${flux.stage.exit}/${@}

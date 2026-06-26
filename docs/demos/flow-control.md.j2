@@ -1,0 +1,69 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+## Flow Control
+<hr style="width:100%;border-bottom:3px solid black;">
+
+Because CMK is [homoiconic on targets]({{mkdocs.site_relative_url}}/language/#homoiconic) -- "everything is a target" -- exotic flow control rarely needs new syntax.  Instead a handful of reusable [standard-library]({{mkdocs.site_relative_url}}/standard-lib) and [module]({{mkdocs.site_relative_url}}/modules) primitives compose into event loops, search loops, typed exceptions, and coroutines.
+
+This page is a **high-level tour** of several flavors.  Each is a small, self-contained CMK program, and the embedded source is the source of truth -- so the prose here stays conceptual and the code is free to evolve.  Read the demo for the specifics; read the remarks for how the pieces fit together.
+
+A few building blocks recur:
+
+* **Targets as the universal unit.**  Dispatch is just `make`'s own rule lookup -- a tag is "handled" if and only if a target by that name exists, so there is no registry to maintain.  The same idea underlies dead-letter routing and [typed exceptions]({{mkdocs.site_relative_url}}/standard-lib).
+* **Events & channels.**  The [Events stdlib]({{mkdocs.site_relative_url}}/stages/#events) (`declare.channel`) turns a name into a first-class event-stack plus a family of code-generated `emit` / `filter` / `dispatch` operators -- the substrate for message-passing flow.
+* **The `__vm__` control stack.**  The [CMK Virtual Machine]({{mkdocs.site_relative_url}}/plugins/cmk-virtual-machine) module exposes the live continuation as a control stack with `call` / `return` / `yield` / `fork` over saved frames -- the substrate for coroutines.
+
+These pieces are intentionally decoupled; the walkthroughs below use them independently and in combination.
+
+### An Event Loop
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+!!! tip "Tip"
+    This one ties together [polyglots]({{mkdocs.site_relative_url}}/demos/polyglots), [block-references]({{mkdocs.site_relative_url}}/compiler/#block-references), and [call-forms]({{mkdocs.site_relative_url}}/compiler/#call-forms).
+
+A tiny event-driven system: a *generator*, a *router*, a *dispatcher*, and one handler per event-tag -- several written in different languages, each just a contract on stdin/stdout.  Routing needs no registry: an unrecognized tag simply falls through to a dead-letter target.
+
+```bash {.cli_example}
+$ ./demos/cmk/event-loop.cmk          # run the loop (5 ticks)
+$ ./demos/cmk/event-loop.cmk driver   # a single tick
+```
+
+{{site.embed_demo('demos/cmk/event-loop.cmk', type='cmk', github=github)}}
+
+### Events & Channels
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+The event-loop above hand-wires its routing; the **Events stdlib** packages that pattern.  Declaring a name a channel makes it a first-class [receiver]({{mkdocs.site_relative_url}}/compiler/#receiver-form) whose operators are called anchorless, so seeding and filtering a stream of events reads like method calls.  The same core backs the search loop and the typed exceptions below.
+
+```bash {.cli_example}
+$ ./demos/cmk/events.cmk
+```
+
+{{site.embed_demo('demos/cmk/events.cmk', type='cmk', github=github)}}
+
+### A Multi-Exit Search Loop
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+[Zahn's construct](https://en.wikipedia.org/wiki/Control_flow#Loops_with_multiple_exit_points) is a loop with several *named exits* that drive what happens next.  Built on the event system, it scans candidate events, takes the first match, emits a typed outcome (`found` / `exhausted`), and dispatches -- the exit selects the continuation (recover vs. commit).
+
+```bash {.cli_example}
+$ ./demos/cmk/zahn.cmk
+```
+
+{{site.embed_demo('demos/cmk/zahn.cmk', type='cmk', github=github)}}
+
+### Coroutines
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Where the pieces above pass *messages*, coroutines suspend and resume *execution*.  This walkthrough builds resumable coroutines on the `__vm__` control stack: the reusable coroutines plugin opts into a reflective environment so a suspended coroutine's bindings persist across re-entry, and the body advances itself with a `goto` call-form.
+
+```bash {.cli_example}
+$ ./demos/cmk/vm-coroutines.cmk
+```
+
+{{site.embed_demo('demos/cmk/vm-coroutines.cmk', type='cmk', github=github)}}
+
+### Going Further
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+The standard library's `mk.yield` is a one-shot escape continuation.  For the general case -- a resumable, multi-shot, nestable yield built in user-space on a trampoline (of which `mk.yield` is the degenerate single-frame case) -- see {{macros.repo_link('demos/cmk/flow_control.cmk', name='flow_control.cmk', github=github)}}.  And for deferred, typed exceptions (the same named-exit dispatch as Zahn, but resolved later), see {{macros.repo_link('demos/cmk/exceptions.cmk', name='exceptions.cmk', github=github)}}.

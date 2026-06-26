@@ -1,0 +1,96 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+## CLI Overview
+<hr style="width:100%;border-bottom:3px solid black;">
+
+In [stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview) every make-target doubles as a
+CLI entrypoint, so most of `compose.mk` is *already* a command-line interface.  On top of that bare
+target-dispatch, two **subcommands** package the higher-level workflows:
+
+* [**`cmk`**](#the-cmk-subcommand) -- the public front-end for CMK programs (compile / run / package / REPL).
+* [**`cli`**](#the-cli-subcommand) -- shell integration, i.e. bash/zsh **tab-completion** for your targets.
+
+Both are built on the same reusable [subcommand engine]({{mkdocs.site_relative_url}}/subcommands), so
+they share the usage/help conventions described there (bare invocation, `help`, `-h`, and `--help` all
+print generated usage).
+
+### The `cmk` subcommand
+<hr style="width:100%;border-bottom:3px solid black;">
+
+`cmk` is the canonical entrypoint for working with [CMK-lang]({{mkdocs.site_relative_url}}/compiler)
+programs.  It is a thin client over the compiler internals, exposing these subcommands:
+
+| Command | What it does |
+| --- | --- |
+| `cmk run <file> [target..]` | Compile then execute (the program self-supervises).  This is the **default**, so `cmk <file>` is shorthand for `cmk run <file>`. |
+| `cmk compile <file> [out]` | [Transpile]({{mkdocs.site_relative_url}}/compiler/#compilation-vs-transpilation) to a Makefile.  With no `out`, previews highlighted source to a terminal; with `out`, emits a **self-contained**, directly-runnable program (embedded stdlib). |
+| `cmk build <file> [bin]` | Package a `.cmk` into a [self-extracting executable]({{mkdocs.site_relative_url}}/demos/packaging). |
+| `cmk repl [<file>]` | Open an interactive [REPL]({{mkdocs.site_relative_url}}/zero-config-tuis) over a program's target namespace (or, with no file, a simple shell over the core namespace). |
+| `cmk doc <file>` | Add a mode-matching shebang (if missing), `chmod +x`, and compile-check the file. |
+| `cmk cli <sub>` | Shell integration -- see [below](#the-cli-subcommand). |
+
+The most common forms, and the ones used throughout the [compiler tutorial]({{mkdocs.site_relative_url}}/compiler/#running-demos):
+
+```bash {.cli_example}
+# Run a program directly via its shebang (`#!/usr/bin/env -S ./compose.mk cmk run`)
+$ ./demos/cmk/example.cmk
+
+# Run it explicitly (`cmk <file>` == `cmk run <file>`)
+$ ./compose.mk cmk run ./demos/cmk/example.cmk
+
+# Compile-only: highlighted preview to a terminal..
+$ ./compose.mk cmk compile ./demos/cmk/example.cmk
+# ..or pass an output path for a stand-alone, embedded-stdlib program
+$ ./compose.mk cmk compile ./demos/cmk/example.cmk example && ./example
+```
+
+!!! note "Run vs REPL"
+    A program that opts into [REPL-as-execution-mode]({{mkdocs.site_relative_url}}/zero-config-tuis) (via the
+    `repl` pragma) launches the interactive harness when run with no target args; passing an explicit target
+    bypasses it (like `python script.py` vs bare `python`).  `cmk repl <file>` forces the mode for any program.
+
+### The `cli` subcommand
+<hr style="width:100%;border-bottom:3px solid black;">
+
+The `cli` subcommand group (reached as `cmk cli`) handles **shell integration** -- chiefly
+bash/zsh tab-completion for target names.  Completion is a fast, static scan of the file's public
+targets (define/endef-aware), so typing part of a target name and pressing `<Tab>` offers the
+matching completions.
+
+| Command | What it does |
+| --- | --- |
+| `cmk cli complete [file]` | Emit a self-contained bash completion script to stdout (you `eval` it). |
+| `cmk cli init [file]` | Install that script into the user's bash-completion dir (persistent; no shell-rc edits). |
+| `cmk cli targets [file]` | Debug primitive: print the public target base-names a scan finds. |
+
+#### Enabling completion
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+For the **current shell**, `eval` the generated script (registers `compose.mk`, `./compose.mk`, and `cmk`):
+
+```bash {.cli_example}
+$ eval "$(./compose.mk cmk cli complete)"
+$ ./compose.mk mk.<Tab><Tab>      # now offers mk.* targets
+```
+
+To make it **persistent**, install it once into the XDG bash-completion directory, then reload your shell:
+
+```bash {.cli_example}
+$ ./compose.mk cmk cli init        # writes ~/.local/share/bash-completion/completions/compose.mk
+# undo later with: rm ~/.local/share/bash-completion/completions/compose.mk
+```
+
+Because the `cmk` front-end is inherited by every compiled program, the **same commands work for
+your own `.cmk` programs** -- they register and complete *themselves*:
+
+```bash {.cli_example}
+$ eval "$(./your.cmk cmk cli complete)"   # completion for ./your.cmk's targets
+$ ./your.cmk cmk cli init                 # ..or install it persistently
+```
+
+!!! note "Shell notes"
+    * **zsh:** run `autoload -U +X bashcompinit && bashcompinit` once before `eval`-ing the script.
+    * The scan is **static** -- targets created by `eval` or pulled in via runtime imports are not seen.
+      Completion is a convenience, not an authoritative listing; the [target API]({{mkdocs.site_relative_url}}/api) is.
+
+<hr style="width:100%;border-bottom:3px solid black;">

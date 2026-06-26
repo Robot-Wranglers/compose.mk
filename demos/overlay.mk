@@ -19,7 +19,7 @@
 #   file-backed), so it is not externally reflectable; the panel shows K + E (+ depth + clock).
 include compose.mk
 # The __vm__ plugin (control stack + CEK machine) is no longer in core -- import it.
-$(call include.plugins, __vm__.mk)
+$(call include.plugins, virtual-machine.cmk)
 
 __main__: coro.demo
 

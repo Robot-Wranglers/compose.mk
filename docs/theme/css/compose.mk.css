@@ -2,6 +2,17 @@
  * compose.mk site-specific styles.
  */
 
+/* ---- Content column width ---------------------------------------------------
+ * The RTD theme pins the reading column to `max-width:800px`, which is too narrow
+ * on a typical laptop/desktop (lots of dead margin beside the text).  Widen it,
+ * but keep a bounded, paper-style measure for speed-reading rather than letting
+ * prose stretch edge-to-edge.  `clamp` keeps it at LEAST as wide as before (800px),
+ * grows with the viewport, and CAPS short of width-maximizing (~1080px).  This
+ * sheet loads last (see base.html), so it wins over theme.css. */
+.wy-nav-content {
+  max-width: clamp(800px, 82vw, 1080px);
+}
+
 /* "Quick Reference" cheat-sheet table (docs/compiler.md.j2).
  * Opted out of the global `docutils` class (see js/theme_extra.js) so these
  * rules fully own its look: compact, zebra-striped, and readable. */
@@ -71,32 +82,62 @@ table.quickref a {
  * above those theme_extra rules; this sheet loads last (see base.html), so
  * equal-specificity rules win too. */
 .rst-content table.docutils:not(.api_docs):not(.field-list) {
-  width: 100%; /* fit the content area (like quickref) so wide cells wrap, not overflow */
-  border: 1px solid #e1e4e8;
-  border-collapse: collapse;
+  display: table;
+  width: auto;          /* shrink to content.. */
+  min-width: 50%;       /* ..but at least half the column.. */
+  max-width: 100%;      /* ..never overflowing it (cells still wrap) */
+  margin: 1.6em auto;   /* centered, not flush-left or full-bleed */
+  /* card styling shared with the `.related_api` widget: subtle border + brand-cyan
+   * left accent, rounded corners (needs separate borders + overflow clip), faint shadow */
+  border: 1px solid #d6dbe0;
+  border-left: 4px solid #0db7ed;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 6px;
+  overflow: hidden;
   background: #ffffff;
-  font-size: 0.85rem;
-  line-height: 1.45;
+  box-shadow: 0 1px 2px rgba(27, 31, 35, 0.04);
+  font-size: 0.95rem;   /* larger than the old 0.85rem */
+  line-height: 1.5;
 }
 /* let long, comma-separated chip lists wrap inside their cell instead of
  * pushing the column past the page width */
 .rst-content table.docutils:not(.api_docs):not(.field-list) td,
 .rst-content table.docutils:not(.api_docs):not(.field-list) th {
+  white-space: normal;
   overflow-wrap: anywhere;
+  word-break: break-word;
+}
+/* inline code in these tables (e.g. command synopses like `cmk run <file> [target..]`)
+ * must wrap and stay INSIDE the cell.  The base theme pins `.rst-content code` to
+ * `white-space:nowrap` + `overflow-x:auto`, so a code-heavy column refuses to shrink
+ * and overflows the cell/table.  `white-space:normal` wraps at spaces; `overflow-wrap:
+ * anywhere`/`word-break:break-word` also shrink the cell's min-content width so an
+ * auto-layout table actually fits; `overflow-x:visible` kills the base's scroll-box. */
+.rst-content table.docutils:not(.api_docs):not(.field-list) td code,
+.rst-content table.docutils:not(.api_docs):not(.field-list) th code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  overflow-x: visible;
+  max-width: 100%;
 }
 .rst-content table.docutils:not(.api_docs):not(.field-list) tr,
 .rst-content table.docutils:not(.api_docs):not(.field-list) td,
 .rst-content table.docutils:not(.api_docs):not(.field-list) th {
   border: none;
   margin: 0;
-  padding: 0.4em 0.75em;
+  padding: 0.5em 0.9em;
   text-align: left;
   vertical-align: top;
   font-weight: normal;
   background-color: transparent;
 }
+/* titled header row: bold, a touch larger, with a faint header fill + underline */
 .rst-content table.docutils:not(.api_docs):not(.field-list) thead th {
   font-weight: 700;
+  font-size: 1rem;
+  background-color: #f1f4f7;
   border-bottom: 2px solid #b8c0c8;
 }
 /* zebra: odd = white, even = faint tint (override the cyan + grey stripes).
@@ -149,6 +190,57 @@ details div.highlight {
   margin-bottom: 0;
 }
 
+/* code_mirror: a twin-view embed (e.g. a Makefile + its CMK-lang equivalent) with a
+ * CSS-only tab toggle -- both panes are embedded, one is shown at a time.  The two
+ * radios (visually hidden) drive which pane is visible; the labels are the tabs.  The
+ * `:checked ~` rules use the general-sibling combinator, so the radios MUST precede the
+ * tabs and panes in source order.  Emitted by the `embed_mirror` macro (docs/macros/site.j2). */
+.code_mirror {
+  position: relative;
+  margin-bottom: 1em;
+}
+.code_mirror > .mirror_toggle {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.code_mirror .mirror_tabs {
+  display: flex;
+  gap: 4px;
+}
+.code_mirror .mirror_tab {
+  cursor: pointer;
+  user-select: none;
+  padding: 3px 14px;
+  border: 1px solid #cfcfcf;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: #ededed;
+  color: #555;
+  font-weight: 600;
+  font-size: 0.95em;
+}
+.code_mirror .mirror_pane {
+  display: none;
+}
+.code_mirror > .mirror_toggle_L:checked ~ .mirror_pane_L,
+.code_mirror > .mirror_toggle_R:checked ~ .mirror_pane_R {
+  display: block;
+}
+.code_mirror > .mirror_toggle_L:checked ~ .mirror_tabs .mirror_tab_L,
+.code_mirror > .mirror_toggle_R:checked ~ .mirror_tabs .mirror_tab_R {
+  background: #fff;
+  color: #000;
+  border-color: #999;
+}
+/* always-visible footer (e.g. a preserved "See also:" cross-reference) */
+.code_mirror .mirror_see_also {
+  font-size: 0.9em;
+  color: #555;
+  margin-top: 4px;
+  padding-left: 2px;
+}
+
 /* Image lightbox modal (built/toggled by js/theme_extra.js): click an image
  * that links to an image file to view it enlarged; Escape or a click outside
  * the image closes it. */
@@ -197,41 +289,67 @@ details div.highlight {
   color: #a3be8c;
 }
 
-/* The "Related API" *tables* (`table.api_docs`, from api_link_many) get the
- * quickref look instead: white panel, subtle border, light header underline, no
- * cyan/teal/black borders.  Their header is a bare `tr > th` (not `thead > th`),
- * hence the explicit `th` rule; `html.writer-html5` + `:nth-child` lift specificity
- * over theme_extra's teal/cyan/black-border rules. */
-.rst-content table.docutils.api_docs {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid #e1e4e8;
-  background: #ffffff;
-  font-size: 0.85rem;
-  line-height: 1.45;
+/* Related-API widget (`.related_api`, from site.j2's `api_link_many`): a compact,
+ * self-contained card linking into the main /api docs.  Replaces the old sparse,
+ * one-row-per-target `table.api_docs`.  Site visual vocabulary: a white-ish card with a
+ * subtle border + the brand cyan left-accent (the search-bar/icon color), an icon+title
+ * header, a small muted caption naming the reflect FILTER that generated it, and a single
+ * WRAPPED, comma-separated list of monospace links (each name kept intact; wrap between). */
+.rst-content .related_api {
+  margin: 1.6em 0;
+  padding: 0.7em 1em 0.85em;
+  border: 1px solid #d6dbe0;
+  border-left: 4px solid #0db7ed;
+  border-radius: 6px;
+  background: #f8fafc;
+  box-shadow: 0 1px 2px rgba(27, 31, 35, 0.04);
 }
-html.writer-html5 .rst-content table.docutils.api_docs td,
-html.writer-html5 .rst-content table.docutils.api_docs th {
-  border: none;
-  margin: 0;
-  padding: 0.4em 0.75em;
-  text-align: left;
-  vertical-align: top;
-  font-weight: normal;
-  background-color: transparent;
-  color: inherit;
-}
-html.writer-html5 .rst-content table.docutils.api_docs th {
+.rst-content .related_api .related_api_header {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
   font-weight: 700;
-  border-bottom: 2px solid #b8c0c8;
+  font-size: 0.95rem;
+  color: #2b2f36;
 }
-.rst-content table.docutils.api_docs tr:nth-child(2n-1) td,
-.rst-content table.docutils.api_docs tr:nth-child(2n) td {
-  background-color: transparent;
-  border: none;
+.rst-content .related_api .related_api_header svg {
+  flex: none;
+  color: #0db7ed;
 }
-.rst-content table.docutils.api_docs td a {
-  color: #2980b9;
+.rst-content .related_api .related_api_filter {
+  margin: 0.15em 0 0.6em;
+  font-size: 0.74rem;
+  color: #6a737d;
+}
+.rst-content .related_api .related_api_filter code {
+  background: #eceff3;
+  color: #3d434c;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 0.92em;
+  white-space: nowrap;
+}
+.rst-content .related_api .related_api_excl {
+  color: #8a929b;
+}
+.rst-content .related_api .related_api_links {
+  font-size: 0.85rem;
+  line-height: 1.9;
+}
+.rst-content .related_api .related_api_links a {
+  color: #1c2024;
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.92em;
+  white-space: nowrap;
+}
+.rst-content .related_api .related_api_links a:hover {
+  color: #1c2024;
+  text-decoration: underline;
+}
+.rst-content .related_api .related_api_empty {
+  font-size: 0.85rem;
+  color: #a3334a;
+  font-style: italic;
 }
 
 /* Definition-list descriptions: add breathing room below each `dd`.  Matches the

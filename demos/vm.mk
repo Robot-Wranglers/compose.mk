@@ -17,7 +17,7 @@
 #     ./demos/vm.mk gen.demo consume  # generator: producer yields a VALUE into caller's env
 include compose.mk
 # The __vm__ plugin (control stack + CEK machine) is no longer in core -- import it.
-$(call include.plugins, __vm__.mk)
+$(call include.plugins, virtual-machine.cmk)
 
 __main__: loop.demo
 

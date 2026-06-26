@@ -1,0 +1,35 @@
+# See also: https://docs.github.com/en/actions
+# The `.cmk/` plugin pytest suite (via tox -e plugin): every shipped plugin imports cleanly +
+# exposes its public surface, plus the per-plugin behavior suites (repl / vm / polyglot).  The
+# plugins live in the `.cmk` git SUBMODULE, so `submodules: recursive` is required.  ubuntu-latest
+# has a docker daemon, so the polyglot build+run cases run (they auto-skip without one).
+# One pytest suite per workflow; runnable on demand.
+name: Plugin Tests
+on:
+  workflow_dispatch: {}
+  workflow_call: {}
+  push:
+    branches: [ "main" ]
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
+  pull_request:
+    branches: [ "main" ]
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
+permissions:
+  contents: read
+jobs:
+  plugin:
+    name: Plugins (pytest via tox)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Initialize
+        run: make clean init
+      - name: Run plugin-tests
+        run: make plugin-test

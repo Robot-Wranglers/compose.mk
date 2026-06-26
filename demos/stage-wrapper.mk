@@ -8,13 +8,14 @@
 
 include compose.mk
 
-project.scan:
-	echo '["results"]' | ./compose.mk flux.stage.push/VALIDATION
-
-project.analyze:
-	echo '["other results"]' | ./compose.mk flux.stage.push/VALIDATION
-
 # Override the default target used to print the entry-banner
 export banner_target?=io.figlet
 
 __main__: flux.stage.wrap/INIT/project.scan,project.analyze
+
+project.scan:
+	echo '["results"]' | ${flux.stage.push}/VALIDATION
+
+project.analyze:
+	echo '["other results"]' | ${flux.stage.push}/VALIDATION
+

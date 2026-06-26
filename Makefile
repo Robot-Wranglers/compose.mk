@@ -15,7 +15,12 @@ export SRC_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null || pwd)
 export PROJECT_ROOT := $(shell dirname ${THIS_MAKEFILE})
 export MKDOCS_LISTEN_PORT=8005
 include compose.mk
-$(call include.plugins, actions.mk docs.mk)
+# Release config (consumed by gitops.cmk / py.mk -- plain make vars, NOT exported: dots are
+# illegal in env-var names).  This repo ships via `git+url@vX.Y.Z` + a tag-triggered docker
+# image, so the python step is build-only (no PyPI) and we poll the docker-publish workflow.
+gitops.watch := docker-publish.yml
+py.release.root := via/pip
+$(call include.plugins, actions.mk docs.mk gitops.cmk py.mk)
 $(call include.plugin, file=local.mk strict=0)
 $(call compose.import, file=demos/data/docker-compose.yml)
 

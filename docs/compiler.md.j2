@@ -399,7 +399,7 @@ Call-forms use two kinds of "call anchors", or no anchor at all.  No-anchor is e
 
 #### About Call Anchors
 
-There are two call anchors because CMK treats both *targets* and *macros* callable, but these cases need to be differentiated.  Anchors are **not** keywords, because their actual value can be determined by [the dialect](#claude-link).  By default though, the convention is:
+There are two call anchors because CMK treats both *targets* and *macros* callable, but these cases need to be differentiated.  Anchors are **not** keywords, because their actual value can be determined by [the dialect]({{mkdocs.site_relative_url}}/dialects).  By default though, the convention is:
 
 * Targets anchor: **`this.<name>`**
 * Macro anchor: **`cmk.<name>`**
@@ -452,7 +452,7 @@ Streams are more interesting.
 
 The primary [call-form](#call-form) anchors are explicit.  A **receiver** is a more implicit third option: a name brought into scope by a [declaration]({{mkdocs.site_relative_url}}/macros/#declare-namespace).
 
-This form covers various first-class constructs like a [channel](#claude-link), a [module](#claude-link), a [polyglot](#claude-link), or a [container](#claude-link).   After declaration, the name is implied, but otherwise the standard call-form grammar applies.
+This form covers various first-class constructs like a [channel]({{mkdocs.site_relative_url}}/macros/#declare-namespace), a [module]({{mkdocs.site_relative_url}}/modules), a [polyglot]({{mkdocs.site_relative_url}}/demos/polyglots), or a [container]({{mkdocs.site_relative_url}}/demos/matrioshka).   After declaration, the name is implied, but otherwise the standard call-form grammar applies.
 
 #### Lowering & Quick Example
 <hr style="width:95%;border-bottom:1px dashed black;">

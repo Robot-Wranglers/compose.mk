@@ -1,12 +1,13 @@
 """Tests for the reflective __vm__ environment (`declare.cmk.virtual_machine`) and the
-`ᝏ__vm__.env.load` decorator -- now that control_stack + __vm__ live in the `.cmk/__vm__.mk` plugin.
+`ᝏ__vm__.env.load` decorator -- now that control_stack + __vm__ live in the `.cmk/virtual-machine.cmk` plugin.
 
 A capture POLICY (allowlist `prefix=` or subtraction `exclude=`) makes E reflect the live shell
 env, so a coroutine uses plain `export <var>` instead of `__vm__.setenv` and reads it first-class
 instead of `__vm__.getenv`.  The policy is brought in by an EXPLICIT `$(call
-declare.cmk.virtual_machine, ..)` line (the demo, demos/cmk/vm-coroutines.cmk, imports __vm__.mk
-then declares it) -- the old `# cmk_pragma ::: {virtual_machine: ..} :::` compiler injection was
-REMOVED in favor of this explicit form.  The `ᝏ__vm__.env.load` decorator prepends the re-hydration
+declare.cmk.virtual_machine, ..)` line in the shared `.cmk/coroutines.cmk` plugin (which imports
+virtual-machine.cmk then declares it; demos/cmk/vm-coroutines.cmk is now a thin consumer of that plugin) --
+the old `# cmk_pragma ::: {virtual_machine: ..} :::` compiler injection was REMOVED in favor of
+this explicit form.  The `ᝏ__vm__.env.load` decorator prepends the re-hydration
 to a goal's recipe.  Dormant (zero cost) unless declared -- the fast-path invariant is covered by
 tests/test_vm.py (whose demos never declare).
 """
@@ -63,12 +64,17 @@ def test_virtual_machine_pragma_no_longer_injects():
 
 
 def test_demo_uses_explicit_declaration():
-  # The .cmk imports the __vm__ plugin and OPTS IN explicitly (no compiler pragma); the decorator
-  # re-hydrates E, so it never calls setenv/getenv (the whole point).
-  cmk = (REPO / "demos" / "cmk" / "vm-coroutines.cmk").read_text()
-  assert "include.plugins, __vm__.mk" in cmk             # imports the extracted plugin
-  assert "$(call declare.cmk.virtual_machine," in cmk        # EXPLICIT declaration
-  assert "cmk_pragma" not in cmk                             # the pragma is gone
-  assert "ᝏ__vm__.env.load" in cmk                           # the decorator
-  assert "$(call __vm__.setenv" not in cmk
-  assert "$(call __vm__.getenv" not in cmk
+  # The reflective coroutine now lives in the shared `.cmk/coroutines.cmk` plugin: IT imports the
+  # __vm__ plugin and OPTS IN explicitly (no compiler pragma), and the ᝏ__vm__.env.load decorator
+  # re-hydrates E so it never calls setenv/getenv (the whole point).
+  plugin = (REPO / ".cmk" / "coroutines.cmk").read_text()
+  assert "include.plugins, virtual-machine.cmk" in plugin          # imports the extracted __vm__ plugin
+  assert "$(call declare.cmk.virtual_machine," in plugin     # EXPLICIT declaration
+  assert "cmk_pragma" not in plugin                          # no compiler pragma
+  assert "ᝏ__vm__.env.load" in plugin                        # the decorator
+  assert "$(call __vm__.setenv" not in plugin
+  assert "$(call __vm__.getenv" not in plugin
+  # ...and the demo is now just a thin consumer that imports the shared plugin (no inlined coroutine).
+  demo = (REPO / "demos" / "cmk" / "vm-coroutines.cmk").read_text()
+  assert "include.plugins, coroutines.cmk" in demo
+  assert "cmk_pragma" not in demo

@@ -171,6 +171,14 @@ def test_flux_stage_pop(cmk):
   assert json.loads(r.stdout) == {"k": 1}
 
 
+def test_flux_stage_pop_empty_is_ok(cmk):
+  # popping an empty / never-created stage is graceful: rc 0, JSON `null`
+  # (so a drain loop can over-pop without special-casing).
+  r = cmk("flux.stage.pop/never_created")
+  assert r.ok, r.stderr
+  assert json.loads(r.stdout) is None
+
+
 def test_flux_stage_enter_then_exit(cmk, tmp_path):
   enter = cmk("flux.stage.enter/s1", env=_QUIET_BANNER)
   assert enter.ok, enter.stderr

@@ -154,3 +154,70 @@ def test_oop_inherits_parametric(pet):
   r = pet("describe", "rex")
   assert r.ok, r.stderr
   assert "rex is a kind of animal" in r.stdout
+
+
+# --- NESTED subcommands: a handler that is ITSELF a `cli.subcommands.enter` -------
+# demos/subcommands-nested.mk: `app` -> {status (leaf), db (sub-group)} where `db` ->
+# {migrate (leaf), seed/% (parametric)}.  Proves a multi-word path threads down through
+# each level: the engine forwards a dispatched handler's remaining words in $argv (the
+# command line is just the handler name), and a nested `enter` reads them from there.
+
+
+@pytest.fixture
+def app(cmk):
+  def run(*args, **env):
+    return cmk(
+      "mk.interpret",
+      "demos/subcommands-nested.mk",
+      "app",
+      *args,
+      env={**SUP, **env},
+      cwd=REPO,
+    )
+
+  return run
+
+
+def test_nested_leaf_at_top_level(app):
+  # `status` is a plain leaf of the top group -- the non-nested baseline.
+  r = app("status")
+  assert r.ok, r.stderr
+  assert "app status ok" in r.stdout
+
+
+def test_nested_dispatch_two_levels(app):
+  # `app db migrate` threads through the `db` sub-group to its `migrate` leaf.
+  r = app("db", "migrate")
+  assert r.ok, r.stderr
+  assert "db migrate (argv=)" in r.stdout
+
+
+def test_nested_args_thread_to_depth(app):
+  # a trailing arg survives the descent: it reaches the depth-2 handler in $argv.
+  r = app("db", "migrate", "force")
+  assert r.ok, r.stderr
+  assert "db migrate (argv=force)" in r.stdout
+
+
+def test_nested_parametric_at_depth(app):
+  # a PARAMETRIC handler nested one level down still gets its stem.
+  r = app("db", "seed", "users")
+  assert r.ok, r.stderr
+  assert "db seed users" in r.stdout
+
+
+def test_nested_subgroup_bare_shows_usage(app):
+  # `app db` with no further sub -> the sub-group's own usage (not the top group's).
+  r = app("db")
+  assert r.ok, r.stderr
+  assert "db" in r.stderr and "migrate" in r.stderr and "seed" in r.stderr
+
+
+def test_nested_dispatch_has_no_supervisor_noise(app):
+  # A nested `enter` runs under CMK_SUPERVISOR=0; its `mk.yield` must NOT fire a doomed
+  # `mk.interrupt` (which would log "Supervisor is disabled" + a spurious *** Error on stderr).
+  r = app("db", "migrate")
+  assert r.ok, r.stderr
+  assert "db migrate" in r.stdout
+  noise = ("Supervisor is disabled", "mk.interrupt/SIGINT", "] Error ")
+  assert not any(n in r.stderr for n in noise), r.stderr

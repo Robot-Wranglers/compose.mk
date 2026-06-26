@@ -1,0 +1,19 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# pragma-boot.cmk: a program's BEFORE/AFTER lifecycle, declared IN-SOURCE via the compiler pragma --
+# a symmetric pair of list knobs, no env vars on the shebang:
+#   bootloaders=[..]     -> run BEFORE, in the supervisor's bash via `source` (pre-make), so they can set
+#                           up early state / register an EXIT trap.  A bootloader is an inline named
+#                           `define` -- PURE bash, single `$` (it is sourced, not run by make).
+#   at_exit_targets=[..] -> run AFTER, as make TARGETS, accumulating onto the framework's own cleanup.
+# cmk_pragma ::: { "bootloaders": ["boot.setup"], "at_exit_targets": ["teardown"] } :::
+
+# The bootloader: sourced early in the supervisor's shell (single `$`, no make expansion).
+define boot.setup
+echo "[boot] setup -- early, in the supervisor's bash, before make parses anything"
+trap 'echo "[boot] EXIT trap fired (registered pre-make)"' EXIT
+endef
+
+__main__:; @echo "[main] the program runs (in make)"
+
+# The teardown: a normal make target, run at exit.
+teardown:; @echo "[exit] teardown -- a make target, run at exit"

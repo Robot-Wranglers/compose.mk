@@ -57,6 +57,7 @@ nav:
     - 'Full API': api.md
   - Stand Alone Mode:
     - 'Tool Overview': tool-overview.md
+    - 'CLI Overview': cli-overview.md
     - 'Loading Compose Files': loadf.md
     - 'Target/Container Selector': selector.md
   - TUI Support:
@@ -66,6 +67,10 @@ nav:
     - 'Advanced TUIs': advanced-tuis.md
     - 'GUI Bonus': guis.md
     #- 'Configuration & Customization':  tui-customization-config.md
+  - Plugin System:
+    - 'Plugin Overview': plugins/overview.md
+    - 'Golang Polyglot': plugins/golang.md
+    - 'CMK Virtual Machine': plugins/cmk-virtual-machine.md
   - Tutorials:
     - 'Polyglot Index': demos/polyglots.md
     - 'Embedded Containers and Data': demos/matrioshka.md
@@ -76,7 +81,7 @@ nav:
     - 'Obligatory AI Things': demos/ai.md
     - 'Theorem Proving': demos/lean.md
     - 'Underload Esolang': demos/underload.md
-    - 'Event Loop': demos/event-loop.md
+    - 'Flow Control': demos/flow-control.md
     - 'Object-oriented (ish)': demos/oop.md
   - Misc Features:
       - 'CLI Help': cli-help.md
@@ -116,6 +121,7 @@ plugins:
         structured-io.md: 'standard-lib.md#structured-io'
         demos/ansible.md: 'demos/custom-automation-apis.md'
         demos/nushell.md: 'standard-lib.md#nushell'
+        demos/event-loop.md: 'demos/flow-control.md'
 # https://squidfunk.github.io/mkdocs-material/reference/lists/#using-definition-lists
 markdown_extensions:
   - footnotes 

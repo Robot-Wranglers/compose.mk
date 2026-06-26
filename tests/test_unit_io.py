@@ -134,6 +134,14 @@ def test_io_stack_pop_is_lifo(cmk):
 
 
 @pytest.mark.unit
+def test_io_stack_pop_empty_is_ok(cmk):
+  # popping an empty / never-created stack is graceful: rc 0, JSON `null`.
+  r = cmk("io.stack.pop/never_created")
+  assert r.ok, r.stderr
+  assert json.loads(r.stdout) is None
+
+
+@pytest.mark.unit
 def test_io_stack_discard_removes_without_returning(cmk):
   # io.stack.discard is io.stack.pop minus the return: it trims the top off the
   # stack and emits nothing.

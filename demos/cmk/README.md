@@ -56,6 +56,8 @@
 
 * [lean.cmk](./lean.cmk) (67 lines)
 
+* [local-interpreter.cmk](./local-interpreter.cmk) (23 lines)
+
 * [macrocalls.cmk](./macrocalls.cmk) (20 lines)
 
 * [module-system.cmk](./module-system.cmk) (48 lines)
@@ -64,7 +66,7 @@
 
 * [oop.cmk](./oop.cmk) (32 lines)
 
-* [overlay.cmk](./overlay.cmk) (70 lines)
+* [overlay.cmk](./overlay.cmk) (43 lines)
 
 * [platform-lme.cmk](./platform-lme.cmk) (58 lines)
 
@@ -98,7 +100,7 @@
 
 * [user-sugar.cmk](./user-sugar.cmk) (50 lines)
 
-* [vm-coroutines.cmk](./vm-coroutines.cmk) (29 lines)
+* [vm-coroutines.cmk](./vm-coroutines.cmk) (15 lines)
 
 * [xephyr.cmk](./xephyr.cmk) (111 lines)
 
