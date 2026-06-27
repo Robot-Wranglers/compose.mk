@@ -94,3 +94,4 @@ via/pip/_plugins/
 docs/*.md
 TODO.md
 docs/plugins/*.md
+.claude/*
