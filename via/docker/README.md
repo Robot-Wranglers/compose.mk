@@ -89,6 +89,41 @@ docker run --rm \
 self-contained tool targets above and for `FROM`, but for dispatch use the in-project
 copy so the host daemon can mount it into siblings.)
 
+## Bundled plugins
+
+The image also bundles the stdlib **CMK plugins** (the [`.cmk`](https://github.com/robot-wranglers/.cmk)
+submodule) at `/usr/local/share/compose.mk/cmk`, so plugin-dependent features —
+`cmk repl`, polyglots, the `__vm__` virtual machine, `gitops.release`, and the
+`py.*` / `docs.*` / `json.*` helpers — work out of the box with **no project-local
+`.cmk` required**. (A release bundles the exact `.cmk` commit its ref pins;
+ad-hoc `docker build` tracks the rolling stdlib, overridable with
+`--build-arg CMK_PLUGINS_REF=<sha-or-tag>`.)
+
+Two env vars, baked as defaults and both overridable at `docker run` time, control
+resolution:
+
+| var | default | meaning |
+| --- | --- | --- |
+| `CMK_PLUGINS_DIR` | `.cmk:/usr/local/share/compose.mk/cmk` | `:`-separated search PATH (like `$PATH`): a project-local `./.cmk` is tried **first** (so you can override/extend the bundled set), then the bundled plugins |
+| `CMK_MODULES_DIR` | `.cmk` | writable staging dir for JIT-compiled `.cmk` plugins (the first `CMK_PLUGINS_DIR` element) |
+
+So there are three ways to manage plugins:
+
+- **Use the bundled set** — nothing to do; `cmk repl` and friends just work.
+- **Override/extend with a project `./.cmk`** — drop plugins into `./.cmk` in your
+  working dir; same-named files there win over the bundled copies.
+- **Point elsewhere** — e.g. `-e CMK_PLUGINS_DIR=/my/plugins:/usr/local/share/compose.mk/cmk`.
+
+Notes:
+
+- JIT-compiling a `.cmk` plugin stages output into `CMK_MODULES_DIR` (default `./.cmk`),
+  so the working dir must be **writable**. On a read-only mount, relocate staging:
+  `-e CMK_MODULES_DIR=/tmp/cmk -e CMK_PLUGINS_DIR=/tmp/cmk:/usr/local/share/compose.mk/cmk`.
+  Staged files are root-owned unless you pass `-e DOCKER_UID=$(id -u) -e DOCKER_GID=$(id -g)`
+  (see Caveats).
+- A few plugins build a helper on first use via the dockerized toolchain (e.g. `tux.repl`
+  and the Go polyglot cross-build a wrapper), so those need the shared docker socket.
+
 ## Use as a base image
 
 The image is also `FROM`-able, so your own app can build on it. For example, an

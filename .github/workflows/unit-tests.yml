@@ -6,10 +6,10 @@ on:
   workflow_dispatch: {}
   workflow_call: {}
   push:
-    branches: [ "main" ]
+    branches: [ "main", "[0-9]+.[0-9]+" ]
     paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "[0-9]+.[0-9]+" ]
     paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
 permissions:
   contents: read

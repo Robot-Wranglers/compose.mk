@@ -18,7 +18,7 @@ include compose.mk
 # Release config (consumed by gitops.cmk / py.mk -- plain make vars, NOT exported: dots are
 # illegal in env-var names).  This repo ships via `git+url@vX.Y.Z` + a tag-triggered docker
 # image, so the python step is build-only (no PyPI) and we poll the docker-publish workflow.
-gitops.watch := docker-publish.yml
+gitops.watch := docker-publish.yml release-ci.yml
 py.release.root := via/pip
 $(call include.plugins, actions.mk docs.mk gitops.cmk py.mk)
 $(call include.plugin, file=local.mk strict=0)
