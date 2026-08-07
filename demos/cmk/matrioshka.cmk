@@ -44,7 +44,7 @@ services:
 
 __main__: demo.build demo.dispatch demo.summary
 
-demo.build: flux.stage.enter/BUILD
+demo.build: stage.enter/BUILD
   '''
   Provisioning entrypoint: build each service, deferring its setup back
   here just-in-time.  The scaffolded per-service build targets come from
@@ -71,7 +71,7 @@ demo.dispatch:
   scaffolded per-service dispatch call-form.  Unlike provisioning, this
   runs after build completes.
   '''
-  flux.stage.enter(RUN)
+  stage.enter(RUN)
   ${make} alice.dispatch/internal_task
   ${make} bob.dispatch/internal_task
   
@@ -83,7 +83,7 @@ internal_task:
   cmk.log(Running inside `hostname`)
   cmk.log(Special tools available: `which figlet || which ack`)
   cmk.log(Pushing `hostname` event to RUN stage)
-  io.json_builder(host=`hostname` timestamp="`date`") | ${make} flux.stage.push/RUN
+  io.json_builder(host=`hostname` timestamp="`date`") | ${make} stage.push/RUN
 
-demo.summary: flux.stage.exit/BUILD flux.stage.exit/RUN
+demo.summary: stage.exit/BUILD stage.exit/RUN
   ''' Exit the BUILD/RUN stages opened above, showing the stack. '''

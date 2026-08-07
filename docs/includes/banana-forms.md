@@ -6,13 +6,5 @@ The <a href="{{_}}/cmk/banana">banana block</a> <code>NAME(| body |)</code> is a
 
 {% include "includes/banana-algebra.md" %}
 
-#### Module-Scoped
-<hr style="width:95%;border-bottom:1px dashed black;margin-top:4px;">
-
-*Declarations, parsed at compile time.*
-
-**{{ cmkmath.imath("@NAME {| body |}") }}:** custom treatment assigned by the `block_brackets` pragma.
-> `note{| freeform text |}`
-
 <a name="recipe-scoped"></a>
 {% include "includes/banana-recipes.md" %}

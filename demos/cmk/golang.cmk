@@ -1,13 +1,13 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# golang.cmk: embed inline Go via the dsl.golang plugin.
+# golang.cmk: embed inline Go via the code module.
 
 '''
 Cross-build inline Go in a dockerized toolchain; go.mod auto-generates.
 '''
 
-import dsl.golang
+import code
 
-dsl.golang hello(|
+code.golang hello(|
   package main
   import ("fmt"; "os")
   func main() {
@@ -23,9 +23,14 @@ gomod(|
   go 1.24
 |)
 
-# run.inline: call the dsl.golang.lambda macro directly.
-run.inline:; cmk.code.compiled.lambda(lang=dsl.golang src=hello args=inline)
-# run.custom: build with the hand-written go.mod (mod= override).
-run.custom:; cmk.code.compiled.lambda(lang=dsl.golang src=hello mod=gomod)
-
 __main__: hello hello/you run.inline run.custom
+
+run.inline:
+  '''run.inline: call the code.golang.lambda macro directly.'''
+  code.compiled.lambda(lang=code.golang src=hello args=inline)
+
+run.custom:
+  '''run.custom: build with the hand-written go.mod (mod= override).''' 
+  code.compiled.lambda(lang=code.golang src=hello mod=gomod)
+
+

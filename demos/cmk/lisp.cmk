@@ -1,0 +1,42 @@
+#!/usr/bin/env -S ./compose.mk cmk compile
+
+'''
+The lisp base of kanren.cmk, split out for reuse: an s-expression term algebra
+over paren-tokenized word-lists.  A term is a word-list, so lists, dotted pairs,
+and nested trees all share one representation; nil is the empty group, an atom is
+a single word, and a pair is any other parenthesized group.  span scans a
+balanced sub-group by a one-counter paren walk; car / cdr take the first sub-term
+and the rest (dotted-tail aware); and wire / unwire fold a nested term to a
+vm-safe atom and back.  Import it with `import lisp.cmk as lisp, flat=1`.
+'''
+
+open lisp
+
+# m5.slice: a list window with dynamic bounds (m5.at and the accessors live in core).
+m5.slice = $(wordlist m5[2],m5[3],m5[1])
+
+# term shapes over paren-tokenized word-lists; nil is the empty group.
+lisp.lparen? = $(filter $(m5.tok.lparen),m5[1].first)
+lisp.single? = $(if m5[1][2],,1)
+lisp.nil?    = $(if $(filter $(m5.tok.lparen),m5[1].first),$(if m5[1][3],,$(filter $(m5.tok.rparen),m5[1][2])),)
+lisp.pair?   = $(if lisp.lparen?(m5[1]),$(if lisp.nil?(m5[1]),,1),)
+lisp.atom?   = $(if lisp.single?(m5[1]),1,)
+
+# span: token count of the first term, a one-counter scan for a balanced group.
+lisp.d    = $(if $(filter $(m5.tok.lparen),m5[1]),m5[2] d,$(if $(filter $(m5.tok.rparen),m5[1]),m5[2].rest,m5[2]))
+lisp.grp  = $(if m5[2],m5[1].first lisp.grp(m5[1].rest,lisp.d(m5[1].first,m5[2])),)
+lisp.span = $(if lisp.lparen?(m5[1]),$(words x lisp.grp(m5[1].rest,d)),1)
+
+lisp.take  = cmk.m5.slice(m5[2],1,m5[1])
+lisp.dropn = $(if m5[1],lisp.dropn(m5[1].rest,m5[2].rest),m5[2])
+
+# car / cdr: first balanced sub-term, and the rest (dotted tail aware).
+lisp.car  = lisp.take(lisp.span(m5[1].rest),m5[1].rest)
+lisp.cdr  = lisp.cdr2(lisp.dropn(lisp.car(m5[1]),m5[1].rest))
+lisp.cdr2 = $(if $(filter .,m5[1].first),lisp.take(lisp.span(m5[1].rest),m5[1].rest),$(m5.tok.lparen) m5[1])
+
+# wire: a nested term to a vm-safe atom and back; parens map to Lp/Rp, dotted to Dt.
+lisp.wire   = $(subst $(space),.,$(strip $(subst $(m5.tok.rparen),Rp,$(subst $(m5.tok.lparen),Lp,$(subst .,Dt,m5[1])))))
+lisp.unwire = $(subst Dt,.,$(subst Rp,$(m5.tok.rparen),$(subst Lp,$(m5.tok.lparen),$(subst .,$(space),m5[1]))))
+lisp.nilw  := Lp.Rp
+lisp.consw  = Lp.$(m5[1]).Dt.$(m5[2]).Rp

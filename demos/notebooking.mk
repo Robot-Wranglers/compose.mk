@@ -139,7 +139,7 @@ api.sessions:
 ## Top-level interfaces for the lab.
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-lab.pipeline: lab.init flux.stage.wrap/PREVIEW/lab.notebooks.preview api.kernels lab.stop
+lab.pipeline: lab.init stage.wrap/PREVIEW/lab.notebooks.preview api.kernels lab.stop
 	@# Pipeline-mode interface.
 
 lab.tui: lab.init tux.open.horizontal/${lab.tui.panes}
@@ -151,11 +151,11 @@ lab.tui: lab.init tux.open.horizontal/${lab.tui.panes}
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 lab.init: \
-	flux.stage.enter/INIT \
+	stage.enter/INIT \
 		tux.require jupyter.stop jupyter.build fmtk.build \
 		lab.notebooks.normalize lab.gen.kernels \
 		lab.serve.background lab.summary \
-	flux.stage.exit/INIT
+	stage.exit/INIT
 	@# Clean initialization.  This syncs updates but won't force rebuild
 	@# Besides background the jupyter lab server, it also synchronizes
 	@# raw .ipynb with paired markdown equivalent using `jupytext`.

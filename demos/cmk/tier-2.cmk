@@ -51,10 +51,11 @@ class Dog(bases=Pet,Fetch)(|
     ${self}.log(barking)
   
   self.eat/%:
-    ''' A parametric target.  And the first dunders. '''
+    ''' 
+    A parametric target.  And the first dunders. 
+    '''
     ${self}.log(this target name: ${__target__})
     ${self}.log(these parameters: ${__target__.args})
-    echo "this target docstring: ${__target__.docs}"
 |)
 
 rex <- Dog.new()
@@ -67,8 +68,8 @@ demo.two:
   rex.speak(); rex.fetch()
   rex.eat(food)
   rex.eat(food, shoes)
-  log(module doc=${__doc__})
-  log(Dog.__bases__ is ${Dog.__bases__})
-  log(rex.__class__ is ${rex.__class__})
+  log(module doc is ${__doc__})
+  log(Dog bases are ${Dog.__bases__})
+  log(rex class is ${rex.__class__})
 
 __main__: demo.one demo.two 

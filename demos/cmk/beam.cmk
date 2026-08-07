@@ -1,0 +1,37 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# beam.cmk: BEAM-backed fork; cmk goals as BEAM processes.
+
+'''
+BEAM-backed fork: fan cmk goals out as real BEAM processes, join, and collect
+one {os_rc,verdict,frames} record per branch. BEAM coordinates; cmk is the leaf.
+Companion to stack-of-stacks.cmk (same records, shell-coordinated). Needs docker.
+'''
+
+# USAGE: ./demos/cmk/beam.cmk  (or beam.fork/handler/a,handler/c)
+
+import platform.beam.cmk as beam, flat=1
+
+handler/%:
+  '''
+  One resolution of the nondeterministic handler: a=solution (rc 0, verdict 0),
+  b=dead-end (rc 0, verdict 1), c=fault (rc 3, no verdict). Builds a distinct K
+  stack per label under an overridden run-id, so every write stays private.
+  '''
+  label="${*}"; pidf=".tmp.fork.pid.$${MAKE_SUPER}"; \
+  case "$$label" in a) w=1;; b) w=2;; c) w=3;; *) w=2;; esac; \
+  printf '%s' "$$$$" > "$$pidf"; trap 'rm -f -- "$$pidf"' EXIT; \
+  """{"goal":"handler/$$label","kind":"enter","step":0}""" | ${control_stack.frame.push}; \
+  s=0; while [ "$$s" -lt "$$w" ]; do s=$$((s+1)); \
+    """{"goal":"work/$$label","kind":"step","step":$$s}""" | ${control_stack.frame.push}; \
+  done
+  $(call __vm__.setenv, chosen, ${*})
+  case "${*}" in \
+    a) $(call mk.exit.code,0) ;; \
+    b) echo 1 > ".tmp.mk.super.$${MAKE_SUPER}" ;; \
+    c) exit 3 ;; \
+    *) $(call mk.exit.code,0) ;; \
+  esac
+
+__main__:
+  cmk.log(${bold}beam fork ${sep} ${dim}branches are BEAM processes${comma} cmk leaves)
+  ${make} beam.fork/handler/a,handler/b,handler/c

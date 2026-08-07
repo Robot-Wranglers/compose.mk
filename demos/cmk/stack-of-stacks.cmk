@@ -30,7 +30,7 @@ The three overrides per branch:
   MAKE_SUPER=<key>:
     re-keys E (.tmp.cmk.vmenv.<key>) and the run-id
   CONTROL_STACK_FRAMES=<kfile>:
-    re-keys K explicitly (declare.stack keeps an env-supplied value; io.stack.push
+    re-keys K explicitly (io.stack! keeps an env-supplied value; io.stack.push
     writes there)
   CMK_SUPERVISOR=0:
     no trampoline: MAKE_SUPER is not recomputed, and the supervisor teardown does

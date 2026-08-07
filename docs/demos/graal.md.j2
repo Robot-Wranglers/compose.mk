@@ -13,7 +13,7 @@ This demo wires [GraalVM's polyglot runtime](https://www.graalvm.org/latest/refe
 ### The Demo
 <hr class="section-rule lvl-3">
 
-Each `graal <lang> <name>(| ..code.. |)` block creates a **language-tagged fragment**: an inert piece of source that knows which interpreter it belongs to.  Composing fragments with `+` (as `&pn <- p1+p2+p3+p4`) joins them into a single runnable whose sections all evaluate inside **one shared GraalVM `Context`**.
+Each `graal` block creates a **language-tagged fragment**: an inert piece of source that knows which interpreter it belongs to.  Composing fragments with `+` joins them into a single runnable whose sections all evaluate inside **one shared GraalVM `Context`**.
 
 {{site.embed_demo('demos/cmk/graal-interop.cmk', github=github)}}
 
@@ -23,10 +23,10 @@ Each `graal <lang> <name>(| ..code.. |)` block creates a **language-tagged fragm
 There are three ideas at play:
 
 * **Language fragments.**  `graal py`, `graal js`, and `graal rb` are language *subkinds* built on the cmk [`dsl` / `class` machinery]({{_}}/cmk/metaprogramming).  Each fragment self-tags its language and stays an inert string until it's run.
-* **Composition into one Context.**  The `+` operator concatenates fragments (each behind a `//! lang=..` marker) and re-creates them as one runnable.  When `pn` runs, every section is evaluated in turn against a *single* GraalVM `Context`, so the heap persists across language boundaries.
-* **Mirror mode.**  Calling `pn.mirror()` (instead of `pn()`) exports each section's newly-defined functions into the shared polyglot bindings, so the *next* section -- in a different language -- sees them as ambient globals.  That's how JS calls Python's `fib`, the next Python section calls JS's `fizzbuzz`, and Ruby reaches both (as `$fib` / `$fizzbuzz`, since Ruby's top-level names are `$`-sigiled globals).
+* **Composition into one Context.**  The `+` operator concatenates fragments, each behind a language marker, and re-creates them as one runnable.  When the composed runnable executes, every section is evaluated in turn against a *single* GraalVM `Context`, so the heap persists across language boundaries.
+* **Mirror mode.**  Running a fragment in *mirror* mode exports each section's newly-defined functions into the shared polyglot bindings, so the *next* section, in a different language, sees them as ambient globals.  That's how JS calls the Python fibonacci function, the next Python section calls the JS fizzbuzz, and Ruby reaches both (with a `$` prefix, since Ruby's top-level names are `$`-sigiled globals).
 
-The final fragment, `p5`, is deliberately run on its own (`p5.mirror()`, not part of `pn`).  Because it gets a **fresh** `Context`, `fib` and `fizzbuzz` are *not* in scope -- which demonstrates that the shared heap is scoped to a single composed run, not leaked globally.
+The final fragment is deliberately run on its own, outside the composition.  Because it gets a **fresh** `Context`, the functions the earlier sections defined are *not* in scope, which demonstrates that the shared heap is scoped to a single composed run and not leaked globally.
 
 ### See Also
 <hr class="section-rule lvl-3">

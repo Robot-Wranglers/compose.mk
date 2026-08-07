@@ -1,15 +1,15 @@
-"""Behavioral regression net for the raw stack primitive (`declare.stack` / `io.stack.*`).
+"""Behavioral regression net for the raw stack primitive (`io.stack!` / `io.stack.*`).
 
 The stack is the layer BENEATH channels: a jq-backed JSON-array file with LIFO
 push/pop plus query/transform ops (compose.mk, the `io.stack.*` block ~2212-2346).
 Unlike channels (used only by the event/exception demos), the stack primitive is
 what the heavy machinery rides on -- the virtual-machine plugin's control stack
-(`$(call declare.stack,CONTROL_STACK_FRAMES)`) and every REPL / frame-debugger /
+(`$(call io.stack!,CONTROL_STACK_FRAMES)`) and every REPL / frame-debugger /
 continuation / fork demo manipulate frames through `io.stack.push/pop/peek` and
 the exported per-run stack file.  So this is the high-blast-radius surface: pin it
 BEFORE any rework of how stacks are declared or stamped.
 
-Same idiom as test_channel_ops_cmk.py: `declare.stack` is a plain seed macro, so a
+Same idiom as test_channel_ops_cmk.py: `io.stack!` is a plain seed macro, so a
 vanilla `make -f` wrapper that `include`s compose.mk drives the real operator code
 with no compiler / hosted / docker path.  Assertions are on OBSERVABLE behavior, so
 the suite survives a re-implementation of the primitive.
@@ -56,7 +56,7 @@ def _recipe(*lines, name="probe"):
 
 # One declared stack `S`; `$(S)` holds its per-run file path.  Operators take the
 # stack file as their macro arg.
-DECL = "$(eval $(call declare.stack,S))\n"
+DECL = "$(eval $(call io.stack!,S))\n"
 
 
 def test_push_appends_and_count(cmk, tmp_path):
@@ -193,7 +193,7 @@ def test_initialize_seeds_lazily_from_def(cmk, tmp_path):
   # `io.stack.initialize` eager-seeds it from the named JSON-array define.
   body = (
     "define seed2\n[ {\"a\":1}, {\"b\":2} ]\nendef\n"
-    "$(eval $(call declare.stack,SEEDED init_data=seed2))\n"
+    "$(eval $(call io.stack!,SEEDED init_data=seed2))\n"
     + _recipe(
       '@printf "BEFORE="; $(call io.stack.count,$(SEEDED))',
       "@$(call io.stack.initialize,$(SEEDED),seed2)",
@@ -270,8 +270,8 @@ def test_argless_targets_use_default_stack(cmk, tmp_path):
   assert 'DEF_POP={"d":1}' in out
 
 
-def test_declare_stack_file_is_stable_across_submakes(cmk, tmp_path):
-  # THE property the VM machinery depends on: `declare.stack` exports a per-RUN
+def test_io_stack_bang_file_is_stable_across_submakes(cmk, tmp_path):
+  # the property the VM machinery depends on: io.stack! exports a per-run
   # stack file name, so a sub-make sees the SAME stack the parent populated (this is
   # what lets the virtual-machine plugin harvest child control stacks after a fork /
   # thread frame state across `${make}` hops).  Push in the parent recipe, read the

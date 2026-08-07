@@ -59,7 +59,7 @@ validate.makefiles:
 	ls demos/*[.]mk | ./compose.mk flux.each/mk.validate
 	ls demos/tui/*[.]mk | ./compose.mk flux.each/mk.validate
 
-clean: flux.stage.clean
+clean: stage.clean
 	@# Only used during development; normal usage involves build-on-demand.
 	@# Cache-busting & removes temporary files used by build / tests 
 	rm -f tests/compose.mk

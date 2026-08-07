@@ -35,11 +35,11 @@ demo.use:
     the json.bash macro bare, as jb(..) not cmk.jb(..).
     Push two records onto a named stage, read the depth, then clear it.
     '''
-    flux.stage.push(__target__)[jb(n=1)]
-    flux.stage.push(__target__)[jb(n=2)]
-    depth <- flux.stage.count(__target__)
+    stage.push(__target__)[jb(n=1)]
+    stage.push(__target__)[jb(n=2)]
+    depth <- stage.count(__target__)
     log.io(__target__ ${sep} depth=$${depth})
-    flux.stage.clean(__target__)
+    stage.clean(__target__)
 
 # open reports: ( contribute -- the reports.* targets are the namespace )
 #   A sibling recipe calls them unqualified (routing works for what you

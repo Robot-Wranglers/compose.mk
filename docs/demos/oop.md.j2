@@ -3,14 +3,14 @@
 ## Object-Oriented cmk
 <hr class="section-rule lvl-2">
 
+{{ macros.escape_hatch([
+    '[Metaprogramming](@/cmk/metaprogramming), the deep dive on constructors and reflection.',
+], mkdocs) }}
+
 CMK's [metaprogramming constructors]({{_}}/cmk/metaprogramming) give it genuine
 object-orientation: first-class **classes**, **inheritance** with a linear MRO, and Python-style
 **reflection dunders**: all as ordinary cmk-lang, with no new runtime.  Further down, a lighter
 alternative fakes the same shapes with zero metaprogramming.
-
-{{ macros.escape_hatch([
-    '[Metaprogramming](@/cmk/metaprogramming), the deep dive on constructors and reflection.',
-], mkdocs) }}
 
 ### Classes, Inheritance & Reflection
 <hr class="section-rule lvl-3">
@@ -23,13 +23,13 @@ carries.
   <details class="def-card" open>
     <summary class="def-card-head"><span class="def-card-name"><code>class NAME[| body |]</code></span><span class="def-card-kind">declare</span></summary>
     <div class="def-card-body">
-      <p>An inline class: methods are recipe targets keyed on <code>${self}</code>, the instance.  Instantiate by callform (<code>cmk.Animal(rex)</code>) or capture with <code>&lt;-</code>.</p>
+      <p>An inline class: methods are recipe targets keyed on <code>${self}</code>, the instance.  Instantiate by callform, or capture with <code>&lt;-</code>.</p>
     </div>
   </details>
   <details class="def-card" open>
     <summary class="def-card-head"><span class="def-card-name">inheritance</span><span class="def-card-kind">linear MRO</span></summary>
     <div class="def-card-body">
-      <p><code>class Dog(bases=Animal)</code> <em>is-a</em> <code>Animal</code>: it inherits the whole chain and overrides a method by redefining it.  When two bases define the same method the <strong>leftmost wins</strong>, as in Python's MRO.</p>
+      <p>A class declared with a <code>bases</code> keyword <em>is-a</em> each of those bases: it inherits the whole chain, and overrides a method by redefining it.  When two bases define the same method the <strong>leftmost wins</strong>, as in Python's MRO.</p>
     </div>
   </details>
   <details class="def-card" open>
@@ -43,9 +43,8 @@ carries.
 {{site.embed_demo('demos/cmk/banana-oop.cmk', type='cmk', github=github)}}
 
 For the wider constructor catalog see the golden [`metaprogramming.cmk`]({{_}}/cmk/metaprogramming)
-omnibus, which proves each constructor in isolation and goes further: `dsl NAME[|..|]` data-kinds
-(callable via the `.__call__` dunder) and `constructor NAME(ns=.)` umbrellas for qualified
-construction (`color red` -> `color.red`).
+omnibus, which proves each constructor in isolation and goes further: `dsl` data-kinds (callable via
+the `__call__` dunder) and `constructor` umbrellas for qualified construction.
 
 ### Subcommands as OOP
 <hr class="section-rule lvl-3">
@@ -56,18 +55,20 @@ that search order behaves exactly like a method-resolution order.  So you can (a
 OOP with zero metaprogramming[^mro]: treat each namespace as a "class", list them most-derived first,
 and you get **override** and **inheritance** for free.
 
-The `pet` CLI below lists three namespaces (`namespace='.puppy .dog .animal'`), most-derived (`puppy`)
-to base (`animal`): `speak` is overridden by `.puppy`, `fetch` is inherited from `.dog`, and `legs`
-/ `describe` are inherited from the base `.animal`.
+The `pet` CLI below lists three namespaces, most-derived (puppy) to base (animal).  The puppy
+namespace overrides `speak`, `fetch` is inherited from the dog namespace, and `legs` and `describe`
+are inherited from the base animal namespace.
 
 {{site.embed_mirror('demos/oop-subcommand.mk', 'demos/cmk/oop-subcommand.cmk', github=github, default='left')}}
 
+Overridden, inherited, and inherited-parametric, in that order:
+
 ```bash {.cli_example}
-$ ./demos/oop-subcommand.mk pet speak       # overridden in .puppy
+$ ./demos/oop-subcommand.mk pet speak
 yip!
-$ ./demos/oop-subcommand.mk pet fetch       # inherited from .dog
+$ ./demos/oop-subcommand.mk pet fetch
 fetches the ball
-$ ./demos/oop-subcommand.mk pet describe rex # inherited from .animal, and parametric
+$ ./demos/oop-subcommand.mk pet describe rex
 rex is a kind of animal
 ```
 

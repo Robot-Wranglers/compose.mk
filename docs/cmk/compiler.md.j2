@@ -3,18 +3,18 @@
 ## CMK Language & Compiler
 <hr class="section-rule lvl-2">
 
-A hands-on tutorial for the **CMK language** and its compiler: the concrete syntax, and how each construct *lowers* to Makefile.  CMK adds no new capability over plain `compose.mk`; it elevates existing idioms to native syntax.  That matters a *lot*, because notation is part of how we think.[^1]
-
-{{ macros.img_link("compiler-seed-hosted.png", mkdocs, "95%", class=" ") }}
-
-Under the hood the compiler is a two-layer program: a hand-written **seed** (the make/awk core, parsed first) and a growing **[`__hosted__`](#hosted-partition)** partition authored in CMK and lowered by compose.mk's own compiler.  The boundary is the seed's kind-system API, which every hosted kind is authored with; see the [Hosted Partition](#hosted-partition) and [Multistage](#multistage) appendices for how that second stage is bound.
-
-{{ macros.road_map([
+{{ macros.escape_hatch([
     'New here, or not sure CMK is what you want?  The [language overview](@/cmk/paradigm) covers *what CMK is* and the [compiler-vs-transpiler question](@/cmk/paradigm/#interpreters-transpilation).',
     ['CMK Quick Reference', '@/cmk/quickref', 'a syntax cheat-sheet'],
     ['CMK Demo Index', '@/cmk/demos', 'every featured demo, cross-referenced to its plain-Makefile twin'],
     'Only want a Makefile library?  See the [tools](@/tool-overview) and [standard library](@/standard-lib).',
 ], mkdocs) }}
+
+A hands-on tutorial for the **CMK language** and its compiler: the concrete syntax, and how each construct *lowers* to Makefile.  CMK adds no new capability over plain `compose.mk`; it elevates existing idioms to native syntax.  That matters a *lot*, because notation is part of how we think.[^1]
+
+{{ macros.img_link("compiler-seed-hosted.png", mkdocs, "95%", class=" ") }}
+
+Under the hood the compiler is a two-layer program: a hand-written **seed** (the make/awk core, parsed first) and a growing **[`__hosted__`](#hosted-partition)** partition authored in CMK and lowered by compose.mk's own compiler.  The boundary is the seed's kind-system API, which every hosted kind is authored with; see the [Hosted Partition](#hosted-partition) and [Multistage](#multistage) appendices for how that second stage is bound.
 
 {{ macros.section(3, "Learn by Example", id="learn-by-example") }}
 

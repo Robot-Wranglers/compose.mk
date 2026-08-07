@@ -3,8 +3,8 @@
 # stages-idiom.cmk:
 #   Stages as an explicit
 #   enter/exit context manager.  The JSON pushes use the square-bracket
-#   [stream] call-form: `flux.stage.push(<stage>)[S]` lowers to `S |
-#   ${make} flux.stage.push/<stage>` (the `[...]` supplies stdin; the
+#   [stream] call-form: `stage.push(<stage>)[S]` lowers to `S |
+#   ${make} stage.push/<stage>` (the `[...]` supplies stdin; the
 #   triple-quote literal protects the JSON's own brackets).
 #
 #   See the docs for more discussion [1].
@@ -21,13 +21,13 @@ __main__: validate
 # Wrap targets with stage enter/exit as an explicit context-manager (a
 # plain prerequisite list, exactly like the Makefile twin).
 validate: \
-    flux.stage.enter/VALIDATION \
+    stage.enter/VALIDATION \
         project.scan \
         project.analyze \
-    flux.stage.exit/VALIDATION
+    stage.exit/VALIDATION
 
 project.scan:
-    flux.stage.push(VALIDATION)["""["results"]"""]
+    stage.push(VALIDATION)["""["results"]"""]
 
 project.analyze:
-    flux.stage.push(VALIDATION)["""["other results"]"""]
+    stage.push(VALIDATION)["""["other results"]"""]

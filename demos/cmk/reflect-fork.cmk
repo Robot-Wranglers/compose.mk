@@ -1,0 +1,76 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# reflect-fork.cmk:
+#   A spike for the reflect-back fork: after fanning out, fold the bag of separately
+#   named child stacks into one fork frame on the parent's control stack, so the
+#   parent K structurally contains the whole forest -- and nests to real depth.
+#
+# USAGE:
+#   ./demos/cmk/reflect-fork.cmk
+#   ./demos/cmk/reflect-fork.cmk reflect.tree      # render the current parent K
+
+'''
+The stack-of-stacks spike left the fork hierarchy nominal: each branch is a
+separately named ambient (a run-id keyed bag of files), and the parent-child
+relation lives only in the dotted run-id (top.fork.2), never in the store, which is
+flat.  Reflect-back closes that gap.  After the join, fork.reflect reads the child
+stacks and pushes a single {kind:"fork", branches:[..]} frame onto its own control
+stack -- the shape vm.cmk already anticipates (a frame may carry a branches array of
+frame-lists).  Now the parent K structurally contains the forest: one frame whose
+branches are the child stacks.
+
+Nesting falls out for free.  A branch that is itself a fork.reflect pushes its own
+fork frame onto its own K before the parent harvests it, so collecting that child's
+stack pulls in the whole subtree.  The tree assembles bottom-up through the same
+harvest, to any depth, in one file -- the structural hierarchy the dotted names only
+gestured at.
+'''
+
+$(call include.plugins, virtual-machine.cmk)
+
+# fork.reflect/<g1,g2,..>: ( fan out, then fold the child stacks into one parent frame )
+#   Runs each comma-listed goal as its own private-keyed ambient (as in stack-of-
+#   stacks), waits for all, then collects the direct child stacks and pushes a single
+#   fork frame -- branches = those stacks -- onto this ambient's own control stack.
+#   The forest stops being a bag of files and becomes one structural frame; a child
+#   that is itself a fork.reflect has already folded its own subtree, so the harvest
+#   nests without extra work.
+fork.reflect/%:
+  run="$${MAKE_SUPER:-$$$$}"; i=0; pids=""; \
+  for b in `printf '%s' "${*}" | ${stream.comma.to.nl}`; do \
+    i=$$((i+1)); key="$${run}.fork.$${i}"; $(call _vm.ambient.sweep,$$key); \
+    $(call _vm.ambient,$${key}) ${make} $${b} 2>/dev/null & \
+    pids="$${pids} $$!"; \
+  done; \
+  for p in $${pids}; do wait "$$p" || true; done; \
+  pre=".tmp.CONTROL_STACK_FRAMES.$${run}.fork."; files=""; \
+  for f in $${pre}*; do rest="$${f#$$pre}"; case "$$rest" in ''|*[!0-9]*) continue ;; esac; files="$$files $$f"; done; \
+  if [ -n "$$files" ]; then \
+    frame=`${jq.run} -s -c --arg g "fork/${*}" '{goal:$$g,kind:"fork",branches:.}' $$files`; \
+    printf '%s' "$$frame" | ${control_stack.frame.push}; \
+  fi; \
+  $(call _vm.ambient.sweep,$$run.fork.*)
+
+# handler/<label>: ( a leaf branch -- a tiny stack of its own )
+handler/%:
+  """{"goal":"handler/${*}","kind":"enter","step":0}""" | ${control_stack.frame.push}
+  """{"goal":"work/${*}","kind":"step","step":1}""" | ${control_stack.frame.push}
+
+# subtree/<label>: ( a branch that is itself a fork, to show real nesting )
+#   Pushes its own enter frame, then forks again -- so its stack already carries a
+#   nested fork frame by the time the outer fork.reflect harvests it.
+subtree/%:
+  """{"goal":"subtree/${*}","kind":"enter","step":0}""" | ${control_stack.frame.push}
+  ${make} fork.reflect/handler/x,handler/y
+
+# reflect.tree: ( render the current control stack, descending into fork branches )
+#   Walks the frames; a fork frame recurses into its branches (each a stack), so a
+#   single control stack renders as the whole nested forest.
+reflect.tree.render=def rf: map(if .kind=="fork" then {label:.goal,children:(.branches|to_entries|map({label:("⋔branch "+((.key)|tostring)),children:(.value|rf)}))} else {label:.goal,note:((.kind//"?")+"·"+((.step//0)|tostring))} end); {label:"K",children:rf}
+reflect.tree:; @${control_stack.frames} | ${jq.run} '${reflect.tree.render}'
+
+__main__:
+  cmk.log(${bold}reflect-back fork ${sep} ${dim}fold the forest into one parent frame)
+  ${make} fork.reflect/handler/a,subtree/deep
+  cmk.log(${bold}parent K structurally contains the forest ${sep} ${dim}(nested to depth 2))
+  ${make} reflect.tree

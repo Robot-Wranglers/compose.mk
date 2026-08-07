@@ -55,7 +55,7 @@ Looked at this way-- maybe the "really extreme" example of the matrioshka approa
     The main trouble with this example is that layer-caching does make it impractical for component-oriented usage (like say, [as a widget in the TUI]({{_}}/advanced-tuis/#understanding-widgets)).  But this isn't necessarily a problem if you're using it for automating container *build/test/push* work flows.
 
 !!! closer_look "Closer Look"
-    The eagle-eyed reader will also notice that this uses `docker:dind` as a base image, which is ultimately how JSON can move via `flux.stage.push`, even though tools like `jq` and `jb` are not actually installed.  (See [the JSON I/O docs]({{_}}/standard-lib#json-io) for more details.)  If you can't use a base with docker in it, then you'd have to explicitly install `jq` and `jb` to use the stack.
+    The eagle-eyed reader will also notice that this uses `docker:dind` as a base image, which is ultimately how JSON can move via `stage.push`, even though tools like `jq` and `jb` are not actually installed.  (See [the JSON I/O docs]({{_}}/standard-lib#json-io) for more details.)  If you can't use a base with docker in it, then you'd have to explicitly install `jq` and `jb` to use the stack.
 
 Going further, one might also wonder whether the stage-stack could be used for **bidirectional communication during the build-phase** as well.  This is *also* actually possible, but left as an exercise for the reader.  (As a hint, this does require being "outside" of the finished build-phase currently, and then faking it with a `docker copy` call to concatenate  internal / external stacks.  There's an [open issue](https://github.com/docker/buildx/issues/1991) about allowing bind-mounts during build though, which would remove the special case and give stack access to *both* the build/run stages for the container.
 
@@ -64,7 +64,7 @@ Going further, one might also wonder whether the stage-stack could be used for *
 
 * [Matrioshka]({{_}}/matrioshka/#advanced-matrioshka-idioms): the nested-layer idioms this demo pushes to an extreme.
 * [Stages]({{_}}/stages): the stage-stacks used to communicate across layers.
-* [Standard Library]({{_}}/standard-lib#json-io): the JSON I/O that moves data over `flux.stage.push`.
+* [Standard Library]({{_}}/standard-lib#json-io): the JSON I/O that moves data over `stage.push`.
 
 ### References
 <hr class="section-rule lvl-3">

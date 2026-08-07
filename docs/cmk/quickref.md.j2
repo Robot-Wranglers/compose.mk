@@ -153,7 +153,7 @@ argument-passing <code>(args)</code> and stream-passing <code>[stream]</code>.
   <tbody>
     <tr>
       <td><a href="{{_}}/cmk/compiler/#local-context-embedded-containers">Embed: Script-in-Container</a></td>
-      <td>{{ cmkmath.imath("(|..|) #in #container (|img=.. entrypoint=..|)") }}<br/><code>(| … |) in box</code></td>
+      <td>{{ cmkmath.imath("(|..|) #in @machine") }}<br/><code>(| … |) in box</code></td>
       <td>Script block dispatched into a container via the <code>in</code> machine-algebra (anonymous <code>container(| … |)</code>, or a named <code>container</code>/<code>Dockerfile</code> instance).</td>
     </tr>
     <tr>
@@ -163,7 +163,7 @@ argument-passing <code>(args)</code> and stream-passing <code>[stream]</code>.
     </tr>
     <tr>
       <td><a href="{{_}}/cmk/banana">Embed: Banana</a></td>
-      <td>{{ cmkmath.imath("@ctor @NAME (|body|)") }}<br/><code>Dockerfile box(| FROM … |)</code></td>
+      <td>{{ cmkmath.imath("@ctor @NAME (|..|)") }}<br/><code>Dockerfile box(| FROM … |)</code></td>
       <td>The native, generic block-declare: keeps any body (script, Dockerfile, jq, class) in source and hands it to constructor {{ cmkmath.imath("@ctor") }}.  See <a href="#banana-forms">Banana Forms</a> below and the <a href="{{_}}/cmk/banana">Banana Blocks</a> page.</td>
     </tr>
   </tbody>

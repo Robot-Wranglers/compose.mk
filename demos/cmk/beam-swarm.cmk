@@ -1,0 +1,48 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# beam-swarm.cmk: BEAM swarm race; diversified searchers, first wins.
+
+'''
+BEAM swarm race: N diversified backtracking searchers race for a target; the
+first to find claims a :global sink and wins, the losers are cancelled. BEAM
+replaces the mkdir-sink + poll + pkill coordination. Oracle: swarm-search.cmk.
+'''
+
+# USAGE: ./demos/cmk/beam-swarm.cmk  (env: TARGET WORKERS SPACE DELAY)
+
+import platform.beam.cmk as beam, flat=1
+import virtual-machine.cmk as vm, flat=1
+
+SPACE   ?= 16
+TARGET  ?= 13
+WORKERS ?= 4
+DELAY   ?= 0.35
+
+search/%:
+  '''
+  Seed-diversified backtracking scan: build the candidate order rotated by SEED,
+  then alternate over it with vm.choose (generate-and-test). Runs under a
+  trampoline (a swarm worker is supervised), so the searcher can backtrack.
+  '''
+  t="${*}"; alts=""; k=0; \
+  while [ "$$k" -lt "${SPACE}" ]; do \
+    c=$$(( ($${SEED:-0} + k) % ${SPACE} )); alts="$$alts probe/$$t.$$c"; k=$$((k+1)); \
+  done; \
+  vm.choose($$alts)
+
+probe/%:
+  '''
+  Test one candidate: a hit prints the winning candidate on stdout and stops
+  (nothing follows vm.choose, so the trampoline exits clean); a miss backtracks
+  so the trampoline resumes the next alternative.
+  '''
+  sleep ${DELAY}; \
+  t=`printf '%s' "${*}" | cut -d. -f1`; c=`printf '%s' "${*}" | cut -d. -f2`; \
+  if [ "$$c" = "$$t" ]; then \
+    printf 'seed=%s candidate=%s\n' "$${SEED:-0}" "$$c"; \
+  else \
+    vm.backtrack(); \
+  fi
+
+__main__:
+  cmk.log(${bold}beam swarm ${sep} ${dim}${WORKERS} searchers race for ${TARGET})
+  ${make} beam.swarm/search/${TARGET}

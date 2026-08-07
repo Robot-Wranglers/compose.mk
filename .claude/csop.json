@@ -50,5 +50,43 @@
       { "match": ["demos/cmk/*.cmk"], "command": "cmk lint {file}" },
       { "match": ["demos/*.mk"], "command": "./compose.mk mk.validate/{file}" }
     ]
+  },
+
+  // idiom on by default here; nudge appends this repo's .cmk house style to the code defaults.
+  "idiom": {
+    "default_enabled": true,
+    "nudge": [
+      "In .cmk files: prefer callforms; import log rather than reimplementing logging; do not prefix recipe commands with '@'; write targets as multiline recipes.",
+      "In .cmk files: `$(eval $(call ...))` is never idiomatic, and double-dollar ($$) forms are not idiomatic; reach for callforms and the framework's constructs instead."
+    ],
+    "reject": [
+      { "pattern": "^ +@(?!#)", "message": ".cmk recipe command prefixed with @ (cmk runs recipes silent; drop the @)" },
+      { "pattern": "^[A-Za-z_][A-Za-z0-9._/%-]*[ \\t]*:[^=]*;", "message": "single-line target; write a multiline recipe under the target header" }
+    ]
+  },
+
+  // Promotion flow from demo through module to core; off by default, so docs and unclassified paths stay writable from any stage.
+  "pro": {
+    "default_enabled": false
+  },
+  "stages": {
+    "demo": {
+      "default_stage": true,
+      "globs": ["demos/**"],
+      "post": "Demo `{file}` changed: run it to confirm the idea holds before promoting."
+    },
+    "module": {
+      "globs": [".cmk/**", ".automation.cmk"],
+      "from": ["demo"],
+      "pre":  { "text": "Promoting to a module: does `{file}` earn reuse? give it a namespace and a home under `.cmk/`. Spike risky bits in scratch/iso first.", "action": "nudge" },
+      "post": "Module `{file}` changed: re-run its demo and the curated test set (never the full sweep)."
+    },
+    "core": {
+      "globs": ["compose.mk", "tests/**"],
+      "from": ["module", "demo"],
+      "writable": ["**"],
+      "pre":  { "text": "Core edit (`{file}`): land the behavior via a demo/module or a scratch/iso spike first, then fold it in. Keep consolidations net-negative.", "action": "nudge" },
+      "post": "compose.mk changed: run the curated ~176-test set, not the full sweep; `flux.ok` for a fast signal."
+    }
   }
 }

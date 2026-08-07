@@ -1,0 +1,56 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+'''
+goals-reverse: reverse (push) goal resolution over real make rules.
+
+Make is a pull system: to build a target it first builds that target's
+inputs.  This flips the arrow.  Name an input, and everything downstream
+resolves and fires in dependency order.  Touch a shared library and only
+the things that use it are affected.
+
+Fires downstream of `lib` by default; set `INPUT` to start elsewhere:
+
+    ./demos/cmk/goals-reverse.cmk
+    INPUT=app ./demos/cmk/goals-reverse.cmk
+'''
+
+import log
+
+core:
+  log(built ${@})
+lib: core
+  log(built ${@})
+util: core
+  log(built ${@})
+app: lib util
+  log(built ${@})
+test: app
+  log(built ${@})
+manual: lib
+  log(built ${@})
+
+INPUT ?= lib
+
+# reflect this file's own rule headers via the local shallow scan
+_reflect = awk -v emit=jsonl -f <(${mk.def.read}/.awk.completion.scan) ${__file__}
+
+# every target transitively downstream of a root input
+jqlang downstream(|
+  [.[] | .name as $o | (.header|sub("^[^:]*:";"")|sub(";.*";"")|split(" ")|map(select(length>0)))[]
+   | {from:$o, to:.}] as $e
+  | def grow($s): ($s + [$e[] | select(.to as $t | $s|index($t)) | .from] | unique);
+    def fix($s): grow($s) as $n | if ($n|length)==($s|length) then $s else fix($n) end;
+    (fix([$root]) - [$root]) | join(" ")
+|)
+
+demo.resolve:
+  '''from the input node, the affected targets downstream'''
+  log(input ${sep} ${INPUT} ${sep} affects)
+  ${_reflect} | downstream(-s -r --arg root ${INPUT}) | ${stream.as.log}
+
+demo.fire:
+  '''fire for real: make builds the affected targets by the true graph'''
+  log(${bold}firing downstream of ${sep} ${INPUT})
+  ${_reflect} | downstream(-s -r --arg root ${INPUT}) | xargs -r ${make}
+
+__main__: demo.resolve demo.fire

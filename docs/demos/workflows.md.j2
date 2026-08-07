@@ -38,7 +38,7 @@ For more information, see the api docs for [`docker.run.image`]({{_}}/api/#docke
 
 * [Workflow Rationale]({{_}}/standard-lib/#workflow-rationale): why `flux.*` exists and when to reach for it.
 * [Platform Lifecycle Demo]({{_}}/demos/platform): flow control with `flux.pipe.fork` across containers.
-* `flux.*` isn't really built for ETLs; reach for Luigi or Airflow there.  It's closer in spirit to declarative pipelines in Jenkins[^1], which organize work into *stages*, each optionally pinned to an *agent* (the node it runs on).  `compose.mk` expresses stages with [`flux.stage.*`]({{_}}/stages), pins a stage to a container with the [dispatch-in-container idiom]({{_}}/container-dispatch), and can even stand up [agents]({{_}}/demos/ai) for AI-driven steps.
+* `flux.*` isn't really built for ETLs; reach for Luigi or Airflow there.  It's closer in spirit to declarative pipelines in Jenkins[^1], which organize work into *stages*, each optionally pinned to an *agent* (the node it runs on).  `compose.mk` expresses stages with [`stage.*`]({{_}}/stages), pins a stage to a container with the [dispatch-in-container idiom]({{_}}/container-dispatch), and can even stand up [agents]({{_}}/demos/ai) for AI-driven steps.
 
 ### References
 <hr class="section-rule lvl-3">

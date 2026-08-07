@@ -83,7 +83,7 @@ Both of these demos are instances of a general pattern that goes like this:
 
 **By the time you get to step 4, the possibilities for composition are surprisingly powerful, expressive, and flexible**, in large part because the [homoiconicity]({{_}}/cmk/paradigm/#homoiconic) we discussed earlier starts to pay off.  Summarizing [the justfile demo]({{_}}/demos/just), embedding a justfile is incidental since we could easily work with an external one, but again the interesting part again is a bridge across layers.  We lift part of the `just` interface, then besides changing/exposing that interface, we actually wrapped it and compose our way to new functionality.  As a result.. we end up with an interactive task selector in just one line.
 
-**Step 5 is where the real magic happens,** and the demos mentioned so far are just hints.  Demonstrating the potential for this seriously under realistic circumstances starts to want more tools and larger use-cases.. which is a challenge for brief examples.  See the [platforming demo for a sketch]({{_}}/demos/platform), or the [notebooking demo]({{_}}/demos/notebooking).  See also a preview of the sister project @ k8s-tools{# [^3] #}, which uses `compose.mk` to automate cluster-lifecycles for complex orchestration across a bigger toolbox.
+**Step 5 is where the real magic happens,** and the demos mentioned so far are just hints.  Demonstrating the potential for this seriously under realistic circumstances starts to want more tools and larger use-cases.. which is a challenge for brief examples.  See the [platforming demo for a sketch]({{_}}/demos/platform), or the [notebooking demo]({{_}}/demos/notebooking).
 
 ### Advanced Matrioshka Idioms 
 <hr class="section-rule lvl-3">
@@ -117,7 +117,6 @@ Since `compose.mk` tool-container invocations [default to volume-mounts for the 
 
 [^1]: via the [esolangs wiki](https://esolangs.org/wiki/Matrioshka_language)
 [^2]: {{ tufte.wiki('Here_document')|trim }}
-{# [^3]: sibling project @ [k8s-tools]({{jinja.vars.k8stools_docs_url}}) #}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

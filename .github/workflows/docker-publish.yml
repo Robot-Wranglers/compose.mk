@@ -2,18 +2,31 @@
 # Builds the via/docker shim image and publishes it (multi-arch) to GHCR.
 name: Publish Docker Image
 on:
-  # Allows you to run this workflow manually from the Actions tab
+  # On-demand, on a `v*` release tag, or a `main` push to the image inputs -- never version branches like `2.0`.
   workflow_dispatch: {}
   push:
-    branches: [ "main", "[0-9]+.[0-9]+" ]
+    branches: [ "main" ]
     tags: [ "v*" ]
     paths: [ 'compose.mk', 'via/docker/**', '.github/workflows/docker-publish.yml' ]
 permissions:
   contents: read
   packages: write
 jobs:
+  # Gate publish on the same focused suites release-ci.yml runs, so a red suite blocks the push.
+  unit:
+    uses: ./.github/workflows/unit-tests.yml
+  compiler:
+    uses: ./.github/workflows/compiler-tests.yml
+  plugin:
+    uses: ./.github/workflows/plugin-tests.yml
+  docker:
+    uses: ./.github/workflows/docker-tests.yml
+  integration:
+    uses: ./.github/workflows/integration-tests.yml
+
   publish:
     name: Build + push (ghcr.io)
+    needs: [ unit, compiler, plugin, docker, integration ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

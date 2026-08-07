@@ -11,7 +11,7 @@ By default, the compose file shares the working directory with containers it's u
 ## MacOS, Docker Sockets, and DinD
 <hr class="section-rule lvl-2">
 
-As long as docker is working, any kind of setup (Docker Desktop, Rancher Desktop, Colima) can work with `compose.mk` for container-dispatch.  But for working with `k8s-tools.yml` containers specifically, the docker-socket sharing *must also be working*.[^1]  If you're having problems that might be related to this, first make sure that your setup can correctly run this command:
+As long as docker is working, any kind of setup (Docker Desktop, Rancher Desktop, Colima) can work with `compose.mk` for container-dispatch.  But for working with containers that need docker themselves (docker-in-docker) specifically, the docker-socket sharing *must also be working*.[^1]  If you're having problems that might be related to this, first make sure that your setup can correctly run this command:
 
 ```bash {.cli_example}
 $ docker run -v /var/run/docker.sock:/var/run/docker.sock -ti docker ps

@@ -1,0 +1,31 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+'''
+etl-json, value-layer variant: the extract/transform/load stages are
+jqlang value-transforms, folded by dataflow into one fused jq program
+at compile time, instead of three goals orchestrated by flux.pipeline.
+'''
+
+from cmk import dsl
+
+# the dataflow ctor (inlined until it graduates to a core keyword).
+dataflow = $(call lang.banana.as,$(strip $(call mk.kwargs.get,${1},def)),$(call _dataflow.reduce,$(strip $(call mk.kwargs.get,${1},combinator)),$(value $(strip $(call mk.kwargs.get,${1},def)))))
+
+# foldl1: combine the first two via the combinator, prepend, recurse.
+_dataflow.reduce = $(if $(word 2,${2}),$(call _dataflow.reduce,${1},$(call $(firstword ${2}).${1},$(word 2,${2})) $(wordlist 3,$(words ${2}),${2})),${2})
+
+# stages are jq value-transforms, not goals emitting fresh json.
+dsl.jqlang extract(| { stage: "extracted", n: 1 } |)
+dsl.jqlang transform(| .n += 1 |)
+dsl.jqlang load(| { loaded: . } |)
+
+# fold __pipe__ into ONE fused jq program (compile time), first-class.
+dataflow etl(combinator=__pipe__)(| extract transform load |)
+
+# goal-layer error handling still wraps it (legitimately goal-layer).
+etl.run:; echo '{}' | etl()
+etl.safe: flux.try.except.finally/etl.run,etl.failed,etl.cleanup
+etl.failed:; cmk.log(ETL failed!)
+etl.cleanup:; cmk.log(Cleaning up ETL!)
+
+__main__: etl.safe

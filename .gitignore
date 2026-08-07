@@ -17,7 +17,7 @@ site
 docs/loadf.md
 docs/demos/*.md
 docs/features.md
-.flux.stage.*
+.stage.*
 archive.run
 Untitled*.ipynb
 docs/api.md

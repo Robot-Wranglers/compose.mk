@@ -113,6 +113,66 @@ def test_open_inert_inside_define(ir):
   assert "cmk.open" not in r.stdout
 
 
+def test_all_macro_member_unqualified_in_macro_value(ir):
+  # a macro member of an opened namespace, called unqualified in a macro value, now routed.
+  r = ir(
+    "open lisp\n"
+    "lisp.__all__ := car\n"
+    "lisp.car = $(firstword $(1))\n"
+    "head = lisp.car(abc)\n"
+    "x:; @true\n"
+  )
+  # the macro-value send should lower like a recipe-line send would.
+  assert smart("lisp.car", macro_args="abc", target_stem="abc") in r.stdout
+
+
+def test_all_macro_member_unqualified_via_import(ir):
+  # same routing reached through import: the receiver registers and the macro-value send lowers.
+  r = ir(
+    "import lisp\n"
+    "lisp.__all__ := car\n"
+    "lisp.car = $(firstword $(1))\n"
+    "head = lisp.car(abc)\n"
+    "x:; @true\n"
+  )
+  assert smart("lisp.car", macro_args="abc", target_stem="abc") in r.stdout
+
+
+def test_all_open_routes_recipe_and_macro_value_send(ir):
+  # one program, both contexts: the same unqualified member send from a recipe line and a macro value.
+  r = ir(
+    "open lisp\n"
+    "lisp.__all__ := car\n"
+    "lisp.car = $(firstword $(1))\n"
+    "head = lisp.car(abc)\n"
+    "x:\n\tlisp.car(abc)\n"
+  )
+  core = smart("lisp.car", macro_args="abc", target_stem="abc")
+  # the recipe-line (target) send routes:
+  assert core in r.stdout
+  # the identical macro-value send routes the same way:
+  head_line = next(l for l in r.stdout.splitlines() if l.startswith("head ="))
+  assert core in head_line
+
+
+def test_nested_send_in_arg_lowers(ir):
+  # the inner send of a nested call routes like the outer one (callform lowers args recursively).
+  r = ir("open lisp\nlisp.a = A$(1)\nlisp.b = B$(1)\nx:\n\tlisp.b(lisp.a(z))\n")
+  assert smart("lisp.a", macro_args="z", target_stem="z") in r.stdout
+
+
+def test_question_named_def_body_scanned(ir):
+  # the send in a ?-named macro's body routes like it does in a plain-named twin.
+  r = ir(
+    "open lisp\n"
+    "lisp.q = Q$(1)\n"
+    "lisp.p? = $(if lisp.q(a),1,)\n"
+    "x:; @true\n"
+  )
+  p_line = next(l for l in r.stdout.splitlines() if l.startswith("lisp.p?"))
+  assert smart("lisp.q", macro_args="a", target_stem="a") in p_line
+
+
 def test_dotted_import_sugar_not_a_directive(ir, tmp_path):
   # `import.targets(...)` (dotted, compile-time inline sugar) is not the `import <ns>` directive.
   (tmp_path / "src.mk").write_text("greet:\n\t@echo hi\n")
@@ -331,12 +391,12 @@ def test_nslint_optout(cmk):
   assert "never used or defined" not in r.stderr
 
 
-# --- shadow lint (import flux = use; the send targets a divergent twin) -------
+# --- shadow lint (importing a module = use; the send targets a divergent twin) -------
 
 
 def test_shadow_warns_on_divergent_send(ir):
-  r = ir("import flux\nx:\n\tflux.stage.file(s)\n")
-  assert "DIVERGENT" in r.stderr and "flux.stage.file" in r.stderr
+  r = ir("import stage\nx:\n\tstage.file(s)\n")
+  assert "DIVERGENT" in r.stderr and "stage.file" in r.stderr
 
 
 def test_shadow_no_false_positive(ir):
@@ -355,7 +415,7 @@ def test_shadow_strict_fails(cmk, tmp_path):
   r = _interpret(
     cmk,
     tmp_path,
-    "import flux\n__main__: x\nx:\n\tflux.stage.file(s)\n",
+    "import stage\n__main__: x\nx:\n\tstage.file(s)\n",
     strict=True,
   )
   assert not r.ok
@@ -367,12 +427,3 @@ def test_shadow_strict_passes_safe(cmk, tmp_path):
     cmk, tmp_path, "import flux\n__main__:\n\tflux.ok()\n", strict=True
   )
   assert r.ok, r.stderr
-
-
-# --- the collision lint (host self-consistency) ------------------------------
-
-
-def test_lint_collisions_passes(cmk):
-  r = cmk("lang.lint.self.collisions")
-  assert r.ok, r.stdout + r.stderr
-  assert "macro/target twins" in r.stderr

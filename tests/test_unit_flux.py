@@ -136,8 +136,8 @@ def test_flux_sh_tee(cmk):
   assert r.stdout.count("TEEME") >= 2
 
 
-# --- flux.stage.* : file-backed JSON stack, isolated in the fixture cwd ------
-# (cwd defaults to tmp_path, so `.flux.stage.*` files never touch the repo.)
+# --- stage.* : file-backed JSON stack, isolated in the fixture cwd ------
+# (cwd defaults to tmp_path, so `.stage.*` files never touch the repo.)
 
 # enter/wrap draw a banner via io.draw.banner (gum -> docker); override it with
 # a silent target so these stay pure unit tests.
@@ -145,28 +145,28 @@ _QUIET_BANNER = {"banner_target": "flux.noop"}
 
 
 def test_flux_stage_file_path(cmk):
-  r = cmk("flux.stage.file/foo")
+  r = cmk("stage.file/foo")
   assert r.ok, r.stderr
-  assert r.stdout.strip() == ".flux.stage.foo"
+  assert r.stdout.strip() == ".stage.foo"
 
 
 def test_flux_stage_current_from_env(cmk):
-  r = cmk("flux.stage", env={"FLUX_STAGE": "xyz"})
+  r = cmk("stage", env={"CMK_STAGE": "xyz"})
   assert r.ok, r.stderr
   assert r.stdout.strip() == "xyz"
 
 
 def test_flux_stage_push_and_stack(cmk):
-  cmk("flux.stage.push/s", stdin='{"k":1}')
-  cmk("flux.stage.push/s", stdin='{"k":2}')
-  r = cmk("flux.stage.stack/s")
+  cmk("stage.push/s", stdin='{"k":1}')
+  cmk("stage.push/s", stdin='{"k":2}')
+  r = cmk("stage.stack/s")
   assert r.ok, r.stderr
   assert json.loads(r.stdout) == [{"k": 1}, {"k": 2}]
 
 
 def test_flux_stage_pop(cmk):
-  cmk("flux.stage.push/s", stdin='{"k":1}')
-  r = cmk("flux.stage.pop/s")
+  cmk("stage.push/s", stdin='{"k":1}')
+  r = cmk("stage.pop/s")
   assert r.ok, r.stderr
   assert json.loads(r.stdout) == {"k": 1}
 
@@ -174,30 +174,30 @@ def test_flux_stage_pop(cmk):
 def test_flux_stage_pop_empty_is_ok(cmk):
   # popping an empty / never-created stage is graceful: rc 0, JSON `null`
   # (so a drain loop can over-pop without special-casing).
-  r = cmk("flux.stage.pop/never_created")
+  r = cmk("stage.pop/never_created")
   assert r.ok, r.stderr
   assert json.loads(r.stdout) is None
 
 
 def test_flux_stage_enter_then_exit(cmk, tmp_path):
-  enter = cmk("flux.stage.enter/s1", env=_QUIET_BANNER)
+  enter = cmk("stage.enter/s1", env=_QUIET_BANNER)
   assert enter.ok, enter.stderr
-  stack = cmk("flux.stage.stack/s1")
+  stack = cmk("stage.stack/s1")
   assert any("stage.entered" in e for e in json.loads(stack.stdout))
-  exit_ = cmk("flux.stage.exit/s1")
+  exit_ = cmk("stage.exit/s1")
   assert exit_.ok, exit_.stderr
-  assert not (tmp_path / ".flux.stage.s1").exists()
+  assert not (tmp_path / ".stage.s1").exists()
 
 
 def test_flux_stage_clean(cmk, tmp_path):
-  cmk("flux.stage.enter/s2", env=_QUIET_BANNER)
-  assert (tmp_path / ".flux.stage.s2").exists()
-  cmk("flux.stage.clean/s2")
-  assert not (tmp_path / ".flux.stage.s2").exists()
+  cmk("stage.enter/s2", env=_QUIET_BANNER)
+  assert (tmp_path / ".stage.s2").exists()
+  cmk("stage.clean/s2")
+  assert not (tmp_path / ".stage.s2").exists()
 
 
 def test_flux_stage_wrap(cmk):
-  r = cmk("flux.stage.wrap/MAIN/flux.ok", env=_QUIET_BANNER)
+  r = cmk("stage.wrap/MAIN/flux.ok", env=_QUIET_BANNER)
   assert r.ok, r.stderr
 
 

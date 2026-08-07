@@ -1,0 +1,80 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# prolog.cmk:
+#   A tiny ground (propositional) Prolog -- a knowledge base of atoms plus
+#   Horn-clause rules -- as boolean algebra over make targets, where a
+#   target's exit code is its truth value.
+#
+# USAGE: ./demos/cmk/prolog.cmk
+# REFS:
+#   [1]: https://www.metalevel.at/prolog
+
+'''
+Ground Prolog, with no variables, unification, or backtracking (see
+unicon-queens.cmk for the search-flavored counterpart).  Truth is an exit
+code: flux.ok is true, flux.fail is false, and flux.and / flux.or /
+flux.negate are the connectives.
+
+Facts live in a define block; a query is closed-world membership, so an
+unasserted atom is false -- exactly negation-as-failure.  Each rule is a
+named goal that reifies to its clause-string, so one rule can name another
+as a sub-goal, just as a Prolog clause body calls a predicate.
+
+The mapping is direct: a fact is an atom in define kb; a clause head :- body
+is a goal Head = <flux expr>; ';' is flux.or, ',' is flux.and, negation is
+flux.negate; and a query ?- goal. is make Goal.
+'''
+
+# the database: ( atoms asserted true; closed-world -- else false )
+kb(|
+rain
+frost
+tuesday
+|)
+
+# holds/<atom>: ( the one bridge from data to logic )
+#   TRUE (flux.ok, exit 0) iff <atom> is a line in the kb, else FALSE.
+holds/%:
+  ''' A ground fact query -- is <atom> asserted?  true/false by exit. '''
+  if this.mk.def.read/kb | grep -qxF "${*}"; then this.flux.ok; else this.flux.fail; fi
+
+# the rules: ( Horn clauses as named goals )
+#   A rule reifies to its clause-string, so a rule may name another as a
+#   sub-goal (Slippery calls Wet) -- clause bodies calling predicates.
+goal Wet      = flux.or/holds/rain,holds/sprinkler
+goal Slippery = flux.and/Wet,holds/frost
+goal Dry      = flux.negate/Wet
+goal Commute  = flux.and/holds/tuesday,flux.negate/Slippery
+
+# ask/<goal>: ( a one-line ?- prompt )
+#   Run the query quietly and report whether it holds.
+ask/%:
+  ''' Evaluate one goal or fact and print whether it holds. '''
+  if ${make} ${*} >/dev/null 2>&1; \
+    then cmk.log(?- ${bold}${*}${no_ansi_dim}. ${sep} ${green}true${no_ansi}); \
+    else cmk.log(?- ${bold}${*}${no_ansi_dim}. ${sep} ${red}false${no_ansi}); fi
+
+# demos: ( the database, the rules, reification, and the raw connectives )
+demo.db:
+  '''The database, then two ground fact queries -- one asserted, one not.'''
+  cmk.log(knowledge base ${sep} `this.mk.def.read/kb | ${stream.nl.to.space}`)
+  this.ask/holds/rain
+  this.ask/holds/snow
+
+# Evaluate each rule.  With rain, frost, tuesday asserted, Wet and Slippery
+# hold; Dry and Commute do not.
+demo.rules: ask/Wet ask/Slippery ask/Dry ask/Commute
+
+demo.reify:
+  @# Rules are first-class: a goal reifies to the clause-string it names,
+  @# and every lifted name lands in the __goals__ registry.
+  cmk.log(clause Slippery ${sep} $(Slippery))
+  cmk.log(clause Commute ${sep} $(Commute))
+  cmk.log(registry __goals__ ${sep} $(__goals__))
+
+# The connectives over the truth atoms (flux.ok=true, flux.fail=false).
+demo.algebra: ask/flux.ok ask/flux.fail \
+  ask/flux.and/flux.ok,flux.fail ask/flux.or/flux.fail,flux.ok \
+  ask/flux.negate/flux.fail
+
+__main__: demo.db demo.rules demo.reify demo.algebra

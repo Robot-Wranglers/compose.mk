@@ -131,7 +131,7 @@ def cmk(tmp_path):
       assert r.ok and r.stdout == "a\\nb\\nc"
 
   cwd defaults to a pytest ``tmp_path`` so scratch files (``io.mktemp``'s
-  ``./.tmp.*`` and ``.flux.stage.*``) land in the temp dir and never pollute
+  ``./.tmp.*`` and ``.stage.*``) land in the temp dir and never pollute
   the repo; pytest removes the dir afterwards.
   """
 

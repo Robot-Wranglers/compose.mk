@@ -101,9 +101,9 @@ A map of the macro/function families.  Most members mirror a same-named target. 
       <td class="macro-list"><code>code</code>, <code>code.unbound</code>, <code>code.config</code>, <code>code.pipe</code></td>
       <td><a href="{{_}}/demos/polyglots">Polyglots</a></td>
     </tr>
-    <tr><td colspan="2"><strong><code>declare.*</code>:</strong> Parse-time <em>declaration</em> namespace: the registrars created by constructors, plus the core primitive <code>declare.stack</code>.  Bring things into scope with the canonical <code>*.import</code> verbs.</td></tr>
+    <tr><td colspan="2"><strong><code>declare.*</code>:</strong> Parse-time <em>declaration</em> namespace: the registrars created by constructors.  Bring things into scope with the canonical <code>*.import</code> verbs.</td></tr>
     <tr>
-      <td class="macro-list"><code>import.module</code>, <code>include.plugin</code>, <code>compose.import</code>, <code>declare.stack</code></td>
+      <td class="macro-list"><code>import.module</code>, <code>include.plugin</code>, <code>compose.import</code></td>
       <td><a href="{{_}}/reflection">Reflection</a></td>
     </tr>
     <tr><td colspan="2"><strong><i>colors / glyphs</i>:</strong> ANSI color &amp; brand-glyph constants for log/output formatting.</td></tr>
@@ -117,8 +117,6 @@ A map of the macro/function families.  Most members mirror a same-named target. 
 ### `declare.*` Namespace
 <hr class="section-rule lvl-3">
 <a name=declare-namespace></a>
-
-{{site.block_docs('DeclarationIndex', mkdocs)}}
 
 A `declare.*` macro is also the **constructor** a [banana block]({{_}}/cmk/banana/#banana-declare) is handed to:
 

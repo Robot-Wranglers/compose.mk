@@ -74,7 +74,7 @@ def test_mk_namespace_filter(project):
     ("mk.help", "mk.clean"),
     ("io.help", "io.echo"),
     ("stream.help", "stream.echo"),
-    ("flux.help", "flux.stage"),
+    ("stage.help", "stage.file"),
     ("docker.help", "docker.images"),
   ],
 )
@@ -296,12 +296,12 @@ def test_help_target_surfaces_docstring(project, target):
 
 
 def test_help_includes_hosted_targets(project):
-  # `flux.help` surfaces both seed-level targets (`flux.stage`) and ones that
+  # `flux.help` surfaces both seed-level targets (`flux.noop`) and ones that
   # live in compose.mk's `define __hosted__` self-hosting cache (`flux.ok`).
   # (The old container parser missed the hosted set; the native engine sees it.)
   project.makefile(DEMO)
   r = project.run("flux.help")
   assert r.ok, r.stderr
   names = r.stdout.split()
-  assert "flux.stage" in names  # seed target
+  assert "flux.noop" in names  # seed target
   assert "flux.ok" in names  # hosted target

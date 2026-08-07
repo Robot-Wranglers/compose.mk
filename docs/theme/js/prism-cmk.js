@@ -449,7 +449,9 @@
         // shared recipe-body tokens on the makefile base.
         Prism.languages.insertBefore('makefile', 'keyword', {
             'backtick-content': { pattern: /`[^`\n]*`/, alias: "string", inside: { 'variable': cmkExpandInside, 'punctuation': /`/ } },
-            'cmk-recursion': { pattern: /\b(?:make|self|this)/, alias: "keyword" },
+            // `this` only fires as a receiver keyword when followed by `.` so
+            // `this_directory` / bare `this ` stay plain identifiers.
+            'cmk-recursion': { pattern: /\b(?:make|self)|\bthis(?=\.)/, alias: "keyword" },
             // word-anchored so `run`/`dispatch` don't fire INSIDE a longer word (e.g.
             // the `run` in `runtime`, or a `.run`-prefixed member).
             'cmk-syntax': { pattern: /\b(?:dispatch|run)\b|compose[.]import.* /, alias: "operator" },
