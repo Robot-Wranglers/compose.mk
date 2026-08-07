@@ -89,8 +89,12 @@ documented in depth on the linked page; this list is just the index.
     <div class="def-card-body"><p>The active file: <code>CMK_SRC</code> in stand-alone mode, the invoked file in library mode.</p><p class="def-card-see">the self-path table above</p></div>
   </details>
   <details class="def-card" open>
+    <summary class="def-card-head"><span class="def-card-name"><code>__cmk__</code></span><span class="def-card-kind">self-path</span></summary>
+    <div class="def-card-body"><p>This program, as an invokable: the <code>argv0</code> of the current boot.  Inside an interpreted run that is the compiled artifact, so <code>$__cmk__ target</code> re-enters the same program while skipping the compile front door.  It rides the standard docker env crossing workspace-relative, so a block can re-invoke its own program from inside a container, and through dind.</p><p class="def-card-see">the self-path table above</p></div>
+  </details>
+  <details class="def-card" open>
     <summary class="def-card-head"><span class="def-card-name"><code>__interpreter__</code></span><span class="def-card-kind">self-path</span></summary>
-    <div class="def-card-body"><p>Invocation path (<code>$0</code> / <code>${CMK_BIN}</code>): the exe used for recursive <code>${make}</code> and forks.</p><p class="def-card-see">the self-path table above</p></div>
+    <div class="def-card-body"><p>The hosting <code>compose.mk</code>, in exec form: set once at the first boot and inherited by re-invocations.  The docker crossing rewrites it to the path valid where the block stands (the workspace copy, or the mounted <code>/usr/local/bin/compose.mk</code>).  Contrast <code>__cmk__</code> (this program) and <code>CMK_BIN</code> (the raw invocation path of the current boot).</p><p class="def-card-see">the self-path table above</p></div>
   </details>
   <details class="def-card" open>
     <summary class="def-card-head"><span class="def-card-name"><code>__interpreting__</code></span><span class="def-card-kind">self-path</span></summary>

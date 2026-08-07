@@ -55,14 +55,17 @@ invocation. Each sample asserts a clean exit (rc==0); we print
 min/median/mean/max but assert no latency threshold (machine-dependent, so this
 is a report, not a PR gate).
 
-Alongside wall-clock, the host-make benchmarks also record a **subprocess count**:
-one extra pass per benchmark is run under ``strace -f -e trace=execve``, counting
-every program image the invocation launches (sub-makes, shells, awk, jq, ...) and
-bucketing it by program name. This is machine-independent (unlike time) and is the
-cleanest signal for regressions like "cold boot now forks make three times". It is
-recorded per-benchmark in the JSON (``exec_total`` / ``exec_by_prog``) and printed
-inline; it is skipped for the container make-envs (no strace in the deps image) and
-when strace is unavailable (graceful -- the field is simply omitted).
+Alongside wall-clock, the host-make benchmarks also record a **subprocess
+count**: one extra, un-timed pass per benchmark runs with a shim dir prepended
+to PATH; each shim logs its argv and execs the real tool, so the count covers
+every PATH-resolved program the invocation launches (sub-makes, shells, awk,
+jq, ...), bucketed by program name. This is machine-independent (unlike time)
+and is the cleanest signal for regressions like "cold boot now forks make
+three times". It is recorded per-benchmark in the JSON (``exec_total`` /
+``exec_by_prog``) and printed inline. Blind spots: absolute-path execs and
+shell builtins. It is skipped for the container make-envs (shims on the host
+PATH would only see the docker client). Set ``CMK_PERF_EXEC_LOG`` to a file
+path to also append the raw argv log there, for site-level triage.
 """
 
 import functools
@@ -175,37 +178,68 @@ MAKE_ENVS = [
 INSTALL_MODES = ["local", "global"]
 
 
-@functools.lru_cache(maxsize=1)
-def _strace_available():
-  """True iff a usable `strace` is on PATH (subprocess counting is best-effort)."""
-  return shutil.which("strace") is not None
+# Census coverage: the tools compose.mk's hot paths resolve via the search path.
+_CENSUS_TOOLS = (
+  "bash sh make awk gawk sed grep cut tr head tail sort uniq cat ls mkdir "
+  "mktemp mv cp touch date env dirname basename readlink realpath find "
+  "xargs which id uname hostname docker jq sleep tee wc stat chmod ps "
+  "python3 python tac nproc timeout printf echo test expr seq"
+).split()
 
 
-# A successful execve strace line ends in `= 0`; capture the exec'd program path.
-_EXECVE_PATH = re.compile(r'execve\("([^"]*)"')
-_EXECVE_OK = re.compile(r"=\s*0\s*$")
+def _make_shims(shim_dir, log_path):
+  """Fill ``shim_dir`` with a log-then-exec wrapper per census tool.
+
+  Each wrapper appends one argv record to ``log_path`` (fields joined by the
+  unit separator, records ended by the record separator: argv values may
+  embed newlines, so lines cannot delimit records) and execs the real tool
+  (resolved now, from the un-shimmed PATH; tools that resolve to a
+  non-absolute path or not at all are skipped)."""
+  for tool in _CENSUS_TOOLS:
+    real = shutil.which(tool)
+    if real is None or not os.path.isabs(real):
+      continue
+    wrapper = (
+      "#!/bin/sh\n"
+      'IFS="\x1f"\n'
+      f'printf \'%s\x1e\\n\' "{tool}$IFS$*" >>"{log_path}"\n'
+      f'exec "{real}" "$@"\n'
+    )
+    path = Path(shim_dir) / tool
+    path.write_text(wrapper)
+    path.chmod(0o755)
 
 
 def _count_execs(argv, cwd, env, stdin=None, timeout=120):
-  """Run ``argv`` once under strace; return ``(total, Counter{prog: n})``.
+  """Run ``argv`` once under PATH shims; return ``(total, Counter{prog: n})``.
 
-  Counts successful ``execve(2)`` across the whole process tree (``-f``) -- i.e.
-  every program image the invocation actually launches (the top make, its
-  sub-makes, shells, awk/gawk, jq, cat, ...). Failed execs (a shell probing
-  ``$PATH``) end in ``-1`` and are ignored. Returns ``(None, None)`` when strace
-  is unavailable or errors, so the caller records "not measured" without failing
-  the perf run. This is a SEPARATE pass from the timed samples (strace's ptrace
-  overhead would pollute the wall-clock numbers), run once per benchmark.
+  A shim dir of log-then-exec wrappers (see `_make_shims`) is prepended to
+  PATH, so the count covers every PATH-resolved program the invocation
+  launches across the whole process tree, including make's SHELL binding.
+  Portable (replaces the old strace-only census, which no platform in the
+  matrix could actually run except a linux host). Blind spots: absolute-path
+  execs and shell builtins. Shims cost a few ms per exec, so this stays a
+  separate pass from the timed samples, run once per benchmark. Set
+  ``CMK_PERF_EXEC_LOG`` to a file path to also append the raw argv log there
+  (site-level triage; bucket it with scratch/exec-census/analyze.py).
+  Returns ``(None, None)`` on any error, so the caller records "not measured"
+  without failing the perf run.
   """
-  if not _strace_available():
-    return None, None
-  fd, trace_path = tempfile.mkstemp(suffix=".strace")
-  os.close(fd)
+  tmp = tempfile.mkdtemp(suffix=".census")
+  shim_dir = os.path.join(tmp, "bin")
+  log_path = os.path.join(tmp, "execs.log")
+  os.mkdir(shim_dir)
   try:
+    _make_shims(shim_dir, log_path)
+    Path(log_path).touch()
+    shim_env = {
+      **env,
+      "PATH": shim_dir + os.pathsep + env.get("PATH", os.defpath),
+    }
     subprocess.run(
-      ["strace", "-f", "-qq", "-e", "trace=execve", "-o", trace_path, *argv],
+      argv,
       cwd=str(cwd),
-      env=env,
+      env=shim_env,
       input=stdin,
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL,
@@ -213,20 +247,20 @@ def _count_execs(argv, cwd, env, stdin=None, timeout=120):
       timeout=timeout,
     )
     counts = Counter()
-    for line in Path(trace_path).read_text(errors="replace").splitlines():
-      if not _EXECVE_OK.search(line):
-        continue
-      m = _EXECVE_PATH.search(line)
-      if m:
-        counts[os.path.basename(m.group(1))] += 1
+    raw = Path(log_path).read_text(errors="replace")
+    for rec in raw.split("\x1e"):
+      rec = rec.lstrip("\n")
+      if rec:
+        counts[rec.split("\x1f", 1)[0]] += 1
+    keep = os.environ.get("CMK_PERF_EXEC_LOG")
+    if keep:
+      with open(keep, "a") as out:
+        out.write(raw)
     return sum(counts.values()), counts
   except Exception:
     return None, None
   finally:
-    try:
-      os.unlink(trace_path)
-    except OSError:
-      pass
+    shutil.rmtree(tmp, ignore_errors=True)
 
 
 def _bench(
@@ -250,10 +284,10 @@ def _bench(
   sample, OUTSIDE the timed region -- used to reset shared state so every sample
   is a genuine cold start.
 
-  ``count_procs`` adds one extra, un-timed pass under strace to record how many
-  subprocesses the invocation spawns (see `_count_execs`); best-effort, so it is
-  a no-op where strace is missing. ``pre`` is honored for it too, so the counted
-  pass is as cold as the timed samples.
+  ``count_procs`` adds one extra, un-timed pass under PATH shims to record how
+  many subprocesses the invocation spawns (see `_count_execs`); best-effort, so
+  any failure just omits the count. ``pre`` is honored for it too, so the
+  counted pass is as cold as the timed samples.
   """
   merged = {**PERF_ENV, **(env or {})}
   times = []
@@ -430,7 +464,7 @@ def _runner(make_env, mode, tmp_path, perf_image):
         cwd=cwd,
         env={**xenv, **(env or {})},
         stdin=stdin,
-        count_procs=True,  # host-only: strace the subprocess tree
+        count_procs=True,  # host-only: shim-census the subprocess tree
         **kw,
       )
 
@@ -730,6 +764,7 @@ TUI_SAMPLES = max(1, min(SAMPLES, 3))
 
 
 @pytest.mark.perf
+@pytest.mark.tui
 @pytest.mark.needs_docker
 def test_perf_tui_bringup_coldstart():
   """N cold-start samples of headless TUI bring-up (``tux.open`` -> tmuxp).

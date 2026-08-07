@@ -79,5 +79,10 @@ installers-test:
 	tox -e docker-installer
 
 perf perf-test:
-	@# Cold-start perf benchmark (report-only; opt-in, not wired to CI).
+	@# Cold-start perf benchmark, base tier (report-only; opt-in, not wired to CI).
+	@# The tui-marked heavies auto-skip; see perf-test-extended for the full run.
 	tox -e perf-test
+
+perf-extended perf-test-extended:
+	@# The full perf benchmark: base plus the tui-marked heavies (needs docker).
+	tox -e perf-test-extended

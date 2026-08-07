@@ -14,16 +14,16 @@ As mentioned elsewhere, `compose.mk` is still changing slowly but the goal is to
 ### Self-Audit / Linting
 <hr class="section-rule lvl-3">
 
-`compose.mk` ships a self-audit that checks *the framework's own source* (the `CMK_SRC` file), distinct from `cmk lint`, which vets *user* programs.  It audits the framework, not user code, so it is off the `cmk lint` path; run it directly or from CI:
+A self-audit checks *the framework's own source* (the `CMK_SRC` file), distinct from `cmk lint`, which vets *user* programs.  It is maintainer dev-tooling, so it ships in the `.automation.cmk` project module rather than core.  Load that module (this repo does, from its `Makefile`), then run it directly or from CI:
 
 ```bash
-./compose.mk lang.lint.self
+make lint.self
 ```
 
 It bundles two checks:
 
-* **`lang.lint.self.collisions`**: reports macro/target name collisions ("twins") and their smart-route safety class.  Fails *only* on the one mechanically-provable hazard: an arg-dropping trampoline over a parametric target.
-* **`lang.lint.self.phase`**: audits the `#:phase` markers on every embedded-awk block, in one awk pass.  Fails (exit 48) on a missing/inconsistent marker, a `SUPERVISOR` block that holds a `@@` placeholder or lives inside `__hosted__`, or a parse-time reference to a hosted/undefined block (the "seed quarantine").
+* **`lint.self.collisions`**: reports macro/target name collisions ("twins") and their smart-route safety class.  Fails *only* on the one mechanically-provable hazard: an arg-dropping trampoline over a parametric target.
+* **`lint.self.phase`**: audits the `#:phase` markers on every embedded-awk block, in one awk pass.  Fails (exit 48) on a missing/inconsistent marker, a `SUPERVISOR` block that holds a `@@` placeholder or lives inside `__hosted__`, or a parse-time reference to a hosted/undefined block (the "seed quarantine").
 
 **Editing embedded awk?**  Each `define .awk.*` block carries a structured marker naming the compiler phase it runs in:
 
@@ -32,7 +32,7 @@ It bundles two checks:
 define .awk.<name>
 ```
 
-Keep it accurate when you add or move a block, then re-run `lang.lint.self.phase`; it is the source of truth for which blocks may be hosted (`awklang=yes` iff `seed=0`).
+Keep it accurate when you add or move a block, then re-run `lint.self.phase`; it is the source of truth for which blocks may be hosted (`awklang=yes` iff `seed=0`).
 
 ### See Also
 <hr class="section-rule lvl-3">

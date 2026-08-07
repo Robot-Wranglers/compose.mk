@@ -2,7 +2,7 @@
 
 {{ macros.section(2, "Linting", id="linting") }}
 
-`compose.mk` ships two distinct linters, both reachable directly through the `lang.lint.*` targets: **`cmk lint`** vets *your* programs before you run them, and **`lang.lint.self`** audits the framework's *own* source (a maintainer / CI concern, off the `cmk lint` path).
+`compose.mk` core ships one linter, **`cmk lint`**, which vets *your* programs before you run them. A separate **`lint.self`** audit checks the framework's *own* source. It is project dev-tooling that ships in `.automation.cmk` rather than core, a maintainer / CI concern off the `cmk lint` path.
 
 {{ macros.section(3, "Vetting a Program", id="cmk-lint") }}
 
@@ -18,16 +18,16 @@ The legality tier shares the runtime's [typed-fault taxonomy]({{_}}/runtime): a 
 
 {{ macros.section(3, "Auditing the Framework", id="lang-lint-self") }}
 
-Auditing compose.mk's *own* source is a separate maintainer / CI concern; it checks the framework, not user code, so it is off the `cmk lint` path.  Run it directly or from CI:
+Auditing compose.mk's *own* source is a separate maintainer concern: it checks the framework, not user code, so it lives outside core as the `lint.self` target in the `.automation.cmk` project module. Load that module (this repo does, from its `Makefile`), then run it directly or from CI:
 
 ```bash {.cli_example}
-$ ./compose.mk lang.lint.self
+$ make lint.self
 ```
 
 It bundles two checks:
 
-* **`lang.lint.self.collisions`**: reports macro/target name collisions ("twins") and their smart-route safety class.  Fails *only* on the one mechanically-provable hazard: an arg-dropping trampoline over a parametric target.
-* **`lang.lint.self.phase`**: audits the `#:phase` markers on every embedded-awk block, in one awk pass.  Fails (exit 48) on a missing/inconsistent marker, a `SUPERVISOR` block that holds a `@@` placeholder or lives inside `__hosted__`, or a parse-time reference to a hosted/undefined block (the "seed quarantine").
+* **`lint.self.collisions`**: reports macro/target name collisions ("twins") and their smart-route safety class.  Fails *only* on the one mechanically-provable hazard: an arg-dropping trampoline over a parametric target.
+* **`lint.self.phase`**: audits the `#:phase` markers on every embedded-awk block, in one awk pass.  Fails (exit 48) on a missing/inconsistent marker, a `SUPERVISOR` block that holds a `@@` placeholder or lives inside `__hosted__`, or a parse-time reference to a hosted/undefined block (the "seed quarantine").
 
 See [Contributing]({{_}}/contributing) for where the self-audit sits in the maintainer workflow.
 

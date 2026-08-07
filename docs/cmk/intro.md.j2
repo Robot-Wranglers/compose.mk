@@ -3,12 +3,11 @@
 # CMK: Introduction & Classification
 <hr class="section-rule lvl-1">
 
-{{ macros.road_map([
+{{ macros.escape_hatch([
     'Want to *write* CMK?  Jump straight to the [compiler tutorial](@/cmk/compiler) (syntax and lowering).',
     ['CMK Quick Reference', '@/cmk/quickref', 'a syntax cheat-sheet'],
     ['Language Properties', '@/cmk/paradigm/#language-properties', 'the multi-paradigm classification in full'],
-], mkdocs) }}
-Most documentation doesn't emphasize that `compose.mk` is actually *a programming language*.  The shocking secret truth is safe to ignore, and you don't need to care about this if you're only interested in [tools]({{_}}/tool-overview) or a [standard-library]({{_}}/standard-lib) for Makefiles.
+], mkdocs, preamble="Most documentation doesn't emphasize that `compose.mk` is actually *a programming language*.  The shocking secret truth is safe to ignore, and you don't need to care about this if you're only interested in [tools](@/tool-overview) or a [standard-library](@/standard-lib) for Makefiles.") }}
 
 {%include "cmk/tldr.md.j2"%}
 
@@ -17,12 +16,18 @@ Most documentation doesn't emphasize that `compose.mk` is actually *a programmin
 
 A CMK file is executable via a shebang, or through the `cmk` subcommand:
 
-```bash
-#!/usr/bin/env -S ./compose.mk cmk run        # line 1, then `chmod +x`
+```bash {.cli_example}
+# Line 1 of a CMK file; then `chmod +x` to run it directly
+#!/usr/bin/env -S ./compose.mk cmk run
 
-./compose.mk cmk run     greet.cmk            # compile + run
-./compose.mk cmk compile greet.cmk            # just show the generated Makefile
-./compose.mk cmk compile greet.cmk greet      # emit a self-contained ./greet executable
+# Compile and run
+$ ./compose.mk cmk run greet.cmk
+
+# Show the generated Makefile
+$ ./compose.mk cmk compile greet.cmk
+
+# Emit a self-contained ./greet executable
+$ ./compose.mk cmk compile greet.cmk greet
 ```
 
 `__main__` is the default goal (think Python's `if __name__ == "__main__"`):

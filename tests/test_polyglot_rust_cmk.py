@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = [pytest.mark.external_plugin, pytest.mark.compiler]
+pytestmark = [pytest.mark.external_plugin, pytest.mark.plugin]
 
 REPO = Path(__file__).resolve().parent.parent
 PLUGIN = REPO / ".cmk" / "dsl.rust.cmk"

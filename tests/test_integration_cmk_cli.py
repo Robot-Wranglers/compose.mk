@@ -313,3 +313,64 @@ def test_build_makes_runnable_binary(docker_cmk, tmp_path):
     env={**os.environ, "CMK_SUPERVISOR": "1", "NO_COLOR": "1"},
   )
   assert "CMK-RUN-OK" in out.stdout, out.stderr
+
+
+# --- file identity -----------------------------------------------------------
+
+
+def test_file_identity_in_make_context_and_host_machine_block(cmk, tmp_path):
+  """`cmk run <f>` binds the interpreted file's own path, visible two ways.
+
+  In make context it expands at parse/recipe time; inside a host-machine block
+  it arrives as plain process env.  The docker crossing is pinned below.
+  """
+  (tmp_path / "ident.cmk").write_text(
+    "open cmk\nmachine hm(| entrypoint=bash |)\n"
+    "$(info MF=[${__file__}])\n"
+    'd:\n  (| echo "BF=[$__file__]" |) in hm\n'
+    "__main__: d\n"
+  )
+  r = cmk("cmk", "run", "ident.cmk", env=SUP)
+  out = r.stdout + r.stderr
+  assert r.ok, out[-2000:]
+  assert "MF=[ident.cmk]" in out, out[-2000:]
+  assert "BF=[ident.cmk]" in out, out[-2000:]
+
+
+@pytest.mark.needs_docker
+def test_file_identity_crosses_the_container_boundary(docker_cmk, tmp_path):
+  # rides the standard-env crossing, and the workspace mount keeps the relative path valid.
+  (tmp_path / "file_box.cmk").write_text(
+    "open cmk\n"
+    "container boxy(img=alpine entrypoint=sh)(| |)\n"
+    "foo:\n"
+    '\t(| echo "BOX_FILE=[$__file__] BOX_CMK=[$__cmk__] BOX_INTERP=[$__interpreter__]" |) in boxy\n'
+  )
+  r = docker_cmk("cmk", "run", "file_box.cmk", "foo", timeout=300, env=SUP)
+  out = r.stdout + r.stderr
+  assert r.returncode == 0, out[-2000:]
+  assert "BOX_FILE=[file_box.cmk]" in out, out[-2000:]
+  # this-program identity: the compiled temp, workspace-relative so it stays valid in the box.
+  assert "BOX_CMK=[./.tmp." in out, out[-2000:]
+  # interpreter identity, rewritten by the crossing to the form valid where the block stands.
+  line = next(l for l in out.splitlines() if "BOX_INTERP=" in l)
+  assert "BOX_INTERP=[]" not in line, line
+  assert "compose.mk]" in line, line
+
+
+def test_program_reinvokes_itself_via_cmk_dunder(cmk, tmp_path):
+  """A program's argv0 is exported as its own re-invokable handle.
+
+  Inside an interpreted run that is the compiled artifact, so the re-exec
+  skips the compile front door entirely (no second compile line appears).
+  """
+  (tmp_path / "quine.cmk").write_text(
+    "leaf:\n\techo LEAF_RAN VIA=[$${__cmk__}]\n"
+    "hop:\n\t$${__cmk__} leaf\n"
+    "__main__: hop\n"
+  )
+  r = cmk("cmk", "run", "quine.cmk", env=SUP)
+  out = r.stdout + r.stderr
+  assert r.ok, out[-2000:]
+  assert "LEAF_RAN" in out, out[-2000:]
+  assert "VIA=[./.tmp." in out, out[-2000:]

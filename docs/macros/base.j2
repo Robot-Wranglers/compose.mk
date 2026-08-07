@@ -158,8 +158,6 @@
 {{ marker }} {{ kind }} "{{ title }}"
 {% if preamble %}    {{ _ll_expand(preamble, mkdocs) }}
 
-    &nbsp;
-
 {% endif %}{% for item in items %}    * {{ _ll_item(item, mkdocs) }}
 {% endfor %}
 {%- endmacro -%}

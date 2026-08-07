@@ -208,12 +208,10 @@ The demotion happens at import time, with nothing extra to declare.  The stdlib'
 
 `import.module` is one member of a broader **declaration** namespace: parse-time verbs that bring definitions into scope before any recipe runs.  Its siblings bring other kinds of things into scope by the same convention: single defines, targets, plugins, compose files, and polyglots.  The `declare.*` namespace collects the parse-time registrars created by constructors.
 
-{{site.block_docs('DeclarationIndex', mkdocs)}}
-
 #### Reading a signature {% raw %}{#reading-a-signature}{% endraw %}
 <hr class="section-rule lvl-4">
 
-The **brings-into-scope** column above is a compact arglist/optlist synopsis.
+Each declaration member has a compact arglist/optlist **signature**.
 Each token has a fixed meaning:
 
 {{ site.signature_legend() }}

@@ -132,7 +132,11 @@ This example above is typical, but not necessarily minimal, so let's discuss a f
 ### Compatibility Notes
 <hr class="section-rule lvl-3">
 
-Platforms used in development for `compose.mk` include recentish docker, recentish make (*3.8+*) and bash (*5+*) on both Linux and MacOS.  Testing done in CI only uses Linux and won't try every possible combination of versions, but the goal is to support most things you'll encounter in the wild.
+Platforms used in development for `compose.mk` include recentish docker, GNU make (*4.2+*) and bash (*5+*) on both Linux and MacOS.  Testing done in CI only uses Linux and won't try every possible combination of versions, but the goal is to support most things you'll encounter in the wild.
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+**For make,** the hard floor is GNU make 4.2 (released 2016; anything from a 2019-or-later distro is fine).  Older makes cannot even parse the file, so `compose.mk` checks the version first thing and fails with instructions instead of a cryptic parse error.  The usual way to hit this is stock MacOS, which ships make 3.81 (frozen since 2006) with the command-line tools: `brew install make`, then either invoke `gmake` or put brew's gnubin directory first on PATH.
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
@@ -140,7 +144,7 @@ Platforms used in development for `compose.mk` include recentish docker, recenti
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-**For MacOS,** the [standard library]({{_}}/standard-lib) should mostly Just Work.  For more [advanced]({{_}}/cmk/compiler) [features]({{_}}/bridge) though, there are the usual problems with BSD vs GNU tools, particularly `sed` and `awk`.
+**For MacOS,** once a modern make is installed (see above), the [standard library]({{_}}/standard-lib) should mostly Just Work.  For more [advanced]({{_}}/cmk/compiler) [features]({{_}}/bridge) though, there are the usual problems with BSD vs GNU tools, particularly `sed` and `awk`.
 
 Typically `/usr/local/bin` comes before `/usr/bin` in PATH, so this should leave your base installation untouched and still prefer GNU by default:
 
@@ -152,6 +156,10 @@ $ cp /usr/local/bin/gawk /usr/local/bin/awk
 # Install a GNU sed
 $ brew install gnu-sed
 $ cp /usr/local/bin/gsed /usr/local/bin/sed
+
+# Clear cached lookups, then confirm you're on the GNU versions
+$ hash -r
+$ make --version
 ```
 
 Usage of other tools like `xargs` should be BSD/GNU agnostic so please report any issues!  Opting in to GNU tools on MacOS *everywhere* is a matter of taste, but might be worthwhile. See documentation for example here[^3].

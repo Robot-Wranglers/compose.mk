@@ -159,42 +159,36 @@ Hooks are enabled by default since they don't affect performance much, but it's 
 ### Related Config
 <hr class="section-rule lvl-3">
 
-The runtime layer is driven by a few supervisor/interpreter env-vars and reserved dunder names.  The canonical reference for both is the [Configuration]({{_}}/config) page.
+The runtime layer is driven by a few supervisor/interpreter env-vars and reserved dunder names.  The tables below are a quick index; the [Configuration]({{_}}/config) page is the canonical reference.
 
-> **Environment variables** ( [details]({{_}}/config#general-environment-variables) )
-> {: .cmk-card }
->
-> | Variable | Role |
-> | --- | --- |
-> | `CMK_SUPERVISOR` | Gate the [supervisor]({{_}}/signals) (interpreter-style invocations set it). |
-> | `CMK_BOOTLOADER` / `CMK_BOOTLOADER_DISABLED` | The [bootloader](#bootloader) extension point (and the kill-switch). |
-> | `CMK_DISABLE_HOOKS` | Disable the [pre/post hooks](#pre-post-hooks). |
-> | `MAKE_CLI` | The live command line: the [continuation](#continuations) substrate. |
-> | `MAKE_SUPER` | The supervisor's per-run id (scratch-file keying). |
+**Environment variables** ([details]({{_}}/config#general-environment-variables)):
 
-<!-- separate adjacent card blockquotes (python-markdown merges them otherwise) -->
+| Variable | Role |
+| --- | --- |
+| `CMK_SUPERVISOR` | Gate the [supervisor]({{_}}/signals) (interpreter-style invocations set it). |
+| `CMK_BOOTLOADER` / `CMK_BOOTLOADER_DISABLED` | The [bootloader](#bootloader) extension point (and the kill-switch). |
+| `CMK_DISABLE_HOOKS` | Disable the [pre/post hooks](#pre-post-hooks). |
+| `MAKE_CLI` | The live command line: the [continuation](#continuations) substrate. |
+| `MAKE_SUPER` | The supervisor's per-run id (scratch-file keying). |
 
-> **Dunder names** ( [details]({{_}}/config#dunder-names-__name__) )
-> {: .cmk-card }
->
-> | Name | Role |
-> | --- | --- |
-> | `__main__` | The default goal / entrypoint.  Runs on direct execution; demoted to a `<name>:` target on import ([Executable Modules]({{_}}/cmk/modules#executable-modules)). |
-> | `__vm__` | The [virtual-machine](#virtual-machine) control stack (module). |
-> | `__ip__` / `__step__` / `__posix_code__` / … | The scheduler's seven registers, exported on each dispatch hop as a read-only reflection surface (see [Flat dispatch](#flat-dispatch)). |
-> | `__interpreter__` / `__interpreting__` | Invocation paths used for recursive `make` and forks. |
+**Dunder names** ([details]({{_}}/config#dunder-names-__name__)):
 
-<!-- separate adjacent card blockquotes (python-markdown merges them otherwise) -->
+| Name | Role |
+| --- | --- |
+| `__main__` | The default goal / entrypoint.  Runs on direct execution; demoted to a `<name>:` target on import ([Executable Modules]({{_}}/cmk/modules#executable-modules)). |
+| `__vm__` | The [virtual-machine](#virtual-machine) control stack (module). |
+| `__ip__` / `__step__` / `__posix_code__` / … | The scheduler's seven registers, exported on each dispatch hop as a read-only reflection surface (see [Flat dispatch](#flat-dispatch)). |
+| `__cmk__` | This program as an invokable: the `argv0` of the boot, post-compile the compiled artifact.  Re-exec it to re-enter the same program without the compile front door; forwarded across container crossings. |
+| `__interpreter__` / `__interpreting__` | Invocation paths used for recursive `make` and forks; the crossing rewrites `__interpreter__` to its in-container form. |
 
-> **Pragmas**: a program can also set compile-time settings in its `# cmk_pragma ::: {…} :::` header ( [details]({{_}}/cmk/pragmas) ); the few that shape the runtime:
-> {: .cmk-card }
->
-> | Pragma | Role |
-> | --- | --- |
-> | `repl` | Make the file a [REPL]({{_}}/embedded-tui) runtime execution mode (no import/boilerplate). |
-> | `vm_hydrate` | Auto-receive the reflective [`__vm__`](#virtual-machine) env at every recipe entry (the recommended form). |
-> | `vm_trace` | Inject live frame-tracing so the [virtual machine](#virtual-machine)'s frame-tree reflects the real recursive `make` call stack. |
-> | `compiler_pre` / `compiler_post` | Append custom compile stages (an array, so it *accumulates*, e.g. a plugin lifting its own `vm_hydrate` stage). |
+**Pragmas** ([details]({{_}}/cmk/pragmas)): a program can also set compile-time settings that shape the runtime:
+
+| Pragma | Role |
+| --- | --- |
+| `repl` | Make the file a [REPL]({{_}}/embedded-tui) runtime execution mode (no import/boilerplate). |
+| `vm_hydrate` | Auto-receive the reflective [`__vm__`](#virtual-machine) env at every recipe entry (the recommended form). |
+| `vm_trace` | Inject live frame-tracing so the [virtual machine](#virtual-machine)'s frame-tree reflects the real recursive `make` call stack. |
+| `compiler_pre` / `compiler_post` | Append custom compile stages (an array, so it *accumulates*, e.g. a plugin lifting its own `vm_hydrate` stage). |
 
 {{ macros.section(3, "See Also", id="see-also") }}
 

@@ -39,6 +39,8 @@ The [CMK compiler]({{_}}/cmk/compiler) (`cmk compile` / `cmk run`) is heavier th
 
 This is a deliberate trade for `compose.mk`'s defining feature: it is **a single, dependency-free, drop-in file**.  A persistent bytecode/`.pyc`-style cache is awkward to reconcile with "copy one file into any repo and it just works," so the cost is paid up front on each run instead of amortized across runs.  For the short-lived CLI/automation invocations `compose.mk` is built for, this is usually the right trade but it's worth understanding if you're calling the compiler in a tight loop.
 
+For the speed-demons: the compiler runs on any of gawk, mawk, busybox awk, or one-true-awk with identical output, and `mawk` is measurably the fastest of them (5-16% off compile-heavy paths in our benchmarks), which compounds on real programs where hooks, at-exit handlers, and module imports each trigger additional parses; on debian-family systems `update-alternatives --set awk /usr/bin/mawk` opts in.
+
 ### Parallelism & Multicore
 <hr class="section-rule lvl-3">
 

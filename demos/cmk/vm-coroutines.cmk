@@ -7,25 +7,25 @@
 # USAGE:  ./demos/cmk/vm-coroutines.cmk
 
 '''
-Both a runnable demo and the canonical home of coroutines.demo -- other demos
-import the coroutine from here rather than re-inlining it (overlay.cmk pulls it
-in with include.plugins under prefix=demos/cmk and points its own __main__ at
-coroutines.demo).
+Both a runnable demo and the canonical home of coroutines.demo.  Other
+demos import the coroutine from here rather than re-inlining it.  The
+overlay.cmk demo pulls it in with include.plugins under prefix=demos/cmk,
+and points its own __main__ at coroutines.demo.
 
 The coroutine re-enters itself, advancing a phase through three steps
-(init -> step -> done) until it terminates.  It builds on the __vm__ plugin over
-a reflective environment: vm.reflect brings the reflective E
-into scope, and the vm_hydrate pragma makes the compiler auto-receive context at
-every recipe entry, so the body is just an exported phase plus a vm goto -- no
-setenv/getenv.
+(init -> step -> done) until it terminates.  It builds on the __vm__ plugin
+over a reflective environment: vm.reflect brings the reflective E into
+scope, and the vm_hydrate pragma makes the compiler auto-receive context at
+every recipe entry, so the body is just an exported phase plus a vm goto,
+with no setenv/getenv.
 
 Two knobs a consumer may override after the import (plain make vars):
 
   coroutines.wait:
     empty (default): no pacing; N: wait N seconds between phases.
   coroutines.dump_env:
-    empty (default): quiet; non-empty: print the persisted reflective env file
-    once the coroutine finishes.
+    empty (default): quiet; non-empty: print the persisted reflective
+    env file once the coroutine finishes.
 '''
 
 import virtual-machine.cmk as vm, flat=1
@@ -33,27 +33,32 @@ $(call vm.reflect, exclude=MAKE CMK MFLAGS kwargs_ CONTROL_STACK)
 
 coroutines.wait ?=
 coroutines.dump_env ?=
-# pace: a no-op (true) unless coroutines.wait is set, in which case wait that
+# pace: a no-op unless coroutines.wait is set, in which case wait that
 # many seconds.
-coroutines.pace=$(if ${coroutines.wait},${make} io.wait/${coroutines.wait},true)
+coroutines.pace=$(if ${coroutines.wait},\
+	${make} io.wait/${coroutines.wait},true)
 # env.dump: print the persisted reflective E (the __vm__ env file); the
 # done-phase aid.
-coroutines.env.dump=printf 'persisted E = %s\n' "$$(cat ${__vm__.env.file} 2>/dev/null)"
+coroutines.env.dump=printf 'persisted E = %s\n' \
+	"$$(cat ${__vm__.env.file} 2>/dev/null)"
 
 coroutines.demo:
-	'''the entrypoint: seed the reflective env and tail-jump into the re-entrant body.'''
+	'''seed the reflective env, then tail-jump into the re-entrant body.'''
 	export phase=0
 	vm.goto(coroutines.step)
 
 coroutines.step:
-	@# the re-entrant body: vm_hydrate auto-receives so the phase reads first-class;
-	@# each phase logs, advances the exported phase, and tail-jumps back to itself
-	@# until done.  recipe lines are joined by CMK's implicit joinbody (default &&).
+	@# the re-entrant body: vm_hydrate auto-receives, so the phase reads
+	@# first-class.  each phase logs, advances the exported phase, and
+	@# tail-jumps back to itself until done.
 	${coroutines.pace}
 	case "$$phase" in \
-		0) cmk.log(enter -> init phase=$$phase) && export phase=1 && vm.goto(coroutines.step) ;; \
-		1) cmk.log(resume -> step phase=$$phase) && export phase=2 && vm.goto(coroutines.step) ;; \
-		2) cmk.log(resume -> done phase=$$phase) $(if ${coroutines.dump_env}, && ${coroutines.env.dump},) ;; \
+		0) cmk.log(enter -> init phase=$$phase) \
+			&& export phase=1 && vm.goto(coroutines.step) ;; \
+		1) cmk.log(resume -> step phase=$$phase) \
+			&& export phase=2 && vm.goto(coroutines.step) ;; \
+		2) cmk.log(resume -> done phase=$$phase) \
+			$(if ${coroutines.dump_env}, && ${coroutines.env.dump},) ;; \
 	esac
 
 # this file's own demo config (a consumer importing it overrides these)

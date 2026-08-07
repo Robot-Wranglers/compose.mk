@@ -1,0 +1,73 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# machines-nested.cmk: the containment chain behind in/out, crossing container boundaries.
+# Usage: ./demos/cmk/machines-nested.cmk   (needs docker)
+
+'''
+The containment chain behind `in` / `out`, crossing real container
+boundaries.  Each `in` dispatch pushes the current ambient onto a
+run-scoped chain, so nesting composes: a block sent into one container
+from inside another sees its real enclosure, not a static default.
+`out` pops the chain, landing in the parent with the parent's own parent
+intact.  The hops are docker-in-docker: every layer talks to the host
+daemon over the mounted socket, so every box can open the next.
+
+Three env vars carry the chain: __ambient__ is where the block runs,
+__ambient_parent__ is what encloses it, and __ambient_stack__ holds the
+rest of the enclosure.  They ride the standard docker env crossing, so
+the chain survives both process hops and container boundaries: a recipe
+that re-invokes this file from inside a container hands the chain to the
+child run, and the child's own `in` extends it.
+
+Both boxes build from one inlined Dockerfile.  The base needs make, bash,
+and gawk to re-run the interpreter, and ships the docker client for the
+next hop; the workspace, the interpreter, and the socket are all mounted
+by the standard container run, so no other setup appears here.
+
+'''
+
+import log
+from cmk import container, Dockerfile
+
+Dockerfile base(|
+  FROM docker:dind
+  RUN apk add -q --update --no-cache coreutils bash gawk make
+|)
+
+container outer(img=${base.img} entrypoint=bash)(| |)
+container inner(img=${base.img} entrypoint=bash)(| |)
+
+__main__: base.build demo.depth_one demo.nesting demo.unwind
+
+demo.depth_one:
+  '''
+  depth one: ( a block in a container, from a top-level recipe )
+    The enclosure is the host, same as before the chain was dynamic.
+  '''
+  log()
+  (| echo "  running in ${__ambient__}, enclosed by ${__ambient_parent__}" |) in outer
+
+demo.nesting:
+  '''
+  depth two: ( the hop into inner happens from inside outer )
+    So inner reports outer as its parent, not host.local.
+  '''
+  log()
+  (| ${__cmk__} hop.deep |) in outer
+
+hop.deep:
+  (| echo "  running in ${__ambient__}, enclosed by ${__ambient_parent__}" |) in inner
+
+demo.unwind:
+  '''
+  out from depth two: ( the pop is the dual of the push )
+    The block lands in outer, and outer still knows its own parent is the
+    host, so a further out would keep unwinding instead of bouncing back.
+  '''
+  log()
+  (| ${__cmk__} hop.mid |) in outer
+
+hop.mid:
+  (| ${__cmk__} hop.leaf |) in inner
+
+hop.leaf:
+  (| echo "  landed in ${__ambient__}, enclosed by ${__ambient_parent__}" |) out

@@ -1,0 +1,39 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# goals.cmk: the named-lift form goal NAME = <target-expr>, used programmatically.
+#   A goal reifies a target-expression as a first-class value: $(NAME) quotes it, __goals__
+#   registers it, and running NAME dispatches make on the reify.  The lift is just a macro
+#   (goal.bind), so the goal-set can be built from data -- here one goal is created per stage in
+#   a caller-provided PIPELINE, and __main__ dispatches whatever was created.
+#
+#   Docker-free.
+#
+# USAGE:
+#   ./demos/cmk/goals.cmk                              # create + run the default extract/transform/load
+#   PIPELINE='build test ship' ./demos/cmk/goals.cmk  # a different pipeline, same code
+
+'''goals.cmk: create one lifted goal per PIPELINE stage, then dispatch them dynamically.'''
+
+# phase/<name>: the parametric target each lifted goal reifies onto
+phase/%:; @printf '  phase %s ran\n' '${*}'
+
+# PIPELINE: a caller-provided list of phase names.  goal.bind creates one lifted goal per phase at
+# module load -- the goal-set is data, not hardcoded.  Each reifies to phase/<name>, registers in
+# __goals__, and becomes a runnable target.
+PIPELINE ?= extract transform load
+$(foreach s,${PIPELINE},$(call goal.bind,$(s),phase/$(s)))
+
+demo.reflect:
+  '''The created goals are first-class: __goals__ lists them, and `NAME` quotes each reify.'''
+  cmk.log(pipeline ${sep} ${PIPELINE} ${sep} registry __goals__ = ${__goals__})
+  @$(foreach g,${__goals__},printf '  %s reifies to %s\n' '$(g)' '$($(g))';)
+
+demo.protocol:
+  '''__goals__ conforms to the Registry protocol structurally -- one ABC over reflective dunders.'''
+  [ "$(call Registry.provided_by,__goals__)" = 1 ] \
+    && cmk.log(protocol Registry ${sep} __goals__ conforms) \
+    || cmk.log.error(protocol Registry ${sep} __goals__ does not conform)
+
+# __main__ dispatches the dynamically-created goals: its prereqs are the registry, so running the
+# module runs whatever PIPELINE asked for, in order.
+__main__: demo.reflect demo.protocol ${__goals__}

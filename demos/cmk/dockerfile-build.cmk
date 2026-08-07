@@ -1,0 +1,35 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# dockerfile-build.cmk:
+#   The class-build model.  A Dockerfile(| CONFIG |) is a built image,
+#   and the fluent .container(| code |) fold builds that image then runs
+#   the code inside it.  Dockerfile.__call__ is build; Dockerfile.__dot__
+#   wires the operand to (build this image) then (run its body as a shell
+#   script on it), returning the operand so the chain result runs inline.
+#
+# USAGE: ./demos/cmk/dockerfile-build.cmk
+
+'''
+'''
+
+from cmk import Dockerfile, container
+
+__main__: demo1 demo2 demo3 demo4
+
+demo1:
+  Dockerfile(| FROM alpine:3.21.2 |).container(| 
+    echo hi from the built image; uname -s |)
+
+demo2:
+  Dockerfile(| FROM alpine:3.21.2 |) \
+    .container(| echo hi from the built image; uname -s |)
+
+demo3:
+  Dockerfile(| 
+    FROM alpine:3.21.2 |).container(| echo hi from the built image; uname -s |)
+
+demo4:
+  Dockerfile(| 
+    FROM alpine:3.21.2 |).container(| 
+      echo hi from the built image; uname -s |)
+

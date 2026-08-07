@@ -25,6 +25,9 @@
 #                           warns on comment backticks.
 #     * `lint.callforms`  -- flag legacy make-call syntax in demos that a cmk callform replaces
 #                           (convertible shape only); delegates to the callform fixer in lint mode.
+#     * `lint.self`       -- framework self-audit of compose.mk core (ported out of core): macro/target
+#                           twin collisions (`lint.self.collisions`) + `.awk.*` phase markers
+#                           (`lint.self.phase`).  Audits `CMK_SRC`, not user programs.
 #
 #   A library (no __main__): import it to use it --
 #       $(call include.plugins, prefix=. .automation.cmk)
@@ -245,6 +248,143 @@ lint.callforms:
 	@# reporting.  USAGE:  make lint.callforms  //  make lint.callforms fix=1
 	cmk.log(${dim}lint callforms ${sep}${no_ansi_dim} legacy make-calls -> callforms)
 	if [ "${fix}" = 1 ]; then python3 ${callform.fixer}; else python3 ${callform.fixer} --lint ${lint.demos.glob}; fi
+
+# The framework self-audit -- compose.mk core auditing its own source (`CMK_SRC`), ported out of core
+# as project dev-tooling.  `lint.self.phase` checks the compiler's `.awk.*` phase markers via the awk
+# pass below; `lint.self.collisions` checks macro/target name twins + their smart-route safety class.
+# `pin_scan` marks a block pinned (must be a seed block) when the source references it at parse time;
+# it recognizes the current `lang.awk.export`/`stage.frag`/`export.frag` registration idiom.
+dsl.awklang lint_self_phase(|
+    '''
+    The maintainer self-audit of the compiler's own embedded-awk phase markers.  One pass over the
+    source; the verdict fails on a missing or inconsistent marker, a supervisor block that holds a
+    placeholder or sits in the hosted partition, or a parse-time reference to a hosted or undefined
+    block.  A block is marked pinned (must be seed) when it is referenced at parse time.
+    '''
+    function pin_scan(s,   rest,nm) {
+      rest=s
+      while (match(rest, /\$\(value \.awk\.[A-Za-z0-9._]+\)/)) {
+        nm=substr(rest,RSTART,RLENGTH); sub(/^\$\(value \.awk\./,"",nm); sub(/\)$/,"",nm)
+        pinned[nm]=1; rest=substr(rest,RSTART+RLENGTH) }
+      rest=s
+      while (match(rest, /def=\.awk\.[A-Za-z0-9._]+/)) {
+        nm=substr(rest,RSTART,RLENGTH); sub(/^def=\.awk\./,"",nm)
+        pinned[nm]=1; rest=substr(rest,RSTART+RLENGTH) }
+      rest=s
+      while (match(rest, /\/\^define \.awk\.[A-Za-z0-9._]+\//)) {
+        nm=substr(rest,RSTART,RLENGTH); sub(/^\/\^define \.awk\./,"",nm); sub(/\/$/,"",nm)
+        pinned[nm]=1; rest=substr(rest,RSTART+RLENGTH) }
+      rest=s
+      while (match(rest, /_cmk_(awk|load) +\.awk\.[A-Za-z0-9._]+/)) {
+        nm=substr(rest,RSTART,RLENGTH); sub(/^_cmk_(awk|load) +\.awk\./,"",nm)
+        pinned[nm]=1; rest=substr(rest,RSTART+RLENGTH) }
+      if (s ~ /\$\(call (lang\.awk\.[A-Za-z.]+|awk(comp|export|stage)),/) {
+        rest=s; sub(/^.*\$\(call [A-Za-z0-9._]+,/, "", rest)
+        while (match(rest, /\.awk\.[A-Za-z0-9._]+/)) {
+          nm=substr(rest,RSTART,RLENGTH); sub(/^\.awk\./,"",nm)
+          pinned[nm]=1; rest=substr(rest,RSTART+RLENGTH) } }
+    }
+    {
+      line=$0
+      if (line ~ /^#:phase /) {
+        n=split(line,F,/[ \t]+/); p_phase=F[2]; p_seed=""; p_awk=""; p_forbid=0
+        for(i=3;i<=n;i++){ if(F[i]~/^seed=/)p_seed=substr(F[i],6);
+          else if(F[i]~/^awklang=/)p_awk=substr(F[i],9);
+          else if(F[i]=="placeholder=forbidden")p_forbid=1 }
+        pending=1; next
+      }
+      if (line ~ /^define \.awk\./) {
+        name=line; sub(/^define \.awk\./,"",name); sub(/[ \t]+$/,"",name)
+        nblk++; seen[name]=1
+        inhosted[name]=in_hosted
+        if (pending){has_m[name]=1; m_phase[name]=p_phase; m_seed[name]=p_seed; m_awk[name]=p_awk; m_forbid[name]=p_forbid}
+        pending=0; inb=1; cur=name; at[name]=0
+        depth++; if(in_hosted) h_depth++
+        next
+      }
+      if (line ~ /^define /) {
+        if (line ~ /^define __hosted__/){in_hosted=1; h_depth=0}
+        else if (in_hosted) h_depth++
+        depth++; pending=0; next
+      }
+      if (line ~ /^endef/) {
+        if (inb && depth==1) inb=0
+        if (in_hosted){ if(h_depth==0) in_hosted=0; else h_depth-- }
+        if (depth>0) depth--
+        pending=0; next
+      }
+      pending=0
+      if (inb && line ~ /@@/) at[cur]=1
+      if (depth==0) pin_scan(line)
+    }
+    END {
+      fail=0; nfree=0; npin=0
+      for (nm in pinned) npin++
+      for (nm in seen) {
+        if (!has_m[nm]) { printf "  FAIL [D] %-24s missing #:phase marker\n", nm; fail++; continue }
+        exp_seed = (nm in pinned) ? 1 : 0
+        exp_awk  = (exp_seed==0) ? "yes" : "no"
+        if (m_seed[nm]+0 != exp_seed)
+          { printf "  FAIL [D] %-24s seed=%s but block is %s (pin=%d)\n", nm, m_seed[nm], (exp_seed?"pinned":"free"), (nm in pinned); fail++ }
+        if (m_awk[nm] != (m_seed[nm]+0==0?"yes":"no"))
+          { printf "  FAIL [D] %-24s awklang=%s inconsistent with seed=%s\n", nm, m_awk[nm], m_seed[nm]; fail++ }
+        if (m_phase[nm]=="SUPERVISOR" && at[nm])
+          { printf "  FAIL [A] %-24s SUPERVISOR block contains @@ placeholder\n", nm; fail++ }
+        if (m_phase[nm]=="SUPERVISOR" && !m_forbid[nm])
+          { printf "  FAIL [A] %-24s SUPERVISOR marker missing placeholder=forbidden\n", nm; fail++ }
+        if (m_phase[nm]=="SUPERVISOR" && inhosted[nm])
+          { printf "  FAIL [B] %-24s SUPERVISOR block sits inside __hosted__\n", nm; fail++ }
+        if (exp_seed==0) nfree++
+      }
+      for (nm in pinned) {
+        if (!(nm in seen)) { printf "  FAIL [C] %-24s parse/compile ref to undefined .awk block\n", nm; fail++ }
+        else if (inhosted[nm]) { printf "  FAIL [C] %-24s pinned-at-parse but sits inside __hosted__\n", nm; fail++ }
+      }
+      printf "lint.self.phase: %d blocks, %d pinned(seed), %d awklang-eligible(free), %d failure(s)\n", nblk, npin, nfree, fail
+      exit (fail?48:0)
+    }
+  |)
+
+lint.self.macros=$(sort $(foreach v,$(.VARIABLES),$(if $(filter file,$(origin ${v})),${v})))
+# The self-delegation gate strips dotted sub-target delegations before testing for a self-trampoline,
+# so a macro that pipes to its own sibling stages is not mistaken for one delegating to its bare twin.
+lint.self.selftramp=$(sort $(foreach v,$(.VARIABLES),$(if $(filter file,$(origin ${v})),$(if $(findstring make} ${v},$(subst make} ${v}.,,$(value ${v}))),${v}))))
+lint.self.selftramp.fwd=$(sort $(foreach v,$(.VARIABLES),$(if $(filter file,$(origin ${v})),$(if $(findstring make} ${v},$(subst make} ${v}.,,$(value ${v}))),$(if $(or $(findstring _mk.forward.args,$(value ${v})),$(findstring mk.unpack,$(value ${v})),$(findstring {*},$(value ${v})),$(findstring (1),$(value ${v})),$(findstring {1},$(value ${v}))),${v})))))
+
+lint.self: lint.self.collisions lint.self.phase
+	@# Self-audit of compose.mk core (`CMK_SRC`): macro/target twin collisions + `.awk.*` phase
+	@# markers.  Project dev-tooling -- audits the framework, not user programs.  Run standalone or
+	@# from CI.  USAGE:  make lint.self
+
+lint.self.collisions:
+	@# Reports macro/target collisions ("twins") + their smart-route safety class.  FAILS only on an
+	@# arg-dropping trampoline over a parametric target (the one mechanically-provable hazard).
+	@# USAGE:  make lint.self.collisions
+	macros="${lint.self.macros}" && delegating=" ${lint.self.selftramp} " \
+	&& forwarding=" ${lint.self.selftramp.fwd} " && allow=" ${lang.lint.divergent} " \
+	&& targets=`awk '{ci=index($$0,":"); if(ci<2)next; if(substr($$0,ci+1,1)=="=")next; if(substr($$0,ci,3)=="::=")next; ei=index($$0,"="); if(ei>0&&ei<ci)next; h=substr($$0,1,ci-1); if(h ~ /[?+!]$$/)next; if(h !~ /^[A-Za-z0-9._%\/ -]+$$/)next; n=split(h,t," "); for(i=1;i<=n;i++){g=t[i]; sub(/\/%$$/,"",g); if(g!="")print g}}' ${CMK_SRC} | sort -u` \
+	&& parametric=" `awk '{ci=index($$0,":"); if(ci<2)next; h=substr($$0,1,ci-1); if(h !~ /^[A-Za-z0-9._%\/ -]+$$/)next; n=split(h,t," "); for(i=1;i<=n;i++){g=t[i]; if(g ~ /\/%$$/){sub(/\/%$$/,\"\",g); printf \"%s \",g}}}' ${CMK_SRC} | sort -u | tr '\n' ' '` " \
+	&& collisions=`printf '%s\n' $${targets} | awk -v M="$${macros}" 'BEGIN{n=split(M,a," ");for(i=1;i<=n;i++)m[a[i]]=1} ($$0 in m)' | sort -u` \
+	&& $(call log.compiler, lint.self.collisions ${sep}${dim} `printf '%s' "$${collisions}" | grep -c .` macro/target twins${no_ansi}) \
+	&& fail=0 \
+	&& for c in $${collisions}; do \
+		if case "$${delegating}" in *" $${c} "*) true;; *) false;; esac; then \
+			if case "$${parametric}" in *" $${c} "*) true;; *) false;; esac && ! case "$${forwarding}" in *" $${c} "*) true;; *) false;; esac; then \
+				cls="${red}trampoline DROPS ARGS (parametric target, no forward)${no_ansi}"; mk="${red}!!${no_ansi}"; fail=1; \
+			else cls="${dim}delegates (arg-safe)${no_ansi}"; mk="${green}ok${no_ansi}"; fi; \
+		elif case "$${allow}" in *" $${c} "*) true;; *) false;; esac; then cls="${yellow}inline/divergent (documented)${no_ansi}"; mk="${green}ok${no_ansi}"; \
+		else cls="${dim}inline (pure by convention)${no_ansi}"; mk="${green}ok${no_ansi}"; fi \
+		&& printf '  %b  %-30s %b\n' "$${mk}" "$${c}" "$${cls}"; \
+	done \
+	&& { [ $${fail} -eq 0 ] || { $(call log.compiler, ${red}lint.self.collisions ${sep}${no_ansi} arg-dropping trampoline(s) over a parametric target -- append the ${bold}_mk.forward.args${no_ansi_dim} suffix); exit 47; }; }
+
+lint.self.phase:
+	@# Self-audit of compose.mk core's `.awk.*` phase markers.  One awk pass over `CMK_SRC`; fails
+	@# (exit 48) on a missing/inconsistent marker, a SUPERVISOR block holding a `@@` placeholder or
+	@# inside `__hosted__`, or a parse-time reference to a hosted/undefined block.
+	@# USAGE:  make lint.self.phase
+	$(call log.compiler, ${@} ${sep}${dim} auditing .awk.* phase markers in ${no_ansi}${CMK_SRC})
+	cat ${CMK_SRC} | awk "$${_awklang_lint_self_phase}"
 
 docs.plugins.sync:
 	@# Surface plugin/module docs shipped in the `.cmk` submodule as site pages.

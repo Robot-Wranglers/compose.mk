@@ -1,0 +1,49 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+'''
+Extend one inlined Dockerfile with another: a built image lands at
+compose.mk:<name>, which works as a FROM base.  Ported from the plain
+twin demos/extend-inlined-dockerfile.mk.
+'''
+
+import log
+from cmk import Dockerfile
+
+# Base image (same minimal container as inlined-dockerfile.cmk).
+Dockerfile my_container(|
+  FROM alpine:3.21.2
+  RUN apk add -q --update --no-cache coreutils build-base bash
+|)
+
+# Extension: FROM the base image, using the 'compose.mk:' repo prefix.
+Dockerfile container_extension(|
+  FROM compose.mk:my_container
+  RUN echo hello-docker
+|)
+
+__main__: \
+    my_container.build \
+    container_extension.build \
+    test.raw \
+    container_extension.dispatch(self.demo_extension) \
+    test.cache
+    '''
+    Build base then extension, exercise the extended image directly, dispatch
+    a target inside it, then show subsequent builds hit the cache.
+    '''
+
+self.demo_extension:
+    ''' A private target, dispatched to run inside the extended container. '''
+    log(Testing target from inside the extended container)
+    log(host details: `uname -a`)
+
+test.raw:
+    ''' Work with the extended image directly; note the 'compose.mk' prefix. '''
+    log(Working with the extended image directly)
+    docker image inspect ${container_extension.img} > /dev/null
+    docker run --entrypoint sh ${container_extension.img} -x -c "true" > /dev/null
+
+test.cache:
+    ''' Subsequent runs use the cached image; pass force=1 to rebuild. '''
+    log(Subsequent runs use the cached image; pass force=1 to rebuild)
+    force=1 ${make} container_extension.build

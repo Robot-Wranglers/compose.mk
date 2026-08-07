@@ -133,7 +133,7 @@ isn't already normalized.
   `@pytest.mark.xfail(..., strict=False)` with a `compose.mk:LINE; review SEV`
   pointer. It stays as XFAIL until fixed, then flips to XPASS.
 - **Isolation.** The `cmk` fixture defaults `cwd` to a pytest `tmp_path`, so
-  scratch files (`io.mktemp`'s `./.tmp.*`, `.flux.stage.*`) never touch the repo.
+  scratch files (`io.mktemp`'s `./.tmp.*`, `.stage.*`) never touch the repo.
 - **Docker gating.** `needs_docker` is the capability gate (auto-skip without a
   daemon / on low disk); the suite *selectors* are `unit`/`smoke`/`docker`/...
   So `tox -e docker` runs only the docker.* suite, not every docker-needing test.

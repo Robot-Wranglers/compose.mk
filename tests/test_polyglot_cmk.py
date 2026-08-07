@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 # a plugin file -- also collect the whole file into the plugin suite.
-pytestmark = [pytest.mark.external_plugin, pytest.mark.compiler, pytest.mark.covers_demo("golang.cmk")]
+pytestmark = [pytest.mark.external_plugin, pytest.mark.plugin, pytest.mark.covers_demo("golang.cmk")]
 
 REPO = Path(__file__).resolve().parent.parent
 DEMO = REPO / "demos" / "cmk" / "golang.cmk"

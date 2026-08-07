@@ -6,11 +6,18 @@
 #
 # USAGE: ./demos/cmk/kwarg-parsing.cmk
 
-emit: 
+import log
+
+emit:
+    '''
+    Emit JSON for the downstream consumer to parse.
+    '''
+    log.io(emit ${sep} shape=triangle color=red)
     🡄 shape=triangle color=red
 
+# bind.args binds a subset of the JSON keys as locals, defaulting the absent ones.
 @bind.args(from=json, shape color=blue name=default)
 consume:
-    printf "shape=$${shape} color=$${color} name=$${name}\n"
+    log.io(consume ${sep} shape=$${shape} color=$${color} name=$${name})
 
 __main__:; this.emit | this.consume

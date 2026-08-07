@@ -1,21 +1,20 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret
 #
 # oop-subcommand.mk:
-#   (Ab)using the subcommand-namespace MRO to simulate OOP inheritance.
-#   The `pet` CLI searches its namespaces in order (`.puppy`, then `.dog`,
-#   then `.animal`), exactly like a method-resolution order: a sub defined
+#   (Ab)using the subcommand-namespace search order to simulate
+#   inheritance.  The pet CLI searches its namespaces most-derived
+#   first, exactly like a method-resolution order: a sub defined
 #   in a more-derived "class" overrides the base, and subs that only a base
 #   defines are inherited.
 #
 # USAGE:
-#   ./demos/oop-subcommand.mk pet speak        # -> yip!  (.puppy over .dog/.animal)
-#   ./demos/oop-subcommand.mk pet fetch        # -> ...   (inherited from .dog)
-#   ./demos/oop-subcommand.mk pet legs         # -> 4     (inherited from .animal)
-#   ./demos/oop-subcommand.mk pet describe rex # -> ...   (inherited, parametric)
-#   ./demos/oop-subcommand.mk pet              # -> usage
+#   ./demos/oop-subcommand.mk pet speak
+#   ./demos/oop-subcommand.mk pet fetch
+#   ./demos/oop-subcommand.mk pet legs
+#   ./demos/oop-subcommand.mk pet describe rex
+#   ./demos/oop-subcommand.mk pet
 #
-# NB: Subcommand dispatch requires a supervisor (see shebang); not `make
-# -f`.
+# Note: subcommand dispatch requires a supervisor, so use the shebang.
 #
 include compose.mk
 
@@ -31,9 +30,7 @@ include compose.mk
 # "subclass" puppy (is-a dog): overrides speak again
 .puppy.speak:; printf 'yip!\n'
 
-# the MRO, most-derived first.  `pet speak` resolves to `.puppy.speak`;
-# `pet fetch` falls through to `.dog.fetch`; `pet legs`/`pet describe` fall
-# through to `.animal.*`.
+# the resolution order, most-derived first
 pet:; $(call cli.subcommands.enter, namespace='.puppy .dog .animal')
 
 __main__: pet

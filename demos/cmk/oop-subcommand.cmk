@@ -1,18 +1,18 @@
 #!/usr/bin/env -S ./compose.mk cmk run
 #
 # oop-subcommand.cmk:
-#   (Ab)use the namespace MRO of the `@cli.subcommands` decorator to simulate
-#   OOP inheritance.  `pet` searches the namespaces in order (`.puppy`,
-#   `.dog`, `.animal`) like a method-resolution order: a more-derived
-#   "class" overrides the base; base-only subs are inherited.  Ported from
-#   demos/oop-subcommand.mk.
+#   (Ab)use the namespace search order of the cli.subcommands decorator
+#   to simulate inheritance.  The pet CLI searches its namespaces in
+#   order, most-derived first, like a method-resolution order: a derived
+#   "class" overrides the base, and base-only subs are inherited.
+#   Ported from demos/oop-subcommand.mk.
 #
 # USAGE:
-#   ./demos/cmk/oop-subcommand.cmk pet speak         # -> yip!  (.puppy override)
-#   ./demos/cmk/oop-subcommand.cmk pet fetch         # -> ...  (inherited from .dog)
-#   ./demos/cmk/oop-subcommand.cmk pet legs          # -> 4  (inherited from .animal)
-#   ./demos/cmk/oop-subcommand.cmk pet describe rex  # -> ...  (inherited, parametric)
-#   ./demos/cmk/oop-subcommand.cmk pet               # -> usage
+#   ./demos/cmk/oop-subcommand.cmk pet speak
+#   ./demos/cmk/oop-subcommand.cmk pet fetch
+#   ./demos/cmk/oop-subcommand.cmk pet legs
+#   ./demos/cmk/oop-subcommand.cmk pet describe rex
+#   ./demos/cmk/oop-subcommand.cmk pet
 
 @cli.subcommands(namespace='.puppy .dog .animal')
 pet:

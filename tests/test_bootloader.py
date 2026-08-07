@@ -9,6 +9,9 @@ supervisor is required (CMK_SUPERVISOR=1), since the bootloader lives in the sup
 branch of the polyglot header.
 """
 
+import os
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -65,7 +68,9 @@ def test_file_goal_bootloader_takes_over(cmk):
   )
   assert r.ok, r.stderr
   assert "user-tramp: took over" in r.stdout, r.stdout
-  assert "flux.ok" in r.stdout, r.stdout  # __argv__ forwarded (may be target-rewritten)
+  assert "flux.ok" in r.stdout, (
+    r.stdout
+  )  # __argv__ forwarded (may be target-rewritten)
   assert "make=[make " in r.stdout, r.stdout  # CMK_TRAMP_MK forwarded
   # the takeover replaced the trampoline -> the real flux.ok never ran.
   assert "succeeding as requested" not in (r.stdout + r.stderr), r.stdout
@@ -123,7 +128,9 @@ def test_trampoline_selection_active_guard_skips(cmk, tmp_path):
   )
   assert r.ok, r.stderr
   assert "faketramp: took over" not in r.stdout, r.stdout
-  assert "succeeding as requested" in r.stderr, r.stderr  # bash tramp ran the real target
+  assert "succeeding as requested" in r.stderr, (
+    r.stderr
+  )  # bash tramp ran the real target
 
 
 def test_bootloader_disabled_bypasses(cmk):
@@ -190,3 +197,141 @@ def test_hosted_prewarm_target_direct(cmk, tmp_path):
   r = cmk("mk.hosted.prewarm", env={**SUP, **_mods(tmp_path)}, cwd=str(REPO))
   assert r.ok, r.stderr
   assert _hosted_cache(tmp_path), "mk.hosted.prewarm did not build the cache"
+
+
+VERSION_GUARD_LIST = "3.% 4.0 4.0.% 4.1 4.1.%"
+
+
+def test_make_version_floor_fires_with_named_error(tmp_path):
+  """Hermetic wiring check for the parse-time version floor.
+
+  Widens the guard's filter so it fires under the CURRENT make, then asserts
+  the failure names the requirement.  This also guards the guard's placement:
+  if the gate ever drifts below the first modern construct, old-make users
+  would see a bare missing-separator error and this test's doctored copy
+  would too."""
+  src = (REPO / "compose.mk").read_text()
+  assert VERSION_GUARD_LIST in src, "floor filter moved; update this test"
+  doctored = tmp_path / "compose.doctored.mk"
+  doctored.write_text(src.replace(VERSION_GUARD_LIST, "%", 1))
+  r = subprocess.run(
+    ["make", "-f", str(doctored), "flux.ok"],
+    capture_output=True,
+    text=True,
+    cwd=str(tmp_path),
+    timeout=120,
+  )
+  assert r.returncode != 0
+  assert "needs GNU make >= 4.2" in r.stderr, r.stderr[-800:]
+  assert "missing separator" not in r.stderr, r.stderr[-800:]
+
+
+@pytest.mark.needs_docker
+def test_make_version_floor_real_old_make(tmp_path):
+  """First-contact UX on Apple's frozen toolchain: real GNU make 3.81 (via a
+  debian squeeze image) must fail the parse with the version story, not the
+  raw missing-separator error it produced before the guard existed."""
+  df = (
+    "FROM debian/eol:squeeze\n"
+    "RUN apt-get update -qq >/dev/null 2>&1 || true; "
+    "apt-get install -y --force-yes -qq make >/dev/null 2>&1\n"
+  )
+  tag = "cmk-test-make381:latest"
+  b = subprocess.run(
+    ["docker", "build", "-q", "-t", tag, "-"],
+    input=df,
+    capture_output=True,
+    text=True,
+  )
+  if b.returncode != 0:
+    pytest.skip(f"cannot build the make-3.81 image: {b.stderr[-300:]}")
+  r = subprocess.run(
+    [
+      "docker",
+      "run",
+      "--rm",
+      "-v",
+      f"{REPO}/compose.mk:/work/compose.mk:ro",
+      "-w",
+      "/work",
+      tag,
+      "make",
+      "-f",
+      "compose.mk",
+      "flux.ok",
+    ],
+    capture_output=True,
+    text=True,
+    timeout=300,
+  )
+  assert r.returncode != 0
+  assert "needs GNU make >= 4.2" in r.stderr, r.stderr[-800:]
+  assert "3.81" in r.stderr, r.stderr[-800:]
+
+
+def test_awk_flavor_gate_rejects_unknown_dialect(cmk, tmp_path):
+  """Hermetic check of the compiler's awk gate: a PATH-first awk reporting an
+  unknown version banner must make any compile fail loudly, naming the
+  supported dialect set, before emitting garbage.  The four supported
+  dialects (gawk, mawk, busybox, one-true-awk) are pinned separately by
+  test_awk_dialects.py."""
+  real = shutil.which("awk")
+  shim = tmp_path / "bin"
+  shim.mkdir()
+  fake = shim / "awk"
+  fake.write_text(
+    "#!/bin/sh\n"
+    'case "$1" in --version) echo "gsak 0.1 (unsupported)"; exit 0;; esac\n'
+    f'exec "{real}" "$@"\n'
+  )
+  fake.chmod(0o755)
+  path = f"{shim}:{os.environ['PATH']}"
+  r = cmk("mk.compile", stdin="x:; @printf X\n", env={"PATH": path})
+  assert not r.ok
+  assert "supports GNU awk" in (r.stdout + r.stderr), r.stderr[-800:]
+
+
+@pytest.mark.needs_docker
+def test_busybox_awk_runs_hosted_and_lean(tmp_path):
+  """The busybox-awk first-contact pin, post dialect-port: without gawk, both
+  the hosted and the lean (CMK_LANG=0) run paths must now SUCCEED.  Before
+  the port this environment compiled garbage and the lean path exited 0
+  after the stub main swallowed it, the worst degraded-toolchain behavior;
+  the dialect matrix in test_awk_dialects.py holds the deeper invariant."""
+  df = "FROM alpine:3.21.2\nRUN apk add --no-cache bash make jq\n"
+  tag = "cmk-test-nogawk:latest"
+  b = subprocess.run(
+    ["docker", "build", "-q", "-t", tag, "-"],
+    input=df,
+    capture_output=True,
+    text=True,
+  )
+  if b.returncode != 0:
+    pytest.skip(f"cannot build the no-gawk image: {b.stderr[-300:]}")
+  ws = tmp_path / "ws"
+  ws.mkdir()
+  (ws / "run.cmk").write_text("__main__: flux.ok\n")
+  shutil.copy(REPO / "compose.mk", ws / "compose.mk")
+  for extra_env, label in ((), "hosted"), (("-e", "CMK_LANG=0"), "lean"):
+    r = subprocess.run(
+      [
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        f"{ws}:{ws}",
+        "-w",
+        str(ws),
+        "-e",
+        "NO_COLOR=1",
+        *extra_env,
+        tag,
+        "sh",
+        "-c",
+        "./compose.mk cmk run run.cmk",
+      ],
+      capture_output=True,
+      text=True,
+      timeout=300,
+    )
+    assert r.returncode == 0, f"{label}: {r.stderr[-500:]}"

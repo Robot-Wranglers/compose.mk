@@ -3,13 +3,13 @@
 ## Platform Lifecycle Demo
 <hr class="section-rule lvl-2">
 
-This demo describes one way to express platform lifecycle automation using `compose.mk`, focusing on **data and control flows** without doing any real work.  If you want something that's more than a toy, see the WIP sibling project that's focused on kubernetes over at [k8s-tools]({{jinja.vars.k8stools_docs_url}}/demos/cluster-lifecycle).
+This demo describes one way to express platform lifecycle automation using `compose.mk`, focusing on **data and control flows** without doing any real work.
 
-{{ macros.road_map([
-    ['Container dispatch', '@/container-dispatch', 'including [namespace-style dispatch](@/container-dispatch/#namespace-style-dispatch)'],
-    ['Structured IO', '@/standard-lib/#structured-io', 'with `jb`'],
-    ['Workflow helpers', '@/standard-lib/#workflow-support'],
-], mkdocs, preamble='Some of the idioms used in this demo include:', title='Roadmap') }}
+!!! tip "Idioms used here"
+    * [Container dispatch]({{_}}/container-dispatch): including [namespace-style dispatch]({{_}}/container-dispatch/#namespace-style-dispatch)
+    * [Structured IO]({{_}}/standard-lib/#structured-io): with `jb`
+    * [Workflow helpers]({{_}}/standard-lib/#workflow-support)
+
 ### Basic Platforming 
 <hr class="section-rule lvl-3">
 
@@ -71,8 +71,6 @@ This tight expression of complex flow will already be familiar to lots of people
 If it doesn't yet feel like a "real" programming language compared with vanilla `make`, flip either example above to its [cmk-lang]({{_}}/cmk/compiler) tab.  That ported version feels like it's zeroing in on a minimum-viable description length for the sort of problem it's tackling.  👍
 
 It's a neat party trick that `compose.mk` has features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.  In spirit, `flux.*` is more similar to things like [declarative pipelines in Jenkins](https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline), and that's the way you'll probably want to use it.
-
-Again, for a full blown project, see a preview of the WIP sister project at [k8s-tools.git]({{jinja.vars.k8stools_docs_url}}/demos/cluster-lifecycle), which also breaks down automation into platforms, infrastructure, and app phases, but sets up and provisions a real cluster.
 
 ### See Also
 <hr class="section-rule lvl-3">

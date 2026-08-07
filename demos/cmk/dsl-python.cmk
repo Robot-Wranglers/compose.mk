@@ -2,8 +2,9 @@
 
 '''
 dsl-python.cmk: the `python` dsl base runs instance bodies in a container and
-reflects them via griffe. stats() streams stdin; funcs.__reflect__() lists the
-functions it defines. USAGE: ./demos/cmk/dsl-python.cmk (needs docker).
+reflects on them via comby (the Language protocol).  stats() streams stdin;
+funcs.__symbols__ lists the functions it defines.  Mirrors demos/cmk/comby.cmk
+(the golang sibling).  USAGE: ./demos/cmk/dsl-python.cmk (needs docker).
 '''
 
 cmk.include.plugins(dsl.python.cmk)
@@ -15,7 +16,7 @@ python stats(|
   print(f"n={len(xs)} mean={st.mean(xs):.2f} max={max(xs):g}")
 |)
 
-# funcs: a shape griffe reflects on (its functions), not run.
+# funcs: a shape comby reflects on (its functions/tokens), not run.
 python funcs(|
   def add(a, b):
       return a + b
@@ -27,6 +28,4 @@ demo.stream:
   '''stream numbers into the container-python program on stdin.'''
   printf '3 1 4 1 5 9 2 6' | stats()
 
-demo.reflect:; funcs.__reflect__()
-
-__main__: demo.stream demo.reflect
+__main__: demo.stream funcs.__tokens__ funcs.__symbols__

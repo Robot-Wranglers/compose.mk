@@ -11,13 +11,13 @@
 include compose.mk
 
 # Override the default target used to print the entry-banner
-export FLUX_STAGE_BANNER?=io.figlet
+export CMK_STAGE_BANNER?=io.figlet
 
-__main__: flux.stage.wrap/VALIDATION/project.scan,project.analyze
+__main__: stage.wrap/VALIDATION/project.scan,project.analyze
 
 project.scan:
-	echo '["results"]' | ${flux.stage.push}/VALIDATION
+	echo '["results"]' | ${stage.push}/VALIDATION
 
 project.analyze:
-	echo '["other results"]' | ${flux.stage.push}/VALIDATION
+	echo '["other results"]' | ${stage.push}/VALIDATION
 

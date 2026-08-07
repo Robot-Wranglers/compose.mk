@@ -16,13 +16,13 @@ __main__: validate
 
 # Wrap targets with entry/exit as an explicit context-manager
 validate: \
-	flux.stage.enter/VALIDATION \
+	stage.enter/VALIDATION \
 		project.scan \
 		project.analyze \
-	flux.stage.exit/VALIDATION
+	stage.exit/VALIDATION
 
 project.scan:
-	echo '["results"]' | ${flux.stage.push}/VALIDATION
+	echo '["results"]' | ${stage.push}/VALIDATION
 
 project.analyze:
-	echo '["other results"]' | ${flux.stage.push}/VALIDATION
+	echo '["other results"]' | ${stage.push}/VALIDATION

@@ -22,8 +22,8 @@ clean:
     Look! Targets / goals / tasks also support docstrings.
     Like a Makefile, you can put random shell in the body.
     Unlike a Makefile-- 
-      * Supports smart-indention / sane semantic whitespace
-      * Defaults to fail-fast ( shell joins with `&&` )
+        * Supports smart-indention / sane semantic whitespace
+        * Defaults to fail-fast ( shell joins with `&&` )
     '''
     ls; pwd; cd .
     who=people
@@ -54,8 +54,11 @@ build:
     '''
     flux.parallel(build.part_one, build.part_two)
 
-build.part_one:; echo pretending to do stuff..
-build.part_two:; cmk.log.warn(pretending to do other stuff)
+build.part_one:
+    log.warn(pretending to do stuff)
+
+build.part_two:
+    log.warn(pretending to do other stuff)
     
 # Look!  You can use target-algebra as a prerequisite too
 build.all: flux.parallel/build.part_one,build.part_two

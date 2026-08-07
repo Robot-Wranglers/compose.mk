@@ -1,15 +1,14 @@
-"""A dsl extends code.compiled, but cooked-body `self.` config isn't consumed.
+"""A dsl extends code.compiled; cooked-body `self.` config reaches the class scope.
 
 Following the Language-protocol pattern -- cook the dsl body with `[|..|]` and write
 `self.key = val` -- correctly namespaces the assignment to the INSTANCE
 (`${self}.key`), with NO global leak (unlike a bare `key:=val`, which leaks global;
 see test_class_body_attr_scope_cmk).  So structurally a dsl CAN extend code.compiled.
 
-The gap: code.compiled reads its per-language spec CLASS-scoped, as `$(<class>.key)`
-(compose.mk ~5285 srcmap / ~5291 env+mounts / ~5361 fmtentry+base).  A cooked body's
-`self.fmtentry` lands on the instance, where code.compiled never looks -- so the
-build/fmt see nothing.  Fixing that means code.compiled reading spec off the instance
-(src), a code.compiled change deliberately NOT made here.  Docker-free.
+code.compiled reads its per-language spec CLASS-scoped, as `$(<class>.key)`.  The dsl
+plugins close that gap by publishing the spec at class level via `dsl.export!` (see
+the last line of .cmk/dsl.golang.cmk), so a class-qualified read like
+`$(dsl.golang.fmtentry)` resolves.  Docker-free.
 """
 
 import re
@@ -18,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = [pytest.mark.unit, pytest.mark.compiler]
+pytestmark = [pytest.mark.unit]
 
 REPO = Path(__file__).resolve().parent.parent
 COMPOSE = REPO / "compose.mk"
@@ -48,15 +47,8 @@ def test_cooked_self_config_namespaces_to_instance(tmp_path):
   assert "inst=[gofmt] glob=[]" in out, out
 
 
-@pytest.mark.xfail(reason=(
-  "code.compiled reads per-language config CLASS-scoped ($(<class>.fmtentry), "
-  "compose.mk:5361); a cooked dsl body's `self.fmtentry` lands on the INSTANCE, so "
-  "the build/fmt never see it -- code.compiled would have to read spec off the src "
-  "(instance) for cooked-body config to be consumed"), strict=True)
 def test_code_compiled_reads_cooked_self_config(tmp_path):
-  # DESIRED: config a dsl declares in its cooked body is visible where code.compiled
-  # reads it. code.compiled reads $(<class>.fmtentry); the body's self.fmtentry is
-  # on the instance, so the class read is empty today.
+  # Cooked-body config is visible class-scoped, published by the plugin's export.
   r, out = _run_cmk(
     "import dsl.golang\n"
     "dsl.golang gc(| package main |)\n"

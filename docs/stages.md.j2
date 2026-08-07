@@ -82,15 +82,15 @@ Stack-operations are logged by default to stderr, so it's easy for users or devs
 **Creating a stack** is just mentioning it.
 
 ```bash {.cli_example}
-$ ./compose.mk flux.stage.enter/BUILD
+$ ./compose.mk stage.enter/BUILD
 ```
 ```bash {.cli_output}
 ╔═══════════════════════════════════════════════════════════╗
 ║                           BUILD                           ║
 ╚═══════════════════════════════════════════════════════════╝
-⇄ flux.stage // BUILD //  stack file @ .flux.stage.BUILD
-Φ flux.stage.push // BUILD 
-⇄ io.stack.push // stack@.flux.stage.BUILD ⋘
+⇄ stage // BUILD //  stack file @ .stage.BUILD
+Φ stage.push // BUILD 
+⇄ io.stack.push // stack@.stage.BUILD ⋘
   {"stage.entered":"Mon 24 Feb 2025 08:53:39 PM PST"}
 ```
 
@@ -100,18 +100,18 @@ $ ./compose.mk flux.stage.enter/BUILD
 **Pushing data** works with pipes:
 
 ```bash {.cli_example}
-$ echo '{"data":789}' | ./compose.mk flux.stage.push/BUILD
+$ echo '{"data":789}' | ./compose.mk stage.push/BUILD
 ```
 ```bash {.cli_output}
-Φ flux.stage.push // BUILD 
-⇄ io.stack.push // stack@.flux.stage.BUILD ⋘
+Φ stage.push // BUILD 
+⇄ io.stack.push // stack@.stage.BUILD ⋘
   {"data":789}
 ```
 
 You can also use the builtin wrapper for `jb` like this:
 
 ```bash {.cli_example}
-$ ./compose.mk jb foo=bar | ./compose.mk flux.stage.push/BUILD
+$ ./compose.mk jb foo=bar | ./compose.mk stage.push/BUILD
 ```
 
 <hr style="width:95%;border-bottom:1px dashed black;">
@@ -121,46 +121,46 @@ $ ./compose.mk jb foo=bar | ./compose.mk flux.stage.push/BUILD
 **Popping data** is pipe-safe JSON for downstream, but stderr is annotated for humans.
 
 ```bash {.cli_example}
-$ ./compose.mk flux.stage.pop/BUILD
+$ ./compose.mk stage.pop/BUILD
 ```
 ```bash {.cli_output}
-Φ flux.stage.pop // BUILD
-⇄ io.stack.pop // stack@.flux.stage.BUILD ⋙
+Φ stage.pop // BUILD
+⇄ io.stack.pop // stack@.stage.BUILD ⋙
 {
   "data": 789
 }
 ```
 
 ```bash {.cli_example}
-$ ./compose.mk flux.stage.pop/BUILD
+$ ./compose.mk stage.pop/BUILD
 ```
 ```bash {.cli_output}
-Φ flux.stage.pop // BUILD
-⇄ io.stack.pop // stack@.flux.stage.BUILD ⋙
+Φ stage.pop // BUILD
+⇄ io.stack.pop // stack@.stage.BUILD ⋙
 {
   "stage.entered": "Mon 24 Feb 2025 08:53:39 PM PST"
 }
 ```
 
 ```bash {.cli_example}
-$ ./compose.mk flux.stage.exit/BUILD
+$ ./compose.mk stage.exit/BUILD
 ```
 ```bash {.cli_output}
-Φ flux.stage.clean // BUILD //  removing stack file @  .flux.stage.BUILD
+Φ stage.clean // BUILD //  removing stack file @  .stage.BUILD
 ```
 
 #### Stage Idioms
 <hr class="section-rule lvl-4">
 
-If you're scripting with stages, the main difference is that `flux.stage.enter` and `flux.stage.exit` can be used like function decorators.  Each example below is shown as **twins**: a plain `Makefile` and its [cmk-lang]({{_}}/cmk/compiler) equivalent (toggle the tabs); the CMK side pushes JSON with the square-bracket [stream] call-form applied to the stage-push receiver.
+If you're scripting with stages, the main difference is that `stage.enter` and `stage.exit` can be used like function decorators.  Each example below is shown as **twins**: a plain `Makefile` and its [cmk-lang]({{_}}/cmk/compiler) equivalent (toggle the tabs); the CMK side pushes JSON with the square-bracket [stream] call-form applied to the stage-push receiver.
 
 {{site.embed_mirror('demos/stages-idiom.mk', 'demos/cmk/stages-idiom.cmk', github=github, default='left')}}
 
-In this case when `validate` succeeds the stage file is cleaned like we'd expect, and if there's a crash then partial results can be inspected.  Inside a recipe body, each operator also has a `flux.stage.<op>` variable shorthand (for example the stage-push variable followed by a stage name) that's terser than spelling out the recursive `make` call; on the command-line the same operators are just `./compose.mk flux.stage.<op>/<stage>`.
+In this case when `validate` succeeds the stage file is cleaned like we'd expect, and if there's a crash then partial results can be inspected.  Inside a recipe body, each operator also has a `stage.<op>` variable shorthand (for example the stage-push variable followed by a stage name) that's terser than spelling out the recursive `make` call; on the command-line the same operators are just `./compose.mk stage.<op>/<stage>`.
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-**Using an implicit context manager** with {{site.api_link('flux.stage.wrap',mkdocs,arg='target')}} is an alternative style.  The example below shows that, plus overriding the banner-printing mechanism to use the (dockerized) `figlet` tool instead of using `gum`. 
+**Using an implicit context manager** with {{site.api_link('stage.wrap',mkdocs,arg='target')}} is an alternative style.  The example below shows that, plus overriding the banner-printing mechanism to use the (dockerized) `figlet` tool instead of using `gum`. 
 
 {{site.embed_mirror('demos/stage-wrapper.mk', 'demos/cmk/stage-wrapper.cmk', github=github, default='left')}}
 
@@ -186,9 +186,9 @@ If you think you *do* have a use-case for something like this you might want to 
 #### Stage API
 <hr class="section-rule lvl-4">
 
-Stages are implemented using the `flux.stage.*` family of targets, and the lower level `io.stack` helpers.
+Stages are implemented using the `stage.*` family of targets, and the lower level `io.stack` helpers.
 
-{{site.api_link_many(['flux.stage','io.stack'], mkdocs)}}
+{{site.api_link_many(['stage','io.stack'], mkdocs)}}
 
 ### Stacks as Shared State
 <hr class="section-rule lvl-3">
@@ -243,7 +243,7 @@ Stacks and stages sit on the structured-IO layer and feed the concurrency primit
 
 * [Structured IO]({{_}}/structured-io): the JSON tooling the backing store is built on.
 * [Standard Library]({{_}}/standard-lib): `flux.*` concurrency and the wider library.
-* [Full API]({{_}}/api): the reflected `flux.stage`/`io.stack` reference.
+* [Full API]({{_}}/api): the reflected `stage`/`io.stack` reference.
 
 ### References
 <hr class="section-rule lvl-3">

@@ -324,11 +324,10 @@ def test_io_mktemp_custom_var(cmk, tmp_path):
   assert "OK:./.tmp." in r.stdout
 
 
-def test_io_declare_stack_codegen_fresh(cmk, tmp_path):
-  # declare.stack code-gens an exported, per-run-unique stack-name var
-  # when the name is UNDEFINED (the macro wraps its own $(eval)).
+def test_io_stack_bang_codegen_fresh(cmk, tmp_path):
+  # io.stack! codegens an exported, per-run-unique stack-name var when the name is unset.
   body = (
-    "$(call declare.stack,MY_STACK)\n"
+    "$(call io.stack!,MY_STACK)\n"
     "probe:; @printf 'name=[%s]\\n' '$(MY_STACK)'\n"
   )
   r = cmk("probe", makefile=_wrapper(tmp_path, body))
@@ -336,12 +335,12 @@ def test_io_declare_stack_codegen_fresh(cmk, tmp_path):
   assert "name=[.tmp.MY_STACK." in r.stdout  # fresh, namespaced by the var
 
 
-def test_io_declare_stack_origin_guard_preserves(cmk, tmp_path):
+def test_io_stack_bang_origin_guard_preserves(cmk, tmp_path):
   # the origin-guard reuses an already-defined value (so sub-makes inherit one
   # shared file) instead of generating a new name.
   body = (
     "MY_STACK := preset.json\n"
-    "$(call declare.stack,MY_STACK)\n"
+    "$(call io.stack!,MY_STACK)\n"
     "probe:; @printf 'name=[%s]\\n' '$(MY_STACK)'\n"
   )
   r = cmk("probe", makefile=_wrapper(tmp_path, body))

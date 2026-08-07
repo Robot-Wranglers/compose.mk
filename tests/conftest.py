@@ -131,7 +131,7 @@ def cmk(tmp_path):
       assert r.ok and r.stdout == "a\\nb\\nc"
 
   cwd defaults to a pytest ``tmp_path`` so scratch files (``io.mktemp``'s
-  ``./.tmp.*`` and ``.flux.stage.*``) land in the temp dir and never pollute
+  ``./.tmp.*`` and ``.stage.*``) land in the temp dir and never pollute
   the repo; pytest removes the dir afterwards.
   """
 
@@ -1057,6 +1057,12 @@ def pytest_collection_modifyitems(config, items):
     for item in tui:
       item.add_marker(
         pytest.mark.skip(reason="tui disabled (set CMK_TEST_TUI=1)")
+      )
+  awkm = [i for i in items if "awk_matrix" in i.keywords]
+  if awkm and os.environ.get("CMK_TEST_AWK_MATRIX") != "1":
+    for item in awkm:
+      item.add_marker(
+        pytest.mark.skip(reason="awk matrix disabled (set CMK_TEST_AWK_MATRIX=1)")
       )
   nb = [i for i in items if "notebooking" in i.keywords]
   if nb and os.environ.get("CMK_TEST_NOTEBOOKING") != "1":

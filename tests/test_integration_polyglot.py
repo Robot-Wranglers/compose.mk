@@ -1,6 +1,7 @@
 """Integration test: a code-object with img+entrypoint mints a machine and runs in it.
 
-`code` (with an `img`/`entrypoint`, no `bind`) mints a `<def>.machine` (a plain `cmk.machine`)
+`code` (with an `img`/`entrypoint`, no `bind`) mints a `<namespace>.machine` (a plain
+`cmk.machine`; the namespace defaults to the def name)
 and binds the code-object to it; running the code-object runs its body inside the image via the
 machine's call dispatch.  Driven via the `project` fixture (docker-labeled, swept on teardown).
 """
@@ -21,4 +22,4 @@ def test_polyglot_import_interpreter(project):
   r = project.run("myp")
   assert r.ok, r.stderr
   assert "root" in r.stdout                          # whoami ran INSIDE alpine (root)
-  assert project.run("mycode.machine.build").ok      # the minted machine's build hook
+  assert project.run("myp.machine.build").ok         # the minted machine's build hook

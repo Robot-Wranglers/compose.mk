@@ -243,7 +243,7 @@ Unlike the "*helm bolted on to terraform/ansible/jenkins*" approach, using `comp
 ## Forever Development Considered Harmful
 <hr class="section-rule lvl-2">
 
-While `compose.mk` is committed to bugfixes, and will continue to change in cases where it feels **incompatible, incomplete, or internally inconsistent**.. the goal is to freeze development as much as possible after it's mature enough to be **extensible**.  It will never change simply to accommodate "one more" domain specific thing, e.g. no increase in surface area for use cases like *documentation builds*, or *cluster lifecycles*, because those things are easy to express as extensions. (See .cmk[^30] and k8s-tools[^31])
+While `compose.mk` is committed to bugfixes, and will continue to change in cases where it feels **incompatible, incomplete, or internally inconsistent**.. the goal is to freeze development as much as possible after it's mature enough to be **extensible**.  It will never change simply to accommodate "one more" domain specific thing, e.g. no increase in surface area for use cases like *documentation builds*, or *cluster lifecycles*, because those things are easy to express as extensions. (See .cmk[^30])
 
 As another example, support for something like `podman` won't ever bloat the code-base until/unless it's very clearly more ubiquitous than `docker` is.  In some ways, `compose.mk` is a proof of concept and a reference, so that usage of `docker` or even `make` itself is an implementation detail that could be swapped out in a fork.  Hate to see an  [admittedly gruesome transpiler hackjob]({{_}}/cmk/compiler) written in `awk`?  Rewrite it by all means.. but if it's more elegant at the expense of becoming larger or less portable, it probably can't be merged.  See also the [fork-and-forget advice]({{_}}/quickstart/#forks-versioning) for installation
 
@@ -326,9 +326,15 @@ This is a passion project, and I think we both know that only a human could come
 
 #### By Robots
 
-As for disclosure about AI usage.. a quick look around will show that several parts of `compose.mk` were barely possible to build *before* AI.
+Regarding disclosure about AI usage.. a quick look around will show that several parts of `compose.mk` were barely possible to build *before* AI.
 
-Have you ever written a thousand lines of a multistage-compiler with `awk`?  If you *did* write something like that, you probably shouldn't trust it without *many hundreds of lines* of automated tests.  Do you know how tedious something like that would actually be to write and to maintain?
+Have you ever written a thousand lines of a multistage-compiler with `awk`?  If you *did* write something like that, would you trust it without *thousands of lines* of automated tests?  And do you know how tedious something like that would actually be to write and to maintain?
+
+I'd go even further and suggest that a compiler is an *almost ideal* project for AI, because much of the goal is to characterize exhaustively and then freeze known-good behaviour.  More generally, the first thing to do with AI in any project is to **use AI to build a box that restricts the AI.**  Consider the structural aspects of this project in particular:
+
+* A linter restricts the compiler, the compiler restricts the linter.
+* Twinned Makefile/CMK demos restrict core changes, and each side of the twin constrains drift on the other.
+* Even the diagrams tend to check/restrict the [tower of abstractions]({{_}}/cmk/concepts), and vice versa.
 
 #### For Humans
 
@@ -336,13 +342,13 @@ Of course it's for you.  (You are there aren't you?)
 
 Just look at all this gratuitous mindshare.  To reduce cognitive load, it adds only a few powerful new concepts to learn and otherwise co-exists with multiple systems you're probably already familiar with.
 
-Besides being well-documented, it documents itself through [CLI help]({{_}}/cli-help) and target docstrings.  Code-to-comment ratios are roughly 1:1 throughout.  It's certainly tempting to ruthlessly minify the sections of code that only a machine could really maintain, but it's left expanded *and* actively groomed.  There's a lot of other transparency too, from [the embedded tui]({{_}}/embedded-tui) to the [compiler pipeline]({{_}}/cmk/compiler) and even [the packaging]({{_}}/demos/packaging) you could say `compose.mk` mostly *embeds* dependencies where they can be inspected, and we build-on-demand and just in time, rather than grabbing opaque external containers whenever possible.
+CMK's well-documented, through online [CLI help]({{_}}/cli-help) and target docstrings, and besides the interface the implementation's code-to-comment ratios are roughly 1:1 throughout.  It's certainly very tempting to *ruthlessly minify* the more opaque sections of code that only a machine could really maintain, but it's left expanded *and* actively groomed.  There's a lot of other transparency too, from [the embedded tui]({{_}}/embedded-tui) to the [compiler pipeline]({{_}}/cmk/compiler) and even [the packaging]({{_}}/demos/packaging) you could say `compose.mk` mostly *embeds* dependencies where they can be inspected, and whenever possible we build-on-demand and just in time, rather than grabbing opaque external containers whenever possible.
 
 #### For Robots
 
-The same docs, tool-reuse, and an embrace-and-extend approach for familiar systems and concepts make `compose.mk` great for people, but also pretty ideal for agents.  *Self documenting features*, and discovery by [reflection]({{_}}/standard-lib/#reflection-support) works well.   [Container dispatch]({{_}}/container-dispatch) also gives sandboxed, reproducible execution and a clean tool-use surface where a model can list what is available, run it, and read the result.
+The same docs, tool-reuse, and an embrace-and-extend approach for familiar systems and concepts that make `compose.mk` *great for people* actually are ideal for agents too.  Self documenting features and discovery by [reflection]({{_}}/standard-lib/#reflection-support) works well.   [Container dispatch]({{_}}/container-dispatch) gives sandboxed, reproducible execution and clean tool-use where a model can list what is available, run it, and read the result.
 
-Less obvious, but also important: the [extensive collection]({{_}}/cmk/demos) of twinned demos organized by topic is basically *one huge roadmap* for writing, tracing, and reducing cmk-lang where needed.  The demo corpus is big by human standards, but small enough to grep, or to fit into context as single chunk. 
+The [extensive collection]({{_}}/cmk/demos) of twinned demos organized by topic is basically *one huge roadmap* for writing, tracing, and reducing cmk-lang where needed.  The demo corpus is big by human standards, but small enough to grep, or to fit into context as single chunk. 
 
 More specifically and quoting from the *other* page with [obligatory AI things]({{_}}/demos/ai#obligatory-ai-things), here's some more concrete observations about where LLMs and `compose.mk` overlap:
 
@@ -381,7 +387,6 @@ More specifically and quoting from the *other* page with [obligatory AI things](
 [^28]: [ansible helm module](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/helm_module.html)
 [^29]: [jenkins container-step](https://www.jenkins.io/doc/pipeline/steps/kubernetes/#-container-run-build-steps-in-a-container)
 [^30]: [.cmk](https://github.com/robot-wranglers/.cmk)
-[^31]: [k8s-tools](https://robot-wranglers.github.io/k8s-tools/)
 [^32]: [web-browsers to keep copy/paste working](https://connect.mozilla.org/t5/discussions/when-they-going-to-fix-the-copy-and-paste-in-firefox/td-p/52574)
 [^33]: [front end treadmill](https://polotek.net/posts/the-frontend-treadmill/)
 [^34]: [a project is killed and a community abandoned](https://killedbygoogle.com/)

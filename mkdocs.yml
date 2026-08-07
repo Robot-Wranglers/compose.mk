@@ -103,17 +103,16 @@ nav:
       - 'Self Extracting Executables': demos/packaging.md
   - CMK Language:
       - 'Overview': cmk/index.md
-      - 'Concepts': cmk/concepts.md
-      - 'Quick Reference': cmk/quickref.md
-      - 'All Demos (Index)': cmk/demos.md
       - 'Paradigm / Lineage': cmk/paradigm.md
+      - 'Quick Reference': cmk/quickref.md
+      - 'Concepts': cmk/concepts.md
       - 'Banana Brackets': cmk/banana.md
       - 'Modules': cmk/modules.md
-      - 'Compiler Tutorial': cmk/compiler.md
-      - 'Compiler Pragmas': cmk/pragmas.md
-      - 'Metaprogramming': cmk/metaprogramming.md
       - 'DSLs': cmk/dsls.md
       - 'Matrioshka Automata': matrioshka.md
+      - 'All Demos (Index)': cmk/demos.md
+      - 'Compiler Tutorial': cmk/compiler.md
+      - 'Compiler Pragmas': cmk/pragmas.md
       - 'Linting': cmk/lint.md
     # - 'Justfile Interoperability': demos/just.md
     # - 'Makeception': demos/makeception.md

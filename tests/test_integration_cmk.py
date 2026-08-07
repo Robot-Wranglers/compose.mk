@@ -103,14 +103,14 @@ def test_demo_kwarg_parsing(run_demo):
   # `@bind.args(from=json, ..)` decorator: JSON kwargs with per-key defaults.
   r = run_demo("demos/cmk/kwarg-parsing.cmk")
   assert r.ok, r.stderr
-  assert "shape=triangle color=red name=default" in r.stdout
+  assert "shape=triangle color=red name=default" in (r.stdout + r.stderr)
 
 
 def test_demo_kwarg_parsing_2(run_demo):
   # bind.args from=json + from=env (env override) chained via flux.pipeline.
   r = run_demo("demos/cmk/kwarg-parsing-2.cmk")
   assert r.ok, r.stderr
-  assert "shape=square color=green name=Bob" in r.stdout
+  assert "shape=square color=green name=Bob" in (r.stdout + r.stderr)
 
 
 def test_demo_host_native_bash(run_demo):

@@ -1421,6 +1421,23 @@ def test_targetdoc_pipe_form_not_doc(ir):
 
 
 @pytest.mark.docstring
+@pytest.mark.xfail(
+  strict=True,
+  reason="TODO: a decorator relocates above the target to become the first recipe line, "
+  "displacing the docstring to the second line, where joinbody lowers it to a printf "
+  "(leaks to stdout at runtime) instead of the canonical @# doc comment.  Surfaced by "
+  "demos/cmk/kwarg-parsing.cmk, whose decorated `consume` had to drop its docstring for "
+  "a plain # comment.  If this xpasses, the docstring lift learned to look past a leading "
+  "decorator -- keep the fix and drop this marker.",
+)
+def test_targetdoc_under_decorator_still_hashes(ir):
+  # the docstring is the target's first authored body line even when a decorator precedes it.
+  r = ir("@bind.args(from=json, shape)\nfoo:\n  '''builds the widget'''\n  @true\n")
+  assert "\t@# builds the widget" in r.stdout
+  assert "printf '%s' 'builds the widget'" not in r.stdout
+
+
+@pytest.mark.docstring
 def test_target_doc_accessor_lowers_without_corruption(ir):
   # ${__target__.__doc__} -> ${_cmk.target.doc}; the compound is consumed whole, NOT corrupted
   # into ${${@}.__doc__} by the bare __target__ -> ${@} restore.
