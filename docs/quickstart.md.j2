@@ -132,7 +132,7 @@ This example above is typical, but not necessarily minimal, so let's discuss a f
 ### Compatibility Notes
 <hr class="section-rule lvl-3">
 
-Platforms used in development for `compose.mk` include recentish docker, recentish make (*3.8+*) and bash (*5+*) on both Linux and MacOS.  Testing done in CI only uses Linux and won't try every possible combination of versions, but the goal is to support most things you'll encounter in the wild.
+Platforms used in development for `compose.mk` include recentish docker, GNU make (*4.0+*) and bash (*5+*) on both Linux and MacOS.  Testing done in CI only uses Linux and won't try every possible combination of versions, but the goal is to support most things you'll encounter in the wild.
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
@@ -140,11 +140,15 @@ Platforms used in development for `compose.mk` include recentish docker, recenti
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-**For MacOS,** the [standard library]({{_}}/standard-lib) should mostly Just Work.  For more [advanced]({{_}}/cmk/compiler) [features]({{_}}/bridge) though, there are the usual problems with BSD vs GNU tools, particularly `sed` and `awk`.
+**For MacOS,** there are the usual problems with BSD vs GNU tools, particularly `make`, `sed` and `awk`.
 
 Typically `/usr/local/bin` comes before `/usr/bin` in PATH, so this should leave your base installation untouched and still prefer GNU by default:
 
 ```bash {.cli_example}
+# Install a GNU make
+$ brew install make
+$ ln -s $(brew --prefix)/bin/gmake /usr/local/bin/make
+
 # Install a GNU awk
 $ brew install gawk
 $ cp /usr/local/bin/gawk /usr/local/bin/awk
@@ -152,6 +156,10 @@ $ cp /usr/local/bin/gawk /usr/local/bin/awk
 # Install a GNU sed
 $ brew install gnu-sed
 $ cp /usr/local/bin/gsed /usr/local/bin/sed
+
+# Clear cached lookups, then confirm you're on the GNU versions
+$ hash -r
+$ make --version
 ```
 
 Usage of other tools like `xargs` should be BSD/GNU agnostic so please report any issues!  Opting in to GNU tools on MacOS *everywhere* is a matter of taste, but might be worthwhile. See documentation for example here[^3].

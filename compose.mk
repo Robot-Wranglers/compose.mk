@@ -223,7 +223,9 @@ make=make ${MAKE_FLAGS} ${makefile_list}
 cmk.self = $(abspath $(firstword $(filter %compose.mk,$(MAKEFILE_LIST))))
 $(call m5.declare, CMK_VERSION:=0.0.0-dev, CMK_DOCKER_PATH:=/usr/local/bin/compose.mk)
 _cmk.ws.probe=s='${cmk.self}'; ws="$${DOCKER_HOST_WORKSPACE:-$$PWD}"; rel="$${s\#$$ws/}"
-docker.hosted.mount=$(if $(wildcard ${HOSTED_CACHE}),-v ${HOSTED_CACHE}:/cmk-hosted/$(notdir ${HOSTED_CACHE}):ro -e HOSTED_CACHE_DIR=/cmk-hosted,)
+# A relative cache path is anchored to the docker-host workspace; docker reads one as a volume name.
+docker.hosted.mount.src=$(if $(filter /%,${HOSTED_CACHE}),${HOSTED_CACHE},$${workspace:-$${PWD}}/$(patsubst ./%,%,${HOSTED_CACHE}))
+docker.hosted.mount=$(if $(wildcard ${HOSTED_CACHE}),-v ${docker.hosted.mount.src}:/cmk-hosted/$(notdir ${HOSTED_CACHE}):ro -e HOSTED_CACHE_DIR=/cmk-hosted,)
 makefile_list.dind=$(if $(strip ${docker.cmk.mount}),$(patsubst -f${cmk.self},-f${CMK_DOCKER_PATH},${makefile_list}),${makefile_list})
 make.dind=make ${MAKE_FLAGS} ${makefile_list.dind}
 export CMK_DIND_SRC=$(shell ${_cmk.ws.probe}; if [ "$$rel" = "$$s" ]; then echo "${CMK_DOCKER_PATH}"; else echo "$$rel"; fi)
@@ -347,6 +349,10 @@ m5.def.! = $(eval $(m5[1]) = $$(eval $$(call $(m5[2]),$$(strip $$(1)))))
 m5.self! = $(eval m5.self := $(1))
 m5.set = $(call m5!,$(m5.self).$(1) := $(2))
 m5.set.op = $(call m5!,$(m5.self).$(1) $(2) $(3))
+# Save/restore stack: a scalar plus a shadow list, ꙮ standing in for an empty value.
+m5.stack.push = $(or $(1),ꙮ) $(2)
+m5.stack.top = $(patsubst ꙮ,,$(firstword $(1)))
+m5.stack.rest = $(wordlist 2,$(words $(1)),$(1))
 m5.ctx? = $(if $(findstring ",$(1))$(findstring ',$(1)),$(subst «qk.s»,$(space),$(patsubst $(m5[2])=%,%,$(filter $(m5[2])=%,$(call m5.lex.qnorm,$(1))))),$(strip $(patsubst $(m5[2])=%,%,$(filter $(m5[2])=%,${1}))))
 # m5.table: KEY=VALUE subscript table; .dispatch/.call = jump table.
 define m5.table
@@ -782,7 +788,9 @@ export workspace?=$(shell echo ${DOCKER_HOST_WORKSPACE})
 export CMK_INTERNAL=0
 endif
 
-docker.env.standard=-e DOCKER_HOST_WORKSPACE=$${DOCKER_HOST_WORKSPACE:-$${PWD}} -e TERM=$${TERM:-xterm} -e GITHUB_ACTIONS=${GITHUB_ACTIONS} -e TRACE=$${TRACE} -e CMK_IO_STACK=$${CMK_IO_STACK}
+docker.env.standard=-e DOCKER_HOST_WORKSPACE=$${DOCKER_HOST_WORKSPACE:-$${PWD}} -e TERM=$${TERM:-xterm} -e GITHUB_ACTIONS=${GITHUB_ACTIONS} -e TRACE=$${TRACE} -e CMK_IO_STACK=$${CMK_IO_STACK} ${docker.env.ambient}
+# the ambient chain rides the same crossing as the io-stack: run-scoped state a nested dispatch must see.
+docker.env.ambient=-e __ambient__="$${__ambient__:-}" -e __ambient_stack__="$${__ambient_stack__:-}" -e __ambient_parent__="$${__ambient_parent__:-}"
 
 ifeq (${TRACE},1)
 $(shell printf "trace=$${TRACE} quiet=$${quiet} verbose=$${verbose:-} ${yellow}CMK_INTERNAL=$${CMK_INTERNAL} CMK_DIND=$${CMK_DIND} $(if $(filter 0,$(__hosted__.enabled)),${GLYPH_LANG_OFF}CMK_LANG=0 ,)${MAKE_CLI}${no_ansi}\n" > /dev/stderr)
@@ -915,7 +923,7 @@ $(eval _cmix := $($(_cn).__mixins))
 $(eval _cmix := $(call lang.class.shadowclean,$(_cn),$(_cmix)))
 # classvar closure: classvars of this class and its mixins.
 $(eval _cvars := $(sort $(foreach _m,$(_cn) $(_cmix) $(_cifc),$(if $(call m5.defined?,$(_m).__classvars__),$($(_m).__classvars__)))))
-$(_cn).__tmpl = $$(eval self_stack := $$(or $$(self),ꙮ) $$(self_stack))$$(eval self :=$$(or $$(call m5.ctx?,$$(1),namespace),$$(call m5.ctx?,$$(1),def),$$(firstword $$(1))))$$(eval $${self}.__class__ := $(_cn))$(foreach _cv,$(_cvars),$$(eval $${self}.$(_cv) := $(firstword $(foreach _m,$(_cn) $(_cmix) $(_cifc),$(if $(call m5.defined?,$(_m).$(_cv)),$($(_m).$(_cv)))))))$$(eval $${self}.__ctor__ := $(_cn))$$(eval $${self}.__im_self__ := $${self})$$(eval $${self}.%: self := $${self})$(foreach _b,$(_cmix),$$(eval $$(call m5.tmpl/seed.self,$(strip $(_b)),$$(1),$${self})))$$(if $$(filter-out undefined,$$(origin $${self}.__raw_body__)),,$$(if $$(value $${self}),$$(eval $$(call m5.tmpl/seed.self,$${self},$$(1),$${self}))$$(if $$(filter-out undefined,$$(origin $${self}.__isprotocol__)),,$$(eval undefine $${self}))))$$(eval $${self}.__dir__ := $$(sort $$(patsubst $${self}.%,%,$$(filter $${self}.%,$$(.VARIABLES)))))$$(if $$(filter-out undefined,$$(origin $${self}.__minted__)),$$(eval $$(call $${self}.__minted__,$$(1))))$$(eval self := $$(patsubst ꙮ,,$$(firstword $$(self_stack))))$$(eval self_stack := $$(wordlist 2,$$(words $$(self_stack)),$$(self_stack)))
+$(_cn).__tmpl = $$(eval self_stack := $$(call m5.stack.push,$$(self),$$(self_stack)))$$(eval self :=$$(or $$(call m5.ctx?,$$(1),namespace),$$(call m5.ctx?,$$(1),def),$$(firstword $$(1))))$$(eval $${self}.__class__ := $(_cn))$(foreach _cv,$(_cvars),$$(eval $${self}.$(_cv) := $(firstword $(foreach _m,$(_cn) $(_cmix) $(_cifc),$(if $(call m5.defined?,$(_m).$(_cv)),$($(_m).$(_cv)))))))$$(eval $${self}.__ctor__ := $(_cn))$$(eval $${self}.__im_self__ := $${self})$$(eval $${self}.%: self := $${self})$(foreach _b,$(_cmix),$$(eval $$(call m5.tmpl/seed.self,$(strip $(_b)),$$(1),$${self})))$$(if $$(filter-out undefined,$$(origin $${self}.__raw_body__)),,$$(if $$(value $${self}),$$(eval $$(call m5.tmpl/seed.self,$${self},$$(1),$${self}))$$(if $$(filter-out undefined,$$(origin $${self}.__isprotocol__)),,$$(eval undefine $${self}))))$$(eval $${self}.__dir__ := $$(sort $$(patsubst $${self}.%,%,$$(filter $${self}.%,$$(.VARIABLES)))))$$(if $$(filter-out undefined,$$(origin $${self}.__minted__)),$$(eval $$(call $${self}.__minted__,$$(1))))$$(eval self := $$(call m5.stack.top,$$(self_stack)))$$(eval self_stack := $$(call m5.stack.rest,$$(self_stack)))
 $$(call m5.def.!,$(_cn),$(_cn).__tmpl)
 endef
 
@@ -3378,6 +3386,9 @@ path.__open__ = $(call import.module, file=$(call _ambient.pathsrc,$(strip $(val
 ambient.dissolve = $(call _ambient.dissolve.route,$(strip $(call mk.kwargs.get,${1},kind)),$(strip $(call mk.kwargs.get,${1},def)),${1})
 _ambient.dissolve.route = $(if ${1},$(if $(call m5.defined?,${1}.__open__),$(call ${1}.__open__,${2},${3}),$(call ambient.dissolve.inline,${2})),$(call ambient.dissolve.inline,${2}))
 
+# ambient.enter <name>: env-prefix moving the chain one level in; its dual is the pop in `outwards`.
+ambient.enter = __ambient_stack__="$(call m5.stack.push,$(__ambient__),$(__ambient_stack__))" __ambient__="$(strip ${1})" __ambient_parent__="$(or $(__ambient__),$($(strip ${1}).__ambient_parent__))"
+
 # cmk.ambient.host/<def> (run a machine DEF) + cmk.host.exec (run a prebuilt `cmd=..`) -- THE
 # irreducible base ambient: raw host exec, never lowered through `in`; everything nests over these.
 # if/then/else (not `A && B || C`) so a failing body propagates its exit code.
@@ -3864,6 +3875,9 @@ _mk.plugin.autohelp=$(if $(wildcard ${2}),$(eval _ah_ns:=$(patsubst %.CMK,%,$(pa
 # `__name__` -- the current namespace path, threaded by the `namespace` ctor (empty at
 # module scope); also the anticipated identity for `${__name__}.__doc__` (moduledoc).
 $(call m5.declare, __name__ :=, __name__stack :=, self :=, self_stack :=)
+
+# The dynamic containment chain; lazy so a value inherited from an enclosing dispatch survives.
+$(call m5.declare, __ambient__ ?=, __ambient_stack__ ?=)
 
 # `_mk.module.namespace/%` -- prefix every module-level assignment/target LHS on stdin with
 # `<ns>.` (the destination namespace taken literally from the stem; pure, no header).  The
@@ -4353,8 +4367,10 @@ define __hosted__
       self.__name__ ?= self
       self.entrypoint = $(or $(self._entrypoint),$(if $(self.img),,self))
       self.run = $(if $(self.img),_crun/self,host.dispatch/$(self.entrypoint))
-      self.__in__ = __ambient_parent__="$(self.__ambient_parent__)" feed="$(self.feed)" feed_flag="$(self.feed_flag)" ${make} $(self.run),${__args__}
+      self.__run__ = feed="$(self.feed)" feed_flag="$(self.feed_flag)" ${make} $(self.run),${__args__}
+      self.__in__ = $(call ambient.enter,${self}) $(call ${self}.__run__,${__args__})
       ${self}/%:; @$(call ${self}.__in__,${*})
+      ${self}.reenter/%:; @$(call ${self}.__run__,${*})
       self.__call__ = $(if $(filter @%,$(self.entrypoint)),${make} $(patsubst @%,%,$(self.entrypoint))/$(strip $(self.cmd) ${__args__}),$(if $(self.img),img=$(self.img) entrypoint=$(or $(self.entrypoint),none) cmd="$(strip $(self.cmd) ${__args__}) $${CMK_LAMBDA_ARGV:-}" ${make} docker.run.sh,cmd="$(strip $(self.entrypoint) $(self.cmd) ${__args__}) $${CMK_LAMBDA_ARGV:-}" ${make} cmk.host.exec))
       self.polyglot = $(call code.unbound, ${__args__} bind=self)
     |)
@@ -4405,7 +4421,7 @@ define __hosted__
     # whose enclosing ambient is `host.local` (so `out` there = escape to the host, the existing
     # behavior).  EXPLICITLY EMPTY means you are IN `host.local` (its parent is unset) -> there is
     # nowhere further out -> a hard, named fault.  A named parent -> navigate into it.
-    outwards/%:; @P="$${__ambient_parent__-host.local}"; if [ -z "$$P" ]; then echo 'cmk: OutwardsUndefined: this is the top (nothing encloses this ambient to move out to)' >&2; exit 1; elif [ "$$P" = host.local ]; then cmk.io.mktemp() && ${mk.def.to.file}/${*},$${tmpf} && { if [ "$${CMK_IN_CONTAINER:-0}" = 0 ]; then bash $${tmpf} $${CMK_LAMBDA_ARGV:-}; elif [ -S "$${DOCKER_SOCKET:-/var/run/docker.sock}" ]; then img="$${img:-debian:bookworm-slim}" cmd="bash /workspace/$$(basename $${tmpf}) $${CMK_LAMBDA_ARGV:-}" ${make} docker.run.sh; else echo 'cmk: out denied -- no host channel (mount the docker socket to grant escape)' >&2; exit 1; fi; }; else ${make} $${P}/${*}; fi
+    outwards/%:; @P="$${__ambient_parent__-host.local}"; if [ -z "$$P" ]; then echo 'cmk: OutwardsUndefined: this is the top (nothing encloses this ambient to move out to)' >&2; exit 1; elif [ "$$P" = host.local ]; then cmk.io.mktemp() && ${mk.def.to.file}/${*},$${tmpf} && { if [ "$${CMK_IN_CONTAINER:-0}" = 0 ]; then bash $${tmpf} $${CMK_LAMBDA_ARGV:-}; elif [ -S "$${DOCKER_SOCKET:-/var/run/docker.sock}" ]; then img="$${img:-debian:bookworm-slim}" cmd="bash /workspace/$$(basename $${tmpf}) $${CMK_LAMBDA_ARGV:-}" ${make} docker.run.sh; else echo 'cmk: out denied -- no host channel (mount the docker socket to grant escape)' >&2; exit 1; fi; }; else __ambient__="$(call m5.stack.top,$(__ambient_stack__))" __ambient_stack__="$(call m5.stack.rest,$(__ambient_stack__))" __ambient_parent__="$(or $(call m5.stack.top,$(call m5.stack.rest,$(__ambient_stack__))),host.local)" ${make} $${P}.reenter/${*}; fi
     cmk.class cmk.Dockerfile(bases=cmk.container)(|
       '''
       Thin alias of container: a container whose non-empty body is the image recipe builds it identically (img=compose.mk:self, src=self, fluent chain), so Dockerfile just names that intent -- all behavior is inherited.  When files are bound to it (see dockerfs), the build folds them into a private context, injecting a copy plus a chmod after the first base line; render shows that injected recipe without building.
@@ -4488,12 +4504,12 @@ define __hosted__
     $(eval $(__fqn__).__ambient_parent__ ?= host.local)
     $(eval $(__fqn__).__all__ ?=)
     $(if $(__name__),$(eval $(__fqn__) := $(__fqn__))$(eval $(__name__).__all__ += ${self})$(if $(call m5.defined?,${self}.__class__),$(eval $(__fqn__).__class__ := $(${self}.__class__)))$(eval $(__fqn__).__ctor__ := $(${self}.__ctor__)))
-    $(eval __name__stack := $(or $(__name__),ꙮ) $(__name__stack))
+    $(eval __name__stack := $(call m5.stack.push,$(__name__),$(__name__stack)))
     $(eval __name__ := $(__fqn__))
     # an empty body has no heads to dedent/hoist, so skip the file+awk+include entirely -- this also
     # keeps a pure container (an identity-only namespace) from adding a temp to MAKEFILE_LIST.
     $(if $(strip $(value $(__fqn__).shape)),$(eval __ns_base := $(filter $(__fqn__).%,$(.VARIABLES)))$(file >.tmp.ns.$(__fqn__).raw,$(value $(__fqn__).shape))$(shell awk "$${_awklang_ns_dedent}" .tmp.ns.$(__fqn__).raw | awk "$${_awklang_indent}" | awk -v ns='$(__fqn__)' -v dunders=1 -v frags=1 "$${_awklang_module_ns}" > .tmp.ns.$(__fqn__).mk)$(eval include .tmp.ns.$(__fqn__).mk)$(eval $(__fqn__).__all__ += $(foreach _m,$(patsubst $(__fqn__).%,%,$(filter-out $(__ns_base),$(filter $(__fqn__).%,$(.VARIABLES)))),$(if $(findstring .,$(_m)),,$(_m)))))
-    $(eval __name__ := $(patsubst ꙮ,,$(firstword $(__name__stack))))$(eval __name__stack := $(wordlist 2,$(words $(__name__stack)),$(__name__stack)))
+    $(eval __name__ := $(call m5.stack.top,$(__name__stack)))$(eval __name__stack := $(call m5.stack.rest,$(__name__stack)))
     $(eval __fqn__ := $(if $(__name__),$(if $(filter $(__name__).%,${self}),${self},$(__name__).${self}),${self}))
     $(if $(strip $(value ${body1})),$(if $(strip $(call mk.native.stage,${CMK_NATIVE_CACHE}/$(__fqn__).hm,$(value $(__fqn__).shape))$(call lang.main.has,${CMK_NATIVE_CACHE}/$(__fqn__).hm)),$(eval $(__fqn__).__call__ = ${make} $(__fqn__).__main__)))
     $(call lang.seed.materialize!,$(__fqn__),lang.proto.tmpl.directory)

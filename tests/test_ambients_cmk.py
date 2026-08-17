@@ -584,6 +584,24 @@ def test_in_image_runs_body_in_real_container(docker_cmk, tmp_path):
   assert "ID=debian" in out, out[-2000:]   # proves it ran INSIDE debian, not the host
 
 
+@pytest.mark.needs_docker
+def test_ambient_chain_crosses_the_container_boundary(docker_cmk, tmp_path):
+  # without the standard-env forwarding a containerized block sees no parent at all.
+  f = tmp_path / "chain_box.cmk"
+  f.write_text(
+    "open cmk\n"
+    "container boxy(img=alpine entrypoint=sh)(| |)\n"
+    "foo:\n"
+    '\t(| echo "BOX_AP=[$__ambient_parent__] BOX_CUR=[$__ambient__]" |) in boxy\n'
+  )
+  r = docker_cmk("cmk", "run", "chain_box.cmk", "foo", timeout=300,
+                 env={"CMK_SUPERVISOR": "1"})
+  out = r.stdout + r.stderr
+  assert r.returncode == 0, out[-2000:]
+  assert "BOX_AP=[host.local]" in out, out[-2000:]
+  assert "BOX_CUR=[boxy]" in out, out[-2000:]
+
+
 def test_bare_anon_callform_is_grammar_error(cmk):
   # A bare anonymous banana `(| .. |)()` -- no `in`/`out`, no typed-machine constructor -- carries a
   # `()` callform trailer it cannot honor: an anonymous banana has only a string-concat algebra, no

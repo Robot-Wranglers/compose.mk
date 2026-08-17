@@ -28,7 +28,7 @@
   // techwrite carries em-dash ban plus code-in-prose for docs; supersedes the docs_prose_gate hook
   "techwrite": {
     "default_enabled": true,
-    "prose_scope": ["docs/*.md.j2"],
+    "prose_globs": ["docs/*.md.j2"],
     "exempt": ["quickref.md.j2"],
     "prose_rules": [
       { "pattern": "\\$[({]", "message": "make/shell expansion in doc prose; put runnable code in a fenced block, a {{ macro }}, or a demo, not a paragraph" },

@@ -175,3 +175,47 @@ def test_out_from_top_recipe_runs_on_host():
   rc, out = _run("open cmk\nd:\n  (| echo OUT_RAN_ON_HOST |) out\n", "d")
   assert rc == 0, out
   assert "OUT_RAN_ON_HOST" in out
+
+
+# Re-invoking the written file is what makes each hop a separate process, so the chain is real.
+_CHAIN_SRC = (
+  "open cmk\n"
+  "machine outer(entrypoint=bash)(| |)\n"
+  "machine inner(entrypoint=bash)(| |)\n"
+  "lone:\n"
+  '  (| echo "L1_AP=[$__ambient_parent__] L1_CUR=[$__ambient__]" |) in outer\n'
+  "nest:\n"
+  "  (| ./compose.mk cmk run .tmp.machine.hierarchy.cmk deep |) in outer\n"
+  "deep:\n"
+  '  (| echo "L2_AP=[$__ambient_parent__] L2_CUR=[$__ambient__]" |) in inner\n'
+  "hop:\n"
+  "  (| ./compose.mk cmk run .tmp.machine.hierarchy.cmk mid |) in outer\n"
+  "mid:\n"
+  "  (| ./compose.mk cmk run .tmp.machine.hierarchy.cmk leaf |) in inner\n"
+  "leaf:\n"
+  '  (| echo "OUT_AP=[$__ambient_parent__] OUT_CUR=[$__ambient__]" |) out\n'
+)
+
+
+def test_nested_in_composes_the_chain():
+  """A block sent into `inner` from inside `outer` sees `outer` as its parent.
+
+  Before the chain was dynamic, every machine reported the static `host.local`.
+  """
+  rc, out = _run(_CHAIN_SRC, "lone", "nest", timeout=300)
+  assert rc == 0, out[-2000:]
+  assert "L1_AP=[host.local] L1_CUR=[outer]" in out, out[-2000:]
+  assert "L2_AP=[outer] L2_CUR=[inner]" in out, out[-2000:]
+
+
+def test_multihop_out_lands_on_the_parents_own_parent():
+  """`out` from two levels deep lands in `outer` carrying outer's own parent.
+
+  Landing with `OUT_AP=[outer]` would mean the destination became its own parent, which is the
+  bug the non-pushing reenter door exists to prevent: the next `out` would bounce straight back.
+  """
+  rc, out = _run(_CHAIN_SRC, "hop", timeout=300)
+  assert rc == 0, out[-2000:]
+  assert "OUT_CUR=[outer]" in out, out[-2000:]
+  assert "OUT_AP=[host.local]" in out, out[-2000:]
+  assert "OUT_AP=[outer]" not in out, out[-2000:]
