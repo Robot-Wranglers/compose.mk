@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = [pytest.mark.unit, pytest.mark.covers_demo("module-system.cmk")]
+pytestmark = [pytest.mark.unit, pytest.mark.module_system, pytest.mark.covers_demo("module-system.cmk")]
 
 REPO = Path(__file__).resolve().parent.parent
 COMPOSE = REPO / "compose.mk"

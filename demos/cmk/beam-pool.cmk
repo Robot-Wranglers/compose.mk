@@ -10,7 +10,7 @@ with the node that ran it (CMK_LOG_PRE), so you see the work fan across nodes.
 
 # USAGE: ./demos/cmk/beam-pool.cmk  (or beam.pool/<n>,g1,g2)
 
-import platform.beam.cmk as beam, flat=1
+from platform.beam import beam.pool
 
 work/%:
   '''One unit of pool work: announce it and do a little.'''

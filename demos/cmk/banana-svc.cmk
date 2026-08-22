@@ -14,7 +14,7 @@ is built by aliasing targets that already exist, not new machinery.  Two
 backends share one handle shape:
 
   1. a compose service -- the handle aliases the scaffolded verbs.
-  2. an actor (light)  -- reuse jqd.cmk's agent, a handle already.
+  2. an actor (light)  -- reuse the agent module's Agent, a handle already.
 
 See the & (unary) row in TODO-banana-algebra.md.
 '''
@@ -65,20 +65,15 @@ demo.svc:
   this.box.svc.status
   this.box.svc.stop
 
-# 2) actor handle (light): ( reuse jqd.cmk's Agent )
-#   A lighter backend for the same idea.  open the jqd/actor demo (flat
-#   dissolve of the file) for its `Agent` class; an inproc instance is
-#   the handle by construction -- cast to send, its mailbox answers
-#   count / dump, stop tears it down (ready on creation, so no start).
-#   Inproc, so this part runs with no docker.
+# 2) actor handle (light): a flat import of the agent module binds its Agent class, and an inproc instance is the handle by construction: cast to send, its mailbox answers count and dump, stop tears it down (ready on creation, so no start).  Inproc, so this part runs with no docker.
 
-open demos/cmk/jqd.cmk
+from agents import Agent
 
 worker <- Agent.new()
 
 demo.actor:
   '''
-  & over an inproc actor: a jqd Agent instance is already a handle by construction,
+  & over an inproc actor: an Agent instance is already a handle by construction,
   so cast sends, its mailbox answers count / dump, and stop tears it down.
   '''
   log(& serviceize -> handle over an actor (inproc):)

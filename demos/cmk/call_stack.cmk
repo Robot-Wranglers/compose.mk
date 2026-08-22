@@ -13,7 +13,7 @@
 #   ./demos/cmk/call_stack.cmk find/hit C
 
 # The __vm__ plugin (control stack + CEK machine) is not in core -- import it.
-import virtual-machine.cmk as vm, flat=1
+from virtual-machine import vm.push, vm.call, vm.return, vm.goto, vm.drop, __vm__
 
 # The no-args default: showcase the bounded goto-loop.
 __main__: count/3

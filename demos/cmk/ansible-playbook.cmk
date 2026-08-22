@@ -38,7 +38,7 @@ self.playbook_runner/%:
         ansible-playbook -i localhost, -c local $${tmpf}
     log.io(${dim_green} Playbook finished.)
 
-# Main entrypoint: build the image, then run the playbook inside it.
-__main__: AnsiblePlaybook.build
+# Main entrypoint: run the playbook inside the image, which builds on first use.
+__main__:
     ''' Pass the embedded playbook into the embedded container and run it. '''
     this.AnsiblePlaybook.dispatch/self.playbook_runner/Ansible.playbook

@@ -957,7 +957,7 @@ _TOPIC_NODE_SUBSTRINGS = {
   "self": ("self",),
   "banana": ("banana",),
   "namespace": ("namespace",),
-  "module": ("module",),
+  "module_system": ("module", "import", "include"),
   "vm": ("vm_", "::vm", "/vm.", "vm.py", "vm_cmk"),
   "machine": ("machine",),
   "protocol": ("protocol",),
@@ -965,7 +965,6 @@ _TOPIC_NODE_SUBSTRINGS = {
   "class_system": ("class_", "class.", "inheritance", "dot_operator"),
   "callform": ("callform",),
   "receiver": ("receiver",),
-  "import": ("import", "include"),
   "sandbox": ("sandbox",),
   "hosted": ("hosted",),
   "channel": ("channel",),
@@ -1069,6 +1068,12 @@ def pytest_collection_modifyitems(config, items):
     for item in nb:
       item.add_marker(
         pytest.mark.skip(reason="notebooking disabled (set CMK_TEST_NOTEBOOKING=1)")
+      )
+  dnd = [i for i in items if "dind" in i.keywords]
+  if dnd and os.environ.get("CMK_TEST_DIND") != "1":
+    for item in dnd:
+      item.add_marker(
+        pytest.mark.skip(reason="dind disabled (set CMK_TEST_DIND=1)")
       )
 
 

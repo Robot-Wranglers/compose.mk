@@ -62,8 +62,6 @@
 
 * [fault.mk](./fault.mk) (49 lines)
 
-* [flux.candidates.mk](./flux.candidates.mk) (49 lines)
-
 * [flux.star.mk](./flux.star.mk) (14 lines)
 
 * [golang.mk](./golang.mk) (29 lines)
@@ -122,7 +120,7 @@
 
 * [notebooking.mk](./notebooking.mk) (297 lines)
 
-* [oop-subcommand.mk](./oop-subcommand.mk) (39 lines)
+* [oop-subcommand.mk](./oop-subcommand.mk) (36 lines)
 
 * [overlay.mk](./overlay.mk) (94 lines)
 

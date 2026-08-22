@@ -82,9 +82,7 @@ Beyond *running* a guest language, a DSL can also *reflect* on it.  A language k
 
 Reflection here is *structural*, not semantic.  It reads the concrete syntax without a full parse or any execution, which keeps it cheap and language-parametric.  The default provider is [comby](https://comby.dev), a structural matcher reached through the `lang.parser` interface; a `matcher` hint (`.go`, `.py`, `.rs`, ...) selects the guest grammar, and comby is only the swappable implementation *behind* that interface.
 
-A kind opts in through the [`ifaces=`]({{_}}/cmk/concepts/#protocols) slot, mixing the protocol onto an existing language.  The demo below does this for Go: `dsl.golang` both builds/runs a fragment *and* reflects it onto its own symbols and tokens.  Each kind also picks a *grammar family* that supplies the comby patterns behind `__symbols__` and `__blocks__`: brace-delimited languages (Go, Rust, C) use the default `braces` family, and an indentation language like `python` sets `__grammar__=python`, so it reflects its own symbols and blocks too, not just tokens.
-
-{{site.embed_demo('demos/cmk/comby.cmk', github=github)}}
+A kind opts in through the [`ifaces=`]({{_}}/cmk/concepts/#protocols) slot, mixing the protocol onto an existing language.  The [`python` demo](#python) above does this: `dsl.python` both runs a fragment *and* reflects it onto its own symbols and tokens.  Each kind also picks a *grammar family* that supplies the patterns behind `__symbols__` and `__blocks__`: brace-delimited languages (Go, Rust, C) use the default `braces` family, and an indentation language like `python` sets `__grammar__=python`, so it reflects its own symbols and blocks too, not just tokens.
 
 {% set card_open = true %}{% include "includes/language-protocol.md" %}
 

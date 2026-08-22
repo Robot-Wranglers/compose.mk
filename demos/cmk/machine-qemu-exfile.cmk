@@ -3,9 +3,12 @@
 # machine-qemu-exfile.cmk: a virtual machine as a machine, helper scripts as bound file-bananas (needs docker)
 
 '''
-Same VM-as-machine concept as machine-qemu.cmk, but the qemu plumbing no longer
-clutters the Dockerfile.  Each shell script the image needs is a file-banana bound
-to the image, so the Dockerfile reads as intent and the scripts read as scripts.
+A virtual machine as a machine: the image's entrypoint (vmexec) boots a tiny
+guest under qemu, runs the fed program in the guest, and prints the guest's
+stdout, so `in vm` means "in a real kernel", not just "in a container".  The
+qemu plumbing never clutters the Dockerfile: each shell script the image needs
+is a file-banana bound to the image, so the Dockerfile reads as intent and the
+scripts read as scripts.
 
 A file-banana is a `dockerfs` instance bound to a Dockerfile at declaration:
 
@@ -17,7 +20,7 @@ unlike a Dockerfile heredoc).  A plain `qemu_runner.build` then folds the bound
 files in: each is materialized into a throwaway context and a copy plus chmod is
 injected right after the first base line.  Nothing touches the working tree.
 
-The nesting and feed story are unchanged from machine-qemu.cmk:
+The nesting is the whole idea, one hop deeper than a container machine:
   vm machine:  program -> [ image running qemu ] -> guest kernel -> sh
 
   usage: ./demos/cmk/machine-qemu-exfile.cmk
@@ -28,7 +31,8 @@ from cmk import container, dsl, dockerfs, Dockerfile
 # The Dockerfile carries no scripts and no copy lines; the bound file-bananas supply them at build.
 Dockerfile qemu_runner(|
   FROM alpine:3.21
-  RUN apk add --no-cache qemu-system-x86_64 linux-virt busybox-static coreutils
+  RUN apk add --no-cache linux-virt busybox-static coreutils
+  RUN case "$(uname -m)" in aarch64) apk add --no-cache qemu-system-aarch64;; *) apk add --no-cache qemu-system-x86_64;; esac
   RUN mkdir -p /guest/root/bin /guest/root/proc /guest/root/sys /guest/root/dev
   RUN cp /bin/busybox.static /guest/root/bin/busybox
   RUN cd /guest/root && find . | cpio -o -H newc | gzip > /guest/initramfs.gz
@@ -57,7 +61,11 @@ dockerfs vmexec(bind=qemu_runner path=/usr/local/bin/vmexec mode=+x)(|
   #!/bin/sh
   prog="$1"
   b64=$(base64 -w0 "$prog")
-  out=$(timeout 60 qemu-system-x86_64 -machine accel=kvm:tcg -m 256M -smp 1 -no-reboot -nographic -kernel /boot/vmlinuz-virt -initrd /guest/initramfs.gz -append "console=ttyS0 quiet cmk_payload=$b64" 2>/dev/null)
+  if [ "$(uname -m)" = aarch64 ]; then
+    out=$(timeout 90 qemu-system-aarch64 -machine virt -cpu max -m 256M -smp 1 -no-reboot -nographic -kernel /boot/vmlinuz-virt -initrd /guest/initramfs.gz -append "console=ttyAMA0 quiet cmk_payload=$b64" 2>/dev/null)
+  else
+    out=$(timeout 90 qemu-system-x86_64 -machine accel=kvm:tcg -m 256M -smp 1 -no-reboot -nographic -kernel /boot/vmlinuz-virt -initrd /guest/initramfs.gz -append "console=ttyS0 quiet cmk_payload=$b64" 2>/dev/null)
+  fi
   echo "$out" | awk '/___CMK_VM_BEGIN___/{f=1;next} /___CMK_VM_END___/{f=0} f'
 |)
 

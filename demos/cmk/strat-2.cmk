@@ -109,7 +109,7 @@ strategy oracle(|
   ${self}.eval   = $$(${make} oracle.order 2>${devnull} | sed -n 's/^ *order: //p')
 |)
 
-demo.puzzle: z3env.build
+demo.puzzle:
   # state the clues, then show the order (and its certificate) the oracle
   # solved for, from one solver run
   cmk.log(clues ${sep} $(foreach c,${clues},[$(strip $($c))] ))
@@ -127,7 +127,7 @@ demo.contrast:
 #   immediately before Ben), so the two together form a cycle
 clue.5 := before ben ana
 
-demo.infeasible: z3env.build
+demo.infeasible:
   # hand the oracle a cycle (clue.3 plus clue.5) and let it report that no
   # valid order exists, instead of a greedy walk's plausible wrong guess
   cmk.log(extra clue ${sep} [$(strip ${clue.5})] ${sep} fights [$(strip ${clue.3})])
@@ -136,7 +136,7 @@ demo.infeasible: z3env.build
   cmk.strategy.oracle.log(finishing order ${sep} $${ord:-<none>})
   cmk.strategy.oracle.log(z3 certificate ${sep} $$(printf '%s' "$$solved" | sed -n 's/^ *status: //p'))
 
-run.active: z3env.build
+run.active:
   # run the racers in the oracle's solved finishing order
   order="cmk.strategy.oracle.eval(${frontier})"
   cmk.log(${bold}running racers in finishing order ${sep} $$order)

@@ -3,7 +3,7 @@
 Inside a class body the `${self}.<member>()` callform is how an instance method is
 invoked without the `this.` receiver prefix.  It lowers correctly when `<member>`
 is a recipe TARGET: `${self}.tgt()` becomes the sub-make invocation and runs (this
-is what let demos/cmk/jqd.cmk convert every `this.alice.start` to `alice.start()`).
+is what lets the agent module convert every `this.alice.start` to `alice.start()`).
 
 It does NOT lower when `<member>` is a parametric MACRO.  `${self}.lg(hi)` reaches
 the shell as the literal token `cmk.<self>.lg(hi)` -- the callform/smart-send stage
@@ -16,7 +16,7 @@ that is emitted verbatim.  The parametric macro must still be invoked the make w
 Two workarounds exist, and the second needs no `$(call)` at the call site: invoke it
 the make way (`$(call ${self}.lg, args)`), OR define the member as its `.__call__`
 dunder -- the gate's FIRST branch honours `${self}.lg.__call__`, so the callform then
-routes correctly.  The dunder path is why demos/cmk/jqd.cmk's `log` verb is a
+routes correctly.  The dunder path is why the agent module's `log` verb is a
 `${self}.log.__call__` member invoked as `${self}.log(started)`.
 """
 
@@ -67,7 +67,7 @@ def test_self_call_dunder_makes_callform_lower(cmk, tmp_path):
   # CONTROL / DESIGNED FIX: define the member's `.__call__` dunder and the
   # `${self}.lg(hi)` callform routes through the gate's first branch
   # (`$(call ${self}.lg.__call__,hi)`) -- no `$(call)` at the call site, no compiler
-  # change.  This is why demos/cmk/jqd.cmk's `log` verb is a `.log.__call__` member.
+  # change.  This is why the agent module's `log` verb is a `.log.__call__` member.
   r = _run(cmk, tmp_path, "${self}.lg(hi)", lg_dunder=True)
   out = r.stdout + r.stderr
   assert r.ok, out

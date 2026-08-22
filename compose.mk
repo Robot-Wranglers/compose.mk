@@ -15,11 +15,11 @@
 # Let's get into the horror and the delight right away with shebang hacks. 
 # The block below these comments *looks* like a comment, but it is not. That 
 # line and a matching one at EOF makes this file a polyglot, so that it is 
-# executable as both a bash script and a Makefile.  This allows for improvement
-# around the poor signal-handling that Make supports by default, and several 
-# other advanced features like such as short-circuiting `make` from attempting
-# to parse the full CLI, and "pre" / "post" targets.  See documentation & usage 
-# info here https://github.com/robot-wranglers/compose.mk/signals/, especially 
+# executable as both a bash script and a Makefile.  This allows working around
+# the poor signal-handling that Make supports by default, plus several other
+# advanced features such as short-circuiting `make` from attempting to parse
+# the full CLI, and "pre" / "post" targets.  See documentation and usage info
+# at https://github.com/robot-wranglers/compose.mk/signals/, especially
 # re: `mk.interrupt` and `mk.yield`.
 #
 #/* \
@@ -35,7 +35,7 @@ esac; \
 no_ansi="\033[0m"; green="\033[92m"; dim="\033[2m"; yellow="\033[93m"; bold="\033[1m"; sep="${no_ansi}//${dim}";\
 export CMK_BIN=${0}; export __file__=${0}; export __cmk__=${0}; \
 _cmk_bootloader_log() { printf '%b\n' "${yellow}${bold}⚠${no_ansi}${dim}${yellow} $*${no_ansi}" >&2; }; \
-_cmk_awk() { sed -n "/^define $1/,/^endef/{/^define/d;/^endef/d;p}" ${0}; }; \
+_cmk_awk() { sed -n "/^define $1/,/^endef/{/^define/d;/^endef/d;p;}" ${0}; }; \
 _cmk_load() { source <(_cmk_awk "$1"); }; \
 _cmk_reap() { command -v docker >/dev/null 2>&1 || return 0; _cmk_ids=$(docker ps -aq --filter label=cmk.run="${MAKE_SUPER:-${CMK_RUN_ID:-none}}-${CMK_REAP_SALT:-0}" 2>/dev/null); [ -n "${_cmk_ids:-}" ] && docker rm -f ${_cmk_ids} >/dev/null 2>&1; return 0; }; \
 for _d in make awk sed; do command -v "$_d" >/dev/null 2>&1 || _cmk_miss="${_cmk_miss:+$_cmk_miss }$_d"; done; \
@@ -65,16 +65,16 @@ esac \
 ; exit ${__exit_code__}
 
 #░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: Supervisor & Signals Boilerplate
-## BEGIN: Constants for colors, glyphs, logging, and other Makefile-related boilerplate
+## BEGIN: constants :: Colors, glyphs, and Makefile boilerplate
 ##
-## This includes hints for determining Makefile invocations:
-##   MAKE:          Prefer `make` instead as an expansion for recursive calls.
-##   MAKEFILE:      The path to the Makefile being used at the top-level
-##   MAKE_CLI:      A *complete* CLI invocation for this process (Reliable with Linux, somewhat broken for OSX?)
-##   MAKEFILE_LIST: Prefer instead `makefile_list`, derived from `MAKE_CLI`.  
-##                  This is a list of includes, either used with 'include ..' or present at CLI with '-f ..'
+## Ends the supervisor / signals boilerplate above and starts make-side setup.
+## The invocation hints declared here:
 ##
+## * MAKE :: Prefer `make` instead as an expansion for recursive calls
+## * MAKEFILE :: The path to the Makefile being used at the top-level
+## * MAKE_CLI :: A complete CLI invocation for this process (reliable on Linux, partial on macOS)
+## * MAKEFILE_LIST :: Prefer `makefile_list`, derived from MAKE_CLI.
+##     The list of includes, from 'include ..' or given at the CLI with '-f ..'
 #░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 SHELL:=bash
 # Version floor, checked at parse time in syntax every old make accepts; it must sit above the first modern construct or users see a bare missing-separator error instead of this.
@@ -232,12 +232,12 @@ twin.map = $(if $(CMK_TWIN_PATH),$(subst $(CMK_BIN),$(CMK_TWIN_PATH),$(1)),$(1))
 twin.unmap = $(if $(CMK_TWIN_PATH),$(subst $(CMK_TWIN_PATH),$(CMK_BIN),$(1)),$(1))
 make=make ${MAKE_FLAGS} $(call twin.map,${makefile_list})
 
-## ----------------------------------------------------------------------------
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+## BEGIN: SelfPath :: Where is compose.mk? One var per context
 ##
-## BEGIN: SelfPath
-## "Where is compose.mk?" -- several vars answer this, each for a DIFFERENT
-## context (they are not redundant).  The last few bridge the host<->dispatch-
-## container boundary, where a host path is meaningless inside the container.
+## Several vars answer this, each for a different context (they are not
+## redundant).  The last few bridge the host / dispatch-container boundary,
+## where a host path is meaningless inside the container.
 ##
 ## | name            | what it answers                   |
 ## |-----------------|-----------------------------------|
@@ -247,9 +247,8 @@ make=make ${MAKE_FLAGS} $(call twin.map,${makefile_list})
 ## | CMK_DOCKER_PATH | where it's mounted in-container   |
 ## | CMK_DIND_SRC    | include path: host and container  |
 ##
-## Derived host<->container helpers (detailed below): docker.cmk.mount (the `-v`
+## Derived host / container helpers (detailed below): docker.cmk.mount (the `-v`
 ## bind), makefile_list.dind / make.dind (the host `-f` rewritten to the mount).
-## END: SelfPath
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 # The SelfPath family (each var mapped by the table above) answers "where is compose.mk?" for a
 # different context. All are recursive (`=`) so paths resolve freshly at each use. The container mount
@@ -308,6 +307,7 @@ lang.rex.recv.def      = (docker\.import|code\b)[^)]*def=${lang.rex.name}+
 lang.rex.recv.importas = ^[ \t]*import[ \t]+.*[ \t]+as[ \t]+${lang.rex.name}+([ \t]*,[ \t]*${lang.rex.name}+)*
 lang.rex.recv.openlist = ^[ \t]*(open|import)[ \t]+${lang.rex.name}+([ \t]*,[ \t]*${lang.rex.name}+)*
 lang.rex.recv.star     = ^[ \t]*\*[ \t]+${lang.rex.name}+([ \t]*,[ \t]*${lang.rex.name}+)*
+lang.rex.recv.fromimport = ^[ \t]*from[ \t]+${lang.rex.name}+[ \t]+import[ \t]+(\*|${lang.rex.name}+([ \t]*,[ \t]*${lang.rex.name}+)*)
 lang.rex.recv.goal     = ^[ \t]*goal[ \t]+${lang.rex.name}+
 lang.rex.recv.capture  = ^[ \t]*&?${lang.rex.name}+[ \t]*<-
 # Shared banana-opener grammar -- one source for the two awk stages that gate on "does this line
@@ -343,7 +343,6 @@ lang.grammar.kwargs.class   := ifaces classvars bind
 lang.grammar.kwargs.machine := machine img flag feed entrypoint
 lang.grammar.kwargs.subject := def namespace file
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: lang.grammar
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -458,7 +457,6 @@ mk.kwargs.get = $(call m5.ctx?,${1},${2})
 # get + un-sentinel: decode the sentinel at final-consumption only.
 _mk.kwargs.getd=$(subst ${lang.comp.kwargs.sp},${space},$(call m5.ctx?,${1},${2}))
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: m5
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## BEGIN: m5.lex :: Fork-free pure-make lexer (+ m5.tok data: chars/marks)
@@ -473,7 +471,7 @@ _mk.kwargs.getd=$(subst ${lang.comp.kwargs.sp},${space},$(call m5.ctx?,${1},${2}
 ## * m5.lex.tok / .tok/% / .tok/* :: Tokenize (wrap delimiters) + map over tokens
 ## * m5.lex.line/* :: Map a function over each line
 ## * m5.lex.upper / .split :: Leaf string ops (uppercase; split on colon)
-## * m5.lex.rev / .uniq :: List ops -- callable (reverse; keep-first dedup)
+## * m5.lex.rev / .uniq :: List ops, callable (reverse; keep-first dedup)
 ## * m5.lex.qnorm :: Quote-aware kwarg normalizer (.dq/.sq split by quote parity)
 ## * m5[dollar] / m5[space] / m5[tab] / m5[nl] / m5[break] :: The «X» sentinel alphabet
 ## * m5.tok.marks :: The sentinel alphabet as DATA (name→glyph→char); the accessors derive from it
@@ -662,7 +660,6 @@ log.trace.compiler.part1=( [ "${TRACE}" == "0" ] && true || $(call log.base.part
 log.trace.compiler.part2=( [ "${TRACE}" == "0" ] && true || $(call log.base.part2, ${1}))
 log.trace.compiler.fmt=( [ "${TRACE}" == "0" ] && true || ( $(call log.base, ${GLYPH_MK} ${1}) && printf '%b\n' "${2}" | fmt -w 64 | ${stream.indent.to.stderr} ) )
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: log
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 
@@ -673,20 +670,19 @@ docker.run.base:=docker run --rm -i -v $${DOCKER_HOST_WORKSPACE:-$${PWD}}:/works
 ##
 ## Internal knobs, host/container paths, and interpreter state; most are `?=`
 ## overridable from the environment.  Order-independent knobs are clustered at the
-## body head; the rest is an ordered bootstrap.  Two critical ones get a note here.
+## body head; the rest is an ordered bootstrap.  The two critical ones lead:
 ##
-## CMK_INTERNAL — 1 for a nested / internal (non-top-level) cmk invocation, else 0.
-## Set by the host-side recursive helpers (io.bash, mk.def.read, module staging,
-## cli-subcommands, the hosted build) AND at the container-dispatch boundary — so
-## running inside a dispatch container is just ONE case of "internal".  It gates
-## DIND and skips re-scaffolding the heavyweight `*.import` verbs on every nested
-## sub-make.  For the strict "literally inside a container?" test use
-## CMK_IN_CONTAINER (a subset, set only at dispatch).
-##
-## CMK_STAGE_DIR — the one dir compose.mk writes host artifacts into.  Writable
-## CMK_MODULES_DIR wins (co-located with the workspace bind-mount, reused in
-## container); an explicit value is trusted; else (read-only default `.cmk`) it
-## falls back to the writable user XDG cache.
+## * CMK_INTERNAL :: 1 for a nested / internal (non-top-level) cmk invocation, else 0.
+##     Set by the host-side recursive helpers (io.bash, mk.def.read, module staging,
+##     cli-subcommands, the hosted build) and at the container-dispatch boundary, so
+##     running inside a dispatch container is just one case of "internal".  It gates
+##     DIND and skips re-scaffolding the heavyweight `*.import` verbs on every nested
+##     sub-make.  For the strict "literally inside a container?" test use
+##     CMK_IN_CONTAINER (a subset, set only at dispatch).
+## * CMK_STAGE_DIR :: The one dir compose.mk writes host artifacts into.
+##     Writable CMK_MODULES_DIR wins (co-located with the workspace bind-mount,
+##     reused in container); an explicit value is trusted; else (read-only default
+##     `.cmk`) it falls back to the writable user XDG cache.
 ##
 ## * CMK_IN_CONTAINER :: 1 only literally inside a dispatch container
 ## * CMK_LIB / CMK_STANDALONE :: Library-mode vs standalone-mode flags
@@ -710,7 +706,7 @@ docker.run.base:=docker run --rm -i -v $${DOCKER_HOST_WORKSPACE:-$${PWD}}:/works
 ## * CMK_SCRATCH / CMK_IO_STACK / CMK_BRF_PREFIX :: Run-id-keyed .tmp.* scratch names
 ##
 ## * CMK_SRC :: Path to compose.mk source to read / include
-## * cmk.self :: compose.mk host ABSPATH (single source of truth)
+## * cmk.self :: compose.mk host abspath (single source of truth)
 ## * CMK_BIN :: compose.mk invocation / exe path
 ## * CMK_DOCKER_PATH :: Where compose.mk is mounted inside a dispatch container
 ## * CMK_DIND_SRC :: compose.mk include-path for host + in-container DIND runs
@@ -977,7 +973,7 @@ lang.class.mixin.effective = $(if $(filter $(3),$($(m5[2]).__targets__)),$(call 
 # the clone path, fired only on a real recipe-target override (inert for current classes).
 # Its awk+input scratch is lazy and keyed on $$PPID (the make pid), so concurrent sub-makes
 # can't collide on a fixed name; the scratch is written and removed within this one call.
-lang.class.mixin.clean = $(eval _claw := .tmp.cmk.awk.self.strip.${_cmk.pid})$(eval _clnm := _cmk.clean.$(m5[1]).$(subst /,_,$(subst .__mixin,,$(m5[2]))))$(eval _clin := .tmp.cmk.cclin.$(subst /,_,$(subst .,_,$(m5[2]))).${_cmk.pid})$(file > $(_claw),$(value .awk.self.strip))$(file > $(_clin),$(value $(m5[2])))$(eval _clout := $(shell set -- `cat $(_clin) $(_claw) | cksum`; o=.tmp.cmk.mixin.$(subst /,_,$(subst .,_,$(m5[2]))).$(m5[3]).$$1-$$2.mk; [ -f "$$o" ] || { awk -v drop='$(m5[3])' -f $(_claw) $(_clin) > $$o.${_cmk.pid} 2>/dev/null && mv -f $$o.${_cmk.pid} $$o || o=$$o.${_cmk.pid}; }; rm -f $(_claw) $(_clin); echo $$o))$(eval define $(_clnm)$(nl)$(file < $(_clout))$(nl)endef)$(_clnm)
+lang.class.mixin.clean = $(eval _claw := .tmp.cmk.awk.self.strip.${_cmk.pid})$(eval _clnm := _cmk.clean.$(m5[1]).$(subst /,_,$(subst .__mixin,,$(m5[2]))))$(eval _clin := .tmp.cmk.cclin.$(subst /,_,$(subst .,_,$(m5[2]))).${_cmk.pid})$(eval _cldrop := $(subst /,_,$(subst .,_,$(subst ${space},-,$(strip $(m5[3]))))))$(file > $(_claw),$(value .awk.self.strip))$(file > $(_clin),$(value $(m5[2])))$(eval _clout := $(shell set -- `cat $(_clin) $(_claw) | cksum`; o=.tmp.cmk.mixin.$(subst /,_,$(subst .,_,$(m5[2]))).$(_cldrop).$$1-$$2.mk; [ -f "$$o" ] || { awk -v drop='$(m5[3])' -f $(_claw) $(_clin) > $$o.${_cmk.pid} 2>/dev/null && mv -f $$o.${_cmk.pid} $$o || o=$$o.${_cmk.pid}; }; rm -f $(_claw) $(_clin); echo $$o))$(eval define $(_clnm)$(nl)$(file < $(_clout))$(nl)endef)$(_clnm)
 
 # class umbrella under arg1; _qualified = out-param (read post-mint)
 lang.class.umbrella = $(call m5.self!,$(m5[__self__]))$(call lang.module!,$1)$(eval _given := $(call m5.ctx?,$2,def))$(eval _qualified := $(if $(findstring .,$(_given)),$(_given),$(m5[1]).$(_given)))$(if $(filter $(m5[1]).%,$(_qualified)),$(eval _leaf := $(patsubst $(m5[1]).%,%,$(_qualified)))$(if $(filter $(_leaf),$($(m5[1]).__all__)),,$(call m5.set.op,__all__,+=,$(_leaf)))$(if $(filter $(_qualified),$(_given)),,$(eval define $(_qualified)$(nl)$(value $(_given))$(nl)endef)),)$(patsubst def=$(_given),def=$(_qualified),$2)
@@ -1007,7 +1003,6 @@ lang.class.comp.classvar.dirty = $(findstring .,$(1))$(findstring {,$(1))$(finds
 lang.class.classvar = $(m5[1]).__classvars__ += $(word 1,$(subst =, ,$2))$(if $(word 2,$(subst =, ,$2)),$(nl)$(m5[1]).$(word 1,$(subst =, ,$2)) := $(patsubst $(word 1,$(subst =, ,$2))=%,%,$2))
 lang.class.classvar!/* = $(foreach _p,$(call _mk.kwargs.getd,$1,classvars),$(call lang.seed.grow!,lang.class.classvar,$2,$(_p)))
 lang.class.copy = $(eval define $(m5[2])$(nl)$(value $(m5[1]).__mixin)$(nl)endef)$(call lang.class!,$(subst def=$(m5[1]),def=$(m5[2]),$(value $(m5[1]).__ctor_initkw__)))
-## END: lang.class
 
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -1171,21 +1166,17 @@ cmk.__all__ := class constructor container machine dsl namespace module protocol
 cmk.import=$(foreach _imp,$(m5[1]),$(call lang.module.import.one,$(strip ${_imp})))
 # __open__/__dir__ minting moved down, after all __all__ decls
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: cmk.prelude
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: tools
+## BEGIN: tools :: Third-party CLI helpers (jq / yq / jb / glow)
 ##
-## The `tools` section collects the third-party command-line helpers that compose.mk
-## leans on: `jq`, `yq`, and `jb` (json.bash) for JSON/YAML, plus `glow` for rendering
-## markdown.  Each prefers a local binary on PATH and falls back to a
-## pinned, dockerized version otherwise, so recipes reach for them
-## uniformly without a hard host dependency. The docker fallback warns
-## once per run (log.warn.once).  The `.run` forms are the resolved,
-## memoized commands; bare handles are the conventional entrypoints.
-##
-##-------------------------------------------------------------------------------
+## `jq`, `yq`, and `jb` (json.bash) for JSON/YAML, plus `glow` for rendering
+## markdown.  Each prefers a local binary on PATH and falls back to a pinned,
+## dockerized version otherwise, so recipes reach for them uniformly without a
+## hard host dependency.  The docker fallback warns once per run
+## (log.warn.once).  The `.run` forms are the resolved, memoized commands;
+## bare handles are the conventional entrypoints.
 ##
 ## DOCS:
 ##  * `[1]:` [jq](https://github.com/jqlang/jq)
@@ -1336,16 +1327,10 @@ jb jb.pipe:
 	esac
 endif
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: tools
-## BEGIN: compose.* targets
-## ----------------------------------------------------------------------------
+## BEGIN: compose.* :: Targets for docker compose, without the import macro
 ##
-## Targets for working with docker compose, without the compose-import macro.  
-##
-## These targets support basic operations on compose files like 'build' and 'clean', 
-## so in some cases scaffolded targets will chain here.
-##
-##-------------------------------------------------------------------------------
+## Basic operations on compose files, like 'build' and 'clean'; scaffolded
+## targets chain here in some cases.
 ##
 ## DOCS:
 ##  * `[1]:` [Main API](https://robot-wranglers.github.io/compose.mk/api#api-compose)
@@ -1414,7 +1399,7 @@ compose.clean/%:
 # compose run`. Inputs (shell env): compose_file, svc, entrypoint (=bash),
 # compose_env (extra `-e ..` flags), compose_run_flags (e.g. `-T`). Callers append
 # their own tail (`-c "$cmd"` / `-i`) plus ${dash_x_maybe} and $(compose._quiet).
-docker.compose.run=${docker.compose} $${COMPOSE_EXTRA_ARGS} -f $${compose_file} run $${compose_run_flags:-} --rm --remove-orphans ${docker.cmk.mount} -e CMK_IO_STACK=$${CMK_IO_STACK} $${compose_env:-} --entrypoint $${entrypoint:-bash} $${svc}
+docker.compose.run=${docker.compose} $${COMPOSE_EXTRA_ARGS} -f $${compose_file} run $${compose_run_flags:-} --rm --remove-orphans ${docker.cmk.mount} ${docker.env.standard} $${compose_env:-} --entrypoint $${entrypoint:-bash} $${svc}
 compose.dispatch.sh/%:
 	@# Similar interface to the scaffolded '<compose_stem>.dispatch' target,
 	@# except that this is a backup plan for when 'compose.import' has not
@@ -1558,17 +1543,12 @@ compose.with_profile/%:
 
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: docker.* targets
+## BEGIN: docker.* :: Helpers for working with docker
 ##
-## The `docker.*` targets cover a few helpers for working with docker. 
-##
-## This interface is deliberately minimal, focusing on verbs like 'stop' and 
-## 'stat' more than verbs like 'build' and 'run'. That's because containers that
-# are managed by docker compose are preferred, but some ability to work with 
-# inlined Dockerfiles for simple use-cases is supported. For an example see the
+## Deliberately minimal, favoring verbs like 'stop' and 'stat' over 'build' and
+## 'run': containers managed by docker compose are preferred, but inlined
+## Dockerfiles are supported for simple use-cases.  For an example see the
 ## implementation of `stream.pygmentize`.
-##
-##-------------------------------------------------------------------------------
 ##
 ## DOCS:
 ##  * `[1]:` [Main API](https://robot-wranglers.github.io/compose.mk/api#api-docker)
@@ -1730,7 +1710,13 @@ docker.context/%:
 docker.def.name=$(if $(call m5.defined?,Dockerfile.$(m5[1])),Dockerfile.$(m5[1]),$(m5[1]))
 docker.def.sha=${mk.def.read}/$(call docker.def.name,${1}) | md5sum | cut -d' ' -f1
 
-docker.def.is.cached/%:
+assert.md5sum:
+	@# Guards that `md5sum` is on PATH, since the docker def-cache keys on its output.
+	@# Without the guard a missing binary yields an empty hash, which reads as a
+	@# permanent cache miss rather than an error.
+	$(call assert.tool.required,md5sum,on macOS install coreutils for md5sum)
+
+docker.def.is.cached/%: assert.md5sum
 	@# Answers whether the named define has an up-to-date cached docker image.
 	@#
 	@# "Up-to-date" means an image exists *and* its recorded def-content hash
@@ -1870,7 +1856,7 @@ docker.logs.timeout/%:
 	quiet=1 CMK_INTERNAL=1 \
 	cmd="docker logs -f $${id} 2>&1" timeout=3 ${make} flux.timeout.sh 
 
-docker.from.def/% Dockerfile.build/%:
+docker.from.def/% Dockerfile.build/%: assert.md5sum
 	@# Builds a container, treating the given 'define' block as a Dockerfile.
 	@# The 'Dockerfile.' prefix on the define is optional (resolved by name lookup):
 	@# `Dockerfile.build/<n>` uses `define Dockerfile.<n>` when it exists, else the
@@ -1988,9 +1974,9 @@ docker.run.def:
 	&& (script_pre="$${cmd:-}" \
 		&& unset cmd \
 		&& case "$${feed:-file}" in \
-			flag) script="$${script_pre} $${feed_flag} $${tmpf}";; \
+			flag) script="$${script_pre} $${CMK_LAMBDA_ARGV:-} $${feed_flag} $${tmpf}";; \
 			stdin) echo 'cmk: feed=stdin has no container path yet -- it must stream through docker.run.sh (which proxies stdin), not a materialized tmpfile; use feed=file/flag here or run on the host' >&2; exit 1;; \
-			*) script="$${script_pre} $${tmpf}";; \
+			*) script="$${script_pre} $${tmpf} $${CMK_LAMBDA_ARGV:-}";; \
 		esac \
 		&& script="$${script}" img=$${img} ${make} docker.run.sh) \
 	${stderr_stdout_indent}
@@ -2141,15 +2127,11 @@ docker.stop.all:
 	&& [ -z "$${ids}" ] && true || (set -x && docker stop -t $${timeout:-1} $${ids})
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: docker.* targets
-## BEGIN: io.* targets
+## BEGIN: io.* :: Input/output helpers
 ##
-## The `io.*` namespace has misc helpers for working with input/output, including
-## utilities for working with temp files and showing output to users.  User-facing 
-## output leverages  charmbracelet utilities like gum[2] and glow[3].  Generally we 
-## use tools directly if they are available, falling back to utilities in containers.
-##
-##-------------------------------------------------------------------------------
+## Misc helpers for input/output, including temp files and showing output to
+## users.  User-facing output leverages charmbracelet utilities like gum[2] and
+## glow[3], used directly when available and via containers otherwise.
 ##
 ## DOCS:
 ##  * `[1]:` [Main API](https://robot-wranglers.github.io/compose.mk/api#api-io)
@@ -2665,19 +2647,16 @@ io.pushd=pushd "$(m5[1])" >/dev/null
 io.xargs.verbose=xargs -I% sh -x -c
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: io.* targets
-## BEGIN: assert.* targets
+## BEGIN: assert.* :: Assertions with clear errors
 ##
-## The `assert.*` namespace collects assertions.  Each logs a clear error and exits nonzero on
-## failure, covering environment variables, host tools, stdin streams, and plugin
-## availability.  Most are macros (usable inline via `$(call assert.X, ...)`); the
-## env + tool guards also expose `assert.X/%` TARGET forms for use as prerequisites.
+## Each logs a clear error and exits nonzero on failure, covering environment
+## variables, host tools, stdin streams, and plugin availability.  Most are
+## macros (usable inline via `$(call assert.X, ...)`); the env + tool guards
+## also expose `assert.X/%` target forms for use as prerequisites.
 ##
 ## Sibling guards that live in their own namespaces (not here): `__plugins__.assert`
 ## / `__modules__.assert` (parse-time registry asserts) and `_mk.assert.define`
 ## (the `import.module` define-exists guard).
-##
-##-------------------------------------------------------------------------------
 ##
 ## DOCS:
 ##  * `[1]:` [Assertions](https://robot-wranglers.github.io/compose.mk/assertions)
@@ -2741,24 +2720,18 @@ assert.stream.stdin.required=if ${io.tty.stdin}; then $(call log.error, needs a 
 assert.plugin=$(if $(call __plugins__.has,$(m5[1])),true,{ [ -n "$(call cmk.plugin.find,${1})" ] || { $(call log.io, ${red}assert.plugin ${sep}${no_ansi} plugin not available${no_ansi_dim}: ${no_ansi}${bold}$(m5[1])${no_ansi} ${dim}(searched ${CMK_PLUGINS_DIR})) ; exit 1 ; } ; })
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: assert.* targets
-## BEGIN: mk.* targets
+## BEGIN: mk.* :: Meta-tooling and extensions to make itself
 ##
-## The 'mk.*' targets are meta-tooling that include various extensions to 
-## `make` itself, including some support for reflection and runtime changes.
+## Reflection and runtime changes, in several families:
 ##
-## A rough guide to stuff you can find here:
-## 
-## * `mk.super.*` for signals and supervisors
-## * `mk.def.*` for tools related to reading 'define' blocks
-## * `mk.parse.*` for makefile parsing (used as part of generating help)
-## * `mk.help.*` for help-generation
-##
-##-------------------------------------------------------------------------------
+## * mk.super.* :: Signals and supervisors
+## * mk.def.* :: Tools for reading 'define' blocks
+## * mk.parse.* :: Makefile parsing (used as part of generating help)
+## * mk.help.* :: Help-generation
 ##
 ## DOCS:
 ## * `[1]:` [Main API](https://robot-wranglers.github.io/compose.mk/api#api-mk)
-## * `[2]:` [Signals & Supervisors](https:/robot-wranglers.github.io/compose.mk/signals)
+## * `[2]:` [Signals & Supervisors](https://robot-wranglers.github.io/compose.mk/signals)
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
@@ -3154,6 +3127,7 @@ mk.src:
 		*) $(call log.trace, ${@} ${sep} ${yellow}possible extra source to include: $${src_list});; \
 	esac
 
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## BEGIN: lang.comp :: The CMK compiler pipeline (awk preprocess -> Makefile)
 ##
 ## head|body|tail pipeline (mk.compile / lang.transpile): head fuses
@@ -3208,7 +3182,7 @@ lang.comp.stages.all=$(strip $(lang.comp.stages.pre) $(lang.comp.stages) $(lang.
 lang.comp.stages.core=$(foreach _s,$(lang.comp.stages.all),$(if $(call m5.defined?,lang.comp.stage.$(_s)),$(_s)))
 
 # _cmk.stage.lift: resolve a non-core stage from a plugin block.
-_cmk.stage.lift=_lsp= ; _lifs=$$IFS ; IFS=: ; for _ld in $${CMK_PLUGINS_DIR}; do for _lf in "$$_ld"/*.cmk; do { [ -f "$$_lf" ] && grep -q "^define _cmk_blk_$(m5[1])$$" "$$_lf" ; } && { _lsp="$$_lf" ; break 2 ; } ; done ; done ; IFS=$$_lifs ; if [ -n "$$_lsp" ]; then $(call io.mktemp) && sed -n "/^define _cmk_blk_$(m5[1])$$/,/^endef/{/^define/d;/^endef/d;p}" "$$_lsp" > $${tmpf} && _cmklift_$(m5[1])="$${tmpf}" && $(call log.compiler, lang.comp.pipeline ${sep}${dim} lifted plugin stage ${ital}$(m5[1])${no_ansi}) ; else _cmklift_$(m5[1])= ; $(call log.compiler, lang.comp.pipeline ${sep}${dim} stage ${ital}$(m5[1])${no_ansi} not found (no core lang.comp.stage. macro, no plugin _cmk_blk_) ${sep} skipped) ; fi
+_cmk.stage.lift=_lsp= ; _lifs=$$IFS ; IFS=: ; for _ld in $${CMK_PLUGINS_DIR}; do for _lf in "$$_ld"/*.cmk; do { [ -f "$$_lf" ] && grep -q "^define _cmk_blk_$(m5[1])$$" "$$_lf" ; } && { _lsp="$$_lf" ; break 2 ; } ; done ; done ; IFS=$$_lifs ; if [ -n "$$_lsp" ]; then $(call io.mktemp) && sed -n "/^define _cmk_blk_$(m5[1])$$/,/^endef/{/^define/d;/^endef/d;p;}" "$$_lsp" > $${tmpf} && _cmklift_$(m5[1])="$${tmpf}" && $(call log.compiler, lang.comp.pipeline ${sep}${dim} lifted plugin stage ${ital}$(m5[1])${no_ansi}) ; else _cmklift_$(m5[1])= ; $(call log.compiler, lang.comp.pipeline ${sep}${dim} stage ${ital}$(m5[1])${no_ansi} not found (no core lang.comp.stage. macro, no plugin _cmk_blk_) ${sep} skipped) ; fi
 
 # Drop the timer wrapper (bare pipeline) when CMK_COMPILER_VERBOSE=0.
 lang.comp.pipeline.head: $(if $(filter 0,${CMK_COMPILER_VERBOSE}),.lang.comp.pipeline,flux.timer/.lang.comp.pipeline)
@@ -3269,7 +3243,6 @@ lang.comp.stats:
 	cat ${CMK_SRC} | LC_ALL=C awk "$${_awklang_compiler_stats}" | ${jq} .
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: lang.comp
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # The composable `.cmk.<stage>` pipe-fragment macros (one per stage) are minted alongside their
@@ -3423,6 +3396,21 @@ _ambient.fwd = $(foreach _kv,${1},$(if $(filter kind def,$(firstword $(subst =, 
 module.__open__ = $(call include.plugins, strict=0 $(foreach _n,$(value $(m5[1])),$(_n).cmk $(_n).mk))
 path.__open__ = $(call import.module, file=$(call _ambient.pathsrc,$(strip $(value $(m5[1])))) $(call _ambient.fwd,${2}))
 
+# lang.module.from mod names -- from-import / open dispatcher: the module's kind is decided here at import time, never by the compiler.
+lang.module.from = $(if $(call m5.defined?,$(m5[1]).__open__),$(call _lang.module.from.core,$(m5[1]),$(m5[2])),$(call _lang.module.from.path,$(m5[1]),$(m5[2])))
+# in-core prelude: bind members through the module's own open method; a star takes the whole roster, minus any except-list.
+_lang.module.from.core = $(if $(filter *,$(m5[2][1])),$(if $(word 3,$(m5[2])),$(call $(m5[1]).__open__,$(filter-out $(wordlist 3,999,$(m5[2])),$($(m5[1]).__all__))),$(call $(m5[1]).__open__)),$(call $(m5[1]).__open__,$(m5[2])))
+# disk plugin: the whole module loads flat either way (bodies are not rewritten, so members need their siblings), then the listed names bind bare.
+_lang.module.from.path = $(if $(filter *,$(m5[2][1])),$(call include.plugins, strict=0 $(m5[1]).cmk $(m5[1]).mk),$(call _lang.module.from.file,$(m5[1]),$(m5[2]),$(or $(call _ambient.pathsrc,$(m5[1])),$(call mk.error, from-import: no module named `$(m5[1])`, errno=MODULE_MISSING))))
+# the staged path is recomputed from the source, since nested imports clobber the staging globals.
+_lang.module.from.file = $(call import.module, file=${3} flat=1)$(eval _lang_from_staged:=${CMK_STAGE_DIR}/.tmp.module.$(call _mk.module.key,$(basename $(notdir ${3})),$(basename $(notdir ${3})))-$(call _mk.hash.file,${3}).mk)$(call _lang.module.from.bind,${1},${2})
+# a qualified member aliases to its bare name; one the module already declares bare passes through; anything else is a fault.
+_lang.module.from.bind = $(foreach _n,$(m5[2]),$(if $(filter $(m5[1]).%,$(_n)),$(call _lang.module.from.check,$(m5[1]),$(_n)),$(if $(call _lang.module.qmember?,$(m5[1]),$(_n)),$(call lang.module.bind,$(m5[1]),$(_n)),$(if $(call _lang.module.target?,$(m5[1]).$(_n)),$(eval $(_n): $(m5[1]).$(_n)),$(call _lang.module.from.check,$(m5[1]),$(_n))))))
+_lang.module.from.check = $(if $(or $(call m5.defined?,${2}),$(filter ${2}.%,$(.VARIABLES)),$(call _lang.module.target?,${2})),,$(if ${__hosted__.loaded},$(call mk.error, cmk: `$(strip ${2})` is not a member of module `$(m5[1])`, errno=MODULE_MEMBER),))
+_lang.module.qmember? = $(or $(call m5.defined?,${1}.${2}),$(filter ${1}.${2}.%,$(.VARIABLES)))
+# target-only members are invisible to the variable roster, so probe the just-staged module file.
+_lang.module.target? = $(shell grep -Em1 '^$(subst .,\.,$(strip ${1}))[:/%]' ${_lang_from_staged} 2>/dev/null)
+
 # ambient.dissolve <def> [kind=..] [kw=v..] -- dispatch to the kind's own `.__open__` method, passing
 # the def payload plus the pass-through kwargs, defaulting to the base inline dissolve. A kind with no
 # `.__open__` method (and an empty kind) both fall back to inline dissolve -- an unknown kind is not
@@ -3452,9 +3440,10 @@ cmk.host.exec:; @if [ -p ${stdin} ]; then ${stream.stdin} | bash ${dash_x_maybe}
 .awk.preprocess.dialect=\
 	BEGIN{ block=0; gsub(/[].*+?(){}|[]/, bs bs amp, old); gsub(/[&]/, bs bs amp, new) } /^define/{block=1} /^endef/{block=0} !block{gsub(old,new)} 1
 
-## BEGIN: lang.parse
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+## BEGIN: lang.parse :: Read-only extraction from CMK source
 ##
-## Read-only extraction from CMK source, run BEFORE the compile pipeline (lang.comp) to hand it the
+## Runs before the compile pipeline (lang.comp) to hand it the
 ## metadata it needs via env: the `*.hint` parsers pull the `:::`-delimited JSON out of a header comment
 ## (`cmk_pragma`/`cmk_dialect`/`cmk_sugar`), and the `scan.*` macros grep the raw source for declared
 ## receivers (`-v RECEIVERS`) and junction overrides (`-v JUNCTIONS`). Distinct from lang.comp (which
@@ -3474,13 +3463,13 @@ lang.parse.dialect.hint=( tmp=`${stream.stdin} | awk 'NR==1 && /^\#!/{next} /^\#
 # name(s), dedupe).  `.receivers` extracts every bound name (the `lang.rex.recv.*` rows above, in that row order
 # -- the sed extractors assume it) for -v RECEIVERS.  `.junctions` extracts `<name>.__junction__ := <op>`
 # overrides as `name=op` pairs for -v JUNCTIONS (none in source -> nothing, so chains keep the ` | ` pipe).
-lang.parse.scan.receivers=( grep -aoE '$(lang.rex.recv.kwarg)|$(lang.rex.recv.def)|$(lang.rex.recv.importas)|$(lang.rex.recv.openlist)|$(lang.rex.recv.star)|$(lang.rex.recv.goal)|$(lang.rex.recv.capture)|$(lang.rex.recv.banana)' || true ) | sed -E 's/.*[[:space:]]as[[:space:]]+//; s/.*(namespace=|def=)//; s/^[[:space:]]*(open|import)[[:space:]]+//; s/^[[:space:]]*goal[[:space:]]+//; s/^[[:space:]]*&?(${lang.rex.name}+)[[:space:]]*<-.*/\1/; s/^[[:space:]]*\*[[:space:]]+//; s/[[:space:]]*,[[:space:]]*/ /g; s/(\([^()|]*\))?[([{]\|$$//; s/^Dockerfile\.//' | sort -u | tr '\n' ' '
+lang.parse.scan.receivers=( grep -aoE '$(lang.rex.recv.kwarg)|$(lang.rex.recv.def)|$(lang.rex.recv.importas)|$(lang.rex.recv.fromimport)|$(lang.rex.recv.openlist)|$(lang.rex.recv.star)|$(lang.rex.recv.goal)|$(lang.rex.recv.capture)|$(lang.rex.recv.banana)' || true ) | sed -E 's/^[[:space:]]*from[[:space:]]+(${lang.rex.name}+)[[:space:]]+import[[:space:]]+\*.*$$/\1/; s/^[[:space:]]*from[[:space:]]+${lang.rex.name}+[[:space:]]+import[[:space:]]+//; s/.*[[:space:]]as[[:space:]]+//; s/.*(namespace=|def=)//; s/^[[:space:]]*(open|import)[[:space:]]+//; s/^[[:space:]]*goal[[:space:]]+//; s/^[[:space:]]*&?(${lang.rex.name}+)[[:space:]]*<-.*/\1/; s/^[[:space:]]*\*[[:space:]]+//; s/[[:space:]]*,[[:space:]]*/ /g; s/(\([^()|]*\))?[([{]\|$$//; s/^Dockerfile\.//' | sort -u | tr '\n' ' '
 lang.parse.scan.junctions=( grep -aoE '${lang.rex.name}+\.__junction__[[:space:]]*:?=[[:space:]]*[^[:space:]]+' || true ) | sed -E 's/\.__junction__[[:space:]]*:?=[[:space:]]*/=/' | sort -u | tr '\n' ' '
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: lang.parse
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: Compiler Pragmas
+## BEGIN: __pragma__ :: Compiler pragmas
+##
 ## A pragma is a per-program knob, declared as a JSON object in a header comment
 ## (`# cmk_pragma ::: { "recipe_join": ";" } :::`; case-insensitive, JSON5-lite).  Each key
 ## folds (upcase, `.`/`-` -> `_`) into the compiler-only `CMK_PRAGMA_*` namespace (never
@@ -3520,7 +3509,6 @@ __pragma__.resolve:
 	&& { printf '%s\n' "$$ent" ; for _pf in $$paths; do [ -f "$$_pf" ] || continue ; _pp="$$(cat "$$_pf" | ${lang.parse.pragma.hint})" ; [ -z "$$_pp" ] || printf '%s\n' "$$_pp" ; done ; } \
 		| ${jq.run.pipe} -s '(map(keys)|add) as $$a | ($$a|group_by(.)|map(select(length>1))|map(.[0])|unique) as $$d | if ($$d|length)>0 then error("cmk pragma merge conflict (additive-only, no updates) on keys: "+($$d|join(", "))) else (reduce .[] as $$o ({};.+$$o)) end' \
 		| ${jq.run.pipe} -r 'to_entries[] | "export CMK_PRAGMA_\(.key|ascii_upcase|gsub("[.-]";"_")) := \(if (.value|type)=="array" then (.value|join(" ")) else (.value|tostring) end)"'
-## END: Compiler Pragmas
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 .mk.parse.sugar.hint:
@@ -3544,14 +3532,15 @@ include/%:; $(call mk.yield, MAKEFILE=${*} ${make} -f${*} ${mk.cli.continuation}
 	@#   ./compose.mk include/demos/no-include.mk foo:flux.ok mk.let/bar:foo bar
 	@#
 
-## BEGIN: import/include :: importer (def/target) + include wrappers
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+## BEGIN: import/include :: The importer (def/target) + include wrappers
 ##
 ## The def/target importer copies `define` block(s) or whole targets verbatim out
 ## of another file into this namespace (def=/defs=/as=/namespace=, globs allowed;
 ## a target never overrides a local).  Parse-time only, top-level.  _import.emit
 ## is the compile-time inliner (bakes imports in via lang.comp.pipeline.tail).
 ##
-## The file/plugin include family -- thin wrappers over the module importer's copy-free fast path, so
+## The file/plugin include family: thin wrappers over the module importer's copy-free fast path, so
 ## an `include.*` is just that importer with an empty pipeline. `include.file`/`include.files` include
 ## one-or-many cwd-relative (or absolute) makefiles with import-logging and a clean missing-file error;
 ## `include.dir` bulk-loads every `*.mk`/`*.cmk` directly under a directory (hard-erroring when none
@@ -3562,7 +3551,7 @@ include/%:; $(call mk.yield, MAKEFILE=${*} ${make} -f${*} ${mk.cli.continuation}
 ## verbatim include, a `*.cmk`/`*.cmk.mk` is JIT-compiled then imported (via `_include.cmk.one`), and
 ## each imported namespace gets an auto `<ns>.help` target. `_include` is the one guarded-`include`
 ## primitive behind the whole family (and the module bind): it resolves `<prefix>/<file>` (an absolute
-## file used as-is), honors `strict`, and is include-once -- skipping a path already in MAKEFILE_LIST,
+## file used as-is), honors `strict`, and is include-once, skipping a path already in MAKEFILE_LIST,
 ## the cycle-breaker for a file or module that imports itself.
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -3761,7 +3750,6 @@ endif
 endif
 endef
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: import/include
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # Root-namespace dunders -- the registries and self-model registers the runtime keeps at file scope.
@@ -3805,8 +3793,9 @@ __goals__.declare=$(if $(call __goals__.has,${1}),,$(eval export __goals__ += $(
 goal.bind=$(eval $(m5[1]) := $(m5[2]))$(call __goals__.declare,${1})$(eval $(m5[1]):; @$${make} $$($(m5[1])))$(eval $(m5[1])/%:; @$${make} $$($(m5[1]))/$$*)
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: lang.repl
-## REPL-as-execution-mode: the core->plugin bridge that turns a compiled program into an interactive
+## BEGIN: lang.repl :: REPL as an execution mode
+##
+## The core-to-plugin bridge that turns a compiled program into an interactive
 ## tux.repl session over its target namespace. Core cannot import the tux.repl plugin (the harness and
 ## launch logic live there), so this layer builds the tux.repl kwarg string, auto-imports any vm regions
 ## the session needs, applies the start-by-default enter, and compiles+runs the plugin. It backs both the
@@ -3862,7 +3851,6 @@ lang.repl.vm.ensure=case "$${_rk} vt=$${CMK_PRAGMA_VM_TRACE:-}" in \
 		|| { $(call log.io, ${dim}cmk repl ${sep}${no_ansi_dim} vm region requested ${sep} auto-importing virtual-machine.cmk into the runner) ; \
 		     printf '\n$$(call import.module, file=$$(call cmk.plugin.find,virtual-machine.cmk) flat=1)\n' >> $${tmpf} ; } ;; \
 	esac
-## END: lang.repl
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # present = at least one `ns.*` macro already in scope (core namespaces + earlier-defined members).
@@ -3949,7 +3937,8 @@ _mk.demote.main/%:; @${stream.stdin} | awk -v root='${*}' "$${_awklang_demote_ma
 	@# Rebind `__main__` -> `<root>:` on import (stdin->stdout); see _mk.module.stage.
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: Module staging engine
+## BEGIN: Module staging :: The engine behind import.module
+##
 ## The `_mk.module.*` helpers turn a module source (an in-scope `define`, or a file) into a
 ## namespaced, header-injected, main-demoted staged makefile under CMK_STAGE_DIR, then include
 ## it into the importer's scope.  Both `import.module` paths (def= and file=) funnel through it;
@@ -3962,7 +3951,7 @@ _mk.demote.main/%:; @${stream.stdin} | awk -v root='${*}' "$${_awklang_demote_ma
 ## destination (the tidy common case), else `<src>-<dest>` so two sources imported to one namespace
 ## get distinct files instead of colliding.  `_mk.hash.file` adds a short cksum digest (7 hex,
 ## POSIX-portable) to a file-import's key so it is content-addressed: two files sharing a basename
-## stay distinct, and an edited source changes the key -- so a failed recompile finds the new key's
+## stay distinct, and an edited source changes the key, so a failed recompile finds the new key's
 ## file simply absent (a clean error) rather than falling back to stale output.  `_mk.module.stage`
 ## runs the source through the memoized pipeline (select -> main-demote -> namespace -> header ->
 ## compile; flat=1 omits the namespace + header stages), regenerating only when the output is absent,
@@ -3979,6 +3968,7 @@ _mk.demote.main/%:; @${stream.stdin} | awk -v root='${*}' "$${_awklang_demote_ma
 ## staging and binds the value directly.  With no sub-make or temp file, it is also the only
 ## def-import that works when compose.mk has been inlined into one image (the interpret shebang),
 ## where the staging sub-make cannot find a standalone compose.mk in MAKEFILE_LIST.
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 _mk.module.key=$(if $(filter $(m5[1]),$(m5[2])),$(m5[2]),$(m5[1])-$(m5[2]))
 _mk.hash.file=$(shell cksum < "$(1)" | awk '{printf "%07x",$$1%268435456}')
 _mk.module.stage=$(shell mkdir -p ${CMK_STAGE_DIR})$(shell _o=${CMK_STAGE_DIR}/.tmp.module.${1}.mk; if [ -s "$$_o" ] && [ "$$_o" -nt "${2}" ]; then true; else cat ${2} | CMK_INTERNAL=1 MAKEFLAGS= make -f $(firstword $(filter %compose.mk,${MAKEFILE_LIST}) ${MAKEFILE}) flux.column/$(if $(m5[4]),$(m5[4]):)_mk.demote.main/$(strip $(if $(filter 1,$(strip ${5})),${6},${7})):$(if $(filter 1,$(strip ${5})),,_mk.module.namespace/${7}:_mk.module.header/${6}:)$(or $(m5[3]),mk.compile) > $$_o.$$$$.out && mv $$_o.$$$$.out $$_o 2>/dev/null; fi; true)
@@ -3986,7 +3976,6 @@ _mk.assert.define=$(if $(call m5.undefined?,${1}),$(call mk.error, import.module
 _mk.module.from_def=$(call _mk.assert.define,${1})$(shell mkdir -p ${CMK_STAGE_DIR})$(eval _mk_mod_k:=$(call _mk.module.key,${1},${2}))$(file > ${CMK_STAGE_DIR}/.tmp.module.${_mk_mod_k}.raw.new,$(value ${1}))$(shell _r=${CMK_STAGE_DIR}/.tmp.module.${_mk_mod_k}.raw; if cmp -s "$$_r.new" "$$_r"; then rm -f "$$_r.new"; else mv "$$_r.new" "$$_r"; fi)$(call _mk.module.stage,${_mk_mod_k},${CMK_STAGE_DIR}/.tmp.module.${_mk_mod_k}.raw,${3},${4},${5},${1},${2})$(call _include, prefix=${CMK_STAGE_DIR} strict=1 file=.tmp.module.${_mk_mod_k}.mk)
 _mk.module.from_file=$(if $(wildcard ${1}),,$(call mk.error, import.module: no such file: ${1}, errno=MODULE_MISSING))$(eval _mk_mod_k:=$(call _mk.module.key,$(basename $(notdir ${1})),${2})-$(call _mk.hash.file,${1}))$(call _mk.module.stage,${_mk_mod_k},${1},${3},${4},${5},$(basename $(notdir ${1})),${2})$(call _include, prefix=${CMK_STAGE_DIR} strict=1 file=.tmp.module.${_mk_mod_k}.mk)
 _mk.module.from_def_flat=$(call _mk.assert.define,${1})$(eval $(value ${1}))
-## END: Module staging engine
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 $(call m5.def.!, import.module, _import.module)
 # A partial/star module import: `defs=`/`targets=` (mutually exclusive) prepend a
@@ -4028,7 +4017,7 @@ $(if ${_mk_mod_fast},$(call _include, prefix=$(strip ${kwargs_prefix}) strict=$(
 endef
 
 #░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: The HOSTED partition.
+## BEGIN: __hosted__ :: The hosted partition
 ##
 ## `define __hosted__` is a region of compose.mk authored in CMK-lang, parked in an
 ## opaque make `define` (never expanded as a var).  It is lowered to a content-addressed
@@ -4358,7 +4347,11 @@ define __hosted__
   # `_crun/${self}`, and the machine dispatch appends `,<def>`, which `_crun` splits back out.
   mk.expand = $(eval _mk.expand.tmp := $(1))$(_mk.expand.tmp)
   container.exec = def=$(2) img=$($(1).img) cmd="$($(1).cmd)" entrypoint=$(or $($(1).entrypoint),none) feed=$(or $($(1).feed),file) feed_flag="$($(1).feed_flag)" ${make} docker.run.def
-  container.ensure = $(if $($(1).src),docker image inspect $($(1).img) >/dev/null 2>&1 || ${make} $(1).build &&)
+  # container.owner names the builder of an instance's image: itself, else whoever registered that tag at mint; the run, call, and dispatch seams all ensure it.
+  container.owner.key = $(subst /,__,$(subst :,__,$(1)))
+  container.buildable = $(or $($(1).src),$($(1).file))
+  container.owner = $(if $(call container.buildable,$(1)),$(1),$(container.owner.$(call container.owner.key,$($(1).img))))
+  container.ensure = $(if $(call container.owner,$(1)),docker image inspect $($(1).img) >/dev/null 2>&1 || ${make} $(call container.owner,$(1)).build &&)
   _crun/%:; @$(call container.ensure,$(firstword $(subst $(comma), ,${*}))) $(call container.exec,$(firstword $(subst $(comma), ,${*})),$(lastword $(subst $(comma), ,${*})))
   *[|
     cmk.class cmk.container.capabilities[|
@@ -4417,7 +4410,7 @@ define __hosted__
       self.__in__ = $(call ambient.enter,${self}) $(call ${self}.__run__,${__args__})
       ${self}/%:; @$(call ${self}.__in__,${*})
       ${self}.reenter/%:; @$(call ${self}.__run__,${*})
-      self.__call__ = $(if $(filter @%,$(self.entrypoint)),${make} $(patsubst @%,%,$(self.entrypoint))/$(strip $(self.cmd) ${__args__}),$(if $(self.img),img=$(self.img) entrypoint=$(or $(self.entrypoint),none) cmd="$(strip $(self.cmd) ${__args__}) $${CMK_LAMBDA_ARGV:-}" ${make} docker.run.sh,cmd="$(strip $(self.entrypoint) $(self.cmd) ${__args__}) $${CMK_LAMBDA_ARGV:-}" ${make} cmk.host.exec))
+      self.__call__ = $(if $(filter @%,$(self.entrypoint)),${make} $(patsubst @%,%,$(self.entrypoint))/$(strip $(self.cmd) ${__args__}),$(if $(self.img),$(call container.ensure,self) img=$(self.img) entrypoint=$(or $(self.entrypoint),none) cmd="$(strip $(self.cmd) ${__args__}) $${CMK_LAMBDA_ARGV:-}" ${make} docker.run.sh,cmd="$(strip $(self.entrypoint) $(self.cmd) ${__args__}) $${CMK_LAMBDA_ARGV:-}" ${make} cmk.host.exec))
       self.polyglot = $(call code.unbound, ${__args__} bind=self)
     |)
 
@@ -4426,13 +4419,15 @@ define __hosted__
       A machine whose execute hook is fixed to the container-runtime dispatch: always a container, an
       image is expected.  The call dispatch is inherited from the base machine; the refinement pins the
       execute hook so a block run in an instance always uses the container, and the dispatch hook runs
-      a make target inside the image.
+      a make target inside the image.  A buildable instance registers its tag at mint, so an instance
+      that merely points at that tag builds it on first dispatch instead of needing a manual build.
       '''
       self.run := _crun/self
-      ${self}.dispatch/%:; @img=$(${self}.img) ${make} docker.dispatch/${*}
+      ${self}.dispatch/%:; @$(call container.ensure,${self}) img=$(${self}.img) ${make} docker.dispatch/${*}
       self.__buildable := $(if $(strip $(foreach _w,$(value self),$(if $(findstring =,$(_w)),,$(_w)))),1)
       self.src := $(or $(self.src),$(if $(self.__buildable),self))
       self.img := $(or $(self.img),$(if $(self.__buildable),compose.mk:self))
+      self.__minted__ = $(if $(call container.buildable,${self}),$(if $(${self}.img),$(eval container.owner.$(call container.owner.key,$(${self}.img)) ?= ${self})))
       ${self}.__dot__ = $(eval _op := $(strip ${__args__}))$(eval $(_op).__call__ := ${make} ${self}.build && def=$(_op) img=$(${self}.img) entrypoint=sh ${make} docker.run.def)$(_op)
     |)
     cmk.class cmk.host(bases=cmk.machine)(|
@@ -5539,8 +5534,7 @@ endef
 # Guards module.bind cold-miss; empty until load = defer.
 __hosted__.loaded =$(strip $(filter ${HOSTED_CACHE},${MAKEFILE_LIST}))
 #░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: Hosted partition.
-## BEGIN: partition.* -- the parametric staging engine.
+## BEGIN: partition.* :: The parametric staging engine
 ##
 ## A partition is a `define __<name>__` region authored in CMK-lang; the staging template
 ## lowers any such region to a content-addressed cache and binds it via make's makefile-remaking,
@@ -5551,16 +5545,19 @@ __hosted__.loaded =$(strip $(filter ${HOSTED_CACHE},${MAKEFILE_LIST}))
 ## built-in prewarm loader, which materializes the hosted cache once before the supervised makes run.
 ##
 ## Contents, top to bottom:
-##   __sandbox__          the sandbox region: a lab bench for the dedent/cook/docstring hazards,
-##                        run through the real transpile pipeline but depended on by nothing.
-##   _CMK_HOSTED_BUILDING re-entrancy guard so the cache-build sub-make skips this whole block.
-##   partition.stage      the staging template (positional: name, prefix, min-count, phony, failmsg;
-##                        `CMK_<PREFIX>_SRC` overrides the body as a per-test injection hook).
-##   partition.*.failmsg  the per-partition cold-build failure messages.
-##   HOSTED_SRC           the file that carries the regions plus the transpiler.
-##   hosted instance      plus the whole-file `.PHONY` collision guard and core-namespace auto-help.
-##   sandbox instance     the same template, gated off unless opted in.
-##   _cmk.prewarm.hosted  the built-in loader that warms the hosted cache before the run.
+##
+## * __sandbox__ :: The sandbox region.
+##     A lab bench for the dedent/cook/docstring hazards, run through the real
+##     transpile pipeline but depended on by nothing.
+## * _CMK_HOSTED_BUILDING :: Re-entrancy guard so the cache-build sub-make skips this whole block
+## * partition.stage :: The staging template.
+##     Positional args: name, prefix, min-count, phony, failmsg;
+##     `CMK_<PREFIX>_SRC` overrides the body as a per-test injection hook.
+## * partition.*.failmsg :: The per-partition cold-build failure messages
+## * HOSTED_SRC :: The file that carries the regions plus the transpiler
+## * hosted instance :: Plus the whole-file `.PHONY` collision guard and core-namespace auto-help
+## * sandbox instance :: The same template, gated off unless opted in
+## * _cmk.prewarm.hosted :: The built-in loader that warms the hosted cache before the run
 #░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # Home for experimental forms before they earn a stable name; the early ones have all graduated to
@@ -5693,13 +5690,12 @@ fi
 case "${CMK_HOSTED_PREWARM:-1}" in 0|false|no|off) ;; *) [ -n "${_hosted_warm}" ] || CMK_INTERNAL=1 ${_make_} mk.hosted.prewarm 2>&1 >/dev/null | grep -a 'hosted partition failed to compile' >&2 || true ;; esac
 endef
 #░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: partition.*
 #░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: mk.interpret.* targets
+## BEGIN: mk.interpret.* :: compose.mk as a makefile interpreter
 ##
-## The `mk.interpret.*` targets turn compose.mk into a makefile interpreter, so a
+## These targets turn compose.mk into a makefile interpreter, so a
 ## `.mk` or `.cmk` file can run itself via a `compose.mk` shebang and inherit not
 ## just the framework's targets but its signals and supervisor.  `mk.interpret`
 ## reads a makefile and re-execs it against compose.mk; `mk.interpret!` runs the
@@ -5797,7 +5793,6 @@ mk.interpret/%:
 	$(call _mk.interpret.file,${*})
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: mk.interpret.* targets
 
 # Fast, define-aware enumeration of a makefile's public target base-names -- the single source of truth
 # behind the shell-completion helpers and the repl's local-target banner.  A pure single-pass POSIX-awk scan (no
@@ -5843,7 +5838,8 @@ define .awk.completion.scan
 endef
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: native mk.parse -- awk+jq Makefile->JSON engine behind the `mkparse` seam.
+## BEGIN: native mk.parse :: The awk+jq Makefile-to-JSON engine (the `mkparse` seam)
+##
 ## awk extracts scalar-only JSONL (docs joined by a 0x1f sentinel); jq reshapes,
 ## derives booleans, filters, and renders.  The shallow path reuses
 ## `.awk.completion.scan -v emit=jsonl` (one scanner for help + completion).
@@ -6063,7 +6059,6 @@ mkparse:
 	&& ${trace_maybe} && ${mkparse} $${path:-${MAKEFILE}} $${prefix} $${local} $${preview} --public 
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: native mk.parse
 ## BEGIN: cli.subcommands :: The reusable subcommand / CLI engine
 ##
 ## Turns any target namespace into a `compose.mk <ns> <sub> <args>` dispatcher in
@@ -6188,14 +6183,14 @@ cli.subcommands:
 cli.subcommands=$(call cli.subcommands.enter,$(or $(strip $(if $(filter-out undefined,$(origin 1)),${1})),namespace='├ ╰' sep=─))
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: cli.subcommands
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-## tux.progress -- the dockerized NDJSON progress renderer
-## (github.com/mattvonrocketstein/tux.progress).  `stream.progress` is a pipe filter: a producer
+## BEGIN: tux.progress :: The dockerized NDJSON progress renderer
+##
+## From github.com/mattvonrocketstein/tux.progress.  `stream.progress` is a pipe filter: a producer
 ## emits `{index,total,output}` NDJSON, pipes it through, the bar is drawn on the terminal and
 ## stdout passes through unchanged.  When a controlling terminal exists and it is not CI, the bar
-## is forced on and routed straight to /dev/tty -- `[ -t 2 ]` is unreliable here because the cmk
+## is forced on and routed straight to /dev/tty; `[ -t 2 ]` is unreliable here because the cmk
 ## CLI wraps recipe stderr.  Any set `tux_progress_*` env vars are forwarded into the container.
 ## terminal = a controlling tty exists (not CI)
 tux.progress.terminal={ true >/dev/tty; } 2>/dev/null && [ "$${GITHUB_ACTIONS:-false}" != true ] && [ "$${CI:-}" != true ]
@@ -6210,9 +6205,9 @@ tux.progress:
 	${stream.progress}
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: cli.cmk
+## BEGIN: cli.cmk :: The cmk CLI client
 ##
-## The `cmk` CLI client -- a public subcommand front-end (`cmk` is the short alias for `cli.cmk`,
+## A public subcommand front-end (`cmk` is the short alias for `cli.cmk`,
 ## both dispatching to the `cli.cmk.*` handlers) built as a thin client of the subcommand engine
 ## above. Subcommands: `build`/`compile`/`transpile`/`eval`/`run`/`repl`/`doc`/`lint`, plus the
 ## nested `cli.cmk.cli` group (`complete`/`init`/`targets`) for bash-completion integration. A bare
@@ -6504,7 +6499,6 @@ cli.cmk.lint:
 	fi
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: cli.cmk
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 mk.let/%:
@@ -6579,9 +6573,9 @@ mk.namespace.list help.namespaces:
 	&& $(call log.base, ${no_ansi}${GLYPH_MK} help.namespaces ${sep} ${dim}count=${no_ansi}$${count} )
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: lang.pkg
+## BEGIN: lang.pkg :: Packaging as a self-extracting executable
 ##
-## Packaging: freeze a CMK app, a `.mk` file, or a make-target into a single-file, dependency-free
+## Freeze a CMK app, a `.mk` file, or a make-target into a single-file, dependency-free
 ## self-extracting executable (via `makeself`), bundling `compose.mk` plus whatever is packaged so the
 ## result runs on a host with no compose.mk/source present. `lang.pkg/<input>` dispatches by suffix
 ## (`.cmk` re-interprets the bundled app, `.mk` runs its default goal, a bare name packages a target);
@@ -6662,7 +6656,6 @@ endif
 	  awk "$${_awklang_fork_section}"
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: lang.pkg
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 mk.namespace.filter/%:
 	@# Lists all targets in the given namespace, filtering them by the given pattern.
@@ -6724,7 +6717,8 @@ mk.set/%:; $(eval $(call m5.__args__,1,/):=$(call m5.__args__,2-,/))
 # mk.stat lives in the `__hosted__` partition (built with the `jqlang` DSL).
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: supervisor -- signals, interrupts, bootloader, trampoline
+## BEGIN: supervisor :: Signals, interrupts, bootloader, trampoline
+##
 ## The make-side runtime supervisor: signal handling (mk.interrupt / mk.super.trap),
 ## process reflection (mk.super.pid), the bootloader (_mk.super.bootloader), the
 ## yield/dispatch trampoline (_mk.super.tramp), and the
@@ -6975,7 +6969,6 @@ define mk.super.tramp
 endef
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: supervisor
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 mk.targets.simple/%:; $(call __targets__,${*}) | grep -v '%$$'
@@ -7051,16 +7044,17 @@ mk.vars.filter/%:; (${mk.vars} | grep ${*}) || true
 	@# Filter output of `mk.vars` with the given pattern.
 	@# Non-strict; no error in case of no-match.
 
-## BEGIN: lang.lint
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+## BEGIN: lang.lint :: The CMK source linter, in two tiers
 ##
-## The CMK source linter for user programs, in two cost/trigger tiers. `preflight` is cheap and
+## The linter for user programs, in two cost/trigger tiers. `preflight` is cheap and
 ## always-on, riding the compiler (namespace/shadow checks in the receivers stage plus
 ## `lang.lint.source` hygiene), so it stays a compiler stage. `deep` is expensive and runs on demand
 ## (`cmk lint`) or as a post-mortem when `mk.validate` fails; it is currently a wired stub extension
 ## point. The framework self-audit (compose.mk auditing its own source) is project dev-tooling, not
 ## core: it moved to `.automation.cmk` as `lint.self` (+ `.collisions` / `.phase`).
 ##
-## `lang.lint.source` is the hygiene deferral point the `cmk` entrypoints call -- it chains them:
+## `lang.lint.source` is the hygiene deferral point the `cmk` entrypoints call; it chains them:
 ## an exists-guard (the one hard failure) plus soft notes (silenced by CMK_COMPILER_VERBOSE=0) for a
 ## non-`.cmk` extension, a missing `__main__`/`repl` entrypoint, an overwrite, and a raw self-var
 ## read. The `-` sentinel (stdin) is always valid.
@@ -7134,7 +7128,6 @@ lang.lint.divergent=io.env io.env.log mk.exit.code stage.file
 lang.lint.divergent.p=$(strip $(filter $(m5[1]),${lang.lint.divergent}))
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: lang.lint
 ## BEGIN: mk.unpack :: Argument unpackers for make macros
 ##
 ## Pull positional, comma-variadic, and k=v args out of a call or a target
@@ -7185,7 +7178,6 @@ export _kwargs_value="$(or $(call m5.ctx?,${1},${2}),$(m5[3]?))" \
 	export $(strip ${2})="$${_kwargs_value}",false)
 endef
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: mk.unpack
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # _mk.forward.args -- the arg-forwarding suffix for a macro twin (`NAME=${make} NAME${_mk.forward.args}`).
@@ -7265,32 +7257,29 @@ __supervisor__.exit_code  = $(call mk.exit.code,${1})
 __supervisor__.exit_clear = $(call mk.exit.clear)
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: flux.* targets
+## BEGIN: flux.* :: A miniature workflow library
 ##
-## The flux.* targets describe a miniature workflow library. Combining flux with 
-## container dispatch is similar in spirit to things like declarative pipelines 
-## in Jenkins, but simpler, more portable, and significantly easier to use.  
+## Combining flux with container dispatch is similar in spirit to declarative
+## pipelines in Jenkins, but simpler, more portable, and easier to use.
 ##
-## What's a workflow in this context? Shell by itself is fine for what you might
-## call "process algebra", and using operators like `&&`, `||`, `|` in the grand 
-## unix tradition goes a long way. And adding `make` to the mix already provides 
-## DAGs.
+## What's a workflow in this context? Shell alone covers "process algebra"
+## with operators like `&&`, `||`, `|` in the grand unix tradition, and adding
+## `make` to the mix already provides DAGs.  What `flux.*` adds is
+## *flow-control constructs* and *higher-level join/loop/map* instructions
+## over other make-targets, taking inspiration from functional programming and
+## threading libraries.  Alternatively, think of flux as a programming
+## language whose primitives are the objects make understands: targets,
+## defines, and variables.  Every target in `make` is a DAG, so task-DAGs are
+## also primitives; `compose.import` maps containers onto targets, so
+## containers are primitives too; `tux` targets map targets onto TUI panes, so
+## UI elements are effectively primitives as well.
 ##
-## What `flux.*` targets add is *flow-control constructs* and *higher-level 
-## join/loop/map* instructions over other make-targets, taking inspiration from 
-## functional programming and threading libraries. Alternatively, one may think of
-## flux as a programming language where all primitives are the objects that make 
-## understands, like targets, defines, and variables. Since every target in `make`
-## is a DAG, you might say that task-DAGs are also primitives. Since `compose.import`
-## maps containers onto targets, containers are primitives too.  Since `tux` targets 
-## map targets onto TUI panes, UI elements are also effectively primitives.
+## Flux targets are mostly used programmatically for scripting, but in
+## stand-alone mode they can help clean up (external) bash scripts, port bash
+## to makefiles, or support ad-hoc interactive scripting.
 ##
-## In most cases flux targets are used programmatically for scripting, but in 
-## stand-alone mode it can sometimes be useful for cleaning up (external) bash 
-## scripts, or porting from bash to makefiles, or ad-hoc interactive scripting.  
-##
-## For parts that are more specific to shell code, see `flux.*.sh`, and for 
-## working with scripts see `flux.*.script`.
+## For parts more specific to shell code see `flux.*.sh`; for working with
+## scripts see `flux.*.script`.
 ##
 ## DOCS:
 ## * `[1]:` [Main API](https://robot-wranglers.github.io/compose.mk/api#api-flux)
@@ -7733,10 +7722,9 @@ flux.watchdog/%:; cmd="${make} ${*}" ${make} io.fs.watch/$${path}
 	@# USAGE: path='..' make flux.watchdog/<target>
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: flux.* targets
-## BEGIN: stage.* targets
+## BEGIN: stage.* :: File-backed persistence for workflows
 ##
-## The `stage.*` targets add lightweight, file-backed persistence to otherwise
+## These targets add lightweight, file-backed persistence to otherwise
 ## stateless workflows.  A stage is a named JSON stack that cooperating tasks
 ## push to and pop from: `stage.enter/<name>` draws a divider and records a
 ## timestamp, `stage.exit/<name>` dumps and cleans the stage file, and
@@ -7899,31 +7887,23 @@ stage.wrap/%:
 		|| (${make} stage.wrap ) 
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: stage.* targets
-## BEGIN: stream.* targets
+## BEGIN: stream.* :: Helpers for IO streams
 ##
-## The `stream.*` targets support IO streams, including basic stuff with JSON,
-## newline-delimited, and space-delimited formats.
-##
-## **General purpose tools:**
+## Basic operations over JSON, newline-delimited, and space-delimited formats.
 ##
 ## * For conversion, see `stream.nl.to.comma`, `stream.comma.to.nl`, etc.
-## * For JSON ops, see `stream.jb`[2] and `stream.json.append.*`, etc
+## * For JSON ops, see `stream.jb`[2] and `stream.json.append.*`, etc.
 ## * For formatting and printing, see `stream.dim.*`, etc.
 ##
-## ----------------------------------------------------------------------------
+## Most targets here are also available as macros, an optimization that
+## saves a process:
 ##
-## **Macro Equivalents:**
-##
-## Most targets here are also available as macros, which can be used 
-#  as an optimization since it saves a process.  
-## 
-## ```bash 
+## ```bash
 ##   # For example, from a makefile, these are equivalent commands:
 ##   echo "one,two,three" | ${stream.comma.to.nl}
 ##   echo "one,two,three" | make stream.comma.to.nl
 ## ```
-## ----------------------------------------------------------------------------
+##
 ## DOCS:
 ##   * `[1]:` [Main API](https://robot-wranglers.github.io/compose.mk/docs/api#api-stream)
 ##   * `[2]:` [Docs for jb](https://github.com/h4l/json.bash)
@@ -8168,7 +8148,7 @@ stream.peek.summary=tee >($(call log, $${msg:-streaming} ${sep} ${yellow}`${stre
 stream.peek.40=( $(call io.mktemp) && ${stream.stdin} > $${tmpf} && cat $${tmpf} | fmt -w 35 | ${stream.as.log} && cat $${tmpf} )
 
 # WARNING: long options will not work with OSX
-stream.nl.enum=( ${stream.stdin} | nl -v0 -n ln )
+stream.nl.enum=( ${stream.stdin} | awk '1' | nl -v0 -n ln )
 stream.nl.enum:; ${stream.nl.enum}
 	@# Enumerates the newline-delimited input stream, zipping index with values
 	@#
@@ -8211,19 +8191,20 @@ stream.yaml.to.json:; ${stream.yaml.to.json}
 stream.makefile.pygmentize=lexer=makefile ${make} stream.pygmentize
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: tux.* targets
+## BEGIN: tux.* :: The embedded TUI interface
 ##
-## The *`tux.*`* targets allow for creation, configuration and automation of an embedded TUI interface.  This works by sending commands to a (dockerized) version of tmux.  See also the public/private sections of the tux API[1], the general docs for the TUI[2], or the spec for the 'compose.mk:tux' container for more details.
-## 
-## ----------------------------------------------------------------------------
+## Creation, configuration, and automation of an embedded TUI, by sending
+## commands to a (dockerized) version of tmux.  See also the public/private
+## sections of the tux API[1], the general docs for the TUI[2], or the spec
+## for the 'compose.mk:tux' container.
 ##
 ## DOCS:
 ##   * `[1]`: [API](https://github.com/robot-wranglers/compose.mk/api#api-tux)
 ##   * `[2]`: [Embedded TUI](https://github.com/robot-wranglers/compose.mk/embedded-tui)
-##
-## ----------------------------------------------------------------------------
-##
-## BEGIN: TUI Environment Variables
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+## BEGIN: TUI Environment Variables :: Knobs for the embedded TUI
 ## | Variable Name        | Description                                                                  |
 ## | -------------------- | ---------------------------------------------------------------------------- |
 ## | TUI_BOOTSTRAP        | *Target-name that is used to bootstrap the TUI.  *                           |
@@ -8483,8 +8464,7 @@ tux.mux.detach/%:
 	&& trap "${docker.compose} -f ${TUI_COMPOSE_FILE} stop -t 1; rm -f $${TMUXP}" exit \
 	&& $(call log.tux, $${header} Enter main loop for TUI) \
 	&& compose_file=${TUI_COMPOSE_FILE} svc=$${TUI_SVC_NAME} \
-	&& compose_env="${docker.env.standard} \
-		-e TUI_TMUX_SOCKET=${TUI_TMUX_SOCKET} \
+	&& compose_env="-e TUI_TMUX_SOCKET=${TUI_TMUX_SOCKET} \
 		-e TUI_TMUX_SESSION_NAME=${TUI_TMUX_SESSION_NAME} \
 		-e TUI_INIT_CALLBACK=$${TUI_INIT_CALLBACK} \
 		-e TUX_LAYOUT_CALLBACK=$${TUX_LAYOUT_CALLBACK} \
@@ -8567,8 +8547,7 @@ tux.shell.pipe: tux.require
 	&& ${docker.compose.run} ${dash_x_maybe} -c "`${stream.stdin}`" $(compose._quiet)
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: tux.*' public targets
-## BEGIN: TUI private targets
+## BEGIN: TUI internals :: Private targets, run only from inside the TUI
 ##
 ## These targets mostly require tmux, and so are only executed *from* the
 ## TUI, i.e. inside either the compose.mk:tux container, or inside k8s:tui.
@@ -8719,7 +8698,7 @@ endef
 	@# REFS:
 	@#   * `[1]`: https://raw.githubusercontent.com/sunaku/home/master/bin/tmux-layout-dwindle
 	
-.tux.layout.shuffle:
+.tux.layout.shuffle: assert.tool.required/shuf
 	@# Shuffles the pane layout randomly
 	@#
 	$(call log.tux, shuffling layout )
@@ -8929,7 +8908,7 @@ endef
 	| tte matrix --rain-time 1 && ${make} io.shell
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: Embedded files and data
+## BEGIN: Embedded files :: Inlined compose files, configs, and other data
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 define FILE.TUX_COMPOSE
@@ -9370,8 +9349,7 @@ define compose.shell
 endef
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: *.import.*
-## Import-Statement Macros
+## BEGIN: *.import.* :: Import-statement macros
 ##
 ## See the docs here: https://github.com/robot-wranglers/compose.mk/style#import-statements
 ##
@@ -9633,7 +9611,7 @@ ${compose_file_stem}/%:
 		${docker.cmk.mount} \
 		$$(subst ☂,\",$${extra_env}) \
 		--env CMK_INTERNAL=1 --env CMK_IN_CONTAINER=1 \
-		-e TERM="$${TERM}" -e GITHUB_ACTIONS=${GITHUB_ACTIONS} -e TRACE=$${TRACE} \
+		$$$${docker.env.standard} \
 		--env verbose=$${verbose} \
 		 $${pipe} $${user} $${entrypoint} $${svc_name} $${cmd})
 	@# host-only stdin buffer (bare mktemp, not io.mktemp): only its CONTENTS stream into
@@ -9708,7 +9686,7 @@ code.pipe = $(strip \
   $(_lpp))
 
 # lang.seed.code!: adapt! -- wire the bound Runnable surface.
-lang.seed.code! = $(call m5.self!,$(m5[__self__]))$(call m5.set,__machine__,$(m5[2]))$(if $(call m5.defined?,$(m5[2]).__call__),$(eval $(m5[__self__]).__in__ = $$(call $(m5[2]).__call__,$$($(m5[1]).file))),$(call m5.set.op,__in__,=,${make} $(m5[1]).with.file/$(m5[2])))$(eval $(m5[__self__]).__pipe__ = $$(call code.pipe,$(m5[1]),$$(strip $${__args__})))
+lang.seed.code! = $(call m5.self!,$(m5[__self__]))$(call m5.set,__machine__,$(m5[2]))$(if $(call m5.defined?,$(m5[2]).__in__),$(eval $(m5[__self__]).__in__ = $$(call $(m5[2]).__in__,$(m5[1]).shape)),$(if $(call m5.defined?,$(m5[2]).__call__),$(eval $(m5[__self__]).__in__ = $$(call $(m5[2]).__call__,$$($(m5[1]).file))),$(call m5.set.op,__in__,=,${make} $(m5[1]).with.file/$(m5[2]))))$(eval $(m5[__self__]).__pipe__ = $$(call code.pipe,$(m5[1]),$$(strip $${__args__})))
 $(call m5.def.!, code.unbound, _code.unbound)
 define _code.unbound
 ${nl}
@@ -9841,13 +9819,14 @@ esac
 endef
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: bind.* targets
+## BEGIN: bind.* :: Run a target's body in a container or service
+##
 ## See the docs: /compose.mk/style/#bind-declarations
 ##
 ## `docker.bind.script`/`compose.bind.script` run a target's own define-body in a container /
 ## compose service (used as the `@docker.bind.script(..)` / `@compose.bind.script(..)` decorators,
 ## and as the runtime under `(| .. |) in <service>`).  The old `docker_context`/`local_context`/
-## `compose_context` as-clause macros (the retired `⨖ .. with .. as ..` sugar) are gone -- run a
+## `compose_context` as-clause macros (the retired `⨖ .. with .. as ..` sugar) are gone; run a
 ## body in a container via `(| .. |) in container(| img=.. |)` or a named `container`/`Dockerfile`
 ## instance, and in a service via `(| .. |) in <service>`.
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -9942,7 +9921,7 @@ ${trace_maybe} && for v in $1; do if [[ "$$v" =~ ^([^=]+)=(.+)$$ ]]; then n=$${B
 endef
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: help.* targets and macros
+## BEGIN: help.* :: Help targets and macros
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 define _help_gen
@@ -9998,11 +9977,9 @@ help:
 
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## END: Macros
-##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## BEGIN: .awk
+## BEGIN: .awk :: The compiler's awk stage definitions
 ##
-## The compiler's awk stage definitions. Lowering CMK-lang to a Makefile runs a pipeline of awk
+## Lowering CMK-lang to a Makefile runs a pipeline of awk
 ## passes; each `.awk.<stage>` is an awk program stored as an inert `define` (read via `$(value)`,
 ## never expanded by make) carrying a `#:phase` pragma. A `lang.awk.stage`/`.comp`/`.export` call
 ## (in the registration block below) exports each as `_awklang_<name>` and mints its paired
@@ -10014,8 +9991,8 @@ help:
 ## lambdalift), the binding-form grammar (receivers, capture, fluent), the banana-opener grammar,
 ## moduledoc and lint passes, and the shared error/defskip/litparse preludes, ending in joinbody
 ## and unsentinel. Order among the `define`s here is irrelevant (they are inert text); only the
-## registration block that reads them must follow. The subsystem-local `.awk.*` -- super.stderr,
-## completion.scan, rewrite.targets.maybe -- live with their subsystems, not here.
+## registration block that reads them must follow. The subsystem-local `.awk.*` (super.stderr,
+## completion.scan, rewrite.targets.maybe) live with their subsystems, not here.
 ##
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
@@ -11900,8 +11877,6 @@ define .awk.cmk.acquire
   function emit_pathdis(src, kwargs,   d) { d = "__opena_" NR "_" (++_pdseq)
     print "define " d; print src; print "endef"
     print "$(call ambient.dissolve, def=" d " kind=path " kwargs ")" }
-  # COREMOD -- the in-core prelude modules (from -v CORE_MODULES = `lang.module.core`).
-  BEGIN { _cmn = split(CORE_MODULES, _cma, /[ \t]+/); for (_cmi = 1; _cmi <= _cmn; _cmi++) if (_cma[_cmi] != "") COREMOD[_cma[_cmi]] = 1 }
   {
     line = $0
     # import/open wrap: a trailing `,` continues to the next line.
@@ -11923,34 +11898,16 @@ define .awk.cmk.acquire
       gexpr = line; sub(/^goal[ \t]+@@SYM_NAME@@+[ \t]*=[ \t]*/, "", gexpr)
       gsub(/,/, "$(comma)", gexpr)   # protect the expr's commas from the $(call) arg-split
       print "$(call goal.bind, " gname ", " gexpr ")"; next }
-    # In-core prelude modules (`lang.module.core`, e.g. `cmk`/`dsl`) -- NOT disk plugins.  `from
-    # <mod> import *` binds the module's members bare (copy `<mod>.<m>`->`<m>`); `from <mod> import
-    # * except A B` skips the listed; `from <mod> import A, B` binds only those; `import <mod>` is a
-    # no-op (the qualified `<mod>.*` forms always exist).  `open <mod>` / `open <mod> except A B` are
-    # equivalent older aliases.  A non-core name falls through to disk resolution.
+    # both open-forms lower to the one lang.module.from dispatcher; core-vs-disk resolves at import time.
     if (line ~ /^[ \t]*open[ \t]+@@SYM_NAME@@+([ \t]+except[ \t]+.+)?[ \t]*$/) {
       mod = line; sub(/^[ \t]*open[ \t]+/, "", mod); sub(/[ \t].*$/, "", mod)
-      if (mod in COREMOD) {
-        xc = ""; if (line ~ /[ \t]except[ \t]/) { xc = line; sub(/^.*except[ \t]+/, "", xc); gsub(/[ \t]*,[ \t]*/, " ", xc); gsub(/[ \t]+/, " ", xc); sub(/^ +/, "", xc); sub(/ +$/, "", xc) }
-        if (xc == "") print "$(call " mod ".__open__)"
-        else print "$(call " mod ".__open__, $(filter-out " xc ",$(" mod ".__all__)))"
-        next } }
+      xc = ""; if (line ~ /[ \t]except[ \t]/) { xc = line; sub(/^.*except[ \t]+/, "", xc); gsub(/[ \t]*,[ \t]*/, " ", xc); gsub(/[ \t]+/, " ", xc); sub(/^ +/, "", xc); sub(/ +$/, "", xc) }
+      print "$(call lang.module.from," mod ", *" (xc == "" ? "" : " except " xc) ")"; next }
     if (line ~ /^[ \t]*from[ \t]+@@SYM_NAME@@+[ \t]+import[ \t]+.+/) {
       mod = line; sub(/^[ \t]*from[ \t]+/, "", mod); sub(/[ \t].*$/, "", mod)
-      if (mod in COREMOD) {
-        fi = line; sub(/^[ \t]*from[ \t]+@@SYM_NAME@@+[ \t]+import[ \t]+/, "", fi)
-        gsub(/[ \t]*,[ \t]*/, " ", fi); gsub(/[ \t]+/, " ", fi); sub(/^ +/, "", fi); sub(/ +$/, "", fi)
-        # `from <mod> import *` (optionally `* except A B`) -- bind ALL prelude names, the same
-        # lowering as `open <mod>`.  This is the preferred spelling; `open` is the older alias.
-        if (fi ~ /^\*([ \t]+except[ \t]+.+)?$/) {
-          xc = fi; sub(/^\*[ \t]*/, "", xc); sub(/^except[ \t]+/, "", xc)
-          if (xc == "") print "$(call " mod ".__open__)"
-          else print "$(call " mod ".__open__, $(filter-out " xc ",$(" mod ".__all__)))"
-          next }
-        print "$(call " mod ".__open__, " fi ")"; next } }
-    if (line ~ /^[ \t]*import[ \t]+@@SYM_NAME@@+[ \t]*$/) {
-      mod = line; sub(/^[ \t]*import[ \t]+/, "", mod); sub(/[ \t]*$/, "", mod)
-      if (mod in COREMOD) next }
+      fi = line; sub(/^[ \t]*from[ \t]+@@SYM_NAME@@+[ \t]+import[ \t]+/, "", fi)
+      gsub(/[ \t]*,[ \t]*/, " ", fi); gsub(/[ \t]+/, " ", fi); sub(/^ +/, "", fi); sub(/ +$/, "", fi)
+      print "$(call lang.module.from," mod "," fi ")"; next }
     # `include <file> <kw=v>..` -- lower to import.module (default raw+flat; kwargs override).
     if (line ~ /^-?s?include[ \t]+[^ \t]+[ \t]+[A-Za-z_][A-Za-z0-9_]*=/) {
       inc = line; sub(/^-?s?include[ \t]+/, "", inc); incf = inc; sub(/[ \t].*$/, "", incf)
@@ -12443,7 +12400,7 @@ $(call lang.awk.stage.frag, main=.awk.cmk.unsentinel)
 # run` / eval / banana-cook.  Keep them as stages -- a separate cheap-lint
 # pass would re-scan per cook.
 $(call lang.awk.stage.frag, main=.awk.cmk.nslint pipeline=.awk.cmk.defskip:.awk.cmk.errors, -v NS_LINT="$$$${CMK_NS_LINT:-1}" -v CORE_MODULES="$$(lang.module.core)")
-$(call lang.awk.stage.frag, main=.awk.cmk.acquire pipeline=.awk.cmk.defskip, -v CORE_MODULES="$$(lang.module.core)")
+$(call lang.awk.stage.frag, main=.awk.cmk.acquire pipeline=.awk.cmk.defskip)
 
 $(call lang.awk.stage.frag, main=.awk.cmk.fluent, -v RECEIVERS="$$$${RECEIVERS}")
 $(call lang.awk.stage.frag, main=.awk.cmk.receivers pipeline=.awk.cmk.defskip:.awk.cmk.errors, -v RECEIVERS="$$$${RECEIVERS}" -v DIVERGENT="$${lang.lint.divergent}" -v JUNCTIONS="$$$${JUNCTIONS}" -v SHADOW_STRICT="$$$${CMK_SHADOW_STRICT:-0}")
@@ -12510,7 +12467,6 @@ BEGIN { if (want != "") { k = split(want, w, " "); for (i = 1; i <= k; i++) W[w[
 /^define /{d=1} /^endef/{d=0;next} d{next}
 /^[^[:space:]#=][^=]*:([^=]|$)/{ h=$0; sub(/[ \t]*:.*/,"",h); n=split(h,a," "); for(j=1;j<=n;j++) if(!filt || (a[j] in W)) print a[j] }
 endef
-## END: .awk
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 flux.pre/%:
@@ -12559,7 +12515,9 @@ define .awk.rewrite.targets.maybe
 endef
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-## lang.src.fork.* -- source-forking / packaging.  Co-host other files INSIDE a single stand-alone
+## BEGIN: lang.src.fork.* :: Source-forking / packaging
+##
+## Co-host other files *inside* a single stand-alone
 ## compose.mk by rewriting its named sections (between the `# 𒄡 BEGIN/END <SECTION>` markers):
 ##
 ##   .guest      <- an embedded Makefile       (rewrites the GUEST section)

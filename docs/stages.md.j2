@@ -206,7 +206,7 @@ Multiple writers means **concurrency**, and that is where the higher layers come
 <hr class="section-rule lvl-3">
 
 !!! info "Layered on stacks"
-    Channels and agents are higher-level constructs built directly on the stack primitives above.  Both are core: the `channel` event bus and the base `Actor` transport ship in core, and an **agent** is assembled from them (a mailbox and store plus an Elixir-style lifecycle), as the self-contained `jqd.cmk` demo below shows.  No plugin needed here -- unlike the typed-exceptions example, which reaches for the opt-in [`fault.cmk`]({{_}}/plugins/faults) module.
+    Channels and agents are higher-level constructs built directly on the stack primitives above.  Both are core: the `channel` event bus and the base `Actor` transport ship in core, and an **agent** is assembled from them (a mailbox and store plus an Elixir-style lifecycle) by the `agents.cmk` module, which the `jqd.cmk` demo below exercises.  No plugin needed here -- unlike the typed-exceptions example, which reaches for the opt-in [`fault.cmk`]({{_}}/plugins/faults) module.
 
 The same backing store grows new capabilities as you climb the ladder:
 
@@ -228,7 +228,7 @@ A **channel** is the passive layer: a named event-stack with `emit`/`dispatch`/h
 #### Agents
 <hr class="section-rule lvl-4">
 
-An **agent** is the active layer: a channel plus an Elixir-flavored lifecycle (`start`/`cast`/`stop`), state, and a run-loop, built on the core actor/channel layer.  The self-contained demo below (`jqd.cmk`) assembles the actor transport, an agent (mailbox plus store), and a socketed leaf, then starts an agent, queries/transforms its state, casts events, and drains them to handlers.
+An **agent** is the active layer: a channel plus an Elixir-flavored lifecycle (`start`/`cast`/`stop`), state, and a run-loop, built on the core actor/channel layer.  The `agents.cmk` module assembles the actor transport, an agent (mailbox plus store), and a socketed leaf; the demo below (`jqd.cmk`) starts an agent, queries/transforms its state, casts events, and drains them to handlers.
 
 {{site.embed_demo('demos/cmk/jqd.cmk', type='cmk', github=github)}}
 

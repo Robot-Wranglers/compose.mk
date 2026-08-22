@@ -24,7 +24,7 @@ REPO = Path(__file__).resolve().parent.parent
 COMPOSE = REPO / "compose.mk"
 CMK_DIR = REPO / ".cmk"
 
-pytestmark = [pytest.mark.external_module, pytest.mark.integration, pytest.mark.needs_docker]
+pytestmark = [pytest.mark.external_module, pytest.mark.integration, pytest.mark.needs_docker, pytest.mark.module_system]
 
 
 def _run(tmp_path, body, *targets, timeout=180):

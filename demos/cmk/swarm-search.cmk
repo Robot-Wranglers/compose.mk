@@ -32,7 +32,7 @@ direct children best-effort -- a deep grandchild can reparent to init and finish
 current step; and the winner is only first-to-find, not provably-optimal.
 '''
 
-import virtual-machine.cmk as vm, flat=1
+from virtual-machine import vm.choose, vm.backtrack
 import log
 from cmk import class
 from cmk import Actor

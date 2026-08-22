@@ -8,6 +8,8 @@
 
 * [all-glyphs.cmk](./all-glyphs.cmk) (41 lines)
 
+* [ambient-siblings.cmk](./ambient-siblings.cmk) (72 lines)
+
 * [ambients-open.cmk](./ambients-open.cmk) (107 lines)
 
 * [ambients.cmk](./ambients.cmk) (51 lines)
@@ -58,7 +60,7 @@
 
 * [bash-if.cmk](./bash-if.cmk) (96 lines)
 
-* [beam-pool.cmk](./beam-pool.cmk) (26 lines)
+* [beam-pool.cmk](./beam-pool.cmk) (27 lines)
 
 * [beam-portfolio.cmk](./beam-portfolio.cmk) (28 lines)
 
@@ -90,8 +92,6 @@
 
 * [code-objects.cmk](./code-objects.cmk) (79 lines)
 
-* [comby.cmk](./comby.cmk) (24 lines)
-
 * [container-dispatch-2.cmk](./container-dispatch-2.cmk) (22 lines)
 
 * [container-dispatch-3.cmk](./container-dispatch-3.cmk) (22 lines)
@@ -118,7 +118,7 @@
 
 * [dsl-composition.cmk](./dsl-composition.cmk) (32 lines)
 
-* [dsl-python.cmk](./dsl-python.cmk) (32 lines)
+* [dsl-python.cmk](./dsl-python.cmk) (31 lines)
 
 * [elixir-1.cmk](./elixir-1.cmk) (30 lines)
 
@@ -132,7 +132,7 @@
 
 * [etl-json.cmk](./etl-json.cmk) (27 lines)
 
-* [events.cmk](./events.cmk) (74 lines)
+* [events.cmk](./events.cmk) (79 lines)
 
 * [example.cmk](./example.cmk) (10 lines)
 
@@ -146,11 +146,11 @@
 
 * [fluent-style.cmk](./fluent-style.cmk) (64 lines)
 
-* [goals-reverse.cmk](./goals-reverse.cmk) (61 lines)
+* [goals-reverse.cmk](./goals-reverse.cmk) (56 lines)
 
 * [goals.cmk](./goals.cmk) (39 lines)
 
-* [golang.cmk](./golang.cmk) (31 lines)
+* [golang.cmk](./golang.cmk) (34 lines)
 
 * [graal-interop.cmk](./graal-interop.cmk) (66 lines)
 
@@ -190,13 +190,17 @@
 
 * [just.cmk](./just.cmk) (83 lines)
 
+* [kanren.cmk](./kanren.cmk) (143 lines)
+
 * [kwarg-parsing-2.cmk](./kwarg-parsing-2.cmk) (20 lines)
 
 * [kwarg-parsing-3.cmk](./kwarg-parsing-3.cmk) (27 lines)
 
-* [kwarg-parsing.cmk](./kwarg-parsing.cmk) (16 lines)
+* [kwarg-parsing.cmk](./kwarg-parsing.cmk) (23 lines)
 
 * [lean.cmk](./lean.cmk) (59 lines)
+
+* [lisp.cmk](./lisp.cmk) (42 lines)
 
 * [local-interpreter.cmk](./local-interpreter.cmk) (32 lines)
 
@@ -204,9 +208,15 @@
 
 * [logging.cmk](./logging.cmk) (60 lines)
 
+* [machine-qemu-exfile.cmk](./machine-qemu-exfile.cmk) (90 lines)
+
+* [machine-qemu.cmk](./machine-qemu.cmk) (95 lines)
+
 * [machine.cmk](./machine.cmk) (53 lines)
 
-* [matrioshka.cmk](./matrioshka.cmk) (84 lines)
+* [machines-nested.cmk](./machines-nested.cmk) (74 lines)
+
+* [matrioshka.cmk](./matrioshka.cmk) (89 lines)
 
 * [metaprogramming.cmk](./metaprogramming.cmk) (185 lines)
 
@@ -262,7 +272,7 @@
 
 * [repl.cmk](./repl.cmk) (9 lines)
 
-* [rust.cmk](./rust.cmk) (31 lines)
+* [rust.cmk](./rust.cmk) (33 lines)
 
 * [script-dispatch-custom.cmk](./script-dispatch-custom.cmk) (26 lines)
 
@@ -294,9 +304,9 @@
 
 * [swarm-search.cmk](./swarm-search.cmk) (127 lines)
 
-* [tier-1.cmk](./tier-1.cmk) (61 lines)
+* [tier-1.cmk](./tier-1.cmk) (64 lines)
 
-* [tier-2.cmk](./tier-2.cmk) (74 lines)
+* [tier-2.cmk](./tier-2.cmk) (75 lines)
 
 * [tinycc.cmk](./tinycc.cmk) (28 lines)
 
@@ -312,7 +322,7 @@
 
 * [uv.cmk](./uv.cmk) (38 lines)
 
-* [vm-coroutines.cmk](./vm-coroutines.cmk) (61 lines)
+* [vm-coroutines.cmk](./vm-coroutines.cmk) (66 lines)
 
 * [vm-steer.cmk](./vm-steer.cmk) (39 lines)
 

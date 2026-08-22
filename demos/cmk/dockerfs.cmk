@@ -1,0 +1,72 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+# dockerfs.cmk: files bound to an image build, and the folded build that lands them (needs docker)
+
+'''
+A `dockerfs` is a file bound to an image at declaration:
+
+  dockerfs NAME(bind=IMAGE path=/where/it/lands mode=CHMOD)(| ...contents... |)
+
+`bind=` registers the file on that image eagerly, `path=` is where it lands, and
+`mode=` is its chmod.  The body is captured verbatim, so dollars and backslashes
+survive intact, unlike a Dockerfile heredoc.
+
+The payoff is separation.  The Dockerfile below declares a base and packages and
+nothing else: no heredocs, no copy lines, no scripts folded into RUN.  The files
+read as files.  A plain `.build` folds them in, materializing each into a
+throwaway context and injecting a copy plus a chmod right after the first base
+line.  Nothing is written to the working tree.
+
+`.render` prints that same injected recipe without building, which is the way to
+see what the fold produced.
+
+  usage: ./demos/cmk/dockerfs.cmk
+'''
+
+from cmk import container, dockerfs, Dockerfile
+import log
+
+# Intent only: the greeter script and its config arrive from the bound files below.
+Dockerfile greeter_img(|
+  FROM alpine:3.21
+  RUN apk add --no-cache jq
+  ENTRYPOINT ["/usr/local/bin/greet"]
+|)
+
+# An executable: mode=+x, and the shell dollars reach the image unmangled.
+dockerfs greet(bind=greeter_img path=/usr/local/bin/greet mode=+x)(|
+  #!/bin/sh
+  who=$(jq -r .who /etc/greeter.json)
+  punct=$(jq -r .punct /etc/greeter.json)
+  echo "hello, ${who}${punct} (from $(uname -s), pid $$)"
+|)
+
+# Data alongside it: same binding, different mode.
+dockerfs greet_conf(bind=greeter_img path=/etc/greeter.json mode=0644)(|
+  {"who": "dockerfs", "punct": "!"}
+|)
+
+# The machine that runs the built image, so a call reaches the bound entrypoint.
+container greeter(img=compose.mk:greeter_img)(| |)
+
+# The same image with the entrypoint overridden, for looking at what landed.
+container greeter_cat(img=compose.mk:greeter_img entrypoint=cat)(| |)
+
+demo.render:
+  '''Show the folded recipe without building: base line first, then the injected copy and chmod pairs.'''
+  log(${bold}rendered Dockerfile${no_ansi} (bound files folded in):)
+  greeter_img.render()
+
+demo.build:
+  '''Build the image, which materializes both bound files into a private context.'''
+  log(${bold}building${no_ansi} compose.mk:greeter_img)
+  greeter_img.build()
+
+demo.run:
+  '''Run the entrypoint the bound files supplied, then read the bound config back out.'''
+  log(${bold}entrypoint${no_ansi} (the +x bound file):)
+  greeter()
+  log(${bold}config${no_ansi} (the 0644 bound file, as it landed):)
+  greeter_cat(/etc/greeter.json)
+
+__main__: demo.render demo.build demo.run

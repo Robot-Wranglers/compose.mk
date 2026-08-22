@@ -465,7 +465,7 @@ The declaration keywords (`class`, `constructor`, `container`, `machine`, `dsl`,
 cmk.class Box[| ${self}.x = 1 |]
 ```
 
-The bare spelling is *opt-in*: a program pulls the keywords in with an ordinary import statement (`from cmk import *`), exactly like Python.  Until it does, `class`/`container`/… stay free for the program's own grammar, and reaching a bare keyword without pulling it in is an error.  The star form, its `except`/selective variants, and the older `open cmk` alias are the same forms every core module supports; see the [import statements]({{_}}/cmk/modules/#the-declaration-family) reference for the full grammar.
+The bare spelling is *opt-in*: a program pulls the keywords in with an ordinary import statement (`from cmk import *`), exactly like Python.  Until it does, `class`/`container`/… stay free for the program's own grammar, and reaching a bare keyword without pulling it in is an error.  The star form, its `except`/selective variants, and the older `open cmk` alias are the same forms every module supports, core or disk; see the [from-imports]({{_}}/cmk/modules/#from-imports) reference for the full grammar and binding rules.
 
 The one compiler-specific mechanic: a qualified `cmk` keyword survives compilation as a **literal ctor** because the macro anchor (the calling convention behind a macro-callform like `cmk.log(..)`) is a structural, *banana-aware* stage (`cmkanchor`, run right after `dialect`): a qualified `cmk` name in the ctor position of a banana head is left intact for the sugar stage, while every other macro-anchored name still lowers to a macro call.  The list/callform spelling still means "call `class`" and needs a prior `from cmk import *`; the always-on qualified form is the banana spelling shown above.
 

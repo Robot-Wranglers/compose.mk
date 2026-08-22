@@ -2406,3 +2406,69 @@ def test_banana_dot_named_instance_in_chain_errors(cmk, tmp_path):
   r = cmk("cmk", "run", str(f), cwd=tmp_path)
   assert not r.ok
   assert "module-level declaration" in (r.stdout + r.stderr)
+
+
+# --- fluent declaration chains (staged grammar, xfail) --------------------------------------------
+
+_FLUENT_HDR = "from cmk import dockerfs, Dockerfile\n"
+_FLUENT_IMG = "Dockerfile img(|\n  FROM alpine:3.21\n  RUN true\n|)\n"
+
+
+@pytest.mark.covers_demo("dockerfs-fluent.cmk")
+@pytest.mark.xfail(
+  strict=True,
+  reason="TODO: chained ctor on a module-level declaration.  The declared name in a dockerfs "
+  "declaration is never referenced again, and bind= repeats the image per file, so the binding is "
+  "well-defined as a chain hung off the image declaration itself: the receiver supplies the "
+  "binding and the compiler a gensym def.  Today the banana trailer walk reads the chain link "
+  "`.dockerfs(path=.. mode=..)(|` as a compile-time postfix treatment, shells it out as a make "
+  "target, and poisons the module with `postfix treatment .. failed` (GRAMMAR code=65).  Surfaced "
+  "by demos/cmk/dockerfs-fluent.cmk (kept in the intended grammar; excluded from the demo sweep "
+  "via the covers-demo marker here).  If this xpasses, the declaration-chain form lowers -- run "
+  "that demo end-to-end, then drop this marker.",
+)
+def test_declaration_chain_lowers_to_bound_ctor_call(ir):
+  # expected: the chain link lowers like the named form, with the receiver as the binding
+  src = (
+    _FLUENT_HDR
+    + "Dockerfile img(|\n  FROM alpine:3.21\n  RUN true\n"
+    + "|).dockerfs(path=/etc/g1 mode=+x)(|\n  hello\n|)\n"
+  )
+  r = ir(src)
+  assert "cmk-fault" not in r.stdout, r.stdout
+  assert "$(call dockerfs," in r.stdout and "bind=img" in r.stdout, r.stdout
+  assert "hello" in r.stdout, r.stdout
+
+
+@pytest.mark.xfail(
+  strict=True,
+  reason="TODO: anonymous ctor declaration with kwargs -- `dockerfs(bind=.. path=.. mode=..)(| .. |)` "
+  "with no declared name.  The name in the named form is semantically unused (nothing references "
+  "it; it only gives registration a def), so the parser should gensym it.  This is the kwargs "
+  "sibling of the ctor-args gap `X(a,b)(| body |)` xfailed in test_dsl_machine_cmk.py.  Today the "
+  "parser takes the ctor word itself as the block name and faults with `using/paren kwargs with "
+  "no PREFIX constructor`.  If this xpasses, drop this marker and promote the form to the "
+  "dockerfs suite.",
+)
+def test_anonymous_ctor_kwargs_declaration_lowers(ir):
+  # expected: same lowering as the named form, with a compiler-chosen def name
+  src = _FLUENT_HDR + _FLUENT_IMG + "dockerfs(bind=img path=/etc/g1 mode=+x)(|\n  hello\n|)\n"
+  r = ir(src)
+  assert "cmk-fault" not in r.stdout, r.stdout
+  assert "$(call dockerfs, def=" in r.stdout and "bind=img" in r.stdout, r.stdout
+
+
+@pytest.mark.xfail(
+  strict=True,
+  reason="TODO: a recipe-level chain segment carrying both kwargs and a banana body -- "
+  "`img(| |).dockerfs(path=..)(| body |)` -- compiles today but silently drops the segment's "
+  "body: only `$(call <gensym>.dockerfs,path=..)` is emitted and the body text appears nowhere "
+  "in the lowering.  Silent data loss; the body should survive, or a mixed segment should be a "
+  "compile error.  If this xpasses, the body reached the lowering -- check which semantics "
+  "landed, then drop this marker.",
+)
+def test_recipe_chain_segment_keeps_its_body(ir):
+  # expected: the segment body text survives somewhere in the lowering
+  src = _FLUENT_HDR + _FLUENT_IMG + "probe:\n  img(| |).dockerfs(path=/x mode=+x)(| CHAIN_BODY_MARKER |)\n"
+  r = ir(src)
+  assert "CHAIN_BODY_MARKER" in r.stdout, r.stdout

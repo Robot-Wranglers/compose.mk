@@ -40,7 +40,7 @@
 #   [1]: https://robot-wranglers.github.io/compose.mk/modules/virtual-machine
 
 import log
-import virtual-machine.cmk as vm, flat=1
+from virtual-machine import vm.goto, __vm__
 
 tree.demo:
   @# ── print region: a recursive call graph looped via __vm__ goto

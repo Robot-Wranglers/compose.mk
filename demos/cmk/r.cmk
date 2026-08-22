@@ -14,7 +14,7 @@ Dockerfile RBase(entrypoint=Rscript)(|
     RUN R -e "install.packages('ggplot2', repos='https://cran.rstudio.com/')"
 |)
 
-__main__: RBase.build plot io.preview.img/${output_file}
+__main__: plot io.preview.img/${output_file}
 
 plot:
   '''

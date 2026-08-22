@@ -25,6 +25,22 @@
     ]
   },
 
+  // hyg: line-count and syntax defaults restored per matt, 2026-08-21; only shout_ok stays widened for doc-block vocabulary. See scratch/csop-hyg-doc-blocks.md
+  "hyg": {
+    "shout_ok": ["CSOP", "SOP", "CLI", "API", "URL", "JSON", "HTML", "HTTP", "ID",
+                 "ANSI", "SGR", "OSC", "UTF", "ASCII", "JIT", "WIP", "TODO", "FIXME",
+                 "NOTE", "OK", "SSOT", "MCP", "VM", "README", "LICENSE",
+                 "BEGIN", "END", "DOCS", "USAGE", "NB", "WARNING", "TUI", "DIND",
+                 "OSX", "GNU", "POSIX", "CMK", "REPL", "PATH", "XDG", "EOF", "PID",
+                 "SIGINT", "SIGTERM", "MAKE", "MAKEFILE", "MAKEFLAGS", "MAKELEVEL",
+                 "HOSTED", "DAG", "DAGS", "AWK", "SED", "JQ", "YQ", "JB", "LHS",
+                 "RHS", "JSONL", "ERE", "IR", "UI", "CI", "IO", "TRACE", "TERM",
+                 "SHELL", "HOME", "YAML", "TTY", "DSL", "TOML", "CSS", "SVG",
+                 "PHONY", "PREFIX", "SRC", "DIR", "ENV", "STDIN", "STDOUT",
+                 "STDERR", "RECEIVERS", "JUNCTIONS", "GUEST", "SERVICES",
+                 "PAYLOAD", "SECTION", "NDJSON"]
+  },
+
   // techwrite carries em-dash ban plus code-in-prose for docs; supersedes the docs_prose_gate hook
   "techwrite": {
     "default_enabled": true,

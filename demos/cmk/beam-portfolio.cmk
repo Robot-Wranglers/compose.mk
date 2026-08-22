@@ -7,8 +7,8 @@ RESUME safety-net backtracks. Under CMK_TRAMP_CHOOSE=parallel the whole frontier
 CONCURRENTLY on the BEAM node and the first hit wins. Needs docker.
 '''
 
-import platform.beam.cmk as beam, flat=1
-import virtual-machine.cmk as vm, flat=1
+from platform.beam import beam.tramp
+from virtual-machine import vm.choose
 
 SPACE  ?= 8
 TARGET ?= 5

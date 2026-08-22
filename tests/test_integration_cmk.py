@@ -273,9 +273,8 @@ def test_demo_channel(run_demo):
 
 
 def test_demo_agent(run_demo):
-  # An event-log agent rebuilt on the actor/agent layer in demos/cmk/jqd.cmk
-  # (the standalone agent.mk plugin was retired to scratch/).  The demo `open`s
-  # jqd.cmk, mints an inproc agent, then: the data plane casts carol(login)/
+  # An event-log agent rebuilt on the actor/agent layer in .cmk/agents.cmk.
+  # The demo flat-imports that module, mints an inproc agent, then: the data plane casts carol(login)/
   # bob(logout)/alice(login) and dumps the stack; a read-only jq-fold query keeps
   # the logins; the control plane drains each event to auth/<action>, which logs
   # the user from the CMK_EVENT envelope.

@@ -9,7 +9,7 @@ Companion to stack-of-stacks.cmk (same records, shell-coordinated). Needs docker
 
 # USAGE: ./demos/cmk/beam.cmk  (or beam.fork/handler/a,handler/c)
 
-import platform.beam.cmk as beam, flat=1
+from platform.beam import beam.fork
 
 handler/%:
   '''

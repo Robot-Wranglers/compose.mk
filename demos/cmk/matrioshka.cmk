@@ -24,7 +24,7 @@ services:
       dockerfile_inline: |
         FROM docker:dind
         RUN apk add -q --update --no-cache \
-          coreutils build-base bash gawk make git
+          coreutils build-base bash make git
         COPY . /app
         RUN cd /app && ./compose.mk cmk run ${__interpreting__} ${BUILD_TARGET}
     working_dir: /workspace

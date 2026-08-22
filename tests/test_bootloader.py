@@ -12,6 +12,7 @@ branch of the polyglot header.
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -289,6 +290,23 @@ def test_awk_flavor_gate_rejects_unknown_dialect(cmk, tmp_path):
   r = cmk("mk.compile", stdin="x:; @printf X\n", env={"PATH": path})
   assert not r.ok
   assert "supports GNU awk" in (r.stdout + r.stderr), r.stderr[-800:]
+
+
+@pytest.mark.skipif(
+  sys.platform != "darwin", reason="needs the real BSD sed at /usr/bin/sed"
+)
+def test_bsd_sed_is_not_a_silent_noop(cmk, tmp_path):
+  """The stock-macOS sed pin, sibling of the make floor and the awk gate:
+  with BSD sed PATH-first, a supervised run must either work or fail
+  loudly; the header extraction is BSD-compatible, so it works."""
+  shim = tmp_path / "bin"
+  shim.mkdir()
+  (shim / "sed").symlink_to("/usr/bin/sed")
+  path = f"{shim}:{os.environ['PATH']}"
+  r = cmk("flux.ok", env={**SUP, "PATH": path}, cwd=str(REPO))
+  ran = r.ok and "succeeding as requested" in (r.stdout + r.stderr)
+  failed_loudly = not r.ok and (r.stdout + r.stderr).strip()
+  assert ran or failed_loudly, (r.returncode, r.stdout, r.stderr)
 
 
 @pytest.mark.needs_docker

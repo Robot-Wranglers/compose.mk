@@ -62,7 +62,7 @@ $(info P_COPY_SHAPE=[$(value greeting_dup.shape)])
 $(info P_COPY_MINT=[$(greeting_dup.__ctor__)])
 $(info P_BOUND_MACHINE=[$(value payload.__machine__)])
 $(info P_BOUND_RUN_ORIGIN=[$(origin payload.__in__)])
-$(info P_BOUND_RUN_DELEGATES=[$(findstring host.local.__call__,$(value payload.__in__))])
+$(info P_BOUND_RUN_DELEGATES=[$(findstring host.local.__in__,$(value payload.__in__))])
 
 probe:; @true
 """
@@ -91,12 +91,15 @@ def test_copy_remints_independent_same_kind(tmp_path):
 
 def test_bound_object_is_runnable_and_delegates(tmp_path):
   # A BOUND object carries `.__machine__` == the binding and a `.__in__` (Runnable).  For a MACHINE
-  # binding the `.__in__` routes through the machine's own file-call (`<machine>.__call__(<file>)`),
-  # which runs the materialized body; a plain-target binding keeps the `.with.file/<target>` seam.
+  # binding the `.__in__` delegates to the machine's own `.__in__`, handing it the body BY NAME so the
+  # feed discipline materializes it at recipe time -- the same seam `lang.dsl.machine.proxy` uses.
+  # Passing the materialized text instead would cross a callform argument, where `m5[1]`'s strip
+  # collapses its indentation (see scratch/polyglot-indent-transport.md).  A plain-target binding
+  # keeps the `.with.file/<target>` seam.
   out = _run(DATA_PROBE, tmp_path)
   assert "P_BOUND_MACHINE=[host.local]" in out
   assert "P_BOUND_RUN_ORIGIN=[undefined]" not in out       # .__in__ IS defined when bound
-  assert "P_BOUND_RUN_DELEGATES=[host.local.__call__]" in out
+  assert "P_BOUND_RUN_DELEGATES=[host.local.__in__]" in out
 
 
 def test_to_file_materializes_body(tmp_path):

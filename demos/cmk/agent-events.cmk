@@ -1,8 +1,6 @@
 #!/usr/bin/env -S ./compose.mk cmk run
 #
-# agent-events.cmk: an event-log agent built on the actor/agent layer in
-# demos/cmk/jqd.cmk (a transport-subclass Actor with a mailbox).  It
-# derives a login/logout event log from those primitives.
+# agent-events.cmk: an event-log agent built on the agents module.
 #
 # USAGE:
 #   ./demos/cmk/agent-events.cmk
@@ -10,8 +8,8 @@
 '''
 An agent is a transport-Actor with a mailbox folded in.  Its mailbox is
 constructed with the agent and torn down at exit (stop is also callable
-mid-run); the mailbox itself answers count and dump.  Dissolving jqd.cmk
-brings its classes into scope, so an in-process agent can be created here:
+mid-run); the mailbox itself answers count and dump.  A flat import of the
+agent module brings its classes into scope, so an agent is created here:
 synchronous and socket-free, yet answering the callforms of a socketed
 one.  Events ride a dual-plane envelope.  The data plane appends an inert
 JSON record (a login or logout).  The control plane delivers a native cmk
@@ -21,10 +19,9 @@ drains the log.
 '''
 
 import log
-open demos/cmk/jqd.cmk
+from agents import Agent
 
-# auth: the login/logout event log, an inproc agent created from jqd's
-# Agent class; its handlers run receiver-side as the control plane drains.
+# auth: the login/logout event log, an inproc agent; its handlers run receiver-side as the control plane drains.
 auth <- Agent.new()
 
 login:

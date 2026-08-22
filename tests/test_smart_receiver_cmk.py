@@ -78,13 +78,10 @@ def _interpret(cmk, tmp_path, src, plugins=None, strict=False):
 
 
 def test_open_dissolves_via_module_subkind(ir):
-  # `open ns` dissolves through the `module` ambient subkind: no `cmk.open` runtime call
-  # (it never errors), just a throwaway def + `ambient.dissolve kind=module` (whose handler
-  # is include.plugins).  One unified dissolve seam, shared with `*(| .. |)`.
+  # bare `open ns` lowers to the one lang.module.from dispatcher (star form), never a runtime cmk.open.
   r = ir("open reports\nreports.x:; @true\n")
   assert "cmk.open" not in r.stdout
-  assert "define __open_" in r.stdout and "reports" in r.stdout
-  assert "$(call ambient.dissolve, def=__open_" in r.stdout and "kind=module)" in r.stdout
+  assert "$(call lang.module.from,reports, *)" in r.stdout
 
 
 def test_import_lowers_to_assert_plus_dissolve(ir):
@@ -284,6 +281,18 @@ def test_import_loads_plugin_member(cmk, tmp_path):
   assert "PLUGHI" in r.stdout
 
 
+def test_from_disk_module_import_binds_name(cmk, tmp_path):
+  # a standalone program should be able to bind a disk module's member, as it does for `cmk`.
+  r = _interpret(
+    cmk,
+    tmp_path,
+    "from foo import hi\n__main__:\n\thi()\n",
+    plugins={"foo.mk": "foo.hi:\n\t@printf 'FROMOK\\n'\nfoo.__all__ := hi\n"},
+  )
+  assert r.ok, r.stderr
+  assert "FROMOK" in r.stdout
+
+
 def test_import_resolving_to_nothing_hard_errors(cmk, tmp_path):
   # `import` of a name that is neither present, loadable, nor loaded is a HARD ERROR.
   r = _interpret(cmk, tmp_path, "import nope_xyz\n__main__:; @true\n")
@@ -380,6 +389,33 @@ def test_nslint_clean_import_anchored_use(ir):
   # a cmk.-anchored send registers the namespace as used (the anchor lowers to a
   # sentinel before nslint, so nl_use must see through it -- else a false "dead").
   r = ir("import flux\nx:\n\tcmk.flux.ok()\n")
+  assert "never used or defined" not in r.stderr
+
+
+@pytest.mark.xfail(
+  strict=True,
+  reason="TODO: a `flat=1` import binds the namespace's members BARE, which is the whole "
+  "point of the flag, but nl_use only counts a qualified `ns.*` send as a use.  So a flat "
+  "import whose members are used bare is reported dead, and the warning goes away only if "
+  "you also spell one use qualified.  Same false-positive family as the predicate and "
+  "cmk-anchored cases above.  Live example: demos/cmk/beam-tramp.cmk.",
+)
+def test_nslint_clean_flat_import_bare_use(ir):
+  # a flat import binds members bare, so a bare use must count as using the namespace.
+  r = ir("import flux, flat=1\nx:\n\tok()\n")
+  assert "never used or defined" not in r.stderr
+
+
+@pytest.mark.xfail(
+  strict=True,
+  reason="TODO: nl_use scans recipe-position sends, so a namespace referenced only from a "
+  "declaration kwarg (`bases=ns.Class`) is reported dead.  Same false-positive family as the "
+  "predicate and cmk-anchored cases above.  Live example: demos/cmk/ambient-siblings-v2.cmk, "
+  "whose only reference to the agents module is a class base.",
+)
+def test_nslint_clean_kwarg_position_use(ir):
+  # a namespace used as a declaration kwarg is used, even with no recipe-position send.
+  r = ir("import flux\nfrom cmk import class\n\nclass B(bases=flux.ok)(| |)\n")
   assert "never used or defined" not in r.stderr
 
 

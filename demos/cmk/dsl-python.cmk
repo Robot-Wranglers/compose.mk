@@ -3,8 +3,8 @@
 '''
 dsl-python.cmk: the `python` dsl base runs instance bodies in a container and
 reflects on them via comby (the Language protocol).  stats() streams stdin;
-funcs.__symbols__ lists the functions it defines.  Mirrors demos/cmk/comby.cmk
-(the golang sibling).  USAGE: ./demos/cmk/dsl-python.cmk (needs docker).
+funcs.__symbols__ lists the functions it defines.
+USAGE: ./demos/cmk/dsl-python.cmk (needs docker).
 '''
 
 cmk.include.plugins(dsl.python.cmk)

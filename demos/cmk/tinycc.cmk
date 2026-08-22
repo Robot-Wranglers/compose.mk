@@ -25,4 +25,4 @@ tcc.polyglot hello_world(|
 |)
 
 # Build the tcc image, preview the code, then compile+run it.
-__main__: tcc.build hello_world.preview hello_world
+__main__: hello_world.preview hello_world

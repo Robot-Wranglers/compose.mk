@@ -105,12 +105,9 @@ def test_import_threads_kwargs(ir):
 
 
 def test_bare_open_dissolves_via_module_subkind(ir):
-  # a bare `open <name>` reroutes through the `module` ambient subkind: its name is
-  # staged into a throwaway def and dissolved via `ambient.dissolve kind=module`
-  # (whose handler is `include.plugins`).  Same load, one unified dissolve seam.
+  # a bare `open <name>` lowers to the lang.module.from dispatcher (star form); core-vs-disk resolves at import time.
   out = ir("open flux\n")
-  assert "define __open_" in out and "flux" in out
-  assert "$(call ambient.dissolve, def=__open_" in out and "kind=module)" in out
+  assert "$(call lang.module.from,flux, *)" in out
 
 
 # --- recipe `in <X>` mobility (dispatch into a named ambient) -----------------

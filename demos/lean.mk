@@ -48,9 +48,9 @@ section
 open Classical
 example : A ∨ ¬ A := by
   apply byContradiction
-  intro (h1 : ¬ (A ∨ ¬ A))
+  intro h1
   have h2 : ¬ A := by
-    intro (h3 : A)
+    intro h3
     have h4 : A ∨ ¬ A := Or.inl h3
     show False
     exact h1 h4

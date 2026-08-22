@@ -18,10 +18,11 @@ the chain survives both process hops and container boundaries: a recipe
 that re-invokes this file from inside a container hands the chain to the
 child run, and the child's own `in` extends it.
 
-Both boxes build from one inlined Dockerfile.  The base needs make, bash,
-and gawk to re-run the interpreter, and ships the docker client for the
-next hop; the workspace, the interpreter, and the socket are all mounted
-by the standard container run, so no other setup appears here.
+Both boxes build from one inlined Dockerfile.  The base needs make and
+bash to re-run the interpreter (the stock busybox awk is enough, the
+compiler is dialect-agnostic), and ships the docker client for the next
+hop; the workspace, the interpreter, and the socket are all mounted by
+the standard container run, so no other setup appears here.
 
 '''
 
@@ -30,13 +31,13 @@ from cmk import container, Dockerfile
 
 Dockerfile base(|
   FROM docker:dind
-  RUN apk add -q --update --no-cache coreutils bash gawk make
+  RUN apk add -q --update --no-cache coreutils bash make
 |)
 
 container outer(img=${base.img} entrypoint=bash)(| |)
 container inner(img=${base.img} entrypoint=bash)(| |)
 
-__main__: base.build demo.depth_one demo.nesting demo.unwind
+__main__: demo.depth_one demo.nesting demo.unwind
 
 demo.depth_one:
   '''

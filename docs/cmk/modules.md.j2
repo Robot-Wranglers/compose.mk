@@ -65,6 +65,24 @@ In CMK-Lang the load is usually a **directive** rather than a raw `import.module
 
 {{ site.embed_demo('demos/cmk/module-import-open.cmk', github=github) }}
 
+#### From-imports {% raw %}{#from-imports}{% endraw %}
+<hr class="section-rule lvl-4">
+
+The fourth directive is `from <mod> import <name>, ..`, and it means what it does in Python: each listed name becomes usable **bare**.  The source module can be core (`cmk`, `host.native`) or a disk plugin on `CMK_PLUGINS_DIR`, and the whole module still loads either way, because member bodies are not rewritten and need their siblings.  The name list is the binding contract:
+
+* A member the module declares qualified (`agents.Agent`) binds to its bare name, carrying its whole dotted family with it, so `Agent.new()`, subclassing via `bases=Agent`, and constructor forms all work through the alias.
+* A member the module already declares bare passes through unchanged.
+* A name the module does not define at all faults at import time (`MODULE_MEMBER`); an unresolvable module faults as `MODULE_MISSING`.
+
+```cmk
+from agents import Agent, jqd
+
+jqd events(| {who: .name} |)
+alice <- Agent.new()
+```
+
+The star form (`from <mod> import *`, with an optional `except` list) is the same load without a name contract, and `open <mod>` is its older alias.  Listing a member by its qualified name (`from agents import agents.Agent`) is accepted for compatibility: it membership-checks but binds nothing new.
+
 ### Namespacing
 <hr class="section-rule lvl-3">
 

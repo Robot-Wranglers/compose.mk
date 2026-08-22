@@ -28,7 +28,7 @@ jinja bye_template.j2(|
   bye {{name}}!
 |)
 
-__main__: jinjanator.build
-    '''Build, then feed JSON into each template.'''
+__main__:
+    '''Feed JSON into each template; the image builds on first use.'''
     io.json_builder(name=foo) | hello_template.j2()
     io.json_builder(name=foo) | bye_template.j2()
