@@ -33,7 +33,7 @@ endef
 
 # DynModule1 / DynModule2: two multi-target fragments for cmk.cook.
 # Each is cooked (JIT-compiled) on first call and re-exec'd in a child --
-# unlike a parse-time import.module they don't exist in THIS make process
+# unlike a parse-time import.module they don't exist in this make process
 # until demo.module runs.  Each carries its own __main__ to dispatch.
 define DynModule1
 d1.hello:; cmk.log(hello from dynamically-lifted DynModule1)

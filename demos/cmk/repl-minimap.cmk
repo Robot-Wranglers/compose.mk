@@ -2,11 +2,11 @@
 # repl-minimap.cmk: demonstrates the tux.repl minimap -- an optional 4th region (a small, buffered,
 # dim pane on the right of the panel) that streams a looping target's output [1].
 #
-#   print   = minimap.start    -- a call graph (demo -> compile -> link -> workers) looped via __vm__
+#   print   = minimap.start    -- a call graph (demo, compile, link, workers) looped via __vm__
 #                                 goto, fanning out via flux.pipeline + paced with io.wait.
 #   minimap = minimap.vmstack  -- tails a live execution trace that reads like a tree: each goal emits
-#                                 one line `<MAKELEVEL-indent> <italic-target> { <env keys> }`, so as
-#                                 the call graph descends (each `${make}` a level deeper) + unwinds, the
+#                                 one line of MAKELEVEL indent, italic target, and env keys, so as
+#                                 the call graph descends (a make level deeper each hop) + unwinds, the
 #                                 trace nests + de-nests like a tree.
 #   eval    = mk.repl.kernel   -- a normal REPL: type a target at the prompt to run it.
 #
@@ -24,8 +24,8 @@
 cmk.include.plugins(coroutines.cmk)
 
 # minimap.trace: append one trace line for the current goal to the trace file, formatted
-# `<MAKELEVEL indent> <italic target> { <stack env keys only> }` -- indent makes the stream read as a
-# tree (each `${make}` descent runs a make-level deeper -> nested).  Each goal calls it; the minimap tails
+# a MAKELEVEL indent, the italic target, then the stack env keys.  Indent makes the stream read as a
+# tree (each nested make descent runs a make-level deeper).  Each goal calls it; the minimap tails
 # it.  Fixed filename (one shared file) so the whole call graph stays in real order.
 minimap.trace.file=.tmp.cmk.vmtrace
 minimap.hops.file=.tmp.cmk.mm.hops
@@ -34,8 +34,8 @@ minimap.trace=printf '%b\n' "${GLYPH_MAKELEVEL_INDENT}${ital}${@}${no_ansi}${dim
 
 # print region: a recursive call graph (clean MAKELEVEL nesting) looped via __vm__ goto
 # The outer loop is a flat __vm__.goto (constant depth); each iteration sets GLYPH_INDENT_BASE to the
-# loop's own level (so the tree starts flush-left) then descends a real `${make}` call graph
-# demo -> compile -> link -> {w1,w2,w3 via flux.pipeline}, each `${make}` a make-level deeper, so
+# loop's own level (so the tree starts flush-left) then descends a real nested make call graph
+# demo, compile, link, then w1/w2/w3 via flux.pipeline, each nested make a level deeper, so
 # the emitted trace indents on descent + de-indents as it unwinds -- a live tree.  io.wait paces it.
 @__vm__.env.load
 # minimap.start: the run-once entry -- reset the run scratch (trace + file-tracked hop/bound counters),

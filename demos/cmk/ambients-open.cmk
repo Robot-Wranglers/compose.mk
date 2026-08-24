@@ -18,8 +18,8 @@ http://lucacardelli.name/Papers/MobileAmbientsETAPS98.A4.pdf
 
 # `open <module>` dissolves the module's boundary, merging `probe.*` verbatim into
 # this file's namespace (callable unqualified) -- Cardelli-Gordon `open n`.  A `/`-path
-# opens a file, a bare name opens a plugin; both lower to
-# `$(call import.module, file=.. flat=1)`.
+# opens a file, a bare name opens a plugin; both lower to an import.module
+# call with flat=1.
 open demos/data/ambients.probe.cmk
 # bind the `constructor` declaration keyword bare (docs/compiler prelude)
 from cmk import namespace
@@ -31,7 +31,7 @@ demo.open:
 
 # `*(| body |)` is the inline dual of `open`: it splices an anonymous block's body flat
 # into this namespace -- no boundary, no name.  A leading ctor composes: it runs the block
-# through the ctor first, then dissolves.  Bare `*(||)` is the ctor=identity case.
+# through the ctor first, then dissolves.  A bare star block is ctor=identity.
 *(|
   inline.probe:; @printf "  probe.temp    -> 21.4C (inline ambient)\n"
 |)
@@ -61,9 +61,9 @@ demo.explode:
 
 # `namespace` is a kind for names, bound bare by the `from cmk import namespace` above (`cmk.namespace`
 # qualified).  `namespace NAME[| body |]` qualifies the body's heads under `NAME.` and
-# threads the enclosing `${__name__}`, so nested blocks compose to `tier1.tier2.foo`.
+# threads the enclosing __name__, so nested blocks compose to `tier1.tier2.foo`.
 
-# `namespace *(| .. |)` == `*(| .. |)`: the `namespace` word rides in as `kind=namespace`,
+# `namespace *(| .. |)` matches plain `*(| .. |)`: the word rides in as `kind=namespace`,
 # which has no `.dissolve`, so `ambient.dissolve` falls back to inline eval (a flat
 # splice).
 namespace *(|
@@ -75,7 +75,7 @@ demo.ns.star:
   this.ns.probe
 
 # Two levels: bare heads qualify to `tier1.tier2.*`.  The inner `namespace tier2` fires
-# inside `define tier1`, after tier1 pushes `${__name__}` -- the closure.
+# inside `define tier1`, after tier1 pushes __name__ -- the closure.
 namespace tier1[|
   namespace tier2[|
     foo:; @printf "  ran %s\n" "$@"
@@ -92,8 +92,8 @@ demo.ns.nested:
   cmk.log(reflection: tier1.tier2.__name__ = ${tier1.tier2.__name__})
 
 # `import <module> as sensors` does not dissolve -- it mounts the module as a nested
-# ambient under `sensors.*` (boundary intact).  Lowers to
-# `$(call import.module, file=.. namespace=sensors)`.
+# ambient under `sensors.*` (boundary intact).  Lowers to an import.module
+# call with namespace=sensors.
 import demos/data/ambients.probe.cmk as sensors
 
 demo.mount:

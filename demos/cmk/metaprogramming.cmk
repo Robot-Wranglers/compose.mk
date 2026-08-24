@@ -73,10 +73,10 @@ demo.reflection:
 
 # dsl / lang.seed!: ( a kind whose instances are data, callable via a callform )
 #   dsl NAME[|..|] creates a kind; each instance stashes its own banana body as .shape (the
-#   data, read back with $(value self)) and every instance gets the .__call__ dunder for
-#   free, so a bare NAME() callform invokes it.  bclang is a tiny calculator: a named
-#   instance is a bc program NAME() computes, and an anonymous one runs inline at recipe
-#   level via the anon-immediate NAME(|..|).__call__().
+#   data, read back as the define value) and every instance gets the .__call__
+#   dunder for free, so a bare NAME callform invokes it.  bclang is a tiny
+#   calculator: a named instance is a bc program the callform computes, and an
+#   anonymous one runs inline at recipe level via the anon-immediate form.
 #   Focused version: demos/cmk/dsl-bclang.cmk (kept here too for the
 #   subclassing example below).
 
@@ -113,11 +113,11 @@ demo.inherit:
 
 # subclassing a non-class: ( the "class" / "bases" naming is looser than it reads )
 #   A `bases=` entry need not itself be a class.  bclang above is a `dsl` kind, not a class --
-#   it has no .__class__.  Yet class Volume(bases=bclang) subclasses it and it just works: bclang's
-#   callable behavior flows to Volume's instances, which also gain class reflection.  So "subclass a
-#   non-class" succeeds -- the semantics compose and break nothing; only the naming suggests a
-#   constraint that isn't enforced.  (A `dsl` or mixin base flows this way; a `constructor` kind does
-#   not -- noted for reference.  This is where the subjq/jqlang subkind in jqlang.cmk comes from.)
+#   it has no .__class__.  Yet a Volume class with bases=bclang subclasses it and it just works:
+#   bclang's callable behavior flows to Volume's instances, which also gain class reflection.  So
+#   "subclass a non-class" succeeds -- the semantics compose and break nothing; only the naming
+#   suggests a constraint that isn't enforced.  (A `dsl` or mixin base flows this way; a
+#   `constructor` kind does not -- noted for reference.  See the subjq/jqlang subkind in jqlang.cmk.)
 
 class Volume(bases=bclang classvars='units=cubic')[||]
 
@@ -144,7 +144,7 @@ demo.umbrella:
   log(bare alias ${sep} octahedron mro = ${octahedron.__mro__})
 
 # protocol + bases= : ( a contract that creates a mixin + a default )
-#   cmk.protocol NAME(abstract=hook)(| '''doc''' + default |) is a KIND
+#   A cmk.protocol NAME with abstract=hook and a body banana is a KIND
 #   that is really a MIXIN factory.  (kwargs) are metaclass arguments --
 #   abstract= names the contract member (feeds structural conformance,
 #   lang.proto.provided_by).  (| body |) is a '''docstring''' + default

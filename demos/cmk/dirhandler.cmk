@@ -12,12 +12,12 @@ matching files and then short-circuited so the body never sees the directory.
 The decorator is glue over two reusable core helpers, split along the axes it
 would otherwise conflate:
 
-  * flux.progress/<target> -- OBSERVABILITY.  An observed serial iterator: read
+  * flux.progress/<target> -- observability.  An observed serial iterator: read
     items on stdin, run <target>/<item> for each.  progress=0 narrates `X / N`
     per item and lets output flow; any other value swallows output behind a
     determinate bar and replays only the last (failed) command output.
 
-  * flux.each.dir/<target>/<dir> -- ENUMERATION.  Find files under the dir
+  * flux.each.dir/<target>/<dir> -- enumeration.  Find files under the dir
     matching the glob, then hand them to flux.progress.
 
 This demo just exercises the decorator; the helpers themselves live in core.

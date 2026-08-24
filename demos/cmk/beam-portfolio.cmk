@@ -3,8 +3,8 @@
 
 '''
 An unguarded-failure vm.choose search under beam-tramp: a miss exits nonzero so the
-RESUME safety-net backtracks. Under CMK_TRAMP_CHOOSE=parallel the whole frontier runs
-CONCURRENTLY on the BEAM node and the first hit wins. Needs docker.
+resume safety-net backtracks. Under CMK_TRAMP_CHOOSE=parallel the whole frontier runs
+concurrently on the BEAM node and the first hit wins. Needs docker.
 '''
 
 from platform.beam import beam.tramp

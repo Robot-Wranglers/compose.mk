@@ -3,7 +3,7 @@
 # repl-tree.cmk: 
 #   the raw tux.repl `minimap=` region -- an optional 4th
 #   region (a small RHS pane) whose feeder the Go wrapper auto-detects: print
-#   one `{label,active,children}` JSON object per line and it renders a live
+#   one JSON object per line (label, active, children), rendering a live
 #   lipgloss tree (latest object replaces the pane), the `active` node bright
 #   + its ancestors on-path; a non-JSON feeder instead scrolls as text (the
 #   region's other auto-detect mode) [1].
@@ -18,21 +18,21 @@
 # Contrast debugger-example.cmk, which draws its tree through the unified
 # `read` metadata channel (mm_tree); this demo is the standalone `minimap=`
 # region + its JSON auto-detect.  The call graph is a __vm__ goto loop over
-# demo -> compile -> link -> {w1,w2,w3 via flux.pipeline}; the `vm_trace`
-# pragma injects ${__vm__.frame.enter}, so the live frames give both the
+# demo, compile, link, then w1/w2/w3 via flux.pipeline; the `vm_trace`
+# pragma injects __vm__.frame.enter, so the live frames give both the
 # active IP (deepest frame) the feeder highlights and the monotonic step
 # counter the loop is bounded by -- no hop/max bookkeeping files.
 #
 #   print   = tree.demo  -- the goto-looped call graph
-#                           (vm_trace -> real frames + step counter)
+#                           (vm_trace gives real frames + a step counter)
 #   minimap = tree.view  -- loops printing the call graph as one JSON
 #                           tree/line, the live IP marked active
 #   eval    = tux.repl.kernel
 #
 #   USAGE:  ./demos/cmk/repl-tree.cmk
-#               # -> the REPL + tree pane (needs a tty)
+#               # the REPL + tree pane (needs a tty)
 #           ./demos/cmk/repl-tree.cmk tree.demo
-#               # -> run the call-graph loop inline (no REPL)
+#               # run the call-graph loop inline (no REPL)
 #   Bounded by CMK_TREE_MAX vs the engine step counter (the goto
 #   re-dispatches each cycle).
 #

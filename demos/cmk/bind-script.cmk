@@ -23,7 +23,7 @@ script2.sh(|
 
 # The `in`-form (script1.sh) runs the body in the service directly.  The decorator
 # form (script2.sh) additionally survives re-entrant dispatch: it runs from the
-# container whether called from the host OR from inside the container (the
+# container whether called from the host or from inside the container (the
 # `debian.dispatch/` round-trip below re-enters and still runs correctly).
 __main__: \
     script1.sh \

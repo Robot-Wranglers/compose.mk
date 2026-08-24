@@ -19,7 +19,7 @@ dsl.jqlang extract(| { stage: "extracted", n: 1 } |)
 dsl.jqlang transform(| .n += 1 |)
 dsl.jqlang load(| { loaded: . } |)
 
-# fold __pipe__ into ONE fused jq program (compile time), first-class.
+# fold __pipe__ into one fused jq program (compile time), first-class.
 dataflow etl(combinator=__pipe__)(| extract transform load |)
 
 # goal-layer error handling still wraps it (legitimately goal-layer).

@@ -61,7 +61,7 @@ SPACE   ?= 16      # size of the search space (candidates 0 .. SPACE-1)
 TARGET  ?= 13      # the value a search is looking for
 WORKERS ?= 4       # how many diversified searches race
 # per-probe delay (seconds).  Kept well above supervised-startup jitter so search
-# ORDER, not process-launch noise, decides the race: the seed nearest the target
+# order, not process-launch noise, decides the race: the seed nearest the target
 # reaches it first.  Lower it and the winner becomes noise-dominated (still valid,
 # just not a clean demonstration of diversification).
 DELAY   ?= 0.35

@@ -26,24 +26,24 @@ Docker-free.
 import log
 from cmk import dsl, class
 
-# typed argument builders: ( name each selected recipe var as a jq $var )
+# typed argument builders: ( selected recipe vars become jq variables )
 #   str= binds each listed var with --arg (jq string); json= with --argjson (jq's
 #   typed analog: numbers/bools/objects).  The jq var name matches the recipe var.
 jqn.str=$(foreach v,$(strip ${1}),--arg ${v} "$$${v}" )
 jqn.json=$(foreach v,$(strip ${1}),--argjson ${v} "$$${v}" )
 
 # typed-selection subkind: ( the caller picks which recipe vars go in, and each type )
-#   Overrides the base call so str=/json= select recipe vars as jq $vars; the program
-#   reads them by name, so there is no stdin (jq -n).  Both lists default to empty, so a
-#   no-kwarg call degrades to a bare jq -n.
+#   Overrides the base call so str= and json= select recipe vars as jq
+#   variables; the program reads them by name, so there is no stdin (jq -n).
+#   Both lists default to empty, so a no-kwarg call degrades to a bare jq -n.
 class subjq(bases=dsl.jqlang)[|
   ${self} = $(strip $(call mk.unpack.kwargs, ${__args__}, str= json=))${jq} -n $(call jqn.str,${kwargs_str})$(call jqn.json,${kwargs_json}) -f ${self}.fd()
 |]
 
 # named-input program: ( the caller picks which recipe vars go in, and each type )
-#   The jq program is a (| .. |) banana, so $var stays literal (jq's own variable
-#   syntax).  It names its inputs as $vars, so the caller selects which recipe vars go
-#   in, and each one's jq type (str= -> --arg, json= -> --argjson).
+#   The jq program is a (| .. |) banana, so a jq variable stays literal (jq's
+#   own syntax).  It names its inputs, so the caller picks which recipe vars
+#   go in, and each one's jq type (str= gives --arg, json= gives --argjson).
 subjq jqlang_prog(|
   { who: $user, team: $role, ready: $ready }
 |)
@@ -108,10 +108,10 @@ demo.inlined:
   dsl.jqlang(| { vars: ., total: (. | length) } |).locals()
 
 # stream callform: ( (| filter |)[cmd] runs cmd | filter, captures stdout )
-#   Captures stdout into a make var.  ${jb} foo=bar builds {"foo":"bar"} and pipes it
-#   through a jqlang-shape jq program as a filter.  The body is raw shell, so the
-#   program is inlined (a jqlang_prog reference would need the make-expansion the
-#   materialized body can't do).
+#   Captures stdout into a make var.  A jb call on foo=bar builds a one-key
+#   object and pipes it through a jqlang-shape jq program as a filter.  The
+#   body is raw shell, so the program is inlined (a jqlang_prog reference
+#   would need the make-expansion the materialized body can't do).
 stream_result = (| jq -c '{ vars: ., total: (. | length) }' |)[${jb} foo=bar]
 
 demo.stream:

@@ -1,7 +1,7 @@
 #!/usr/bin/env -S ./compose.mk cmk run
 
 '''
-A tiny miniKanren in cmk on ONE engine: nested s-expression terms, unification
+A tiny miniKanren in cmk on one engine: nested s-expression terms, unification
 with logic variables, and a multi-answer search that rides the vm backtracker.
 A term is a paren-tokenized word-list, so lists, dotted pairs, and nested trees
 all use the same car/cdr/unify; membero, appendo, and parento run over them, and

@@ -11,7 +11,7 @@ from cmk import container
 container py311(img=python:3.11-slim-bookworm entrypoint=python)(| |)
 
 # optimized: run a file with python -O -B in py311 (the customized interpreter
-# invocation) -- the code-objects bind to THIS target (not py311 directly), so
+# invocation) -- the code-objects bind to this target (not py311 directly), so
 # it never re-enters py311's dispatch.
 optimized/%:; $(call py311.__call__,-O -B ${*})
 

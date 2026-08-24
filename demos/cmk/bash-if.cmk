@@ -33,16 +33,16 @@ from cmk import dsl
 # bashlang: an inlined module holding the dsl builder family.  A cooked [| .. |] block whose body
 # is CMK-lang; loading it (below) evals that body, creating the kinds.
 bashlang[|
-  # operand kinds: thin fragment capturers -- an instance value IS its clause body.  Left bare so
-  # a chain step reads `.then(| .. |)`, not `.bashlang.then(| .. |)`.
+  # operand kinds: thin fragment capturers -- an instance value is its clause body.  Left bare so
+  # a chain step reads .then rather than .bashlang.then.
   dsl then[||]
   dsl else[||]
   dsl over[||]
   dsl do[||]
 
   # compound: the shared base -- __dot__ copies each right operand's body into
-  # ${self}.<operand-kind> (a define, so shell $ survives verbatim) and returns self so the fold
-  # chains.  A builder then blockrefs each clause by name: ⬦${self}.then, ⬦${self}.over, ..
+  # a per-kind member on self (a define, so shell $ survives verbatim), returning self
+  # so the fold chains.  A builder blockrefs each clause by name, one glyph per clause.
   dsl bashlang.compound[|
     ${self}.__dot__ = $(eval define ${self}.$(lastword $(subst ., ,$($(strip ${__args__}).__class__)))$(nl)$(value $(strip ${__args__}))$(nl)endef)${self}
   |]

@@ -15,13 +15,13 @@ dataflow = $(call lang.banana.as,$(strip $(call mk.kwargs.get,${1},def)),$(call 
 # foldl1: combine the first two via the combinator, prepend, recurse.
 _dataflow.reduce = $(if $(word 2,${2}),$(call _dataflow.reduce,${1},$(call $(firstword ${2}).${1},$(word 2,${2})) $(wordlist 3,$(words ${2}),${2})),${2})
 
-# EXAMPLE A: combinator=__pipe__, the dataflow (pipe) reading.
+# example A: combinator=__pipe__, the dataflow (pipe) reading.
 dsl.jqlang addone(| .n + 1 |)
 dsl.jqlang double(| . * 2 |)
 dsl.jqlang wrap(|   { result: . } |)
 dataflow pipeline(combinator=__pipe__)(| addone double wrap |)
 
-# EXAMPLE B: combinator=__add__, the fold (merge) reading.
+# example B: combinator=__add__, the fold (merge) reading.
 dsl.cmklang lib(|
   say:; cmk.log(composed then cooked)
 |)

@@ -5,7 +5,7 @@
 '''
 A second take on ambient-siblings.cmk.  There the two boxes are declared flat
 and converge on one top-level channel the parent owns; here they are declared
-INSIDE a shared ambient and each box owns its own mailbox, so a message is
+inside a shared ambient and each box owns its own mailbox, so a message is
 addressed to the recipient by name and no channel is declared anywhere.  alice
 casts into bob's mailbox from inside her box, bob reads his own from inside
 his, and the enclosing ambient only schedules.

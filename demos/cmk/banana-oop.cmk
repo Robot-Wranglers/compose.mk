@@ -35,7 +35,7 @@ class Rhombus(bases=Polygon)[|
     log(self.__im_self__ is a rhombus)
 |]
 
-# A Square is-a Rectangle AND a Rhombus (equal angles and equal sides); both
+# A Square is-a Rectangle and a Rhombus (equal angles and equal sides); both
 # define describe, so the leftmost base wins.
 class Square(bases=Rectangle,Rhombus)(||)
 

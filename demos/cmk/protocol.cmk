@@ -9,7 +9,7 @@
 The protocol keyword gives a first-class ABC / interface for a dunder,
 beside class / container / namespace.  One declaration form:
 NAME(kwargs)(| body |), where the kwargs (abstract / dunder / bases)
-ride the call-args and the body is the OPTIONAL default -- empty for a
+ride the call-args and the body is the optional default -- empty for a
 pure structural interface, docstring-only for a documented one, or a
 real impl for a mixin.  A structural check (.provided_by, Python's
 __subclasshook__) verifies conformance, with .register for conformers

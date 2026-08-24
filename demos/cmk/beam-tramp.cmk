@@ -2,7 +2,7 @@
 # beam-tramp.cmk: vm.choose search under the beam-tramp backend.
 
 '''
-A vm.choose/backtrack search run under beam-tramp (the BEAM trampoline BACKEND,
+A vm.choose/backtrack search run under beam-tramp (the BEAM trampoline backend,
 platform.beam's beam.tramp target). __main__ hands find/TARGET to beam.tramp, which
 drives the whole VM loop on a BEAM node instead of the bash supervisor. Needs docker.
 '''

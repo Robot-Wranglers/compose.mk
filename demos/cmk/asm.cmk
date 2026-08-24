@@ -1,7 +1,7 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# banana-asm.cmk: characterizing NESTED bananas.
+# banana-asm.cmk: characterizing nested bananas.
 '''
-Nests a NAMED banana inner directly inside a NAMED banana outer, to
+Nests a named banana inner directly inside a named banana outer, to
 characterize named-in-named nesting (the corpus only has anonymous
 nested cases).  USAGE: ./demos/cmk/banana-asm.cmk
 '''

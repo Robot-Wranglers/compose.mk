@@ -38,7 +38,21 @@
                  "SHELL", "HOME", "YAML", "TTY", "DSL", "TOML", "CSS", "SVG",
                  "PHONY", "PREFIX", "SRC", "DIR", "ENV", "STDIN", "STDOUT",
                  "STDERR", "RECEIVERS", "JUNCTIONS", "GUEST", "SERVICES",
-                 "PAYLOAD", "SECTION", "NDJSON"]
+                 "PAYLOAD", "SECTION", "NDJSON",
+                 // demo vocabulary, 2026-08-24: acronyms and proper nouns
+                 "BEAM", "ABC", "CEK", "MRO", "DFS", "LIFO", "FFI", "FQN",
+                 "ETL", "RAG", "OOP", "PEP", "ETAPS", "FTA", "LME", "UNSAT",
+                 "JS", "JPEG", "WM", "FD", "IDEAS",
+                 // literal syntax: dockerfile instructions and trap names
+                 "FROM", "RUN", "COPY", "ENTRYPOINT", "CHMOD",
+                 "INT", "EXIT", "DEBUG", "TRUE", "FALSE",
+                 // env vars and stage names read verbatim from usage lines
+                 "TARGET", "WORKERS", "DELAY", "SPACE", "SEED", "POOL", "NQ",
+                 "PIPELINE", "INPUT", "WHO", "GREETING", "WORLD", "BOOM",
+                 "BUILD", "REFS",
+                 // metasyntactic placeholders in grammar synopses
+                 "NAME", "KIND", "VAR", "LIST", "BODY", "CLASS", "CONFIG",
+                 "IMG", "IMAGE", "MIXIN", "INFO"]
   },
 
   // techwrite carries em-dash ban plus code-in-prose for docs; supersedes the docs_prose_gate hook

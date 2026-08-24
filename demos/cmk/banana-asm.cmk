@@ -40,7 +40,7 @@ demo.docs:
   log(root.node2: ${root.node2.__doc__})
 
 demo.children:
-  ''' __children__ lists direct members in SOURCE order (node1 node2). '''
+  ''' __children__ lists direct members in source order (node1 node2). '''
   log(root.__children__ = ${root.__children__})
 
 demo.props:
