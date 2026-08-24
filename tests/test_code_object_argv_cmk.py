@@ -15,6 +15,7 @@ Kept green alongside test_code_object_parity_cmk.py (the construction contract) 
 test_code_object_template_cmk.py (the Templatable surface).
 """
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -29,9 +30,13 @@ COMPOSE = REPO / "compose.mk"
 def _run(src, tmp_path, goal="probe", cwd=None):
   f = tmp_path / "argv.cmk"
   f.write_text(src)
+  run_cwd = str(cwd or REPO)
+  # pin the docker workspace mount to this run's cwd, as conftest's cmk_runner does
+  env = {**os.environ, "DOCKER_HOST_WORKSPACE": run_cwd}
   r = subprocess.run(
     [str(COMPOSE), "cmk", "run", str(f), goal],
-    cwd=str(cwd or REPO),
+    cwd=run_cwd,
+    env=env,
     stdin=subprocess.DEVNULL,
     capture_output=True,
     text=True,

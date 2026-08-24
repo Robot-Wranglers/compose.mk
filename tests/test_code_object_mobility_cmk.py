@@ -13,6 +13,7 @@ run-alias, so feeding a code-object back through the dispatcher reads the body, 
 Host arm is docker-free (bind to host.local); container arm is docker-gated.
 """
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -27,9 +28,13 @@ COMPOSE = REPO / "compose.mk"
 def _run(src, tmp_path, goal, cwd=None):
   f = tmp_path / "mob.cmk"
   f.write_text(src)
+  run_cwd = str(cwd or REPO)
+  # pin the docker workspace mount to this run's cwd, as conftest's cmk_runner does
+  env = {**os.environ, "DOCKER_HOST_WORKSPACE": run_cwd}
   r = subprocess.run(
     [str(COMPOSE), "cmk", "run", str(f), goal],
-    cwd=str(cwd or REPO),
+    cwd=run_cwd,
+    env=env,
     stdin=subprocess.DEVNULL,
     capture_output=True,
     text=True,

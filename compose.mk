@@ -185,9 +185,14 @@ comma=,
 # it is load-bearing for DIND / container-dispatch path resolution, and freezing it to
 # the parse-time pwd (`:=`) mangles the in-container `-f`. It also does not hit the
 # make-4.4 $(shell) blowup in practice (set/inherited before the parse-time storm).
+_dhw.origin:=$(origin DOCKER_HOST_WORKSPACE)
 export DOCKER_HOST_WORKSPACE?=$(shell pwd)
 # freeze to simple: make 4.4 re-expands exported recursive vars per child, ~330 pwd spawns per bare-host run
 export DOCKER_HOST_WORKSPACE:=$(DOCKER_HOST_WORKSPACE)
+# a pwd-derived default stays process-local: exporting it would masquerade as a deliberate override for any descendant with a different cwd, and the dind crossing rides docker.env.standard instead
+ifeq (undefined,$(_dhw.origin))
+unexport DOCKER_HOST_WORKSPACE
+endif
 
 ifdef OS_MACOS
 $(call m5.declare!, DOCKER_UID:=0, DOCKER_GID:=0, DOCKER_UGNAME:=root)

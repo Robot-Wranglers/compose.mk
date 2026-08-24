@@ -10,7 +10,7 @@
 
 * [ambient-ladder.cmk](./ambient-ladder.cmk) (95 lines)
 
-* [ambient-siblings-v2.cmk](./ambient-siblings-v2.cmk) (81 lines)
+* [ambient-siblings-v2.cmk](./ambient-siblings-v2.cmk) (114 lines)
 
 * [ambient-siblings.cmk](./ambient-siblings.cmk) (72 lines)
 
@@ -115,6 +115,8 @@
 * [docker.import.cmk](./docker.import.cmk) (29 lines)
 
 * [dockerfile-build.cmk](./dockerfile-build.cmk) (34 lines)
+
+* [dockerfs-fluent.cmk](./dockerfs-fluent.cmk) (65 lines)
 
 * [dockerfs.cmk](./dockerfs.cmk) (72 lines)
 

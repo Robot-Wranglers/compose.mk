@@ -92,7 +92,7 @@ $ ./compose.mk \
 
 This is neat so far.. but it's not that useful to run *clean/build/test* in parallel.
 
-How about something more practical, like starting a TUI that runs the *clean/build* targets back-to-back, plus a separate pane that's running *test* in a loop?  This is actually doable.  For it to happen, we can leverage the workflow helpers in the [`flux.*`]({{_}}/api#api-flux) target namespace.  The command line for this starts to get complicated, so let's build it up one piece at a time. 
+How about something more practical, like starting a TUI that runs the *clean/build* targets back-to-back, plus a separate pane that's running *test* in a loop?  That's doable with the workflow helpers in the [`flux.*`]({{_}}/api#api-flux) target namespace.  The command line for this starts to get complicated, so let's build it up one piece at a time. 
 
 Running `clean` and `build` in one step:
 
@@ -133,7 +133,7 @@ $ layout=horizontal \
 #### Progress Bars
 <hr class="section-rule lvl-4">
 
-Long-running fan-outs get a progress bar for free: any target built from the `@io.dirhandler` decorator (or `flux.each.dir`) streams one automatically.  Under the hood this is [`tux.progress`](https://github.com/mattvonrocketstein/tux.progress) — a tiny static-binary renderer driven by newline-delimited JSON (`{index, total, output}`) on stdin.  It draws a charm-style bar on **stderr** while passing the stream through unchanged on **stdout**, runs from a `scratch` container (nothing lands on your host), and disables itself outside a TTY or in CI.
+Long-running fan-outs get a progress bar for free: any target built from the `@io.dirhandler` decorator (or `flux.each.dir`) streams one automatically.  Under the hood this is [`tux.progress`](https://github.com/mattvonrocketstein/tux.progress), a tiny static-binary renderer driven by newline-delimited JSON (`{index, total, output}`) on stdin.  It draws a charm-style bar on **stderr** while passing the stream through unchanged on **stdout**, runs from a `scratch` container (nothing lands on your host), and disables itself outside a TTY or in CI.
 
 Anything emitting that contract can drive it directly:
 

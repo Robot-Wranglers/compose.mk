@@ -71,14 +71,14 @@ main-site-relative path.
 Two style linters for the demo sources (`demos/cmk/*.cmk` and `demos/*.mk`) ship in
 `.automation.cmk` (the root `Makefile` already imports it):
 
-* `make lint.demos` — comment/docstring house style: line width, two-column padded label
-  lists, comment blocks that should be target docstrings, docstring `'''` placement,
+* `make lint.demos`: comment/docstring house style, covering line width, two-column padded
+  label lists, comment blocks that should be target docstrings, docstring `'''` placement,
   `cmk_dialect` header placement, and module-docstring placement (directly below the header).
-* `make lint.demos/<path>` — the same checks over a single file (`lint.demo/<path>` also works).
-* `make lint.callforms` — legacy explicit macro-call syntax that a `cmk.name(..)` callform replaces.
+* `make lint.demos/<path>`: the same checks over a single file (`lint.demo/<path>` also works).
+* `make lint.callforms`: legacy explicit macro-call syntax that a `cmk.name(..)` callform replaces.
 
 Each prints `file:line: severity: issue` and exits nonzero on any `error` (a `warning` does
-not fail).  Add `fix=1` to mechanically fix the *first* offender instead of reporting it —
+not fail).  Add `fix=1` to mechanically fix the *first* offender instead of reporting it:
 one per run, with a before/after; re-run to fix the next:
 
 ```bash
