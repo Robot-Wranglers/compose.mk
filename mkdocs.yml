@@ -112,6 +112,7 @@ nav:
       - 'Matrioshka Automata': matrioshka.md
       - 'All Demos (Index)': cmk/demos.md
       - 'Compiler Tutorial': cmk/compiler.md
+      - 'M5 Macro & Templating Engine': cmk/m5.md
       - 'Compiler Pragmas': cmk/pragmas.md
       - 'Linting': cmk/lint.md
     # - 'Justfile Interoperability': demos/just.md

@@ -1,5 +1,10 @@
 // CSOP config for compose.mk -- inert unless/until the csop plugin is installed here.
 {
+  // racc: enabled per matt, 2026-08-24, after shell heredocs routed core edits past the hyg and techwrite gates.
+  "racc": {
+    "default_enabled": true
+  },
+
   "freeze": {
     "default_enabled": true,
     "frozen": [

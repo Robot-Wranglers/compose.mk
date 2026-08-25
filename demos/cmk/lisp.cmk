@@ -35,8 +35,15 @@ lisp.car  = lisp.take(lisp.span(m5[1].rest),m5[1].rest)
 lisp.cdr  = lisp.cdr2(lisp.dropn(lisp.car(m5[1]),m5[1].rest))
 lisp.cdr2 = $(if $(filter .,m5[1].first),lisp.take(lisp.span(m5[1].rest),m5[1].rest),$(m5.tok.lparen) m5[1])
 
-# wire: a nested term to a vm-safe atom and back; parens map to Lp/Rp, dotted to Dt.
-lisp.wire   = $(subst $(space),.,$(strip $(subst $(m5.tok.rparen),Rp,$(subst $(m5.tok.lparen),Lp,$(subst .,Dt,m5[1])))))
-lisp.unwire = $(subst Dt,.,$(subst Rp,$(m5.tok.rparen),$(subst Lp,$(m5.tok.lparen),$(subst .,$(space),m5[1]))))
+# the wire alphabet as data (char to glyph), in the m5.tok mark namespace escape reads.
+$(call m5.declare, \
+  m5.tok.lisp_dot.char = ., m5.tok.lisp_dot = Dt, \
+  m5.tok.lisp_lp.char = $(m5.tok.lparen), m5.tok.lisp_lp = Lp, \
+  m5.tok.lisp_rp.char = $(m5.tok.rparen), m5.tok.lisp_rp = Rp, \
+  lisp.marks := lisp_dot lisp_lp lisp_rp)
+
+# wire folds a term to a vm-safe atom, unwire walks the same marks in reverse.
+lisp.wire   = $(subst $(space),.,$(strip $(call m5.escape,m5[1],$(lisp.marks))))
+lisp.unwire = $(call m5.unescape,$(subst .,$(space),m5[1]),$(call m5.lex.rev,$(lisp.marks)))
 lisp.nilw  := Lp.Rp
 lisp.consw  = Lp.$(m5[1]).Dt.$(m5[2]).Rp

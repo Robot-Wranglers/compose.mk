@@ -16,6 +16,7 @@ import pytest
 pytestmark = pytest.mark.unit
 
 COMPOSE_MK = Path(__file__).resolve().parent.parent / "compose.mk"
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def _wrapper(tmp_path):
@@ -255,3 +256,72 @@ def test_fresh_cwd_no_dotcmk_litter(cmk, tmp_path):
   assert list((xdg / "compose.mk").glob(".tmp.hosted.*.mk")), (
     "cache should be in XDG"
   )
+
+
+# --- target enumeration: what each surface can see ---------------------------
+# Per-surface coverage and the scanner fix it implies: scratch/help-enumeration-surfaces.md
+
+# Witnesses, one per quadrant of (hosted | seed) x (parametric | literal).
+_HOSTED_PARAMETRIC = ["flux.retry", "flux.pool"]
+_HOSTED_LITERAL = ["hosted.selftest", "mk.stat", "io.echo"]
+_SEED_PARAMETRIC = ["mk.help.target", "docker.image.run"]
+_SEED_LITERAL = ["flux.ok"]
+_ALL_WITNESSES = (
+  _HOSTED_PARAMETRIC + _HOSTED_LITERAL + _SEED_PARAMETRIC + _SEED_LITERAL
+)
+
+
+def _bases(names):
+  return {n.rstrip("/%").rstrip("/") for n in names}
+
+
+def _help_names(cmk):
+  r = cmk("help", env={"CMK_DISABLE_HOOKS": "1"})
+  assert r.ok, r.stderr
+  return _bases(_ANSI.sub("", r.stdout).split())
+
+
+def _mk_targets_names(cmk):
+  r = cmk("mk.targets", env={"path": str(COMPOSE_MK)})
+  assert r.ok, r.stderr
+  return _bases(_ANSI.sub("", r.stdout).split())
+
+
+def test_hosted_parametric_targets_resolve_at_runtime(cmk):
+  """The hosted targets the two surfaces disagree about are real, callable rules."""
+  for target in _HOSTED_PARAMETRIC:
+    r = cmk("-n", "%s/flux.ok" % target)
+    assert "No rule to make target" not in (r.stdout + r.stderr), target
+
+
+def test_help_lists_every_quadrant(cmk):
+  """`help` spans both database sections, so no quadrant is missing from it."""
+  listed = _help_names(cmk)
+  missing = set(_ALL_WITNESSES) - listed
+  assert not missing, sorted(missing)
+
+
+def test_mk_targets_lists_the_seed(cmk):
+  """The half of the scanner that works: seed targets, parametric ones included."""
+  listed = _mk_targets_names(cmk)
+  missing = set(_SEED_PARAMETRIC + _SEED_LITERAL) - listed
+  assert not missing, sorted(missing)
+
+
+@pytest.mark.xfail(
+  strict=True,
+  reason="`.awk.completion.scan` enters `define __hosted__` but its recipe-line guard "
+  "then drops every indented line, and the partition is indented, so `mk.targets`, "
+  "`help.local`, and `cmk cli targets` all report the seed only",
+)
+def test_mk_targets_lists_the_hosted_partition(cmk):
+  """Desired state: the scanner reports targets authored in `__hosted__` too.
+
+  Both hosted quadrants are asserted together because they fail for one reason: the
+  literals sit at the partition's top level, the parametric ones inside exploded
+  sub-modules, and the guard discards both.  Stripping a single indent level would
+  turn only the literal half green.
+  """
+  listed = _mk_targets_names(cmk)
+  missing = set(_HOSTED_LITERAL + _HOSTED_PARAMETRIC) - listed
+  assert not missing, sorted(missing)

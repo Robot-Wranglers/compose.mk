@@ -9929,8 +9929,12 @@ endef
 ## BEGIN: help.* :: Help targets and macros
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
+# Interactive rendering for the name-sorted target list: a bold heading per namespace root (the roots lang.mk.dir reports) over its members, parametric ones italic, wrapped on visible width since the styles do not count.
+_help_group=awk -v w=$${width:-${io.term.width}} -v b="${bold}" -v i="${ital}" -v z="${no_ansi}" '{ n=$$0; d=index(n,"."); ns=(d>0)?substr(n,1,d-1):n; s=index(ns,"/"); if(s>0) ns=substr(ns,1,s-1); if(ns!=prev){ if(len>0) print line; if(prev!="") print ""; printf "%s%s:%s\n", b, ns, z; prev=ns; line=""; len=0 } m=(index(n,"%")>0)? i n z : n; if(len>0 && len+2+length(n)>w){ print line; line="  " m; len=2+length(n) } else { line=(len==0)? "  " m : line "  " m; len=(len==0)? 2+length(n) : len+2+length(n) } } END{ if(len>0) print line }'
+
+# Explicit targets come from the database's Files section and pattern rules from Implicit Rules, so span both; a rule head can carry aliases, hence the word-split, and a dunder is private in any segment, not just the first.
 define _help_gen
-(LC_ALL=C $(MAKE) -pRrq -f $(firstword $(MAKEFILE_LIST)) : ${stderr_devnull} | awk -v RS= -F: '/(^|\n)# Files(\n|$$)/,/(^|\n)# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' | sort | grep -E -v -e '^[^[:alnum:]]' -e '^$@$$' | LC_ALL=C sort| uniq || true)
+(LC_ALL=C $(MAKE) -pRrq -f $(firstword $(MAKEFILE_LIST)) : ${stderr_devnull} | awk -v RS= -F: '/(^|\n)# (Implicit Rules|Files)(\n|$$)/,/(^|\n)# Finished Make data base/ {if ($$1 !~ "^[#.]") {n=split($$1,a," "); for(i=1;i<=n;i++) print a[i]}}' | sort | grep -E -v -e '^[^[:alnum:]]' -e '^$@$$' -e '(^|[./])__[A-Za-z0-9_]*__([./]|$$)' | LC_ALL=C sort| uniq || true)
 endef
 
 help.local: 
@@ -9964,7 +9968,7 @@ help:
 	&& case $${count} in \
 		0) ( $(call _help_gen) > $${tmpf} \
 			&& count=`cat $${tmpf} | ${stream.count.lines}` && count="${yellow}$${count}${dim} items" \
-			&& cat $${tmpf} \
+			&& if ${io.tty.stdout}; then ${_help_group} < $${tmpf}; else cat $${tmpf}; fi \
 			&& $(call log.docker, help ${sep} ${dim}Answered help for: ${no_ansi}${bold}top-level ${sep} $${count}) \
 			&& case ${MAKEFILE} in \
 				${CMK_SRC}) $(call log.docker, help ${sep} ${dim}For more specific help use ${no_ansi}${red}${MAKEFILE} help/<target>) ;; \
