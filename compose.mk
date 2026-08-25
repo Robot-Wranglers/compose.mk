@@ -363,6 +363,8 @@ lang.grammar.kwargs.subject := def namespace file
 ## * m5.def! :: Write pole — freeze a body into a named define
 ## * m5.def.! :: Write, live — the name self-evals its template on each use
 ## * m5.ctx? :: Read a kwarg from a k=v list (quote-aware, strips)
+## * m5.at / m5.rest :: List ops: element at a dynamic index; the list minus its head
+## * m5.select / m5.pluck :: Keep (or read) list elements whose %-patterned var is defined
 ## * m5[1] / m5[2..4] :: Inline positional arg accessors (expand in-frame)
 ## * m5[1][KEY] / m5[def|namespace|file] :: Arg-1 kwarg accessors (quote-aware)
 ## * m5[1].gensym / m5.gensym :: codegen kwarg accessors from a key list
@@ -385,7 +387,6 @@ m5.set.op = $(call m5!,$(m5.self).$(1) $(2) $(3))
 # Save/restore stack: a scalar plus a shadow list, ꙮ standing in for an empty value.
 m5.stack.push = $(or $(1),ꙮ) $(2)
 m5.stack.top = $(patsubst ꙮ,,$(firstword $(1)))
-m5.stack.rest = $(wordlist 2,$(words $(1)),$(1))
 m5.ctx? =$(if $(findstring ",$(1))$(findstring ',$(1)),$(subst «qk.s»,$(space),$(patsubst $(m5[2])=%,%,$(filter $(m5[2])=%,$(call m5.lex.qnorm,$(1))))),$(strip $(patsubst $(m5[2])=%,%,$(filter $(m5[2])=%,${1}))))
 # m5.table: KEY=VALUE subscript table; .dispatch/.call = jump table.
 define m5.table
@@ -406,7 +407,7 @@ m5.memoize = $(eval $(strip $(m5[1])) = $$(_$(strip $(m5[1])).detect))$(call m5.
 # m5.memoize.fn cache fn arg: cache fn's result keyed by arg.
 m5.memoize.fn = $(if $(call m5.defined?,$(strip $(m5[1]))[$(strip $(m5[3]))]),,$(eval $(strip $(m5[1]))[$(strip $(m5[3]))] := $(call $(strip $(m5[2])),$(m5[3]))))$($(strip $(m5[1]))[$(strip $(m5[3]))])
 # m5.memoize! key: run-scoped once-guard (MAKE_SUPER-keyed marker).
-m5.memoize! = ( f=".tmp.mk.super.$(if $(call m5.defined?,MAKE_SUPER),${MAKE_SUPER},$(shell echo $$PPID)).once.$(strip $(1))" ; if [ -e "$$f" ]; then false ; else : > "$$f" ; fi )
+m5.memoize! = ( f=".tmp.mk.super.$(call m5|,MAKE_SUPER,${_cmk.pid}).once.$(strip $(1))" ; if [ -e "$$f" ]; then false ; else : > "$$f" ; fi )
 # m5.mtable.upd tbl key a [b]: 3-arg ternary, 2-arg callable-ref.
 m5.mtable.upd = $(if $(m5[4]?),$(eval $(strip $(m5[1]))[$(strip $(m5[2]))] = $$(shell $(m5[3]) 2>/dev/null || echo $(m5[4]))),$(eval $(strip $(m5[1]))[$(strip $(m5[2]))] = $$($(strip $(m5[3])))))$(call m5.marm,$(strip $(m5[1]))[$(strip $(m5[2]))])$(eval $(strip $(m5[1])).__all__ += $(strip $(m5[2])))
 # m5.mtable name: self-memoizing cells; .update keys a check per name.
@@ -421,8 +422,9 @@ $(foreach _n,1 2 3 4 5 6 7 8 9,$(foreach _i,1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 
 # m5[N] dot-accessors over arg N; the m5.__acc__ list is the vocabulary the compiler consumes
 m5.__acc__ := len first last rest
 $(foreach _n,1 2 3 4 5 6 7 8 9,$(eval m5[$(_n)].len = $$(words $$(m5[$(_n)])))$(eval m5[$(_n)].first = $$(firstword $$(m5[$(_n)])))$(eval m5[$(_n)].last = $$(lastword $$(m5[$(_n)])))$(eval m5[$(_n)].rest = $$(wordlist 2,$$(words $$(m5[$(_n)])),$$(m5[$(_n)]))))
-# m5.at list i: the element of a list at a dynamic one-based index
+# m5.at list i: the element of a list at a dynamic one-based index.  m5.rest: the list minus its first word.
 m5.at = $(word $(m5[2]),$(m5[1]))
+m5.rest = $(wordlist 2,$(words $(1)),$(1))
 # docker.cmk.mount: workspace bind-mount flag, memoized in place.
 docker.cmk.mount=$(shell ${_cmk.ws.probe}; [ -n "$$s" ] && [ "$$rel" = "$$s" ] && echo "-v $${CMK_BIN_HOST:-$$s}:${CMK_DOCKER_PATH}:ro -e CMK_BIN_HOST=$${CMK_BIN_HOST:-$$s}" || true)
 $(call m5.marm, docker.cmk.mount)
@@ -432,6 +434,9 @@ m5.defined? = $(filter-out undefined,$(origin $(m5[1])))
 m5.undefined? = $(filter undefined,$(origin $(m5[1])))
 m5.given? = $(or $(findstring environment,$(origin $(m5[1]))),$(findstring command,$(origin $(m5[1]))))
 m5| = $(if $(call m5.defined?,${1}),$($(m5[1])),${2})
+# m5.select list pat / m5.pluck list pat: keep (or read) the elements whose pat-named var is defined.
+m5.select = $(strip $(foreach _m5s_e,$(m5[1]),$(if $(call m5.defined?,$(subst %,$(_m5s_e),$(m5[2]))),$(_m5s_e))))
+m5.pluck = $(strip $(foreach _m5s_e,$(call m5.select,${1},${2}),$($(subst %,$(_m5s_e),$(m5[2])))))
 # m5[1][K]/m5[K]: kwarg accessors codegen'd from lang.grammar.kwargs.* vocab
 m5[1].gensym = $(foreach _k,$(1),$(eval m5[1][$(_k)] = $$(call m5.ctx?,$$(1),$(_k))))
 m5.gensym = $(foreach _k,$(1),$(eval m5[$(_k)] = $$(call m5.ctx?,$$(1),$(_k))))
@@ -449,7 +454,7 @@ m5.__args__.first = $(call m5.__args__.cut,1,$(1))
 m5.__kwargs__ = $(if $(m5[2]),$(call mk.kwargs.get,$(1),$(2)),$(1))
 m5.tmpl% = $(subst $${$(m5[2])},$(m5[3]),$(1))
 m5.quasi% = $(subst @@$(m5[2])@@,${3},${1})
-m5.tmpl/%  = $(if $(m5[2]),$(call m5.tmpl/%,$(call m5.tmpl%,$(1),body$(words x $(3)),$(firstword $(2))),$(wordlist 2,999,$(2)),x $(3)),$(1))
+m5.tmpl/%  = $(if $(m5[2]),$(call m5.tmpl/%,$(call m5.tmpl%,$(1),body$(words x $(3)),$(firstword $(2))),$(wordlist 2,$(words $(2)),$(2)),x $(3)),$(1))
 m5.tmpl/seed = $(call m5.tmpl/%,$(call m5.tmpl%,$(call m5.tmpl%,$(call m5?,$(1)),1,$(2)),self,$(firstword $(3))),$(3),)
 m5.tmpl/seed.self = $(call m5.tmpl/%,$(call m5.tmpl%,$(call m5.tmpl%,$(call lang.class.comp.self.xform,$(1)),1,$(2)),self,$(firstword $(3))),$(3),)
 m5.tmpl/seed.ns =$(call m5.tmpl%,$(call m5.tmpl%,$(call m5.tmpl%,$(call m5?,$(1)),1,$(2)),self,$(3)),body1,$(4))
@@ -506,9 +511,9 @@ m5.ctx.dchars := = : / [ ] < > ; " ' | ! ? * + - ~ @ & ^ `
 # callables: leaf value->value transforms (escape/tokenize/case/qnorm)
 m5.quasi.protect = $(subst $$,$(m5[dollar]),$(1))
 m5.quasi.restore = $(subst $(m5[dollar]),$$,$(1))
-m5.escape = $(if $(2),$(call m5.escape,$(if $(filter dollar,$(firstword $(2))),$(call m5.quasi.protect,$(1)),$(subst $(m5.tok.$(firstword $(2)).char),$(m5.tok.$(firstword $(2))),$(1))),$(wordlist 2,999999,$(2))),$(1))
-m5.unescape = $(if $(2),$(call m5.unescape,$(if $(filter dollar,$(firstword $(2))),$(call m5.quasi.restore,$(1)),$(subst $(m5.tok.$(firstword $(2))),$(m5.tok.$(firstword $(2)).char),$(1))),$(wordlist 2,999999,$(2))),$(1))
-m5.strip = $(if $(2),$(call m5.strip,$(subst $(m5.tok.$(firstword $(2))),,$(1)),$(wordlist 2,999999,$(2))),$(1))
+m5.escape = $(if $(2),$(call m5.escape,$(if $(filter dollar,$(firstword $(2))),$(call m5.quasi.protect,$(1)),$(subst $(m5.tok.$(firstword $(2)).char),$(m5.tok.$(firstword $(2))),$(1))),$(wordlist 2,$(words $(2)),$(2))),$(1))
+m5.unescape = $(if $(2),$(call m5.unescape,$(if $(filter dollar,$(firstword $(2))),$(call m5.quasi.restore,$(1)),$(subst $(m5.tok.$(firstword $(2))),$(m5.tok.$(firstword $(2)).char),$(1))),$(wordlist 2,$(words $(2)),$(2))),$(1))
+m5.strip = $(if $(2),$(call m5.strip,$(subst $(m5.tok.$(firstword $(2))),,$(1)),$(wordlist 2,$(words $(2)),$(2))),$(1))
 m5.lex.protect = $(call m5.escape,$(1),dollar $(m5.tok.ws))
 m5.lex.restore = $(call m5.unescape,$(subst $(space),,$(1)),$(m5.tok.ws) dollar)
 m5.lex.bare = $(call m5.strip,$(1),space tab)
@@ -523,7 +528,7 @@ m5.lex.qnorm.sq = $(call m5.lex.qnorm.sq.rec,$(subst ',$(space),$(1)))
 m5.lex.qnorm.sq.rec = $(if $(m5[1]),$(firstword $(1))$(subst «qk.p»,«qk.s»,$(word 2,$(1)))$(call m5.lex.qnorm.sq.rec,$(wordlist 3,$(words $(1)),$(1))))
 
 # combinators: higher-order -- map/fold a function over tokens/lines
-m5.lex.tok/% = $(if $(1),$(call m5.lex.tok/%,$(wordlist 2,9999,$(1)),$(subst $(firstword $(1)),$(m5[break])$(firstword $(1))$(m5[break]),$(2))),$(2))
+m5.lex.tok/% = $(if $(1),$(call m5.lex.tok/%,$(wordlist 2,$(words $(1)),$(1)),$(subst $(firstword $(1)),$(m5[break])$(firstword $(1))$(m5[break]),$(2))),$(2))
 m5.lex.tok/* = $(call m5.lex.restore,$(foreach _t,$(subst $(m5[break]),$(space),$(call m5.lex.tok,$(call m5.lex.protect,$(1)))),$(call $2,$(_t))))
 m5.lex.line/* = $(call m5.quasi.restore,$(subst $(m5[tab]),$(m5.tok.tab.char),$(subst $(m5[space]),$(space),$(subst $(space),$(nl),$(foreach _line,$(subst $(nl),$(space),$(subst $(space),$(m5[space]),$(subst $(m5.tok.tab.char),$(m5[tab]),$(call m5.quasi.protect,$(1))))),$(call $2,$(_line)))))))
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -541,7 +546,7 @@ m5.lex.line/* = $(call m5.quasi.restore,$(subst $(m5[tab]),$(m5.tok.tab.char),$(
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 m5.auto.la = $(call m5.auto.la.go,$(1),$(2),,)
-m5.auto.la.go = $(if $(1),$(call m5.auto.la.seg,$(firstword $(1)),$(wordlist 2,999999,$(1)),$(2),$(3),$(4)),$(if $(3),$(call $(word 6,$(2)),$(3))$(4)))
+m5.auto.la.go = $(if $(1),$(call m5.auto.la.seg,$(firstword $(1)),$(wordlist 2,$(words $(1)),$(1)),$(2),$(3),$(4)),$(if $(3),$(call $(word 6,$(2)),$(3))$(4)))
 m5.auto.la.seg = $(if $(4),$(call m5.auto.la.wp,$(1),$(2),$(3),$(4),$(5)),$(call m5.auto.la.np,$(1),$(2),$(3)))
 m5.auto.la.np = $(if $(call $(word 1,$(3)),$(1)),$(call m5.auto.la.go,$(2),$(3),$(1),),$(call $(word 2,$(3)),$(1))$(call m5.auto.la.go,$(2),$(3),,))
 m5.auto.la.wp = $(if $(call $(word 3,$(3)),$(1)),$(call m5.auto.la.go,$(2),$(3),$(4),$(5)$(1)),$(if $(call $(word 4,$(3)),$(1)),$(call $(word 5,$(3)),$(4))$(5)$(1)$(call m5.auto.la.go,$(2),$(3),,),$(call $(word 6,$(3)),$(4))$(5)$(call m5.auto.la.seg,$(1),$(2),$(3),,)))
@@ -768,7 +773,9 @@ $(call m5.declare, CMK_SANDBOX?=, CMK_SANDBOX_SRC?=, CMK_YIELD_HOOK?=true, CMK_S
 
 export __interpreting__?=
 
+# One id per run: memoized in place, so the unsupervised path mints it once instead of per read.
 _mk.run.id=$(if $(call m5.defined?,MAKE_SUPER),${MAKE_SUPER},$(shell uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || date +%s%N))
+$(call m5.marm, _mk.run.id)
 ifeq ($(origin CMK_IO_STACK),undefined)
 export CMK_IO_STACK := .tmp.cmk.stack.${_mk.run.id}
 endif
@@ -923,7 +930,7 @@ lang.class! = $(if $(filter-out MKID_NONE,$(m5[1][umbrella])),$(call lang.module
 # lang.seed.grow!; the dsl face adds cmk.Fragment and an optional runtime backing.
 define lang.class.__init__
 ${self}.__mixins := $(foreach _w,${1},$(if $(call m5.defined?,$(_w).__mixins),$($(_w).__mixins),$(_w)))
-${self}.__bases__ := $(strip $(call m5.lex.rev,$(strip $(foreach _w,${1},$(if $(call m5.defined?,$(_w).__mixins),$(_w),)))))
+${self}.__bases__ := $(strip $(call m5.lex.rev,$(call m5.select,${1},%.__mixins)))
 ${self}.__mro__ := $(sort ${self} $(foreach _pb,$(${self}.__bases__),$($(_pb).__mro__)))
 ${self}.__ifaces__ := $(strip $(subst $(comma),$(space),$(call m5.ctx?,$(${self}.__ctor_initkw__),ifaces)))
 endef
@@ -958,8 +965,8 @@ $(eval _cmix := $($(_cn).__mixins))
 # redefines, so the capture below emits one recipe per target (no `overriding recipe` warning).
 $(eval _cmix := $(call lang.class.shadowclean,$(_cn),$(_cmix)))
 # classvar closure: classvars of this class and its mixins.
-$(eval _cvars := $(sort $(foreach _m,$(_cn) $(_cmix) $(_cifc),$(if $(call m5.defined?,$(_m).__classvars__),$($(_m).__classvars__)))))
-$(_cn).__tmpl = $$(eval self_stack := $$(call m5.stack.push,$$(self),$$(self_stack)))$$(eval self :=$$(or $$(call m5.ctx?,$$(1),namespace),$$(call m5.ctx?,$$(1),def),$$(firstword $$(1))))$$(eval $${self}.__class__ := $(_cn))$(foreach _cv,$(_cvars),$$(eval $${self}.$(_cv) := $(firstword $(foreach _m,$(_cn) $(_cmix) $(_cifc),$(if $(call m5.defined?,$(_m).$(_cv)),$($(_m).$(_cv)))))))$$(eval $${self}.__ctor__ := $(_cn))$$(eval $${self}.__im_self__ := $${self})$$(eval $${self}.%: self := $${self})$(foreach _b,$(_cmix),$$(eval $$(call m5.tmpl/seed.self,$(strip $(_b)),$$(1),$${self})))$$(if $$(filter-out undefined,$$(origin $${self}.__raw_body__)),,$$(if $$(value $${self}),$$(eval $$(call m5.tmpl/seed.self,$${self},$$(1),$${self}))$$(if $$(filter-out undefined,$$(origin $${self}.__isprotocol__)),,$$(eval undefine $${self}))))$$(eval $${self}.__dir__ := $$(sort $$(patsubst $${self}.%,%,$$(filter $${self}.%,$$(.VARIABLES)))))$$(if $$(filter-out undefined,$$(origin $${self}.__minted__)),$$(eval $$(call $${self}.__minted__,$$(1))))$$(eval self := $$(call m5.stack.top,$$(self_stack)))$$(eval self_stack := $$(call m5.stack.rest,$$(self_stack)))
+$(eval _cvars := $(sort $(call m5.pluck,$(_cn) $(_cmix) $(_cifc),%.__classvars__)))
+$(_cn).__tmpl = $$(eval self_stack := $$(call m5.stack.push,$$(self),$$(self_stack)))$$(eval self :=$$(or $$(call m5.ctx?,$$(1),namespace),$$(call m5.ctx?,$$(1),def),$$(firstword $$(1))))$$(eval $${self}.__class__ := $(_cn))$(foreach _cv,$(_cvars),$$(eval $${self}.$(_cv) := $(firstword $(call m5.pluck,$(_cn) $(_cmix) $(_cifc),%.$(_cv)))))$$(eval $${self}.__ctor__ := $(_cn))$$(eval $${self}.__im_self__ := $${self})$$(eval $${self}.%: self := $${self})$(foreach _b,$(_cmix),$$(eval $$(call m5.tmpl/seed.self,$(strip $(_b)),$$(1),$${self})))$$(if $$(filter-out undefined,$$(origin $${self}.__raw_body__)),,$$(if $$(value $${self}),$$(eval $$(call m5.tmpl/seed.self,$${self},$$(1),$${self}))$$(if $$(filter-out undefined,$$(origin $${self}.__isprotocol__)),,$$(eval undefine $${self}))))$$(eval $${self}.__dir__ := $$(sort $$(patsubst $${self}.%,%,$$(filter $${self}.%,$$(.VARIABLES)))))$$(if $$(filter-out undefined,$$(origin $${self}.__minted__)),$$(eval $$(call $${self}.__minted__,$$(1))))$$(eval self := $$(call m5.stack.top,$$(self_stack)))$$(eval self_stack := $$(call m5.rest,$$(self_stack)))
 $$(call m5.def.!,$(_cn),$(_cn).__tmpl)
 endef
 
@@ -1077,7 +1084,7 @@ lang.dsl.machine.proxy = $(if $(call m5.defined?,$(m5[1]).__in__),CMK_LAMBDA_ARG
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 lang.proto.registry :=
-lang.proto.provided_by=$(if $(strip $(foreach _m,$($(m5[1]).abstract),$(if $(call m5.defined?,$(m5[2]).$(_m)),,x))),$(if $(filter $(m5[2]),$($(m5[1]).registry)),1,),1)
+lang.proto.provided_by=$(if $(filter-out $(call m5.select,$($(m5[1]).abstract),$(m5[2]).%),$($(m5[1]).abstract)),$(if $(filter $(m5[2]),$($(m5[1]).registry)),1,),1)
 lang.proto.__new__ = $(call m5.self!,$(m5[__self__]))$(call m5.set,__isprotocol__,1)$(call m5.set.op,dunder,?=,$(call m5.ctx?,$2,dunder))$(call lang.class.classvar!/*,$2,$(m5[1]))
 lang.proto.__init__ = $(call m5.self!,$(m5[__self__]))$(call m5.set.op,__bases__,?=,$(subst :,$(space),$(subst $(comma),$(space),$(call m5.ctx?,$2,bases))))$(call m5.set.op,__ifaces__,?=,$(subst :,$(space),$(subst $(comma),$(space),$(call m5.ctx?,$2,ifaces))))$(call m5.set,__ifmix,$(foreach _if,$($(m5[1]).__ifaces__),$(if $(call m5.defined?,$(_if).__mixins),$($(_if).__mixins),$(_if))))$(call m5.set.op,__mro__,?=,$(sort $(m5[1]) $(foreach _pb,$($(m5[1]).__bases__),$($(_pb).__mro__))))$(call m5.set.op,abstract,?=,$(sort $(subst :,$(space),$(subst $(comma),$(space),$(or $(call m5.ctx?,$2,abstract),$($(m5[1]).dunder)))) $(foreach _pb,$($(m5[1]).__bases__),$($(_pb).abstract))))$(call m5.set.op,__concretized__,?=,$(if $(or $(findstring $(lang.grammar.token_self).,$(subst $(lang.grammar.token_self).__doc__,,$(value $(m5[1])))),$(findstring self.,$(subst $(lang.grammar.token_self).__doc__,,$(value $(m5[1])))),$(strip $($(m5[1]).__ifmix))),1,))$(call m5.set,__mixins,$(strip $($(m5[1]).__ifmix) $(if $($(m5[1]).__concretized__),$(m5[1]))))
 
@@ -1105,8 +1112,8 @@ endef
 define lang.proto.tmpl.directory
 ${self}.__children__ = $(call lang.proto.tmpl.directory.children,${self})
 endef
-lang.proto.tmpl.directory.childtest.default=$(call isinstance,$(m5[1]).$(m5[2]),$(if $(call m5.defined?,$(m5[1]).__class__),$($(m5[1]).__class__),cmk.namespace))
-lang.proto.tmpl.directory.children=$(foreach _p,$(sort $(foreach _c,$($(m5[1]).__all__),$(eval _l := $(patsubst $(m5[1]).%,%,$(_c)))$(if $(call m5.defined?,$(m5[1]).$(_l).__ctor__),$(if $(call $(if $(call m5.defined?,$($(m5[1]).__class__).__childtest__),$($(m5[1]).__class__).__childtest__,lang.proto.tmpl.directory.childtest.default),$(m5[1]),$(_l)),$($(m5[1]).$(_l).__line__):$(_l),),))),$(lastword $(subst :, ,$(_p))))
+lang.proto.tmpl.directory.childtest.default=$(call isinstance,$(m5[1]).$(m5[2]),$(call m5|,$(m5[1]).__class__,cmk.namespace))
+lang.proto.tmpl.directory.children=$(foreach _p,$(sort $(foreach _l,$(call m5.select,$(patsubst $(m5[1]).%,%,$($(m5[1]).__all__)),$(m5[1]).%.__ctor__),$(if $(call $(if $(call m5.defined?,$($(m5[1]).__class__).__childtest__),$($(m5[1]).__class__).__childtest__,lang.proto.tmpl.directory.childtest.default),$(m5[1]),$(_l)),$($(m5[1]).$(_l).__line__):$(_l),))),$(lastword $(subst :, ,$(_p))))
 
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -2499,7 +2506,7 @@ io.stack.cur = $(if $(filter-out undefined,$(origin 1)),$(or ${1},${CMK_IO_STACK
 
 # io.stack! codegens a per-run-unique, origin-guarded stack-name var, frozen on first use so sub-makes share one file.
 define _io.stack!
-export $(1) := $(if $(call m5.undefined?,$(1)),.tmp.$(1).$(if $(call m5.defined?,MAKE_SUPER),${MAKE_SUPER},$(shell echo $$PPID)),$($(1)))
+export $(1) := $(call m5|,$(1),.tmp.$(1).$(call m5|,MAKE_SUPER,${_cmk.pid}))
 endef
 # init_data kwarg: name of a JSON-array define to seed a stack from.
 io.stack.init_data=$(call mk.kwargs.get,$(1),init_data)
@@ -2619,12 +2626,8 @@ io.terminal.cols=${bin[cols]}
 
 io.term.width=$(shell echo $$(( $${COLUMNS:-${io.terminal.cols}}-6)))
 
-# Succeeds iff stdout is a terminal (not redirected).
-io.tty.stdout=[ -t 1 ]
-# ..and stdin; prefer these over an inline bracket test (clashes with the cmk-lang stream call-form).
-io.tty.stdin=[ -t 0 ]
-# ..and stderr, where progress displays are drawn.
-io.tty.stderr=[ -t 2 ]
+# Each succeeds iff that stream is a terminal (not redirected); prefer them over an inline bracket test, which clashes with the cmk-lang stream call-form.
+$(call m5.declare, io.tty.stdout = [ -t 1 ], io.tty.stdin = [ -t 0 ], io.tty.stderr = [ -t 2 ])
 
 io.timestamp=`date '+%T'`
 
@@ -3184,7 +3187,9 @@ lang.comp.stages=minify dedent decorators dialect cmkanchor m5wrap moduledoc sug
 lang.comp.stages.pre=$(strip $(call __pragma__.append, compiler_pre))
 lang.comp.stages.post=$(strip $(call __pragma__.append, compiler_post))
 lang.comp.stages.all=$(strip $(lang.comp.stages.pre) $(lang.comp.stages) $(lang.comp.stages.post))
-lang.comp.stages.core=$(foreach _s,$(lang.comp.stages.all),$(if $(call m5.defined?,lang.comp.stage.$(_s)),$(_s)))
+# core: stages backed by a lang.comp.stage macro.  lifted: the rest, resolved from plugin blocks.
+lang.comp.stages.core=$(call m5.select,$(lang.comp.stages.all),lang.comp.stage.%)
+lang.comp.stages.lifted=$(filter-out $(lang.comp.stages.core),$(lang.comp.stages.all))
 
 # _cmk.stage.lift: resolve a non-core stage from a plugin block.
 _cmk.stage.lift=_lsp= ; _lifs=$$IFS ; IFS=: ; for _ld in $${CMK_PLUGINS_DIR}; do for _lf in "$$_ld"/*.cmk; do { [ -f "$$_lf" ] && grep -q "^define _cmk_blk_$(m5[1])$$" "$$_lf" ; } && { _lsp="$$_lf" ; break 2 ; } ; done ; done ; IFS=$$_lifs ; if [ -n "$$_lsp" ]; then $(call io.mktemp) && sed -n "/^define _cmk_blk_$(m5[1])$$/,/^endef/{/^define/d;/^endef/d;p;}" "$$_lsp" > $${tmpf} && _cmklift_$(m5[1])="$${tmpf}" && $(call log.compiler, lang.comp.pipeline ${sep}${dim} lifted plugin stage ${ital}$(m5[1])${no_ansi}) ; else _cmklift_$(m5[1])= ; $(call log.compiler, lang.comp.pipeline ${sep}${dim} stage ${ital}$(m5[1])${no_ansi} not found (no core lang.comp.stage. macro, no plugin _cmk_blk_) ${sep} skipped) ; fi
@@ -3211,9 +3216,9 @@ lang.comp.pipeline.head: $(if $(filter 0,${CMK_COMPILER_VERBOSE}),.lang.comp.pip
 	&& export RECEIVERS=$$(cat $${inputf} | ${lang.parse.scan.receivers}) \
 	&& export JUNCTIONS=$$(cat $${inputf} | ${lang.parse.scan.junctions}) \
 	&& case "$${RECEIVERS// }" in *[![:space:]]*) $(call log.compiler.fmt, lang.comp.pipeline.receivers ${sep}${dim} declared, ${dim}${ital}$${RECEIVERS}${no_ansi}) ;; esac \
-	&& { : $(foreach _s,$(lang.comp.stages.all),$(if $(call m5.defined?,lang.comp.stage.$(_s)),,; $(call _cmk.stage.lift,$(_s)))) ; } \
+	&& { : $(foreach _s,$(lang.comp.stages.lifted),; $(call _cmk.stage.lift,$(_s))) ; } \
 	&& case $${CMK_COMPILER_STEPWISE:-0} in \
-		1) cat $${inputf} $(foreach _s,$(lang.comp.stages.all),$(if $(call m5.defined?,lang.comp.stage.$(_s)),, | { [ -n "$${_cmklift_$(_s)}" ] && awk -f "$${_cmklift_$(_s)}" || cat ; })) \
+		1) cat $${inputf} $(foreach _s,$(lang.comp.stages.lifted), | { [ -n "$${_cmklift_$(_s)}" ] && awk -f "$${_cmklift_$(_s)}" || cat ; }) \
 			| ${make} flux.pipeline/$(subst $(space),$(comma),$(addprefix lang.comp.pipeline.,$(lang.comp.stages.core))) ;; \
 		*) $(call log.trace.compiler.fmt, lang.comp.pipeline ${sep}${dim} fused pipeline, ${dim}${ital}$(lang.comp.stages.all)${no_ansi}) \
 			&& cat $${inputf} $(foreach _s,$(lang.comp.stages.all),$(if $(call m5.defined?,lang.comp.stage.$(_s)), | $(lang.comp.stage.$(_s)), | { [ -n "$${_cmklift_$(_s)}" ] && awk -f "$${_cmklift_$(_s)}" || cat ; })) ;; \
@@ -3703,9 +3708,10 @@ $(call mk.unpack.kwargs, ${1}, strict, 1)
 $(foreach _incf,$(filter-out strict=% prefix=%,$(patsubst file=%,%,$(shell echo "$(m5[1])"))),$(call import.module, file=${_incf} flat=1 preprocs=stream.echo prefix=$(strip ${kwargs_prefix}) strict=${kwargs_strict}))
 endef
 include.file=$(eval $(call _include.set, prefix=. ${1}))
+# Plural-name alias (identical signature/behavior); reads naturally with a file list.
+include.files=$(call include.file, ${1})
 
 include.def=$(call import.def, file=$(m5[2]) def=$(m5[1]))
-include.files=$(eval $(call _include.set, prefix=. ${1}))
 include.dir=$(if $(strip $(wildcard ${1}/*.mk ${1}/*.cmk)),$(call _include.dir.load,${1}),$(call log.module.fail, include.dir ${sep}${no_ansi} no ${bold}*.mk/*.cmk${no_ansi} under ${bold}${1}${no_ansi}$(if $(wildcard ${1}),,${dim} (no such directory)${no_ansi}), CMK_INCLUDE_DIR_EMPTY))
 _include.dir.load=$(call log.module, ${dim}include.dir ${sep}${no_ansi} ${1} ${dim}($(words $(wildcard ${1}/*.mk ${1}/*.cmk)) files)${no_ansi})$(call include.files, $(wildcard ${1}/*.mk ${1}/*.cmk))
 
@@ -3717,11 +3723,12 @@ $(call mk.unpack.kwargs, ${1}, strict, 1)
 $(eval _mkip_prefix:=$(strip ${kwargs_prefix}))
 $(eval _mkip_strict:=$(strip ${kwargs_strict}))
 $(eval _mkip_files:=$(filter-out strict=% prefix=%,$(patsubst file=%,%,$(shell echo "$(m5[1])"))))
-$(if $(filter 1,${CMK_IMPORT_DISCOVER}),,$(foreach _mkip_a,${_mkip_files},$(call _mk.plugin.autohelp,${_mkip_a},$(call _mk.path.resolve,${_mkip_prefix},${_mkip_a}))))
-$(if $(filter 1,${CMK_IMPORT_DISCOVER}),,$(if $(filter-out ${_mk.cmk.exts},${_mkip_files}),$(call _include.set, prefix=${_mkip_prefix} strict=${_mkip_strict} $(filter-out ${_mk.cmk.exts},${_mkip_files}))))
-$(if $(filter 1,${CMK_IMPORT_DISCOVER}),,$(foreach _mkip_c,$(filter ${_mk.cmk.exts},${_mkip_files}),$(call _include.cmk.one,$(call _mk.path.resolve,${_mkip_prefix},${_mkip_c}),${_mkip_strict},${_mkip_c})))
-$(if ${_mkip_files},$(eval __plugins__:=$(sort ${__plugins__} ${_mkip_files})))
-$(if ${_mkip_files},$(eval __plugins__.paths:=$(sort ${__plugins__.paths} $(foreach _mkip_f,${_mkip_files},$(call _mk.path.resolve,${_mkip_prefix},${_mkip_f})))))
+# Discovery mode registers names only, so all three load actions share one gate.
+$(eval _mkip_load:=$(if $(filter 1,${CMK_IMPORT_DISCOVER}),,1))
+$(if ${_mkip_load},$(foreach _mkip_a,${_mkip_files},$(call _mk.plugin.autohelp,${_mkip_a},$(call _mk.path.resolve,${_mkip_prefix},${_mkip_a}))))
+$(if ${_mkip_load},$(if $(filter-out ${_mk.cmk.exts},${_mkip_files}),$(call _include.set, prefix=${_mkip_prefix} strict=${_mkip_strict} $(filter-out ${_mk.cmk.exts},${_mkip_files}))))
+$(if ${_mkip_load},$(foreach _mkip_c,$(filter ${_mk.cmk.exts},${_mkip_files}),$(call _include.cmk.one,$(call _mk.path.resolve,${_mkip_prefix},${_mkip_c}),${_mkip_strict},${_mkip_c})))
+$(if ${_mkip_files},$(eval __plugins__:=$(sort ${__plugins__} ${_mkip_files}))$(eval __plugins__.paths:=$(sort ${__plugins__.paths} $(foreach _mkip_f,${_mkip_files},$(call _mk.path.resolve,${_mkip_prefix},${_mkip_f})))))
 endef
 
 define _include.cmk.one
@@ -3776,13 +3783,11 @@ __step__:; @echo '${__step__}'
 __posix_code__:; @echo '${__posix_code__}'
 __exit_code__:; @echo '${__exit_code__}'
 
-__plugins__.has=$(strip $(filter $(firstword ${1}),${__plugins__}))
-__modules__.has=$(strip $(filter $(firstword ${1}),${__modules__}))
+# One membership test over all four carriers; only the require-action differs.
+$(foreach _reg,__plugins__ __modules__ __ambients__ __goals__,$(eval $(_reg).has=$$(strip $$(filter $$(firstword $${1}),$${$(_reg)}))))
 __plugins__.require=$(if $(call __plugins__.has,${1}),,$(call include.plugins,${1}))
 __modules__.require=$(if $(call __modules__.has,$(call _mk.module.name,${1})),,$(call import.module,${1}))
-__ambients__.has=$(strip $(filter $(firstword ${1}),${__ambients__}))
 __ambients__.require=$(if $(call __ambients__.has,${1}),,$(call __ambients__.declare,${1}))
-__goals__.has=$(strip $(filter $(firstword ${1}),${__goals__}))
 __goals__.require=$(if $(call __goals__.has,${1}),,$(call _registry.assert.fail,goal,$(firstword ${1})))
 __goals__.assert=$(call __goals__.require,${1})
 __main__ = $(.DEFAULT_GOAL)
@@ -4184,7 +4189,7 @@ define __hosted__
     is machine-backed (a `dsl` declaration carrying entrypoint/img/machine), the invoke instead
     delegates to that machine, running the body through its entrypoint: the fragment has-a machine.
     '''
-    self.__machine__ = $(if $(call m5.defined?,$(self.__class__).__machine__),$($(self.__class__).__machine__))
+    self.__machine__ = $(call m5|,$(self.__class__).__machine__,)
     self.stream = $(if $(self.__machine__),$(call lang.dsl.machine.proxy,$(self.__machine__),,self),$(if $(filter file override,$(origin self)),$(call self,),${make} self))
     self.__call__ = $(if $(self.__machine__),$(call lang.dsl.machine.proxy,$(self.__machine__),${__args__},self),$(if $(filter file override,$(origin self)),$(call self,${__args__}),${make} self))
     self.__eval__ = $(call m5.def!,lang.banana.jtmp,${__args__})$(call lang.banana.new!,$(self.__class__),lang.banana.jtmp,raw)
@@ -4467,7 +4472,7 @@ define __hosted__
     # whose enclosing ambient is `host.local` (so `out` there = escape to the host, the existing
     # behavior).  EXPLICITLY EMPTY means you are IN `host.local` (its parent is unset) -> there is
     # nowhere further out -> a hard, named fault.  A named parent -> navigate into it.
-    outwards/%:; @P="$${__ambient_parent__-host.local}"; if [ -z "$$P" ]; then echo 'cmk: OutwardsUndefined: this is the top (nothing encloses this ambient to move out to)' >&2; exit 1; elif [ "$$P" = host.local ]; then cmk.io.mktemp() && ${mk.def.to.file}/${*},$${tmpf} && { if [ "$${CMK_IN_CONTAINER:-0}" = 0 ]; then bash $${tmpf} $${CMK_LAMBDA_ARGV:-}; elif [ -S "$${DOCKER_SOCKET:-/var/run/docker.sock}" ]; then img="$${img:-debian:bookworm-slim}" cmd="bash /workspace/$$(basename $${tmpf}) $${CMK_LAMBDA_ARGV:-}" ${make} docker.run.sh; else echo 'cmk: out denied -- no host channel (mount the docker socket to grant escape)' >&2; exit 1; fi; }; else __ambient__="$(call m5.stack.top,$(_ambient.stack?))" __ambient_stack__="$(call _ambient.stack.enc,$(call m5.stack.rest,$(_ambient.stack?)))" __ambient_parent__="$(or $(call m5.stack.top,$(call m5.stack.rest,$(_ambient.stack?))),host.local)" ${make} $${P}.reenter/${*}; fi
+    outwards/%:; @P="$${__ambient_parent__-host.local}"; if [ -z "$$P" ]; then echo 'cmk: OutwardsUndefined: this is the top (nothing encloses this ambient to move out to)' >&2; exit 1; elif [ "$$P" = host.local ]; then cmk.io.mktemp() && ${mk.def.to.file}/${*},$${tmpf} && { if [ "$${CMK_IN_CONTAINER:-0}" = 0 ]; then bash $${tmpf} $${CMK_LAMBDA_ARGV:-}; elif [ -S "$${DOCKER_SOCKET:-/var/run/docker.sock}" ]; then img="$${img:-debian:bookworm-slim}" cmd="bash /workspace/$$(basename $${tmpf}) $${CMK_LAMBDA_ARGV:-}" ${make} docker.run.sh; else echo 'cmk: out denied -- no host channel (mount the docker socket to grant escape)' >&2; exit 1; fi; }; else __ambient__="$(call m5.stack.top,$(_ambient.stack?))" __ambient_stack__="$(call _ambient.stack.enc,$(call m5.rest,$(_ambient.stack?)))" __ambient_parent__="$(or $(call m5.stack.top,$(call m5.rest,$(_ambient.stack?))),host.local)" ${make} $${P}.reenter/${*}; fi
     cmk.class cmk.Dockerfile(bases=cmk.container)(|
       '''
       Thin alias of container: a container whose non-empty body is the image recipe builds it identically (img=compose.mk:self, src=self, fluent chain), so Dockerfile just names that intent -- all behavior is inherited.  When files are bound to it (see dockerfs), the build folds them into a private context, injecting a copy plus a chmod after the first base line; render shows that injected recipe without building.
@@ -4555,7 +4560,7 @@ define __hosted__
     # an empty body has no heads to dedent/hoist, so skip the file+awk+include entirely -- this also
     # keeps a pure container (an identity-only namespace) from adding a temp to MAKEFILE_LIST.
     $(if $(strip $(value $(__fqn__).shape)),$(eval __ns_base := $(filter $(__fqn__).%,$(.VARIABLES)))$(eval __ns_tmp := .tmp.ns.$(__fqn__).${_cmk.pid})$(file >$(__ns_tmp).raw,$(value $(__fqn__).shape))$(eval __ns_mk := $(shell set -- `cksum < $(__ns_tmp).raw`; o=.tmp.ns.$(__fqn__).${HOSTED_HASH}$(firstword $(subst ., ,$(notdir ${CMK_TWIN_PATH}))).$$1-$$2.mk; [ -f "$$o" ] || { awk "$${_awklang_ns_dedent}" $(__ns_tmp).raw | awk "$${_awklang_indent}" | awk -v ns='$(__fqn__)' -v dunders=1 -v frags=1 "$${_awklang_module_ns}" > $(__ns_tmp).mk && mv -f $(__ns_tmp).mk "$$o"; }; rm -f $(__ns_tmp).raw; echo "$$o"))$(eval include $(__ns_mk))$(eval $(__fqn__).__all__ += $(sort $(foreach _m,$(patsubst $(__fqn__).%,%,$(filter-out $(__ns_base),$(filter $(__fqn__).%,$(.VARIABLES)))),$(if $(findstring .,$(_m)),,$(_m))))))
-    $(eval __name__ := $(call m5.stack.top,$(__name__stack)))$(eval __name__stack := $(call m5.stack.rest,$(__name__stack)))
+    $(eval __name__ := $(call m5.stack.top,$(__name__stack)))$(eval __name__stack := $(call m5.rest,$(__name__stack)))
     $(eval __fqn__ := $(if $(__name__),$(if $(filter $(__name__).%,${self}),${self},$(__name__).${self}),${self}))
     $(if $(strip $(value ${body1})),$(if $(strip $(call mk.native.stage,${CMK_NATIVE_CACHE}/$(__fqn__).hm,$(value $(__fqn__).shape))$(call lang.main.has,${CMK_NATIVE_CACHE}/$(__fqn__).hm)),$(eval $(__fqn__).__call__ = ${make} $(__fqn__).__main__)))
     $(call lang.seed.materialize!,$(__fqn__),lang.proto.tmpl.directory)
@@ -4592,7 +4597,7 @@ define __hosted__
   # __builtins__: reflection predicates, auto-bound bare below.
   cmk.module __builtins__(|
     issubclass = $(if $(filter $(strip ${2}),$($(strip ${1}).__mro__)),1,)
-    isinstance = $(call __builtins__.issubclass,$(if $(call m5.defined?,$(strip ${1}).__class__),$($(strip ${1}).__class__),$($(strip ${1}).__ctor__)),$(strip ${2}))
+    isinstance = $(call __builtins__.issubclass,$(call m5|,$(strip ${1}).__class__,$($(strip ${1}).__ctor__)),$(strip ${2}))
   |)
 
   cmk.kernel:
@@ -5669,12 +5674,12 @@ _cmk.hosted.heads = ${partition.hosted.body} | grep -oE '^[A-Za-z_][A-Za-z0-9._/
 _cmk.phony.roots = { ${_cmk.seed.heads}; ${_cmk.hosted.heads}; } | sed -E 's/:.*//; s/[./%].*//' | sort -u | tr '\n' ' '
 _cmk.phony.bare = ${__builtins__} | grep -vE '[./%]' | tr '\n' ' '
 _cmk.help.auto.roots = for r in $$(${_cmk.phony.roots}); do case "$$r" in _*) continue;; esac; grep -qE "^$$r[.]help[ :]" ${CMK_SRC} || printf '%s ' "$$r"; done
-$(if $(filter %.help,$(if $(call m5.undefined?,MAKECMDGOALS),,${MAKECMDGOALS})),$(foreach _hr,$(shell ${_cmk.help.auto.roots}),$(call _mk.gen.help,${_hr})))
+$(if $(filter %.help,$(call m5|,MAKECMDGOALS,)),$(foreach _hr,$(shell ${_cmk.help.auto.roots}),$(call _mk.gen.help,${_hr})))
 
 # The SANDBOX instance: the same template, gated OFF by default.  Active only when opted in
 # (`CMK_SANDBOX` truthy, `CMK_SANDBOX_SRC` set, or a `sandbox.*`/`mk.sandbox.*` goal), so a normal
 # build never parses or builds it and a broken experiment is recovered by not asking for it.
-_cmk.sandbox.active := $(if $(filter-out 0 false no off,${CMK_SANDBOX}),1,)$(if ${CMK_SANDBOX_SRC},1,)$(if $(filter sandbox.% mk.sandbox.%,$(if $(call m5.undefined?,MAKECMDGOALS),,${MAKECMDGOALS})),1,)
+_cmk.sandbox.active := $(if $(filter-out 0 false no off,${CMK_SANDBOX}),1,)$(if ${CMK_SANDBOX_SRC},1,)$(if $(filter sandbox.% mk.sandbox.%,$(call m5|,MAKECMDGOALS,)),1,)
 ifneq (,${_cmk.sandbox.active})
 $(eval $(call partition.stage,sandbox,SANDBOX,1,,partition.sandbox.failmsg))
 endif
@@ -6076,7 +6081,7 @@ mkparse:
 ## * subcommands.tail :: A dispatcher's CLI tail recovered from `MAKE_CLI`.
 ##     One `sed` drops the make-invocation prefix through the supervisor-enter word
 ##     (empty if absent); make then strips the `flux.pre`/`flux.post` hook decorations
-##     and the leading namespace token (helper `_st.drop1` drops that word).
+##     and the leading namespace token (helper `m5.rest` drops that word).
 ## * _cli.subcommands.make :: Internal-recursion prefix for dispatch sub-makes.
 ##     Marks internal, skips re-installing the target-rewrite/at-exit hooks and the
 ##     SIGINT supervisor. The client keeps the real supervisor at top level; a handler
@@ -6102,8 +6107,7 @@ mkparse:
 ##  * `[1]:` [Subcommands](https://robot-wranglers.github.io/compose.mk/subcommands)
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
-_st.drop1 = $(wordlist 2,$(words ${1}),${1})
-subcommands.tail = $(call _st.drop1,$(filter-out flux.pre/% flux.post/%,$(shell printf '%s' '${MAKE_CLI}' | sed -E 's|^.*mk\.super\.enter/[0-9]+ *||;t;s|.*||')))
+subcommands.tail = $(call m5.rest,$(filter-out flux.pre/% flux.post/%,$(shell printf '%s' '${MAKE_CLI}' | sed -E 's|^.*mk\.super\.enter/[0-9]+ *||;t;s|.*||')))
 
 _cli.subcommands.make=CMK_INTERNAL=1 CMK_DISABLE_HOOKS=1 CMK_SUPERVISOR=0 ${make}
 
