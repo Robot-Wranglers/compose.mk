@@ -194,6 +194,43 @@ _CHAIN_SRC = (
   "  (| ./compose.mk cmk run .tmp.machine.hierarchy.cmk leaf |) in inner\n"
   "leaf:\n"
   '  (| echo "OUT_AP=[$__ambient_parent__] OUT_CUR=[$__ambient__]" |) out\n'
+  "esc:\n"
+  "  (| ./compose.mk cmk run .tmp.machine.hierarchy.cmk root |) in outer\n"
+  "root:\n"
+  '  (| echo "ROOT_CUR=[$__ambient__] ROOT_AP=[$__ambient_parent__] ROOT_ST=[$__ambient_stack__]" |) out\n'
+  "forge:\n"
+  "  (| __ambient_parent__=inner ./compose.mk cmk run .tmp.machine.hierarchy.cmk forged |) in outer\n"
+  "forged:\n"
+  '  (| echo "FORGE_LANDED" |) out\n'
+  "named:\n"
+  "  (| ./compose.mk cmk run .tmp.machine.hierarchy.cmk named.ok |) in outer\n"
+  "named.ok:\n"
+  '  (| echo "NAMED_CUR=[$__ambient__]" |) out outer\n'
+  "misnamed:\n"
+  "  (| ./compose.mk cmk run .tmp.machine.hierarchy.cmk misnamed.bad |) in outer\n"
+  "misnamed.bad:\n"
+  '  (| echo "MISNAMED_LANDED" |) out inner\n'
+)
+
+# Namespaces nested two deep: registered, parenting their members, and `in`-dispatchable.
+_NS_SRC = (
+  "open cmk\n"
+  "namespace zone(|\n"
+  "  namespace grp(|\n"
+  "    machine kid(entrypoint=bash)(| |)\n"
+  "  |)\n"
+  "|)\n"
+  "reg:\n"
+  '  printf "NSREG=[$(call __ambients__.has,zone)$(call __ambients__.has,zone.grp)]'
+  ' GRPAP=[$(zone.grp.__ambient_parent__)] KIDAP=[$(zone.grp.kid.__ambient_parent__)]\\n"\n'
+  "enter:\n"
+  '  (| echo "NS_CUR=[$__ambient__] NS_AP=[$__ambient_parent__]" |) in zone.grp\n'
+  "step:\n"
+  "  (| ./compose.mk cmk run .tmp.machine.hierarchy.cmk step.mid |) in zone.grp.kid\n"
+  "step.mid:\n"
+  "  (| ./compose.mk cmk run .tmp.machine.hierarchy.cmk step.top |) out\n"
+  "step.top:\n"
+  '  (| echo "STEP_CUR=[$__ambient__] STEP_AP=[$__ambient_parent__]" |) out\n'
 )
 
 
@@ -219,3 +256,67 @@ def test_multihop_out_lands_on_the_parents_own_parent():
   assert "OUT_CUR=[outer]" in out, out[-2000:]
   assert "OUT_AP=[host.local]" in out, out[-2000:]
   assert "OUT_AP=[outer]" not in out, out[-2000:]
+
+
+def test_out_to_the_host_relabels_the_chain():
+  """`out` from a machine whose parent is the host lands relabelled at the root.
+
+  Reporting `ROOT_CUR=[outer]` would mean the block claims to be in the machine it just left.
+  The empty parent is the root sentinel a further `out` faults on.
+  """
+  rc, out = _run(_CHAIN_SRC, "esc", timeout=300)
+  assert rc == 0, out[-2000:]
+  assert "ROOT_CUR=[host.local] ROOT_AP=[] ROOT_ST=[]" in out, out[-2000:]
+
+
+def test_a_rewritten_parent_link_faults_instead_of_moving():
+  """The parent link and the stack top are the same value, so a rewritten one is caught.
+
+  Entry pushes exactly what it assigns as the parent, so the two can only disagree when
+  something edits the env out of band.  Moving anyway lands a block whose labels contradict
+  where it went.
+  """
+  rc, out = _run(_CHAIN_SRC, "forge", timeout=300)
+  assert rc != 0, out[-2000:]
+  assert "AmbientChainMismatch" in out, out[-2000:]
+  assert "FORGE_LANDED" not in out, out[-2000:]
+
+
+def test_out_by_name_accepts_the_ambient_being_left():
+  """`out <name>` names the ambient being left, matching the calculus arity for `out m`."""
+  rc, out = _run(_CHAIN_SRC, "named", timeout=300)
+  assert rc == 0, out[-2000:]
+  assert "NAMED_CUR=[host.local]" in out, out[-2000:]
+
+
+def test_out_by_name_rejects_a_different_ambient():
+  """Naming an ambient you are not in faults by name, rather than moving somewhere else."""
+  rc, out = _run(_CHAIN_SRC, "misnamed", timeout=300)
+  assert rc != 0, out[-2000:]
+  assert "OutwardsUnexpected" in out, out[-2000:]
+  assert "MISNAMED_LANDED" not in out, out[-2000:]
+
+
+def test_namespace_is_an_ambient_with_a_door():
+  """A namespace registers, parents its members, and accepts an `in` dispatch.
+
+  Before, it conformed to the protocol structurally while carrying none of the runtime half:
+  `in <ns>` had no rule to make, and a member's parent link still pointed at the host.
+  Nesting composes, so the inner group's parent is the outer group, not the host.
+  """
+  rc, out = _run(_NS_SRC, "reg", "enter", timeout=300)
+  assert rc == 0, out[-2000:]
+  assert "NSREG=[zonezone.grp] GRPAP=[zone] KIDAP=[zone.grp]" in out, out[-2000:]
+  assert "NS_CUR=[zone.grp] NS_AP=[zone]" in out, out[-2000:]
+
+
+def test_outward_climb_walks_the_nested_groups_one_level_at_a_time():
+  """Two outward moves from a member reach the outer group, through the inner one.
+
+  Entering a member pushes one frame, so the climb outruns the stack: each pop refills it
+  from the destination's declared parent, which is what keeps the second move legal.
+  """
+  rc, out = _run(_NS_SRC, "step", timeout=300)
+  assert rc == 0, out[-2000:]
+  assert "STEP_CUR=[zone] STEP_AP=[host.local]" in out, out[-2000:]
+  assert "AmbientChainMismatch" not in out, out[-2000:]

@@ -696,8 +696,8 @@ def test_machine_and_namespace_conform_to_ambient_protocol(cmk):
   # `.__ambient_parent__`).  A machine mixes it via `bases=Ambient` (nominal + structural conformance).
   # A `namespace` -- a DIFFERENT metaclass (`cmk.constructor`) that a class base could never span -- now
   # conforms STRUCTURALLY too (its ctor sets `.__ambient_parent__`): P5 RESOLVES the machine-vs-namespace
-  # asymmetry.  The namespace is deliberately NOT added to `__ambients__` (it is not `in`-dispatchable --
-  # it is `open`-dissolved), so the `in <ns>` routing caveat is avoided.  Behavior is unchanged.
+  # asymmetry.  The namespace joins `__ambients__` like any other ambient, because its ctor also stamps
+  # the entry and reenter doors -- so `in <ns>` routes, and an outward move can land on the group.
   probe = REPO / ".tmp.ambient_proto.cmk"
   probe.write_text(
     "from cmk import machine, namespace\n"
@@ -717,7 +717,7 @@ def test_machine_and_namespace_conform_to_ambient_protocol(cmk):
     assert "isa=[1]" in out, out[-1500:]                 # machine IS-A Ambient (nominal, via bases=)
     assert "pbox=[1]" in out, out[-1500:]                # + structural conformance
     assert "pns=[1]" in out, out[-1500:]                 # namespace conforms too (asymmetry RESOLVED)
-    assert "nsreg=[]" in out, out[-1500:]                # ...but NOT in __ambients__ (no routing caveat)
+    assert "nsreg=[ns]" in out, out[-1500:]              # + registered, so `in <ns>` routes
     assert "abs=[__all__ __ambient_parent__ __dir__ __name__]" in out, out[-1500:]
   finally:
     probe.unlink(missing_ok=True)

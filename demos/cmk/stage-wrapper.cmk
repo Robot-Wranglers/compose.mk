@@ -13,7 +13,7 @@
 #   [1]: https://robot-wranglers.github.io/compose.mk/stages
 
 # Override the default target used to print the entry-banner
-import flux
+import stage
 
 export CMK_STAGE_BANNER?=io.figlet
 

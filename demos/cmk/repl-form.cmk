@@ -7,16 +7,16 @@
 #   * chrome via the metadata (read) channel -- a window `title`, a custom
 #     `prompt`, and a determinate `progress` bar (here tied to how many UI
 #     events have arrived, so interactivity visibly fills it).
-#   * the event channel (UI -> client) -- the wrapper writes one JSON event
-#     per line (key/submit/resize/focus/scroll) to `form.events` stdin;
+#   * the event channel from UI to client -- the wrapper writes one JSON
+#     event per line (key/submit/resize/focus/scroll) to `form.events` stdin;
 #     that target logs them to a file; `form.read` tails the log back into
-#     a bottom minimap.  A full UI -> client -> UI round trip.
+#     a bottom minimap.  A full round trip out to the UI and back.
 #   * a custom (non-make) eval kernel -- `form.eval` just echoes what you
 #     type (+ the \036<rc> done marker), showing the eval region is
 #     client-defined, not tied to make-target dispatch.
 #
 #   USAGE:  ./demos/cmk/repl-form.cmk
-#       -> needs a tty.  Type, resize the window, press F-keys/arrows --
+#          needs a tty.  Type, resize the window, press F-keys/arrows --
 #          watch the (UI events) pane and the progress bar react.
 #
 # cmk_pragma ::: { "repl": { "read":"form.read", "eval":"form.eval",

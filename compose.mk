@@ -387,7 +387,7 @@ m5.set.op = $(call m5!,$(m5.self).$(1) $(2) $(3))
 # Save/restore stack: a scalar plus a shadow list, ꙮ standing in for an empty value.
 m5.stack.push = $(or $(1),ꙮ) $(2)
 m5.stack.top = $(patsubst ꙮ,,$(firstword $(1)))
-m5.ctx? =$(if $(findstring ",$(1))$(findstring ',$(1)),$(subst «qk.s»,$(space),$(patsubst $(m5[2])=%,%,$(filter $(m5[2])=%,$(call m5.lex.qnorm,$(1))))),$(strip $(patsubst $(m5[2])=%,%,$(filter $(m5[2])=%,${1}))))
+m5.ctx? =$(if $(call m5.lex.quoted?,$(1)),$(subst «qk.s»,$(space),$(patsubst $(m5[2])=%,%,$(filter $(m5[2])=%,$(call m5.lex.qnorm,$(1))))),$(strip $(patsubst $(m5[2])=%,%,$(filter $(m5[2])=%,${1}))))
 # m5.table: KEY=VALUE subscript table; .dispatch/.call = jump table.
 define m5.table
 $(eval $(strip $(1)).__all__ :=)
@@ -481,6 +481,7 @@ _mk.kwargs.getd=$(subst ${lang.comp.kwargs.sp},${space},$(call m5.ctx?,${1},${2}
 ## * m5.lex.tok / .tok/% / .tok/* :: Tokenize (wrap delimiters) + map over tokens
 ## * m5.lex.line/* :: Map a function over each line
 ## * m5.lex.upper / .split :: Leaf string ops (uppercase; split on colon)
+## * m5.lex.kwarg? / .glob? / .quoted? :: Token-shape predicates (non-empty is true)
 ## * m5.lex.rev / .uniq :: List ops, callable (reverse; keep-first dedup)
 ## * m5.lex.qnorm :: Quote-aware kwarg normalizer (.dq/.sq split by quote parity)
 ## * m5[dollar] / m5[space] / m5[tab] / m5[nl] / m5[break] :: The «X» sentinel alphabet
@@ -520,6 +521,10 @@ m5.lex.bare = $(call m5.strip,$(1),space tab)
 m5.lex.tok = $(call m5.lex.tok/%,$(m5.ctx.dchars),$(subst $(m5[dollar]),$(m5[break])$(m5[dollar])$(m5[break]),$(subst $(m5[space]),$(m5[break])$(m5[space])$(m5[break]),$(subst $(m5[tab]),$(m5[break])$(m5[tab])$(m5[break]),$(subst $(m5[nl]),$(m5[break])$(m5[nl])$(m5[break]),$(subst $(m5.tok.lparen),$(m5[break])$(m5.tok.lparen)$(m5[break]),$(subst $(m5.tok.rparen),$(m5[break])$(m5.tok.rparen)$(m5[break]),$(subst $(comma),$(m5[break])$(comma)$(m5[break]),$(1)))))))))
 m5.lex.upper=$(subst a,A,$(subst b,B,$(subst c,C,$(subst d,D,$(subst e,E,$(subst f,F,$(subst g,G,$(subst h,H,$(subst i,I,$(subst j,J,$(subst k,K,$(subst l,L,$(subst m,M,$(subst n,N,$(subst o,O,$(subst p,P,$(subst q,Q,$(subst r,R,$(subst s,S,$(subst t,T,$(subst u,U,$(subst v,V,$(subst w,W,$(subst x,X,$(subst y,Y,$(subst z,Z,${1}))))))))))))))))))))))))))
 m5.lex.split=$(subst :, ,$(1))
+# predicates: token-shape tests over a raw string; non-empty is true, like the origin predicates.
+m5.lex.kwarg? = $(findstring =,$(1))
+m5.lex.glob? = $(findstring *,$(1))$(findstring ?,$(1))
+m5.lex.quoted? = $(findstring ",$(1))$(findstring ',$(1))
 # qnorm: quote-aware kwarg space-normalizer (.dq/.sq by quote parity)
 m5.lex.qnorm = $(subst «qk.p»,$(space),$(call m5.lex.qnorm.sq,$(call m5.lex.qnorm.dq,$(subst $(space),«qk.s»,$(1)))))
 m5.lex.qnorm.dq = $(call m5.lex.qnorm.dq.rec,$(subst ",$(space),$(1)))
@@ -998,7 +1003,7 @@ lang.class.comp.self.xform = $(if $(call m5.defined?,$(1).__xf__),,$(eval define
 lang.class.comp.self.xform.raw = $(call lang.class.comp.classvar.lower,$(if $(findstring self,$(subst $${self},,$(value $(1)))),$(call lang.class.comp.self.tok,$(value $(1))),$(value $(1))))
 lang.class.comp.self.tok = $(call m5.lex.line/*,$(1),lang.class.comp.self.line)
 # self.hdr: self-target header; SKIP inline `;` via self.walk.
-lang.class.comp.self.hdr = $(if $(findstring ;,$(1)),,$(if $(findstring =,$(call m5.lex.bare,$(1))),,$(if $(findstring :,$(call m5.lex.bare,$(1))),$(filter self.%,$(call m5.lex.bare,$(1))))))
+lang.class.comp.self.hdr = $(if $(findstring ;,$(1)),,$(if $(call m5.lex.kwarg?,$(call m5.lex.bare,$(1))),,$(if $(findstring :,$(call m5.lex.bare,$(1))),$(filter self.%,$(call m5.lex.bare,$(1))))))
 lang.class.comp.self.line = $(if $(call lang.class.comp.self.hdr,$(1)),$(subst self.,$(m5[dollar]){self}.,$(1)),$(if $(findstring self,$(subst $(m5[dollar]){self},,$(1))),$(call lang.class.comp.self.walk,$(subst $(m5[break]),$(space),$(call m5.lex.tok,$(call lang.class.comp.self.pre,$(1))))),$(1)))
 lang.class.comp.self.pre = $(subst $(m5[dollar]){self.,$(m5[dollar]){$(m5[dollar]){self}.,$(subst $(m5[dollar])$(m5.tok.lparen)self.,$(m5[dollar])$(m5.tok.lparen)$(m5[dollar]){self}.,$(1)))
 lang.class.comp.self.trigger? = $(filter self.%,$(1))
@@ -1010,7 +1015,7 @@ $(call m5.auto[look-ahead],lang.class.comp.self.walk,lang.class.comp.self.trigge
 lang.class.comp.self.commit.mark = $(m5[dollar]){self}.$(patsubst self.%,%,$(1))
 lang.class.comp.classvar.lower = $(call m5.lex.line/*,$(1),lang.class.comp.classvar.line)
 lang.class.comp.classvar.line = $(if $(filter $(m5[dollar]){self}%,$(call m5.strip,$(1),space)),$(1),$(call lang.class.comp.classvar.line.2,$(1),$(firstword $(call m5.unescape,$(subst $(m5[space])=$(m5[space]),=,$(1)),space))))
-lang.class.comp.classvar.line.2 = $(if $(findstring =,$(2)),$(if $(call lang.class.comp.classvar.dirty,$(word 1,$(subst =, ,$(2))))$(findstring $(m5[dollar]),$(1))$(findstring $(comma),$(1)),$(1),$(m5[space])$(m5[space])$(m5[dollar])(call$(m5[space])lang.seed.grow!,lang.class.classvar,$(m5[dollar]){self},$(subst $(m5[space])=$(m5[space]),=,$(patsubst $(m5[space])$(m5[space])%,%,$(1))))),$(1))
+lang.class.comp.classvar.line.2 = $(if $(call m5.lex.kwarg?,$(2)),$(if $(call lang.class.comp.classvar.dirty,$(word 1,$(subst =, ,$(2))))$(findstring $(m5[dollar]),$(1))$(findstring $(comma),$(1)),$(1),$(m5[space])$(m5[space])$(m5[dollar])(call$(m5[space])lang.seed.grow!,lang.class.classvar,$(m5[dollar]){self},$(subst $(m5[space])=$(m5[space]),=,$(patsubst $(m5[space])$(m5[space])%,%,$(1))))),$(1))
 lang.class.comp.classvar.dirty = $(findstring .,$(1))$(findstring {,$(1))$(findstring [,$(1))$(findstring :,$(1))
 lang.class.classvar = $(m5[1]).__classvars__ += $(word 1,$(subst =, ,$2))$(if $(word 2,$(subst =, ,$2)),$(nl)$(m5[1]).$(word 1,$(subst =, ,$2)) := $(patsubst $(word 1,$(subst =, ,$2))=%,%,$2))
 lang.class.classvar!/* = $(foreach _p,$(call _mk.kwargs.getd,$1,classvars),$(call lang.seed.grow!,lang.class.classvar,$2,$(_p)))
@@ -3428,10 +3433,19 @@ _lang.module.target? = $(shell grep -Em1 '^$(subst .,\.,$(strip ${1}))[:/%]' ${_
 ambient.dissolve = $(call _ambient.dissolve.route,$(strip $(call mk.kwargs.get,${1},kind)),$(strip $(call mk.kwargs.get,${1},def)),${1})
 _ambient.dissolve.route = $(if ${1},$(if $(call m5.defined?,${1}.__open__),$(call ${1}.__open__,${2},${3}),$(call ambient.dissolve.inline,${2})),$(call ambient.dissolve.inline,${2}))
 
-# ambient.enter <name>: env-prefix moving the chain one level in; dual of the outwards pop.  The stack rides the env comma-joined, staying one shell word across the docker run quoting seams.
+# ambient.enter <name>: env-prefix moving the chain one level in; dual of ambient.exit.  The stack rides the env comma-joined, staying one shell word across the docker run quoting seams.
 _ambient.stack? = $(subst ${comma},${space},$(__ambient_stack__))
 _ambient.stack.enc = $(subst ${space},${comma},$(strip ${1}))
-ambient.enter = __ambient_stack__="$(call _ambient.stack.enc,$(call m5.stack.push,$(__ambient__),$(_ambient.stack?)))" __ambient__="$(strip ${1})" __ambient_parent__="$(or $(__ambient__),$($(strip ${1}).__ambient_parent__))"
+_ambient.frame = $(or $(__ambient__),$($(strip ${1}).__ambient_parent__))
+ambient.enter = __ambient_stack__="$(call _ambient.stack.enc,$(call m5.stack.push,$(call _ambient.frame,${1}),$(_ambient.stack?)))" __ambient__="$(strip ${1})" __ambient_parent__="$(call _ambient.frame,${1})"
+
+# ambient.exit: env-prefix moving the chain one level out.  A pop that empties the stack refills it from the destination's declared parent, so the parent link is always the stack top and an outward climb can keep going.
+_ambient.dest? = $(call m5.stack.top,$(_ambient.stack?))
+_ambient.rest? = $(or $(call m5.rest,$(_ambient.stack?)),$(call m5.stack.push,$($(_ambient.dest?).__ambient_parent__),))
+ambient.exit = __ambient__="$(_ambient.dest?)" __ambient_stack__="$(call _ambient.stack.enc,$(_ambient.rest?))" __ambient_parent__="$(call m5.stack.top,$(_ambient.rest?))"
+
+# ambient.root: env-prefix landing at the root, where the chain is fully unwound and nothing encloses you.  An empty parent is the sentinel a further outward move faults on.
+ambient.root = __ambient__="host.local" __ambient_stack__="" __ambient_parent__=""
 
 # cmk.ambient.host/<def> (run a machine DEF) + cmk.host.exec (run a prebuilt `cmd=..`) -- THE
 # irreducible base ambient: raw host exec, never lowered through `in`; everything nests over these.
@@ -3607,7 +3621,7 @@ endef
 # none), an exact name imports directly.  ${3} is the (possibly empty) namespace
 # prefix applied to the LOCAL bind name -- the source name (read from the file) is
 # unchanged, so `namespace=N` binds `define N.<name>` (top-level header only).
-_import.def.spec=$(if $(findstring *,${2})$(findstring ?,${2}),$(eval _mk_id_names:=$(call _mk.def.match,${1},${2}))$(if ${_mk_id_names},$(foreach _n,${_mk_id_names},$(call _mk.emit.or.eval.def,${1},${_n},${3}${_n})),$(call mk.error, import.def: no def matching `${2}` in `${1}`, errno=IMPORT_DEF)),$(call _mk.emit.or.eval.def,${1},${2},${3}${2}))
+_import.def.spec=$(if $(call m5.lex.glob?,${2}),$(eval _mk_id_names:=$(call _mk.def.match,${1},${2}))$(if ${_mk_id_names},$(foreach _n,${_mk_id_names},$(call _mk.emit.or.eval.def,${1},${_n},${3}${_n})),$(call mk.error, import.def: no def matching `${2}` in `${1}`, errno=IMPORT_DEF)),$(call _mk.emit.or.eval.def,${1},${2},${3}${2}))
 
 define _import.def
 $(eval _mk_id_args:=$(subst %,%%,$(subst ",',${1})))
@@ -4434,7 +4448,7 @@ define __hosted__
       '''
       self.run := _crun/self
       ${self}.dispatch/%:; @$(call container.ensure,${self}) img=$(${self}.img) ${make} docker.dispatch/${*}
-      self.__buildable := $(if $(strip $(foreach _w,$(value self),$(if $(findstring =,$(_w)),,$(_w)))),1)
+      self.__buildable := $(if $(strip $(foreach _w,$(value self),$(if $(call m5.lex.kwarg?,$(_w)),,$(_w)))),1)
       self.src := $(or $(self.src),$(if $(self.__buildable),self))
       self.img := $(or $(self.img),$(if $(self.__buildable),compose.mk:self))
       self.__minted__ = $(if $(call container.buildable,${self}),$(if $(${self}.img),$(eval container.owner.$(call container.owner.key,$(${self}.img)) ?= ${self})))
@@ -4472,7 +4486,7 @@ define __hosted__
     # whose enclosing ambient is `host.local` (so `out` there = escape to the host, the existing
     # behavior).  EXPLICITLY EMPTY means you are IN `host.local` (its parent is unset) -> there is
     # nowhere further out -> a hard, named fault.  A named parent -> navigate into it.
-    outwards/%:; @P="$${__ambient_parent__-host.local}"; if [ -z "$$P" ]; then echo 'cmk: OutwardsUndefined: this is the top (nothing encloses this ambient to move out to)' >&2; exit 1; elif [ "$$P" = host.local ]; then cmk.io.mktemp() && ${mk.def.to.file}/${*},$${tmpf} && { if [ "$${CMK_IN_CONTAINER:-0}" = 0 ]; then bash $${tmpf} $${CMK_LAMBDA_ARGV:-}; elif [ -S "$${DOCKER_SOCKET:-/var/run/docker.sock}" ]; then img="$${img:-debian:bookworm-slim}" cmd="bash /workspace/$$(basename $${tmpf}) $${CMK_LAMBDA_ARGV:-}" ${make} docker.run.sh; else echo 'cmk: out denied -- no host channel (mount the docker socket to grant escape)' >&2; exit 1; fi; }; else __ambient__="$(call m5.stack.top,$(_ambient.stack?))" __ambient_stack__="$(call _ambient.stack.enc,$(call m5.rest,$(_ambient.stack?)))" __ambient_parent__="$(or $(call m5.stack.top,$(call m5.rest,$(_ambient.stack?))),host.local)" ${make} $${P}.reenter/${*}; fi
+    outwards/%:; @P="$${__ambient_parent__-host.local}"; if [ -n "$${__ambient_expect__:-}" ] && [ "$${__ambient_expect__}" != "$${__ambient__:-}" ]; then echo "cmk: OutwardsUnexpected: asked to leave $${__ambient_expect__}, but this block is in $${__ambient__:-the top}" >&2; exit 1; fi; if [ -n "$${__ambient_parent__+x}" ] && [ -n "$$P" ] && [ "$$P" != "$(_ambient.dest?)" ]; then echo "cmk: AmbientChainMismatch: the parent link says $$P but the chain stack says $(_ambient.dest?)" >&2; exit 1; fi; if [ -z "$$P" ]; then echo 'cmk: OutwardsUndefined: this is the top (nothing encloses this ambient to move out to)' >&2; exit 1; elif [ "$$P" = host.local ]; then cmk.io.mktemp() && ${mk.def.to.file}/${*},$${tmpf} && { if [ "$${CMK_IN_CONTAINER:-0}" = 0 ]; then ${ambient.root} bash $${tmpf} $${CMK_LAMBDA_ARGV:-}; elif [ -S "$${DOCKER_SOCKET:-/var/run/docker.sock}" ]; then ${ambient.root} img="$${img:-debian:bookworm-slim}" entrypoint=bash cmd="/workspace/$$(basename $${tmpf}) $${CMK_LAMBDA_ARGV:-}" ${make} docker.run.sh; else echo 'cmk: out denied -- no host channel (mount the docker socket to grant escape)' >&2; exit 1; fi; }; else ${ambient.exit} ${make} $${P}.reenter/${*}; fi
     cmk.class cmk.Dockerfile(bases=cmk.container)(|
       '''
       Thin alias of container: a container whose non-empty body is the image recipe builds it identically (img=compose.mk:self, src=self, fluent chain), so Dockerfile just names that intent -- all behavior is inherited.  When files are bound to it (see dockerfs), the build folds them into a private context, injecting a copy plus a chmod after the first base line; render shows that injected recipe without building.
@@ -4554,16 +4568,25 @@ define __hosted__
     $(call m5.def!,$(__fqn__).shape,$(value ${body1}))
     $(eval $(__fqn__).__ambient_parent__ ?= host.local)
     $(eval $(__fqn__).__all__ ?=)
-    $(if $(__name__),$(eval $(__fqn__) := $(__fqn__))$(eval $(__name__).__all__ += ${self})$(if $(call m5.defined?,${self}.__class__),$(eval $(__fqn__).__class__ := $(${self}.__class__)))$(eval $(__fqn__).__ctor__ := $(${self}.__ctor__)))
+    $(if $(__name__),$(eval $(__fqn__) := $(__fqn__))$(eval $(__name__).__all__ += $(patsubst $(__name__).%,%,${self}))$(if $(call m5.defined?,${self}.__class__),$(eval $(__fqn__).__class__ := $(${self}.__class__)))$(eval $(__fqn__).__ctor__ := $(${self}.__ctor__)))
     $(eval __name__stack := $(call m5.stack.push,$(__name__),$(__name__stack)))
     $(eval __name__ := $(__fqn__))
     # an empty body has no heads to dedent/hoist, so skip the file+awk+include entirely -- this also
     # keeps a pure container (an identity-only namespace) from adding a temp to MAKEFILE_LIST.
-    $(if $(strip $(value $(__fqn__).shape)),$(eval __ns_base := $(filter $(__fqn__).%,$(.VARIABLES)))$(eval __ns_tmp := .tmp.ns.$(__fqn__).${_cmk.pid})$(file >$(__ns_tmp).raw,$(value $(__fqn__).shape))$(eval __ns_mk := $(shell set -- `cksum < $(__ns_tmp).raw`; o=.tmp.ns.$(__fqn__).${HOSTED_HASH}$(firstword $(subst ., ,$(notdir ${CMK_TWIN_PATH}))).$$1-$$2.mk; [ -f "$$o" ] || { awk "$${_awklang_ns_dedent}" $(__ns_tmp).raw | awk "$${_awklang_indent}" | awk -v ns='$(__fqn__)' -v dunders=1 -v frags=1 "$${_awklang_module_ns}" > $(__ns_tmp).mk && mv -f $(__ns_tmp).mk "$$o"; }; rm -f $(__ns_tmp).raw; echo "$$o"))$(eval include $(__ns_mk))$(eval $(__fqn__).__all__ += $(sort $(foreach _m,$(patsubst $(__fqn__).%,%,$(filter-out $(__ns_base),$(filter $(__fqn__).%,$(.VARIABLES)))),$(if $(findstring .,$(_m)),,$(_m))))))
+    $(if $(strip $(value $(__fqn__).shape)),$(eval __ns_base.$(__fqn__) := $(filter $(__fqn__).%,$(.VARIABLES)))$(eval __ns_tmp := .tmp.ns.$(__fqn__).${_cmk.pid})$(file >$(__ns_tmp).raw,$(value $(__fqn__).shape))$(eval __ns_mk := $(shell set -- `cksum < $(__ns_tmp).raw`; o=.tmp.ns.$(__fqn__).${HOSTED_HASH}$(firstword $(subst ., ,$(notdir ${CMK_TWIN_PATH}))).$$1-$$2.mk; [ -f "$$o" ] || { awk "$${_awklang_ns_dedent}" $(__ns_tmp).raw | awk "$${_awklang_indent}" | awk -v ns='$(__fqn__)' -v dunders=1 -v frags=1 "$${_awklang_module_ns}" > $(__ns_tmp).mk && mv -f $(__ns_tmp).mk "$$o"; }; rm -f $(__ns_tmp).raw; echo "$$o"))$(eval include $(__ns_mk)))
     $(eval __name__ := $(call m5.stack.top,$(__name__stack)))$(eval __name__stack := $(call m5.rest,$(__name__stack)))
     $(eval __fqn__ := $(if $(__name__),$(if $(filter $(__name__).%,${self}),${self},$(__name__).${self}),${self}))
+    # the member manifest is collected here, once the name is this instance's again: a nested body leaves it pointing at the nested one
+    $(if $(call m5.defined?,__ns_base.$(__fqn__)),$(eval $(__fqn__).__all__ += $(sort $(foreach _m,$(patsubst $(__fqn__).%,%,$(filter-out $(__ns_base.$(__fqn__)),$(filter $(__fqn__).%,$(.VARIABLES)))),$(if $(findstring .,$(_m)),,$(_m))))))
+    $(eval $(__fqn__).__all__ := $(sort $($(__fqn__).__all__)))
     $(if $(strip $(value ${body1})),$(if $(strip $(call mk.native.stage,${CMK_NATIVE_CACHE}/$(__fqn__).hm,$(value $(__fqn__).shape))$(call lang.main.has,${CMK_NATIVE_CACHE}/$(__fqn__).hm)),$(eval $(__fqn__).__call__ = ${make} $(__fqn__).__main__)))
     $(call lang.seed.materialize!,$(__fqn__),lang.proto.tmpl.directory)
+    # the ambient half a bare namespace lacked: registry membership, a parent link on each member, and the two doors
+    $(call __ambients__.require,$(__fqn__))
+    # a member arrives bare or already qualified, and only the ones already carrying a parent link are ambients
+    $(foreach _k,$(patsubst $(__fqn__).%,%,$($(__fqn__).__all__)),$(if $(call m5.defined?,$(__fqn__).$(_k).__ambient_parent__),$(eval $(__fqn__).$(_k).__ambient_parent__ := $(__fqn__))))
+    $(eval $(__fqn__)/%:; @$$(call ambient.enter,$(__fqn__)) $${make} host.dispatch/bash,$$*)
+    $(eval $(__fqn__).reenter/%:; @$${make} host.dispatch/bash,$$*)
   |)
 
   cmk.class dsl.cmklang(bases=cmk.Fragment,Program)[|
@@ -7161,7 +7184,7 @@ m5.__nargs__=$(subst $(space),,$(if $(filter-out undefined,$(origin 1)),$(1))$(f
 mk.unpack.args = $(foreach _i,$(wordlist 1,$(words $(m5[1])),1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20),$(word $(_i),$(m5[1]))=$(if $(filter $(_i),$(words $(m5[1]))),$(subst $(space),$(comma),$(wordlist $(_i),$(words $(subst $(comma),$(space),${*})),$(subst $(comma),$(space),${*}))),$(word $(_i),$(subst $(comma),$(space),${*}))))
 
 define mk.unpack.kwargs
-$(if $(or $(findstring =,$(m5[2])),$(word 2,$(m5[2]))),$(call _mk.unpack.kwargs.batch,$(m5[1]),$(m5[2])),$(if $(filter-out undefined,$(origin 3)),$(call _mk.unpack.kwargs.one,$(m5[1]),$(m5[2]),$(m5[3])),$(call _mk.unpack.kwargs.batch,$(m5[1]),$(m5[2]))))
+$(if $(or $(call m5.lex.kwarg?,$(m5[2])),$(word 2,$(m5[2]))),$(call _mk.unpack.kwargs.batch,$(m5[1]),$(m5[2])),$(if $(filter-out undefined,$(origin 3)),$(call _mk.unpack.kwargs.one,$(m5[1]),$(m5[2]),$(m5[3])),$(call _mk.unpack.kwargs.batch,$(m5[1]),$(m5[2]))))
 endef
 
 define _mk.unpack.kwargs.batch
@@ -7170,7 +7193,7 @@ endef
 
 _mk.unpack.kwargs.tokenize=$(call m5.lex.qnorm,${1})
 
-_mk.unpack.kwargs.bind=$(if $(findstring =,${2}),$(call _mk.unpack.kwargs.one,${1},$(word 1,$(subst =,${space},${2})),$(subst «qk.s»,${space},$(patsubst $(word 1,$(subst =,${space},${2}))=%,%,${2}))),$(call _mk.unpack.kwargs.one,${1},${2}))
+_mk.unpack.kwargs.bind=$(if $(call m5.lex.kwarg?,${2}),$(call _mk.unpack.kwargs.one,${1},$(word 1,$(subst =,${space},${2})),$(subst «qk.s»,${space},$(patsubst $(word 1,$(subst =,${space},${2}))=%,%,${2}))),$(call _mk.unpack.kwargs.one,${1},${2}))
 
 define _mk.unpack.kwargs.one
 $(eval _kwargs_dupes:=$(filter $(strip ${2})=%,${1}))
@@ -10997,7 +11020,12 @@ define .awk.lambdalift
       tw = tail; sub(/[^A-Za-z0-9_].*$/, "", tw)
       if (tw == "out") R["amb"] = "out"
       else if (tw == "cooked" || tw == "cooked_deeply") R["docook"] = 1
-      tail = substr(tail, length(tw) + 1); sub(/^[ \t]*,?[ \t]*/, "", tail) }
+      tail = substr(tail, length(tw) + 1); sub(/^[ \t]*,?[ \t]*/, "", tail)
+      # a name after the out keyword is the ambient being left, checked at run time by the outwards gate
+      if (tw == "out" && match(tail, /^[A-Za-z0-9._-]+/)) { onm = substr(tail, RSTART, RLENGTH)
+        if (onm != "cooked" && onm != "cooked_deeply") {
+          R["env"] = (R["env"] == "" ? "" : R["env"] " ") "__ambient_expect__=" onm
+          tail = substr(tail, RLENGTH + 1); sub(/^[ \t]*,?[ \t]*/, "", tail) } } }
     while (1) {
       t0 = substr(tail, 1, 1)
       if (t0 == "{") { oc = "{"; cc = "}" } else if (t0 == "(") { oc = "("; cc = ")" } else break

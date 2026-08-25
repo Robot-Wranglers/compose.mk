@@ -9,7 +9,7 @@
 #   "cmk_pre":     ["__setup__"],
 #   "cmk_post":    ["__teardown__"] } :::
 #
-# Three lifecycle surfaces, before -> main -> after:
+# Three lifecycle surfaces, running before, during, and after main:
 #
 # For `bootloaders`,
 #   use a list of define-blocks like `[<def1>, <def2>, ..]`. Runs *before*

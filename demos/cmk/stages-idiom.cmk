@@ -14,7 +14,7 @@
 # REFS:
 #   [1]: https://robot-wranglers.github.io/compose.mk/stages
 
-import flux
+import stage
 
 __main__: validate
 

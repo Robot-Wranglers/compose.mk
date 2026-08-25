@@ -23,7 +23,8 @@
 
 # Draw banners with the plain built-in instead of the (dockerized) gum
 # default.
-import flux, log, jb
+open stage
+import log, jb
 
 export CMK_STAGE_BANNER?=io.print.banner
 

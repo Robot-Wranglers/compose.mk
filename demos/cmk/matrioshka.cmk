@@ -11,7 +11,7 @@ Data crosses the nested layers over stage-stacks.  Ported from the plain
 Makefile twin.  Docs: robot-wranglers.github.io/compose.mk/matrioshka
 '''
 
-import io, flux
+import io, stage
 
 export BUILD_TARGET ?= none
 

@@ -1,0 +1,31 @@
+# Build-only counterpart to docs.yml, for checking docs without publishing.
+name: Docs Build (no deploy)
+on:
+  workflow_dispatch: {}
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Docs Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Initialize
+        run: make clean init
+      - name: Build docs (render + mkdocs site)
+        run: make docs
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: ./site

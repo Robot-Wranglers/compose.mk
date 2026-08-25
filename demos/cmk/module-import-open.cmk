@@ -26,12 +26,12 @@ with CMK_NS_LINT=0): import-then-define is pollution, open-without-defining
 is pointless, either-without-using is dead.
 '''
 
-import flux, log, jb
+import stage, log, jb
 open reports
 
 demo.use:
     '''
-    import flux = use the core namespace unqualified. import jb = call
+    import stage = use the core namespace unqualified. import jb = call
     the json.bash macro bare, as jb(..) not cmk.jb(..).
     Push two records onto a named stage, read the depth, then clear it.
     '''

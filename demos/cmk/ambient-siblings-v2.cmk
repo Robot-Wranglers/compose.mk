@@ -1,29 +1,25 @@
 #!/usr/bin/env -S ./compose.mk cmk run
 
-# ambient-siblings-v2.cmk: siblings nested in a shared ambient, addressed by name.
+# ambient-siblings-v2.cmk: siblings nested two groups deep, addressed by name.
 
 '''
-A second take on ambient-siblings.cmk.  There the two boxes are declared flat
-and converge on one top-level channel the parent owns; here they are declared
-inside a shared ambient and each box owns its own mailbox, so a message is
-addressed to the recipient by name and no channel is declared anywhere.  alice
-casts into bob's mailbox from inside her box, bob reads his own from inside
-his, and the enclosing ambient only schedules.
+A second take on ambient-siblings.cmk.  There the two boxes are flat and
+converge on one top-level channel the parent owns; here they are declared
+inside nested ambients and each owns its own mailbox, so a message is addressed
+to the recipient by name and no channel is declared anywhere.  alice casts into
+bob's mailbox from inside her box, and bob reads his own from inside his.
 
-The enclosing `namespace` stands in for the `amb` constructor sketched in
-scratch/ambient-calculus-fidelity.md: it qualifies the children under one
-name and gives the group a member manifest.  Each child fuses two kinds, a
-container (the ambient) and the agent module's Agent (mailbox and transport).  The
-transport is the inproc default, so a cast resolves to a push against the
-recipient's backing stack in the shared workspace; a real out-of-process
-transport would swap the verbs, not the shape.
+A `namespace` is a real ambient: it qualifies its children under one name,
+joins the ambient registry, parents every child, and offers the door an outward
+move lands on.  Nesting composes, so zone holding siblings holding alice is a
+three-level place graph that an outward climb walks one level at a time.  Each
+box fuses a container with the agent module's Agent, whose inproc transport
+makes a cast a push against the recipient's backing stack.
 
-Three seams show through, all recorded in the fidelity doc.  The outward move
-relabels without relocating: alice leaves for siblings and the chain updates,
-but the arriving block still runs inside alice's container, because a group has
-no boundary to un-cross and only the exit to host.local carries core's escape
-logic.  The mailbox name is pinned in source, because a backing stack is
-per-run keyed and never crosses the box boundary.  And the hops boot
+Three seams show through, all recorded in the fidelity doc.  An outward move
+into a group relabels without relocating, because a group has no kernel and
+only the exit to host.local carries core's escape logic.  The mailbox name is
+pinned in source, because a backing stack is per-run keyed.  And the hops boot
 unsupervised, because a supervised boot purges the mailbox at its own exit.
 
 Usage: ./demos/cmk/ambient-siblings-v2.cmk   (needs docker)
@@ -40,45 +36,28 @@ Dockerfile base(|
 
 # Pin each mailbox's backing file: the default name is per-run keyed and never
 # crosses the box boundary, so siblings would each derive their own.
-export events__siblings.alice.mbox := .tmp.events__siblings.alice.mbox.sibv2
-export events__siblings.bob.mbox := .tmp.events__siblings.bob.mbox.sibv2
+export events__zone.siblings.alice.mbox := .tmp.events__zone.siblings.alice.mbox.sibv2
+export events__zone.siblings.bob.mbox := .tmp.events__zone.siblings.bob.mbox.sibv2
 
 class BoxAgent(bases=Agent,cmk.container)(|
   '''An ambient that is also an agent: a container with its own mailbox.'''
 |)
 
-class Amb(bases=cmk.namespace)(|
-  '''
-  A group that is a real ambient, assembled demo-side from the half each core
-  kind supplies.  A namespace already knows its members and a machine already
-  joins the ambient registry and threads the chain; neither does both, so this
-  adds the three missing pieces to the namespace half: register the group,
-  point every child's parent link at it, and offer a door to come back to.
-  The door is the co-exit an outward move lands on.  It names the group,
-  because a group is a declared parent that was never entered and so was never
-  pushed on the stack.  It relabels rather than relocates: a group has no
-  boundary of its own, so leaving a child machine for the group moves the chain
-  but not the kernel, and the arriving block runs wherever the caller already
-  was.  Only an exit all the way to host.local performs a real escape, because
-  that branch is the one core gives the container-crossing logic.
-  '''
-  ${self}.reenter/%:
-    __ambient__=${self} __ambient_parent__=$(${self}.__ambient_parent__) ${make} host.dispatch/bash,${*}
-  self.__minted__ = $(call __ambients__.require,${self})$(foreach _k,$(${self}.__all__),$(eval $(${self}.__name__).$(_k).__ambient_parent__ := $(${self}.__name__)))
-|)
-
-Amb siblings(|
-  BoxAgent alice(img=${base.img} entrypoint=bash)(| |)
-  BoxAgent bob(img=${base.img} entrypoint=bash)(| |)
+namespace zone(|
+  namespace siblings(|
+    BoxAgent alice(img=${base.img} entrypoint=bash)(| |)
+    BoxAgent bob(img=${base.img} entrypoint=bash)(| |)
+  |)
 |)
 
 __main__: demo.group demo.emit demo.receive demo.out
 
 demo.group:
-  '''the group is a registered ambient that knows its members and parents them'''
-  log(group ${sep} siblings holds [$(siblings.__all__)])
-  log(registered ${sep} [$(call __ambients__.has,siblings)])
-  log(parent of alice ${sep} $(siblings.alice.__ambient_parent__))
+  '''the groups are registered ambients that know their members and parent them'''
+  log(zone ${sep} holds [$(sort $(filter-out __%,$(zone.__all__)))])
+  log(siblings ${sep} holds [$(sort $(filter-out __%,$(zone.siblings.__all__)))])
+  log(registered ${sep} [$(call __ambients__.has,zone)] [$(call __ambients__.has,zone.siblings)])
+  log(chain ${sep} alice in $(zone.siblings.alice.__ambient_parent__) in $(zone.siblings.__ambient_parent__))
 
 demo.emit:
   '''
@@ -86,29 +65,34 @@ demo.emit:
     The hop boots unsupervised so the mailbox outlives alice's interpreter.
   '''
   log()
-  (| CMK_SUPERVISOR=0 ${__cmk__} hop.emit |) in siblings.alice
+  (| CMK_SUPERVISOR=0 ${__cmk__} hop.emit |) in zone.siblings.alice
 
 hop.emit:
-  siblings.bob.cast["""type=ping from=$${__ambient__}"""]
+  zone.siblings.bob.cast["""type=ping from=$${__ambient__}"""]
 
 demo.receive:
   '''
   bob reads his own mailbox: ( from inside bob's box, nothing shared declared )
   '''
   log()
-  (| CMK_SUPERVISOR=0 ${__cmk__} hop.recv |) in siblings.bob
+  (| CMK_SUPERVISOR=0 ${__cmk__} hop.recv |) in zone.siblings.bob
 
 hop.recv:
   log(heard in [$${__ambient__}]:)
-  siblings.bob.mbox.dump()
+  zone.siblings.bob.mbox.dump()
 
 demo.out:
   '''
-  alice steps out: ( the group is a place, not just a name )
+  alice climbs out: ( one level per hop, box to group to group )
   '''
   log()
-  (| CMK_SUPERVISOR=0 ${__cmk__} hop.out |) in siblings.alice
+  (| CMK_SUPERVISOR=0 ${__cmk__} hop.out |) in zone.siblings.alice
 
 hop.out:
+  '''the named form asserts which ambient is being left, and faults when it is not the current one'''
   log(leaving $${__ambient__} for $${__ambient_parent__})
-  (| echo "  landed in `printenv __ambient__`, whose parent is `printenv __ambient_parent__`" |) in out
+  (| CMK_SUPERVISOR=0 ${__cmk__} hop.out.again |) out zone.siblings.alice
+
+hop.out.again:
+  log(leaving $${__ambient__} for $${__ambient_parent__})
+  (| echo "  landed in `printenv __ambient__`, whose parent is `printenv __ambient_parent__`" |) out zone.siblings

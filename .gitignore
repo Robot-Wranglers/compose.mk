@@ -77,3 +77,4 @@ TODO-*
 IDEAS*.md
 SPIKE*.md
 .claude/csop-state/
+.claude/commands

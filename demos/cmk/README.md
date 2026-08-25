@@ -208,7 +208,7 @@
 
 * [lean.cmk](./lean.cmk) (59 lines)
 
-* [lisp.cmk](./lisp.cmk) (42 lines)
+* [lisp.cmk](./lisp.cmk) (49 lines)
 
 * [local-interpreter.cmk](./local-interpreter.cmk) (32 lines)
 
