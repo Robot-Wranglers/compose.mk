@@ -61,9 +61,17 @@ def _is_interactive(name):
   return "tux.repl" in (CMK_DEMOS / name).read_text(errors="replace")
 
 
+# the beam platform is in-flight and not certified: run under the experimental suite instead
+EXPERIMENTAL = {d for d in ALL_DEMOS if d.startswith("beam")}
+
 INTERACTIVE = {d for d in ALL_DEMOS if d not in COVERED and _is_interactive(d)}
-COMPILE_ONLY = sorted((HEAVY | INTERACTIVE) - COVERED)
-RUN = [d for d in ALL_DEMOS if d not in COVERED and d not in HEAVY and d not in INTERACTIVE]
+COMPILE_ONLY = sorted((HEAVY | INTERACTIVE) - COVERED - EXPERIMENTAL)
+RUN = [
+  d
+  for d in ALL_DEMOS
+  if d not in COVERED and d not in HEAVY and d not in INTERACTIVE and d not in EXPERIMENTAL
+]
+EXPERIMENTAL_RUN = sorted(EXPERIMENTAL - COVERED)
 
 
 def _run_demo(runner, demo):
@@ -81,6 +89,16 @@ def _run_demo(runner, demo):
 @pytest.mark.parametrize("demo", RUN)
 def test_committed_cmk_demo_runs(demo, docker_cmk):
   # every committed demo no dedicated test claims must run clean end to end
+  _run_demo(docker_cmk, demo)
+
+
+@pytest.mark.experimental
+@pytest.mark.needs_docker
+@pytest.mark.parametrize("demo", EXPERIMENTAL_RUN or ["<none>"])
+def test_experimental_cmk_demo_runs(demo, docker_cmk):
+  # in-flight demos, carried by no gating suite so a failure never reddens a PR
+  if demo == "<none>":
+    pytest.skip("no experimental demos")
   _run_demo(docker_cmk, demo)
 
 

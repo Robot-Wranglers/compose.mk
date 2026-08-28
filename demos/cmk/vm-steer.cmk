@@ -1,6 +1,5 @@
 #!/usr/bin/env -S ./compose.mk cmk run
-# cmk_pragma ::: { "repl": { "eval": "vm-steer.eval",
-#   "print": "vm-steer.print" }, "compiler_pre": ["vm_hydrate"] } :::
+# cmk_pragma ::: { "repl": { "eval": "vm-steer.eval", "print": "vm-steer.print" }, "compiler_post": ["vm_hydrate"] } :::
 
 '''
 A REPL that is both a live dashboard and a driver's seat for the reflective vm machine: the print region runs a paused CEK machine that blocks waiting for a steer command, so the mode-line can reflect its live self-model.

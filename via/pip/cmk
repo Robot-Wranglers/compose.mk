@@ -12,7 +12,14 @@
 #
 # Note: this is NOT a generic alias for the whole `compose.mk` tool -- for core
 # tool-mode targets (e.g. `flux.ok`, `mk.interpret!`) call `compose.mk` directly.
-here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd 2>/dev/null)" || here=""
+here="${BASH_SOURCE[0]}"
+
+# pip installs this as a regular file in bin/; npm symlinks bin/cmk at it inside the package.
+while [ -L "$here" ]; do
+  _link="$(readlink -- "$here")"
+  case "$_link" in /*) here="$_link" ;; *) here="$(dirname -- "$here")/$_link" ;; esac
+done
+here="$(cd -- "$(dirname -- "$here")" && pwd 2>/dev/null)" || here=""
 
 # Plugin resolution.  compose.mk resolves plugins from CMK_PLUGINS_DIR, a ':'-separated
 # search path (default `.cmk`, cwd-relative).  For a GLOBAL install that default finds
@@ -22,11 +29,15 @@ here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd 2>/dev/null)" || here="
 # and the bundled set fills the gaps.  An explicit CMK_PLUGINS_DIR is left untouched.
 if [ -z "${CMK_PLUGINS_DIR:-}" ] && [ -n "$here" ]; then
   bundled="$(dirname -- "$here")/share/compose.mk/cmk"
+  [ -d "$bundled" ] || bundled="$here/plugins"
   if [ -d "$bundled" ]; then
     if [ -d "./.cmk" ]; then export CMK_PLUGINS_DIR=".cmk:$bundled"
     else                     export CMK_PLUGINS_DIR="$bundled"; fi
   fi
 fi
+
+# Help output names the program the way the user typed it, not the sibling it execs.
+export CMK_ARGV0="${CMK_ARGV0:-$(basename -- "${BASH_SOURCE[0]}")}"
 
 if [ -n "$here" ] && [ -x "$here/compose.mk" ]; then exec "$here/compose.mk" cmk "$@"; fi
 exec compose.mk cmk "$@"

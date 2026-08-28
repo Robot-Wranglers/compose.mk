@@ -3,74 +3,29 @@
 # machine-qemu-exfile.cmk: a virtual machine as a machine, helper scripts as bound file-bananas (needs docker)
 
 '''
-A virtual machine as a machine: the image's entrypoint (vmexec) boots a tiny
-guest under qemu, runs the fed program in the guest, and prints the guest's
-stdout, so `in vm` means "in a real kernel", not just "in a container".  The
-qemu plumbing never clutters the Dockerfile: each shell script the image needs
-is a file-banana bound to the image, so the Dockerfile reads as intent and the
-scripts read as scripts.
-
-A file-banana is a `dockerfs` instance bound to a Dockerfile at declaration:
-
-  dockerfs guest_init(bind=qemu_runner path=/guest/root/init mode=+x)(| ...script... |)
-
-`bind=` registers the file on that image eagerly, `path=` is where it lands, `mode=`
-is its chmod.  The body is captured verbatim (dollars and backslashes intact,
-unlike a Dockerfile heredoc).  A plain `qemu_runner.build` then folds the bound
-files in: each is materialized into a throwaway context and a copy plus chmod is
-injected right after the first base line.  Nothing touches the working tree.
+A virtual machine as a machine: the runner image boots a tiny guest under qemu,
+runs the fed program there, and prints the guest's stdout, so `in vm` means "in
+a real kernel", not just "in a container".  The guest's exit status is the
+block's.
 
 The nesting is the whole idea, one hop deeper than a container machine:
   vm machine:  program -> [ image running qemu ] -> guest kernel -> sh
 
+A `dsl` bound to that machine carries multi-line guest programs a single recipe
+line cannot hold.  Both kinds come from the qemu module, which owns the image
+recipe and its bound helper scripts; see demos/cmk/dockerfs.cmk for the binding
+technique itself.
+
   usage: ./demos/cmk/machine-qemu-exfile.cmk
 '''
 
-from cmk import container, dsl, dockerfs, Dockerfile
+from cmk import dsl
+from qemu import runner, guest
 
-# The Dockerfile carries no scripts and no copy lines; the bound file-bananas supply them at build.
-Dockerfile qemu_runner(|
-  FROM alpine:3.21
-  RUN apk add --no-cache linux-virt busybox-static coreutils
-  RUN case "$(uname -m)" in aarch64) apk add --no-cache qemu-system-aarch64;; *) apk add --no-cache qemu-system-x86_64;; esac
-  RUN mkdir -p /guest/root/bin /guest/root/proc /guest/root/sys /guest/root/dev
-  RUN cp /bin/busybox.static /guest/root/bin/busybox
-  RUN cd /guest/root && find . | cpio -o -H newc | gzip > /guest/initramfs.gz
-  ENTRYPOINT ["/usr/local/bin/vmexec"]
-|)
+runner qemu_runner(| |)
 
-dockerfs guest_init(bind=qemu_runner path=/guest/root/init mode=+x)(|
-  #!/bin/busybox sh
-  /bin/busybox mkdir -p /proc /sys /bin
-  /bin/busybox mount -t proc proc /proc
-  /bin/busybox mount -t sysfs sys /sys
-  /bin/busybox --install -s /bin
-  export PATH=/bin
-  b64=""
-  for tok in $(cat /proc/cmdline); do
-    case "$tok" in cmk_payload=*) b64="${tok#cmk_payload=}";; esac
-  done
-  echo "$b64" | base64 -d > /prog
-  echo "___CMK_VM_BEGIN___"
-  sh /prog
-  echo "___CMK_VM_END___"
-  poweroff -f
-|)
-
-dockerfs vmexec(bind=qemu_runner path=/usr/local/bin/vmexec mode=+x)(|
-  #!/bin/sh
-  prog="$1"
-  b64=$(base64 -w0 "$prog")
-  if [ "$(uname -m)" = aarch64 ]; then
-    out=$(timeout 90 qemu-system-aarch64 -machine virt -cpu max -m 256M -smp 1 -no-reboot -nographic -kernel /boot/vmlinuz-virt -initrd /guest/initramfs.gz -append "console=ttyAMA0 quiet cmk_payload=$b64" 2>/dev/null)
-  else
-    out=$(timeout 90 qemu-system-x86_64 -machine accel=kvm:tcg -m 256M -smp 1 -no-reboot -nographic -kernel /boot/vmlinuz-virt -initrd /guest/initramfs.gz -append "console=ttyS0 quiet cmk_payload=$b64" 2>/dev/null)
-  fi
-  echo "$out" | awk '/___CMK_VM_BEGIN___/{f=1;next} /___CMK_VM_END___/{f=0} f'
-|)
-
-# vm: a container machine whose entrypoint is vmexec, so a block in vm is a shell program the guest runs.
-container vm(img=compose.mk:qemu_runner entrypoint=/usr/local/bin/vmexec)(| |)
+# vm: a guest whose entrypoint is vmexec, so a block in vm is a shell program the guest runs.
+guest vm(img=${qemu_runner.img} entrypoint=/usr/local/bin/vmexec)(| |)
 
 # vmsh: a dsl backed by the vm machine, for multi-line guest programs a single recipe line cannot hold.
 dsl vmsh(machine=vm)(| |)

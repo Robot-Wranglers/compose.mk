@@ -47,6 +47,11 @@ integration-test:
 	@# Integration suite — scaffolds a mini-project (needs a daemon).
 	tox -e integration
 
+experimental experimental-test:
+	@# In-flight work not certified for the gate (the beam platform).  No other suite
+	@# carries it, so it never reddens a PR; run on demand (needs a daemon).
+	tox -e experimental
+
 tui tui-test:
 	@# Headless embedded-TUI suite (heavy; builds compose.mk:tux; needs a daemon).
 	@# Opt-in/on-demand; CMK_TEST_TUI=1 is set by the tox env.

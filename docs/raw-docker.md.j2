@@ -67,6 +67,15 @@ Sometimes you might be interested in fine-grained control or more flexibility.  
 {{site.embed_mirror('demos/inlined-dockerfile.mk', 'demos/cmk/inlined-dockerfile.cmk', github=github, default='left',
     see_also=_+'/cmk/compiler/#dockerfile-example', see_also_text='cmk-lang Dockerfile example')}}
 
+#### Binding Files to a Build
+<hr class="section-rule lvl-4">
+
+A `dockerfs` is a file bound to an image build.  Its `path=` is where the file lands and `mode=` is its chmod, while the body is captured verbatim, so shell dollars survive where a Dockerfile heredoc would mangle them.  At build each bound file is materialized into a throwaway context, with a copy and a chmod injected after the base line.  Nothing is written to the working tree, and a `.render` shows that fold without building.
+
+Two spellings say which image a file binds to.  The named form takes a `bind=` and reaches anything declared elsewhere, including a class, so every instance of that class inherits the file.  In cmk-lang a chain hung off the image declaration implies the binding instead, which lowers to a call on the image's own member.  That call is what the plain-make twin writes out, since the chain itself is cmk-lang sugar.
+
+{{site.embed_mirror('demos/dockerfs.mk', 'demos/cmk/dockerfs.cmk', github=github, default='left')}}
+
 ### Dispatch Scripts in Containers
 <hr class="section-rule lvl-3">
 

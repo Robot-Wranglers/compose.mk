@@ -253,13 +253,12 @@ def test_polyglot_in_demo_compiles(cmk):
 @pytest.mark.integration
 def test_polyglot_in_demo_runs(cmk):
   # __main__ (docker-free): the `hello`/`compute` targets run python bananas via
-  # `in host.native.python`, routed through the ambient dispatch -> the hosted interpreter runner.
+  # `in host.native.python`.  Routing is pinned by test_machine_hierarchy_cmk, not scraped here.
   r = cmk("cmk", "run", "demos/cmk/banana-in.cmk", cwd=REPO, timeout=120,
           env={"CMK_SUPERVISOR": "1"})
   out = r.stdout + r.stderr
   assert "factorial(10) = 3628800" in out, out[-1500:]
   assert "hello from a python ambient" in out, out[-1500:]
-  assert "host.dispatch" in out, out[-1500:]
 
 
 # --- `__ambients__.declare` registry: named container ambients (§10 phase-2) ---
@@ -545,16 +544,15 @@ def test_dissolve_route_unknown_kind_and_custom_hook(cmk):
 
 @pytest.mark.integration
 def test_out_denied_without_host_channel(cmk):
-  # `{ambient=out}` inside a container (`CMK_IN_CONTAINER=1`) with NO docker socket: the `out`
-  # host-escape is DENIED and the body must not run.  Deterministic guard -- it fires before any
-  # docker call, so no daemon is needed.  (On the host, `out` runs directly; this is the escape guard.)
-  src = 'foo:\n\t(| echo SHOULD_NOT_RUN |) out\n'
+  # Leaving a container for the host without a socket: the container's own exit hook refuses, before any docker call, so no daemon is needed.
+  src = 'open cmk\ncontainer box(img=alpine entrypoint=sh)(| |)\nfoo:\n\t(| echo SHOULD_NOT_RUN |) out\n'
   p = REPO / ".tmp.outdenied.cmk"
   p.write_text(src)
   try:
     r = cmk("cmk", "run", ".tmp.outdenied.cmk", "foo", cwd=REPO, timeout=120,
-            env={"CMK_SUPERVISOR": "1", "CMK_IN_CONTAINER": "1",
-                 "DOCKER_SOCKET": "/nonexistent.sock"})
+            env={"CMK_SUPERVISOR": "1", "DOCKER_SOCKET": "/nonexistent.sock",
+                 "__ambient__": "box", "__ambient_stack__": "host.local",
+                 "__ambient_parent__": "host.local"})
     out = r.stdout + r.stderr
     assert "out denied" in out, out[-1500:]           # the escape-guard message
     assert "SHOULD_NOT_RUN" not in out, out[-1500:]   # body never executed

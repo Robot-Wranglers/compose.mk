@@ -86,6 +86,17 @@ open cmk                  # the prelude -> bind the keywords bare
 
 Three cases fall out: from a **top-level recipe** the enclosing ambient is the host; from a **named ambient** `out` navigates into that parent; and from **inside `host.local`** there is nothing further out, so `out` raises a named fault, `OutwardsUndefined: this is the top`.
 
+**What moves, and what does not.**  An ambient is a *recipe for constructing a place*, not a place that already exists, so `out` **re-dispatches** the block into a freshly built instance of the enclosing ambient.  It never migrates a running computation.  What that costs depends on what is being left, so each kind says how a block leaves it through `__out__`:
+
+| leaving a | means | so |
+|---|---|---|
+| host machine or interpreter | run in the enclosing shell context | nothing relocates |
+| namespace member | the group has no kernel | the chain updates, the block stays put |
+| container, toward a container | build a fresh instance of the enclosing image | the container you came from is *not* the one you land in |
+| container, toward the host | the mounted socket confers daemon powers, not host execution | the block lands in `host.daemon`, a root of its own |
+
+A kind with no channel back refuses rather than landing somewhere adjacent, with `OutwardsUnavailable`.  Naming the ambient you are leaving (`out <name>`) asserts it, and faults with `OutwardsUnexpected` when that is not where the block is.
+
 {{ macros.section(4, "Ambient Protocol", id="ambient-protocol", protocols=['__ambients__', 'Openable']) }}
 
 Besides the algebra, there's the [ambient protocol](#protocols): the ambient superkind conforms to `__ambients__` and `Openable`.

@@ -70,7 +70,7 @@ def test_virtual_machine_pragma_no_longer_injects():
 def test_demo_uses_explicit_declaration():
   # The reflective coroutine lives in demos/cmk/vm-coroutines.cmk (no demos in libraries): it imports
   # the __vm__ plugin, OPTS IN to the reflective env via vm.reflect, and requests the
-  # `compiler_pre: [vm_hydrate]` stage so the COMPILER auto-receives context at each recipe entry -- so it
+  # `compiler_post: [vm_hydrate]` stage so the compiler auto-receives context at each recipe entry -- so it
   # never calls setenv/getenv and needs no hand-placed decorator (the whole point).
   demo = (REPO / "demos" / "cmk" / "vm-coroutines.cmk").read_text()
   assert (
@@ -80,8 +80,8 @@ def test_demo_uses_explicit_declaration():
     "$(call vm.reflect," in demo
   )  # EXPLICIT reflective-env declaration
   assert (
-    '"compiler_pre"' in demo and '"vm_hydrate"' in demo
-  )  # the compiler_pre stage that drives auto-receive
+    '"compiler_post"' in demo and '"vm_hydrate"' in demo
+  )  # the compiler_post stage that drives auto-receive
   assert (
     "@vm.ctx.receive" not in demo
   )  # no hand-placed decorator (auto-injected now)

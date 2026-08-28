@@ -3,22 +3,18 @@
 # dockerfs.cmk: files bound to an image build, and the folded build that lands them (needs docker)
 
 '''
-A `dockerfs` is a file bound to an image at declaration:
+A `dockerfs` is a file bound to an image build: `path=` is where it lands,
+`mode=` is its chmod, and the body is captured verbatim, so dollars survive
+where a Dockerfile heredoc would mangle them.  Two spellings say which image:
 
-  dockerfs NAME(bind=IMAGE path=/where/it/lands mode=CHMOD)(| ...contents... |)
+  dockerfs NAME(bind=IMAGE path=.. mode=..)(| .. |)
+  Dockerfile IMAGE(| .. |).dockerfs(path=.. mode=..)(| .. |)
 
-`bind=` registers the file on that image eagerly, `path=` is where it lands, and
-`mode=` is its chmod.  The body is captured verbatim, so dollars and backslashes
-survive intact, unlike a Dockerfile heredoc.
-
-The payoff is separation.  The Dockerfile below declares a base and packages and
-nothing else: no heredocs, no copy lines, no scripts folded into RUN.  The files
-read as files.  A plain `.build` folds them in, materializing each into a
-throwaway context and injecting a copy plus a chmod right after the first base
-line.  Nothing is written to the working tree.
-
-`.render` prints that same injected recipe without building, which is the way to
-see what the fold produced.
+The chain suits an image declared right there, since the receiver implies the
+binding.  The named form binds to anything declared elsewhere, including a
+class, which a chain cannot reach.  Both are below.  Either way `.build` folds
+the bound files in, injecting a copy and a chmod after the base line without
+touching the working tree, and `.render` shows that fold without building.
 
   usage: ./demos/cmk/dockerfs.cmk
 '''
@@ -46,11 +42,25 @@ dockerfs greet_conf(bind=greeter_img path=/etc/greeter.json mode=0644)(|
   {"who": "dockerfs", "punct": "!"}
 |)
 
+# The chain form: the receiver is right there, so no image name is repeated and no file is named.
+Dockerfile motd_img(|
+  FROM alpine:3.21
+  ENTRYPOINT ["/usr/local/bin/motd"]
+|).dockerfs(path=/usr/local/bin/motd mode=+x)(|
+  #!/bin/sh
+  cat /etc/motd.txt
+|).dockerfs(path=/etc/motd.txt mode=0644)(|
+  bound by a chain, landed by the same fold
+|)
+
 # The machine that runs the built image, so a call reaches the bound entrypoint.
 container greeter(img=compose.mk:greeter_img)(| |)
 
 # The same image with the entrypoint overridden, for looking at what landed.
 container greeter_cat(img=compose.mk:greeter_img entrypoint=cat)(| |)
+
+# The chain-built image, to show both spellings land the same way.
+container motd(img=${motd_img.img})(| |)
 
 demo.render:
   '''Show the folded recipe without building: base line first, then the injected copy and chmod pairs.'''
@@ -69,4 +79,10 @@ demo.run:
   log(${bold}config${no_ansi} (the 0644 bound file, as it landed):)
   greeter_cat(/etc/greeter.json)
 
-__main__: demo.render demo.build demo.run
+demo.chained:
+  '''Build and run the chain-declared image, whose two files were bound with no names at all.'''
+  log(${bold}chain form${no_ansi} (same fold, no names):)
+  motd_img.build()
+  motd()
+
+__main__: demo.render demo.build demo.run demo.chained

@@ -21,7 +21,7 @@
 #
 # REFS:
 #   [1]: https://robot-wranglers.github.io/compose.mk/modules/virtual-machine
-cmk.include.plugins(coroutines.cmk)
+import virtual-machine.cmk as vm, __vm__, flat=1
 
 # minimap.trace: append one trace line for the current goal to the trace file, formatted
 # a MAKELEVEL indent, the italic target, then the stack env keys.  Indent makes the stream read as a
@@ -32,17 +32,17 @@ minimap.hops.file=.tmp.cmk.mm.hops
 minimap.max.file=.tmp.cmk.mm.max
 minimap.trace=printf '%b\n' "${GLYPH_MAKELEVEL_INDENT}${ital}${@}${no_ansi}${dim} { $$( [ -s ${__vm__.env.file} ] && ${jq.run} -r '[keys[]|select((startswith("GLYPH_") or startswith("MK_"))|not)]|join(",")' < ${__vm__.env.file} 2>/dev/null )${no_ansi}${dim} }${no_ansi}" >> ${minimap.trace.file}
 
-# print region: a recursive call graph (clean MAKELEVEL nesting) looped via __vm__ goto
-# The outer loop is a flat __vm__.goto (constant depth); each iteration sets GLYPH_INDENT_BASE to the
+# print region: a recursive call graph (clean make-level nesting) looped via a vm goto
+# The outer loop is a flat vm goto (constant depth); each iteration sets GLYPH_INDENT_BASE to the
 # loop's own level (so the tree starts flush-left) then descends a real nested make call graph
 # demo, compile, link, then w1/w2/w3 via flux.pipeline, each nested make a level deeper, so
 # the emitted trace indents on descent + de-indents as it unwinds -- a live tree.  io.wait paces it.
-@__vm__.env.load
+@vm.ctx.hydrate
 # minimap.start: the run-once entry -- reset the run scratch (trace + file-tracked hop/bound counters),
 # then enter the goto loop.  goto re-entries land on minimap.demo (never back here), so reset is exactly once.
 minimap.start:
     : > ${minimap.trace.file} ; echo 0 > ${minimap.hops.file} ; echo "$${CMK_MINIMAP_MAX:-100000}" > ${minimap.max.file}
-    cmk.__vm__.goto(minimap.demo)
+    cmk.vm.goto(minimap.demo)
 minimap.demo:
     n=$$(( $$(cat ${minimap.hops.file} 2>/dev/null || echo 0) + 1 )) ; echo "$$n" > ${minimap.hops.file} ; mx=$$(cat ${minimap.max.file} 2>/dev/null || echo 100000)
     export GLYPH_INDENT_BASE=$${MAKELEVEL:-0} ; export tick=$$n
@@ -50,7 +50,7 @@ minimap.demo:
     ${make} minimap.compile
     @# bound check re-reads the files (each recipe line is its own shell; a stale shell var would break it) and
     @# never deletes them, so overlapping goto re-dispatches all see n>=mx and stop instead of resetting to 0.
-    if [ "$$(cat ${minimap.hops.file} 2>/dev/null || echo 0)" -ge "$$(cat ${minimap.max.file} 2>/dev/null || echo 100000)" ]; then cmk.log([demo] reached bound -- exit) ; else cmk.__vm__.goto(minimap.demo) ; fi
+    if [ "$$(cat ${minimap.hops.file} 2>/dev/null || echo 0)" -ge "$$(cat ${minimap.max.file} 2>/dev/null || echo 100000)" ]; then cmk.log([demo] reached bound -- exit) ; else cmk.vm.goto(minimap.demo) ; fi
 
 minimap.compile:
     cmk.log([compile] -> link) && ${minimap.trace}

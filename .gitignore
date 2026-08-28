@@ -67,6 +67,8 @@ via/pip/build/
 via/pip/*.egg-info/
 via/pip/dist/
 via/pip/_plugins/
+via/npm/_bundled/
+via/npm/*.tgz
 docs/*.md
 TODO.md
 docs/plugins/*.md

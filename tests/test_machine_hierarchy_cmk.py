@@ -23,6 +23,7 @@ pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parent.parent
 COMPOSE = REPO / "compose.mk"
+HOST_NAME = subprocess.run(["hostname"], capture_output=True, text=True, timeout=30).stdout.strip()
 
 _PROBE_SRC = (
   "open cmk\n"
@@ -295,6 +296,88 @@ def test_out_by_name_rejects_a_different_ambient():
   assert rc != 0, out[-2000:]
   assert "OutwardsUnexpected" in out, out[-2000:]
   assert "MISNAMED_LANDED" not in out, out[-2000:]
+
+
+# The outward move as a protocol method: each kind says how a block leaves it, or refuses.
+_OUT_SRC = (
+  "open cmk\n"
+  "machine outer(entrypoint=bash)(| |)\n"
+  "machine plain(entrypoint=bash)(| |)\n"
+  "class Loud(bases=cmk.machine)(|\n"
+  "  self.__out__ = $(info OUTHOOK=[${self}])$(call ambient.out.default,${__args__})\n"
+  "|)\n"
+  "Loud noisy(entrypoint=bash)(| |)\n"
+  "class Sealed(bases=cmk.machine)(|\n"
+  "  self.__out__ = $(call ambient.out.unavailable,${self})\n"
+  "|)\n"
+  "Sealed vault(entrypoint=bash)(| |)\n"
+  "hook:\n"
+  "  (| ./compose.mk cmk run .tmp.machine.hierarchy.cmk hook.leaf |) in noisy\n"
+  "hook.leaf:\n"
+  '  (| echo "HOOK_CUR=[$__ambient__]" |) out\n'
+  "sealed:\n"
+  "  (| ./compose.mk cmk run .tmp.machine.hierarchy.cmk sealed.leaf |) in vault\n"
+  "sealed.leaf:\n"
+  '  (| echo "SEALED_LANDED" |) out\n'
+  "default:\n"
+  "  (| ./compose.mk cmk run .tmp.machine.hierarchy.cmk default.leaf |) in plain\n"
+  "default.leaf:\n"
+  '  (| echo "PLAIN_CUR=[$__ambient__]" |) out\n'
+)
+
+
+def test_a_kind_can_override_how_a_block_leaves_it():
+  """`__out__` is the dual of `__in__`: the ambient being left says how the block leaves.
+
+  Without the hook the exit logic can only live in one conditional switching over kinds,
+  which is how a dead arm survived unnoticed.
+  """
+  rc, out = _run(_OUT_SRC, "hook", timeout=300)
+  assert rc == 0, out[-2000:]
+  assert "OUTHOOK=[noisy]" in out, out[-2000:]
+  assert "HOOK_CUR=[host.local]" in out, out[-2000:]
+
+
+def test_a_kind_with_no_way_back_refuses_the_move():
+  """An ambient that cannot offer a way back faults by name instead of doing something adjacent.
+
+  This is the shape a vm guest needs: no agent, no exit, and the block must not land
+  somewhere else quietly.
+  """
+  rc, out = _run(_OUT_SRC, "sealed", timeout=300)
+  assert rc != 0, out[-2000:]
+  assert "OutwardsUnavailable: vault" in out, out[-2000:]
+  assert "SEALED_LANDED" not in out, out[-2000:]
+
+
+def test_a_kind_without_an_override_still_leaves_by_the_default():
+  """Adding the hook must not change what an ordinary machine does."""
+  rc, out = _run(_OUT_SRC, "default", timeout=300)
+  assert rc == 0, out[-2000:]
+  assert "PLAIN_CUR=[host.local]" in out, out[-2000:]
+
+
+def test_an_outward_move_between_host_machines_stays_in_place():
+  """Host machines share one context, so leaving one for another relocates nothing.
+
+  Checked against the host's own name, read before the run.  The contrast with the
+  container case is why the exit belongs to the kind: the same operator has to mean
+  different work depending on what is being left.
+  """
+  src = (
+    "open cmk\n"
+    "machine outer(entrypoint=bash)(| |)\n"
+    "machine inner(entrypoint=bash)(| |)\n"
+    "hop:\n"
+    "  (| ./compose.mk cmk run .tmp.machine.hierarchy.cmk mid |) in outer\n"
+    "mid:\n"
+    "  (| ./compose.mk cmk run .tmp.machine.hierarchy.cmk leaf |) in inner\n"
+    "leaf:\n"
+    '  (| echo "HOST_AT=[`hostname`]" |) out\n'
+  )
+  rc, out = _run(src, "hop", timeout=300)
+  assert rc == 0, out[-2000:]
+  assert f"HOST_AT=[{HOST_NAME}]" in out, out[-2000:]
 
 
 def test_namespace_is_an_ambient_with_a_door():

@@ -19,7 +19,7 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.skip(reason="beam tramp / platform.beam is in-flight WIP, not certified")
+pytestmark = [pytest.mark.experimental, pytest.mark.needs_docker]
 
 REPO = Path(__file__).resolve().parent.parent
 BEAM_IMG = "compose.mk:beam.node"
@@ -51,8 +51,6 @@ _SCRIPT = (
 )
 
 
-@pytest.mark.integration
-@pytest.mark.needs_docker
 def test_beam_tramp_rewrites_bare_but_not_slash(cmk):
   builder = REPO / ".tmp.beamflux.build.cmk"
   probe = REPO / ".tmp.beamflux.probe.cmk"

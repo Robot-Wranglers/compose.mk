@@ -66,9 +66,24 @@ def test_help_shows_entrypoint_docstring(cmk):
   # generated subcommand list (build/compile/run/doc).
   r = cmk("cmk", "help", env=SUP)
   assert r.ok, r.stderr
-  assert "Public subcommand interface" in r.stderr  # from cmk's @# docstring
+  assert "Compile, run, package, and inspect" in r.stderr  # from cmk's @# docstring
   for sub in ("build", "compile", "run", "doc"):
     assert sub in r.stderr  # generated subcommand list
+
+
+def test_help_summarizes_each_subcommand(cmk):
+  # Each subcommand line carries the first docstring line of its handler.
+  r = cmk("cmk", "help", env=SUP)
+  assert r.ok, r.stderr
+  assert "Compile and run a program." in r.stderr  # cli.cmk.run/%
+  assert "Show the bare Makefile fragment" in r.stderr  # cli.cmk.transpile/%
+
+
+def test_help_names_the_invocation(cmk):
+  # A wrapper standing for `<program> cmk` says so via CMK_ARGV0, and usage follows.
+  r = cmk("cmk", "help", env={**SUP, "CMK_ARGV0": "cmk"})
+  assert r.ok, r.stderr
+  assert "USAGE: cmk <subcommand>" in r.stderr
 
 
 # --- guards (cross-cutting file hygiene) -------------------------------------

@@ -3,8 +3,14 @@
   "version": "0.0.0",
   "description": "compose.mk: polyglot Make/bash automation lib + CMK language, installed on PATH",
   "license": "MIT",
-  "bin": { "compose.mk": "compose.mk" },
-  "files": ["compose.mk"],
+  "bin": {
+    "compose.mk": "_bundled/compose.mk",
+    "cmk": "_bundled/cmk"
+  },
+  "files": ["_bundled"],
+  "scripts": {
+    "prepack": "bash ./materialize.sh"
+  },
   "os": ["linux", "darwin"],
   "engines": { "node": ">=14" }
 }

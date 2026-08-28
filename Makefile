@@ -102,6 +102,11 @@ itest integration-test:
 	@# Runs the integration-test suite (delegates to tests/).
 	pushd tests && make init integration-test
 
+xtest experimental-test:
+	@# Runs the experimental suite: in-flight work not certified for the gate
+	@# (delegates to tests/).  No other suite carries it, so it never reddens a PR.
+	pushd tests && make init experimental-test
+
 tui-test:
 	@# Runs the headless embedded-TUI suite (heavy/opt-in; delegates to tests/).
 	pushd tests && make init tui-test
@@ -111,7 +116,7 @@ stest smoke-test:
 	pushd tests && make init smoke-test
 
 installers-test:
-	@# Build+install the via/pip shim; verify a global on-PATH compose.mk.
+	@# Build+install via each packaging path; verify a global on-PATH compose.mk.
 	pushd tests && make init installers-test
 
 perftest perf-test:
@@ -153,6 +158,22 @@ gitops.release.assert.version: assert.env/VERSION
 		exit 1; \
 	fi \
 	&& $(call log.io, ${green}version ok ${sep} ${CMK_VERSION})
+
+npm.release.root := via/npm
+gitops.release.npm: assert.env/VERSION
+	@# Release step for the npm package: stamp VERSION into the shim's package.json, then
+	@# pack it (the `prepack` hook stages the tool, the shared `cmk` wrapper, and the stdlib
+	@# plugins into `_bundled/`).  Auto-discovered + run by `gitops.release`, alongside
+	@# `gitops.release.py`.  No upload: publishing to the registry is out of scope here.
+	@# Skips cleanly when npm is unavailable, so a release from a node-less host still cuts.
+	@# USAGE:  VERSION=<x.y.z> make gitops.release.npm
+	root="${npm.release.root}" \
+	&& if [ ! -e "$${root}/package.json" ]; then $(call log, ${dim}skip ${sep} no npm project at ${no_ansi}$${root}); exit 0; fi \
+	&& if ! command -v npm > ${devnull}; then $(call log, ${dim}skip ${sep} npm not available); exit 0; fi \
+	&& $(call log, ${dim}build ${sep} ${no_ansi}$${root}${dim} @ VERSION=${no_ansi}$${VERSION}) \
+	&& ( cd "$${root}" && npm version --no-git-tag-version --allow-same-version "$${VERSION}" > ${devnull} && npm pack > ${devnull} ) \
+	&& $(call log, ${green}built ${sep} ${no_ansi}`ls -1 $${root}/*$${VERSION}*.tgz 2>${devnull} | ${stream.nl.to.comma} || echo "$${root}"`)
+
 actions.demos:
 	@# Entrypoint for test-action
 	${io.shell.isolated} script -q -e -c "bash --noprofile --norc -eo pipefail -x -c 'make demos'"

@@ -1,6 +1,6 @@
 #!/usr/bin/env -S ./compose.mk cmk run
 #
-# cmk_pragma ::: { "compiler_pre": ["vm_hydrate"] } :::
+# cmk_pragma ::: { "compiler_post": ["vm_hydrate"] } :::
 #
 # vm-coroutines.cmk: a reusable reflective __vm__ coroutine, in CMK-lang.
 #

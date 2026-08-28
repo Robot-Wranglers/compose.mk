@@ -2414,30 +2414,16 @@ _FLUENT_HDR = "from cmk import dockerfs, Dockerfile\n"
 _FLUENT_IMG = "Dockerfile img(|\n  FROM alpine:3.21\n  RUN true\n|)\n"
 
 
-@pytest.mark.covers_demo("dockerfs-fluent.cmk")
-@pytest.mark.xfail(
-  strict=True,
-  reason="TODO: chained ctor on a module-level declaration.  The declared name in a dockerfs "
-  "declaration is never referenced again, and bind= repeats the image per file, so the binding is "
-  "well-defined as a chain hung off the image declaration itself: the receiver supplies the "
-  "binding and the compiler a gensym def.  Today the banana trailer walk reads the chain link "
-  "`.dockerfs(path=.. mode=..)(|` as a compile-time postfix treatment, shells it out as a make "
-  "target, and poisons the module with `postfix treatment .. failed` (GRAMMAR code=65).  Surfaced "
-  "by demos/cmk/dockerfs-fluent.cmk (kept in the intended grammar; excluded from the demo sweep "
-  "via the covers-demo marker here).  If this xpasses, the declaration-chain form lowers -- run "
-  "that demo end-to-end, then drop this marker.",
-)
-def test_declaration_chain_lowers_to_bound_ctor_call(ir):
-  # expected: the chain link lowers like the named form, with the receiver as the binding
-  src = (
-    _FLUENT_HDR
-    + "Dockerfile img(|\n  FROM alpine:3.21\n  RUN true\n"
-    + "|).dockerfs(path=/etc/g1 mode=+x)(|\n  hello\n|)\n"
-  )
+@pytest.mark.covers_demo("dockerfs.cmk")
+def test_declaration_chain_link_lowers_as_a_receiver_call(ir):
+  # expected: receiver body kept, link lowered as a call on the receiver's member, link body kept
+  src = "alpha one(|\n  body one\n|).beta(k=v)(|\n  body two\n|)\n"
   r = ir(src)
   assert "cmk-fault" not in r.stdout, r.stdout
-  assert "$(call dockerfs," in r.stdout and "bind=img" in r.stdout, r.stdout
-  assert "hello" in r.stdout, r.stdout
+  assert "body one" in r.stdout, r.stdout
+  assert "$(call one.beta," in r.stdout, r.stdout
+  assert "body two" in r.stdout, r.stdout
+  assert "body two\n|)" not in r.stdout, r.stdout   # body plus delimiter leaking as raw text
 
 
 @pytest.mark.xfail(
@@ -2458,17 +2444,30 @@ def test_anonymous_ctor_kwargs_declaration_lowers(ir):
   assert "$(call dockerfs, def=" in r.stdout and "bind=img" in r.stdout, r.stdout
 
 
+def test_recipe_chain_link_keeps_its_body(ir):
+  # a link's body is hoisted as a gensym def and handed to the receiver call the way a ctor takes one
+  src = "probe:\n  alpha(| body one |).beta(k=v)(| chain_body_marker |)\n"
+  r = ir(src)
+  assert "cmk-fault" not in r.stdout, r.stdout
+  assert "chain_body_marker" in r.stdout, r.stdout
+  assert "def=" in r.stdout, r.stdout
+
+
 @pytest.mark.xfail(
   strict=True,
-  reason="TODO: a recipe-level chain segment carrying both kwargs and a banana body -- "
-  "`img(| |).dockerfs(path=..)(| body |)` -- compiles today but silently drops the segment's "
-  "body: only `$(call <gensym>.dockerfs,path=..)` is emitted and the body text appears nowhere "
-  "in the lowering.  Silent data loss; the body should survive, or a mixed segment should be a "
-  "compile error.  If this xpasses, the body reached the lowering -- check which semantics "
-  "landed, then drop this marker.",
+  reason="TODO: the paren-extractor that reads leading-paren ctor kwargs is not paren-balanced, so "
+  "a value holding a make reference ends the kwargs early and the whole declaration falls through "
+  "the scanner: it reaches the makefile verbatim, delimiters included, with no define and no ctor "
+  "call.  Same leakage family as the chain-link specs above, and the same machinery a chain link "
+  "must scan, since a link has to find the end of its kwargs before the body that follows.  The "
+  "paren-safe workaround is body kwargs.  End-to-end consumer coverage lives in "
+  "test_mint_kwargs_paren_cmk.py; this is the ctor-agnostic min-repro.  If this xpasses, the "
+  "extractor learned balanced parens -- drop both markers.",
 )
-def test_recipe_chain_segment_keeps_its_body(ir):
-  # expected: the segment body text survives somewhere in the lowering
-  src = _FLUENT_HDR + _FLUENT_IMG + "probe:\n  img(| |).dockerfs(path=/x mode=+x)(| CHAIN_BODY_MARKER |)\n"
+def test_leading_paren_kwargs_survive_a_make_reference(ir):
+  # expected: the declaration mints, rather than reaching the output as raw source
+  src = "alpha one(k=$(FOO) j=plain)(|\n  body one\n|)\n"
   r = ir(src)
-  assert "CHAIN_BODY_MARKER" in r.stdout, r.stdout
+  assert "$(call alpha," in r.stdout, r.stdout
+  assert "body one" in r.stdout, r.stdout
+  assert "alpha one(k=" not in r.stdout, r.stdout   # the declaration leaking as raw text

@@ -27,6 +27,7 @@ pytestmark = [
 REPO = Path(__file__).resolve().parent.parent
 COMPOSE = REPO / "compose.mk"
 IMAGE = "cmk-test-ambient-dind:latest"
+HOST_NAME = subprocess.run(["hostname"], capture_output=True, text=True, timeout=30).stdout.strip()
 DOCKERFILE = """FROM docker:dind
 RUN apk add -q --update --no-cache coreutils bash make jq
 """
@@ -91,6 +92,85 @@ def test_containerized_multihop_chain(dind_image):
   assert "OUT_CUR=[outer]" in out, out[-2000:]
   assert "OUT_AP=[host.local]" in out, out[-2000:]
   assert "OUT_AP=[outer]" not in out, out[-2000:]
+
+
+def test_outward_move_builds_a_fresh_instance(dind_image):
+  """An outward move re-dispatches into the enclosing recipe, it does not migrate.
+
+  The marker is written to the container's own filesystem, not the mounted workspace, so
+  it survives only if the arriving block landed in the very container that wrote it.
+  """
+  src = (
+    "open cmk\n"
+    f"container outer(img={dind_image} entrypoint=bash)(| |)\n"
+    f"container inner(img={dind_image} entrypoint=bash)(| |)\n"
+    "hop:\n"
+    "  (| touch /tmp/cmk-instance-marker && ${__cmk__} mid |) in outer\n"
+    "mid:\n"
+    "  (| ${__cmk__} leaf |) in inner\n"
+    "leaf:\n"
+    '  (| test -f /tmp/cmk-instance-marker && echo "INST_STATE=same" || echo "INST_STATE=fresh" |) out\n'
+  )
+  rc, out = _run(".tmp.ambient.dind.instance.cmk", src, "hop")
+  assert rc == 0, out[-2000:]
+  assert "INST_STATE=fresh" in out, out[-2000:]
+
+
+def test_leaving_a_container_for_its_group_relabels_without_relocating(dind_image):
+  """A group has no kernel, so leaving a member for it moves the chain and not the block.
+
+  The marker proves the arriving block is still inside the member's container, which is
+  the namespace row of the per-kind table and the property the sibling demo relies on.
+  """
+  src = (
+    "open cmk\n"
+    "namespace grp(|\n"
+    f"  container alice(img={dind_image} entrypoint=bash)(| |)\n"
+    "|)\n"
+    "hop:\n"
+    "  (| touch /tmp/cmk-group-marker && ${__cmk__} leaf |) in grp.alice\n"
+    "leaf:\n"
+    '  (| test -f /tmp/cmk-group-marker && echo "GRP_STATE=same" || echo "GRP_STATE=fresh"; echo "GRP_CUR=[$__ambient__]" |) out\n'
+  )
+  rc, out = _run(".tmp.ambient.dind.group.cmk", src, "hop")
+  assert rc == 0, out[-2000:]
+  assert "GRP_STATE=same" in out, out[-2000:]
+  assert "GRP_CUR=[grp]" in out, out[-2000:]
+
+
+def test_escape_from_a_container_names_the_daemon_not_the_host(dind_image):
+  """Leaving a container for the host reaches daemon powers, not host execution.
+
+  The socket confers the right to build containers, so the chain has to say so.  Checked
+  against the host's own name, read before any container ran, so the claim holds on any
+  host rather than only where the kernel gives it away.
+  """
+  src = (
+    "open cmk\n"
+    f"container box(img={dind_image} entrypoint=bash)(| |)\n"
+    "hop:\n"
+    "  (| ${__cmk__} leaf |) in box\n"
+    "leaf:\n"
+    '  (| echo "ESC_CUR=[$__ambient__] ESC_HOST=[`hostname`]" |) out\n'
+  )
+  rc, out = _run(".tmp.ambient.dind.escape.cmk", src, "hop")
+  assert rc == 0, out[-2000:]
+  assert "ESC_CUR=[host.daemon]" in out, out[-2000:]
+  assert "ESC_CUR=[host.local]" not in out, out[-2000:]
+  assert f"ESC_HOST=[{HOST_NAME}]" not in out, out[-2000:]
+
+
+def test_the_daemon_context_is_a_registered_ambient(dind_image):
+  """The daemon context is a real ambient, not a label the escape arm invents in passing."""
+  src = (
+    "open cmk\n"
+    "report:\n"
+    "\tprintf 'DAEMON_REG=[$(call __ambients__.has,host.daemon)]\\n'\n"
+    "__main__: report\n"
+  )
+  rc, out = _run(".tmp.ambient.dind.daemonreg.cmk", src, "report")
+  assert rc == 0, out[-2000:]
+  assert "DAEMON_REG=[host.daemon]" in out, out[-2000:]
 
 
 def test_sibling_channel_exchange(dind_image):
