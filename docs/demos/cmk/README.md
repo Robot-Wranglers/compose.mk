@@ -8,9 +8,9 @@
 
 * [all-glyphs.cmk](./all-glyphs.cmk) (41 lines)
 
-* [ambient-ladder.cmk](./ambient-ladder.cmk) (95 lines)
+* [ambient-ladder-qemu.cmk](./ambient-ladder-qemu.cmk) (23 lines)
 
-* [ambient-siblings-v2.cmk](./ambient-siblings-v2.cmk) (114 lines)
+* [ambient-siblings-v2.cmk](./ambient-siblings-v2.cmk) (98 lines)
 
 * [ambient-siblings.cmk](./ambient-siblings.cmk) (72 lines)
 
@@ -116,9 +116,7 @@
 
 * [dockerfile-build.cmk](./dockerfile-build.cmk) (34 lines)
 
-* [dockerfs-fluent.cmk](./dockerfs-fluent.cmk) (65 lines)
-
-* [dockerfs.cmk](./dockerfs.cmk) (72 lines)
+* [dockerfs.cmk](./dockerfs.cmk) (88 lines)
 
 * [double-dispatch.cmk](./double-dispatch.cmk) (22 lines)
 
@@ -216,7 +214,7 @@
 
 * [logging.cmk](./logging.cmk) (60 lines)
 
-* [machine-qemu-exfile.cmk](./machine-qemu-exfile.cmk) (98 lines)
+* [machine-qemu-exfile.cmk](./machine-qemu-exfile.cmk) (53 lines)
 
 * [machine.cmk](./machine.cmk) (53 lines)
 
@@ -294,7 +292,7 @@
 
 * [stages-idiom.cmk](./stages-idiom.cmk) (33 lines)
 
-* [stages.cmk](./stages.cmk) (71 lines)
+* [stages.cmk](./stages.cmk) (72 lines)
 
 * [stdlib-stream-io.cmk](./stdlib-stream-io.cmk) (56 lines)
 
@@ -330,7 +328,7 @@
 
 * [vm-coroutines.cmk](./vm-coroutines.cmk) (66 lines)
 
-* [vm-steer.cmk](./vm-steer.cmk) (39 lines)
+* [vm-steer.cmk](./vm-steer.cmk) (38 lines)
 
 * [xephyr.cmk](./xephyr.cmk) (117 lines)
 

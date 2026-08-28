@@ -46,6 +46,8 @@
 
 * [docker.import.mk](./docker.import.mk) (26 lines)
 
+* [dockerfs.mk](./dockerfs.mk) (93 lines)
+
 * [double-dispatch.mk](./double-dispatch.mk) (21 lines)
 
 * [elixir-1.mk](./elixir-1.mk) (26 lines)

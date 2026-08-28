@@ -22,7 +22,7 @@ import log
 # generator: ( bash, fed in via the ⬦ stream-FD glyph )
 #   Emits a random 4-char token.
 bash_script(|
-LC_ALL=C tr -dc 'a-z0-9' < /dev/urandom | head -c4; echo
+head -c256 /dev/urandom | LC_ALL=C tr -dc 'a-z0-9' | head -c4; echo
 |)
 generator:; bash ⬦bash_script
 

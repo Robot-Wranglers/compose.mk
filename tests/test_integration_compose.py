@@ -249,3 +249,39 @@ def test_compose_import_generated_service_lifecycle(project):
   assert project.run("services.appsvc.stop").ok  # namespaced stop
   assert project.run("appsvc.stop").ok  # bare stop (idempotent)
   assert project.run("dc.clean").ok
+
+
+# --- exec with a target argument -------------------------------------------
+
+
+def test_compose_import_generated_service_exec_target(project):
+  """`<svc>.exec[.detach]/<target>` re-enters make inside the running container.
+
+  The lifecycle tests drive the exec family only in `cmd=` mode, which takes the
+  literal-command branch; this covers the target branch. The sentinel file is the
+  detached form's only observable, since it discards both streams.
+  """
+  project.load("compose-exec")
+  assert project.run("testsvc.up.detach").ok
+  r = project.run("testsvc.exec/hello")
+  assert r.ok, r.stderr
+  assert "hello-cmk-exec" in r.stdout
+  assert project.run("testsvc.exec.detach/leave.mark").ok
+  assert project.run("testsvc.stop").ok
+  assert project.run("dc.clean").ok
+
+
+def test_compose_import_generated_service_exec_target_cmk(project):
+  """Same surface, driven through the cmk entrypoint instead of a Makefile.
+
+  Regression pin: the exec family used to build its command from `${make}`,
+  whose `-f` list is the raw .cmk source, which plain make cannot parse. It now
+  uses the compiled `${MAKEFILE}`, as `<svc>.dispatch/` already did.
+  """
+  project.load("compose-exec-cmk")
+  project.seed_compose_mk()
+  r = project.run(
+    "mk.interpret!", "app.cmk", env={"CMK_SUPERVISOR": "1"}, timeout=600
+  )
+  assert r.ok, r.stderr
+  assert "exec-detach-ok" in (project.dir / "mark.txt").read_text()

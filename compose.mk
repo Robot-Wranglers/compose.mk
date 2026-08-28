@@ -254,7 +254,8 @@ make=make ${MAKE_FLAGS} $(call twin.map,${makefile_list})
 ## | CMK_DIND_SRC    | include path: host and container  |
 ##
 ## Derived host / container helpers (detailed below): docker.cmk.mount (the `-v`
-## bind), makefile_list.dind / make.dind (the host `-f` rewritten to the mount).
+## bind), makefile_list.dind / make.dind (the host `-f` rewritten to the mount),
+## make.exec (re-entry in a running container, via the compiled entrypoint).
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 # The SelfPath family (each var mapped by the table above) answers "where is compose.mk?" for a
 # different context. All are recursive (`=`) so paths resolve freshly at each use. The container mount
@@ -271,6 +272,8 @@ docker.hosted.mount.src=$${HOSTED_CACHE_HOST:-$(if $(filter /%,${HOSTED_CACHE}),
 docker.hosted.mount=$(if $(wildcard ${HOSTED_CACHE}),-v ${docker.hosted.mount.src}:/cmk-hosted/$(notdir ${HOSTED_CACHE}):ro -e HOSTED_CACHE_DIR=/cmk-hosted -e HOSTED_CACHE_HOST="${docker.hosted.mount.src}",)
 makefile_list.dind=$(if $(strip ${docker.cmk.mount}),$(patsubst -f${cmk.self},-f${CMK_DOCKER_PATH},${makefile_list}),${makefile_list})
 make.dind=make ${MAKE_FLAGS} ${makefile_list.dind}
+# Re-entry inside an already-running container: the compiled entrypoint, never the host-only twin.
+make.exec=make ${MAKE_FLAGS} -f ${MAKEFILE}
 # parse-time freeze (inputs are stable by here); recursive form cost one probe per child under make 4.4
 export CMK_DIND_SRC:=$(shell ${_cmk.ws.probe}; if [ "$$rel" = "$$s" ]; then echo "${CMK_DOCKER_PATH}"; else echo "$$rel"; fi)
 
@@ -6908,7 +6911,7 @@ endef
 define .awk.super.stderr.filter
   { _t=ENVIRON["CMK_TWIN_PATH"]; if (_t != "") { _s=ENVIRON["CMK_BIN"]; while (_i=index($0,_t)) $0 = substr($0,1,_i-1) _s substr($0,_i+length(_t)) } }
   /(write error|standard output): Broken pipe$/{next}   # benign SIGPIPE noise (see doc-block)
-  /^make.*:.*mk.interrupt\/SIGINT.*Killed/{d=1} d{ if($0 ~ /^make:.*Error/) d=0; next } /^make(\[[0-9]+\])?: \*\*\* .*Interrupt *$/{ if(!intr){ printf "\033[93m\033[1m⚠\033[0m\033[93m interrupted\033[0m\n"; intr=1; fflush() } next } /^make(\[[0-9]+\])?: \*\*\* /{ printf "  \033[2m%s\033[0m\n", $0; fflush(); next } { print; fflush() }
+  /^make.*:.*mk.interrupt\/SIGINT.*Killed/{d=1} d{ if($0 ~ /^make:.*Error/) d=0; next } /^make(\[[0-9]+\])?: \*\*\* .*Interrupt(: [0-9]+)? *$/{ if(!intr){ printf "\033[93m\033[1m⚠\033[0m\033[93m interrupted\033[0m\n"; intr=1; fflush() } next } /^make(\[[0-9]+\])?: \*\*\* /{ printf "  \033[2m%s\033[0m\n", $0; fflush(); next } { print; fflush() }
 endef
 export _cmk_blk_super_split  := $(call lang.grammar.ctx.fill,$(value .awk.super.stderr.split))
 export _cmk_blk_super_filter := $(call lang.grammar.ctx.fill,$(value .awk.super.stderr.filter))
@@ -6938,6 +6941,8 @@ endef
 define _mk.super.tramp
 # Goal-eval scheduler loop; register map and rationale in scratch/tramp-notes.md.
 xfer=".tmp.cmk.mbox.${MAKE_SUPER}"; __ip__="${__argv__}"; __step__=0; __step_budget__="${CMK_TRAMPOLINE_MAX:-10000}"; __posix_code__=0
+# the stderr filters are read once as text: a `<(..)` opened inside the async `>(..)` below races its own descriptor away
+_awk_err_split="$(_cmk_awk .awk.super.stderr.split)"; _awk_err_filter="$(_cmk_awk .awk.super.stderr.filter)"
 export CMK_SUPER_RESUME="${xfer}.resume"
 rm -f -- "${xfer}" "${xfer}.post" "${xfer}.resume" 2>/dev/null || true
 # In-file pre-hooks only exist after a parse, so the boot gate also probes the program source; the exit gate instead trusts the mbox flag the parsed main hop drops (covering exports, pragmas, and handle registrations alike).
@@ -6952,7 +6957,7 @@ while [ -n "${__ip__}" ]; do
   if [ "${__step__}" -gt "${__step_budget__}" ]; then printf 'compose.mk: trampoline hop limit %s exceeded\n' "${__step_budget__}" >/dev/stderr; __posix_code__=70; break; fi
   rm -f -- "${xfer}" 2>/dev/null || true
   # Stderr filter: split make-error line, drop interrupt noise; fflush per line avoids lost output.
-  __ip__="${__ip__}" __alt__="${__alt__}" __yielded__="${__yielded__}" __step__="${__step__}" __step_budget__="${__step_budget__}" __posix_code__="${__posix_code__}" __exit_code__="${__exit_code__}" ${_make_} mk.super.enter/${MAKE_SUPER} ${__ip__} 2> >(awk -f <(_cmk_awk .awk.super.stderr.split) | awk -f <(_cmk_awk .awk.super.stderr.filter) >/dev/stderr)
+  __ip__="${__ip__}" __alt__="${__alt__}" __yielded__="${__yielded__}" __step__="${__step__}" __step_budget__="${__step_budget__}" __posix_code__="${__posix_code__}" __exit_code__="${__exit_code__}" ${_make_} mk.super.enter/${MAKE_SUPER} ${__ip__} 2> >(awk "${_awk_err_split}" | awk "${_awk_err_filter}" >/dev/stderr)
   __posix_code__=$?
   # Router runs before fault-handling; transfer/resume/exit route first, fault is the fallthrough.
   if grep -q '^CONT=' "${xfer}" 2>/dev/null; then                              # transfer: hop yielded a goal
@@ -9222,7 +9227,7 @@ ${compose_file_stem}.exec/%:
 	&& target="`printf $${*}|cut -d/ -s -f2-`" \
 	&& case $$$${target} in \
 		"") cmd="$$$${cmd:-whoami}";; \
-		*) cmd="${make} $$$${target}";; \
+		*) cmd="${make.exec} $$$${target}";; \
 	esac \
 	&& tmp="${no_ansi}${bold}::" \
 	&& case $$$${target} in \
@@ -9349,7 +9354,7 @@ $(compose_service_name).exec.detach/%:
 	$$(call log.docker, ${dim_green}${target_namespace} ${sep} ${no_ansi}${green}$(compose_service_name) ${sep} ${dim_cyan}exec.detach ${sep} $${*})
 	docker compose -f ${compose_file} \
 		exec --detach $(compose_service_name) \
-		${make} $${*} 2> >(grep -v 'variable is not set' >&2)
+		${make.exec} $${*} 2> >(grep -v 'variable is not set' >&2)
 $(compose_service_name).exec/%:
 	@# Shorthand for <stem>.exec/<svc>/<target_name>
 	${make} ${compose_file_stem}.exec/$(compose_service_name)/$${*}

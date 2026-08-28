@@ -142,4 +142,4 @@ run.active:
   cmk.log(${bold}running racers in finishing order ${sep} $$order)
   for r in $$order; do ${make} racer/$$r; done
 
-__main__: demo.puzzle demo.contrast demo.infeasible run.active
+__main__: demo.puzzle demo.contrast flux.negate/demo.infeasible run.active

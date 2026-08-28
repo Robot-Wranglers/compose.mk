@@ -5,18 +5,17 @@
 # USAGE: ./demos/cmk/xpra.cmk serve
 
 import io
+from gui import xpra_base
 
-export APP_DIMS?=1024x500
-export APP_DISPLAY?=:23
+xpra_base xpra_img(| |)
+
 export CMK_POST=xpra.stop
-
-export XPRA_ARGS?=--mdns=no --printing=no --speaker=no --sharing=yes --audio=no --pulseaudio=no --webcam=no --microphone=off --html=on --exit-with-children=yes --terminate-children=yes --daemon=no --window-close=disconnect --file-transfer=no --tray=no --system-tray=no --resize-display="1200x768"
-export XPRA_PORT_INTERNAL?=14500
-export XPRA_SOURCES=https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra-lts.sources
 export XPRA_PORT_EXTERNAL=9090
+export IMG_XPRA_BASE := $(xpra_img.img)
+export XPRA_ARGS := ${XPRA_ARGS} --resize-display="1200x768"
 
 # Begin containerized version of i3 window manager and support files.
-compose.import.string gui.services(|
+compose.import.string xpra.services(|
 configs:
   # See https://i3wm.org/docs/userguide.html for a complete reference
   i3conf:
@@ -24,7 +23,7 @@ configs:
       # Set mod key to Alt (Mod1)
       set $$mod Mod1
       font pango:Monaco 10
-      # Use Mouse+$mod to drag floating windows
+      # Hold the mod key and drag with the mouse to move floating windows
       floating_modifier $$mod
       # Kill focused window
       bindsym $$mod+Shift+q kill
@@ -51,17 +50,9 @@ services:
     build:
       context: .
       dockerfile_inline: |
-        FROM ubuntu:24.04
-        ENV DEBIAN_FRONTEND=noninteractive
-        RUN apt-get update -qq 
-        RUN apt-get install -y make
-        RUN apt-get install -y wget apt-transport-https \
-          software-properties-common ca-certificates
-        RUN wget -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc
-        RUN wget -O "/etc/apt/sources.list.d/xpra.sources" ${XPRA_SOURCES}
-        RUN apt-get update -qq 
-        RUN apt-get install -qq -y xpra i3 i3status xterm x11-apps mesa-utils
-        # Requires for i3-layouts 
+        FROM ${IMG_XPRA_BASE}
+        RUN apt-get install -qq -y make i3 i3status xterm x11-apps mesa-utils
+        # Required for i3-layouts
         RUN apt-get install -qq -y python3-pip xdotool
         RUN pip3 install --break-system-packages i3-layouts
         # We'll volume-mount this later, swap out the default splash screen
@@ -84,13 +75,14 @@ services:
         target: /root/.config/i3/config
 |)
 
-serve: xpra.stop xpra.build xpra.up.detach xpra.exec.detach/i3.start_apps flux.timeout/5/xpra.logs
+serve: xpra_img.build xpra.stop xpra.build xpra.up.detach xpra.exec.detach/i3.start_apps flux.timeout/5/xpra.logs
     '''
     Starts an XOrg server, rebuilding the xpra container if necessary.
     Then start/detach i3 WM, and start a few apps inside.
     Tail the logs for a while, wait for user-input, exit cleanly.
+    Enter and interrupt both tear the stack down via the xpra.stop exit-hook.
     '''
-    io.user_exit(Serving: http://localhost:${XPRA_PORT_EXTERNAL}\nPress any key to exit.)
+    io.user_exit(Serving: http://localhost:${XPRA_PORT_EXTERNAL})
 
 i3.start_apps: io.wait/5
     '''
