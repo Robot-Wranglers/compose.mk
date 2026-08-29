@@ -80,3 +80,6 @@ IDEAS*.md
 SPIKE*.md
 .claude/csop-state/
 .claude/commands
+# the fossil bug tracker: a local sqlite repo, not source (see .cmk/fossil.cmk)
+tracker.fossil
+.fossil.db

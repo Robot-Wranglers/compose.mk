@@ -21,11 +21,21 @@ __main__: init clean build test docs
 py.release.root := via/pip
 $(call include.plugins, actions.mk docs.cmk drawio.cmk mmd.cmk grip.cmk mkdocs.cmk html.cmk gitops.cmk py.mk)
 $(call include.plugins, prefix=. .automation.cmk)
+$(call import.module, file=fossil.cmk prefix=.cmk flat=1 plugin=1)
+# alias the tracker to a shorter name; a slash-bearing verb needs its own rule, since make matches a slashless pattern against the basename alone
+bugs.%:
+	${make} fossil.${*}
+bugs.run/%:
+	${make} fossil.run/${*}
+bugs.ticket/%:
+	${make} fossil.ticket/${*}
+bugs: bugs.list
 $(call include.plugin, file=local.mk strict=0)
 $(call compose.import, file=demos/data/docker-compose.yml)
 
-init: mk.stat docker.stat gitops.hooks.init
-	@# Show status, initialize some containers, and wire git hooks (see gitops.hooks.precommit/*).
+init: mk.stat docker.stat gitops.hooks.init fossil.init
+	@# Show status, initialize some containers, wire git hooks (see gitops.hooks.precommit/*),
+	@# and bootstrap the fossil bug tracker (see fossil.cmk).
 
 # Register the reusable gitleaks secret-scan (gitops.cmk) as a pre-commit hook; declaring this
 # target IS the registration -- `make gitops.hooks.init` (run by `init`) reflects it into a real

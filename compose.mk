@@ -1257,7 +1257,8 @@ $(call bin.update, glow.run, _tools.glow.run.detect)
 $(call bin.update, compose, docker compose >/dev/null 2>&1 && echo docker compose, echo DOCKER-COMPOSE-MISSING)
 $(call bin.update, gum.present, which gum >/dev/null 2>&1 && echo 1, 0)
 $(call bin.update, curl, which curl, docker run --rm ${IMG_CURL})
-$(call bin.update, cols, which tput >/dev/null 2>&1 && echo `tput cols 2>/dev/null`, 50)
+# Filtered so a terminal reporting no usable width falls back to the default instead of an empty string.
+$(call bin.update, cols, which tput >/dev/null 2>&1 && tput cols 2>/dev/null | grep '[1-9]', 50)
 
 # Flat-project the module onto bare names (like import tools flat=1).
 $(eval $(call lang.module.bind,tools,$(tools.__all__)))
@@ -3982,7 +3983,9 @@ _mk.demote.main/%:; @${stream.stdin} | awk -v root='${*}' "$${_awklang_demote_ma
 ## the pipeline stages driven (namespace, header, main-demote) are defined just above.  A staged
 ## module carries its own identity as `export CMK_MODULE := <source>` (independent of the
 ## destination namespace, read at run time as CMK_MODULE), with every module-level assignment /
-## target LHS prefixed `<dest>.`, so `var`/`tgt` become `<dest>.var`/`<dest>.tgt`.
+## target LHS prefixed `<dest>.`, so `var`/`tgt` become `<dest>.var`/`<dest>.tgt` -- except a head
+## already named `<dest>`, which is the namespace root itself and passes through (that is where the
+## demoted `__main__` lands, so a plugin's entrypoint reads `<dest>`, not `<dest>.<dest>`).
 ##
 ## `_mk.module.key` is the staging key for `.tmp.module.<key>.mk`: just `<dest>` when source ==
 ## destination (the tidy common case), else `<src>-<dest>` so two sources imported to one namespace
@@ -10400,7 +10403,7 @@ define .awk.module.namespace
   depth > 0 { print; next }
   /^\./ { print; next }
   !dunders && /^_/ { print; next }
-  /^[A-Za-z_][A-Za-z0-9_.%\/-]*[ \t]*[:=+?!]/ { print ns "." $0; next }
+  /^[A-Za-z_][A-Za-z0-9_.%\/-]*[ \t]*[:=+?!]/ { h=$0; sub(/[ \t]*[:=+?!].*$/,"",h); print (h==ns ? $0 : ns "." $0); next }
   { print }
   END { if (pstate) flushbuf() }
 endef

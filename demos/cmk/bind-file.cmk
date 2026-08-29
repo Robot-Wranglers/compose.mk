@@ -9,6 +9,6 @@
 #
 # USAGE: ./demos/cmk/bind-file.cmk
 
-code script(file=demos/data/test-file.py img=python:3.11-slim-bookworm entrypoint=python)(| |)
+code myscript(file=demos/data/test-file.py img=python:3.11-slim-bookworm entrypoint=python)(| |)
 
-__main__: script
+__main__: myscript
