@@ -6190,8 +6190,8 @@ subcommands.tail = $(call m5.rest,$(filter-out flux.pre/% flux.post/%,$(shell pr
 
 _cli.subcommands.make=CMK_INTERNAL=1 CMK_DISABLE_HOOKS=1 CMK_SUPERVISOR=0 ${make}
 
-# Sets `_inv`, the invocation as the user spelled it.
-_cli.subcommands.argv0=_a="$${CMK_ARGV0:-}" ; _s="$${subcmd_name}" ; \
+# Sets `_inv`, the invocation as the user spelled it.  An `__main__` entry is implicit -- nobody types it -- so it drops out of the rendered invocation.
+_cli.subcommands.argv0=_a="$${CMK_ARGV0:-}" ; _s="$${subcmd_name}" ; case "$${_s}" in __main__) _s="" ;; esac ; \
 	if [ -n "$${_a}" ]; then _s=`printf '%s' "$${_s}" | sed -E 's|^(cli\.)?cmk\.?||' | tr . ' '` ; \
 	else _a="$${__file__:-$${CMK_BIN}}" ; _b="$${_a\#\#*/}" ; [ "`command -v "$${_b}" 2>/dev/null`" != "$${_a}" ] || _a="$${_b}" ; fi ; \
 	_inv=`printf '%s %s' "$${_a}" "$${_s}" | sed -E 's/ +$$//'`
@@ -6509,7 +6509,9 @@ _cmk.compile.checked=$(call io.mktemp) \
 	&& ( export CMK_COMPILER_VERBOSE=0 && $(call _cmk.compile,$(1)) ) \
 	&& ( export CMK_COMPILER_VERBOSE=0 CMK_INTERNAL=0 ; $(call mk.validate,$${tmpf}) )
 
-_cmk.interpret.self=export CMK_INTERNAL=0 CMK_SUPERVISOR=1 continuation="$${argv:-}" __interpreting__=$(m5[1]) && $(call _mk.interpret.file,$${tmpf})
+# An `__main__` subcommand entry is implicit, so a leading word that names no target of the program routes there rather than failing as an unknown goal.
+_cmk.main.implicit=_w="$${argv:-}" ; _w="$${_w%% *}" ; if [ -n "$${_w}" ] && ! grep -qaE "^$${_w}[:/]" $${tmpf} 2>${devnull} && sed -n '/^__main__:/,/^[^\t]/p' $${tmpf} 2>${devnull} | grep -qa cli.subcommands ; then argv="__main__ $${argv}" ; fi
+_cmk.interpret.self=${_cmk.main.implicit} ; export CMK_INTERNAL=0 CMK_SUPERVISOR=1 continuation="$${argv:-}" __interpreting__=$(m5[1]) && $(call _mk.interpret.file,$${tmpf})
 
 
 cli.cmk.run/%: CMK_COMPILER_VERBOSE := 0

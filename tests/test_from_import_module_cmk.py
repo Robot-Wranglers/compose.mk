@@ -155,6 +155,27 @@ def test_from_disk_module_missing_qualified_member_faults(tmp_path):
   assert "MODULE_MEMBER" in out, out
 
 
+@pytest.mark.xfail(
+  reason="`from <mod> import <member> as <alias>` is unimplemented. The dialect awk's "
+  "`from` branch does not strip the `as` trailer, so the directive lowers to "
+  "`$(call lang.module.from,mylib,mylib as B)` and the binder faults with MODULE_MEMBER "
+  "on `as` and `B` read as member names. The receiver scanner already extracts the alias, "
+  "so the grammar is half-present. `import mylib as B` is the spelling that works today. "
+  "Fix needs the trailer stripped plus an alias mode in _lang.module.from.bind.",
+  strict=True,
+)
+def test_from_disk_module_alias_mounts_namespace(tmp_path):
+  # the aliased from-import should mount the module under B, like `import mylib as B` does.
+  rc, out = _run(
+    "from mylib import mylib as B\n__main__: B.greet\n",
+    "__main__",
+    tmp_path,
+    plugin=QUALIFIED_PLUGIN,
+  )
+  assert rc == 0, out
+  assert "greeted" in out, out
+
+
 def test_from_missing_module_faults(tmp_path):
   rc, out = _run("from nolib import greet\n__main__: greet\n", "__main__", tmp_path)
   assert rc != 0, out
