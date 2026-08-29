@@ -21,6 +21,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Install socat
+        # demos/cmk/jqd.cmk gates demo.socket behind assert.tool.required/socat.
+        run: sudo apt-get update && sudo apt-get install -y socat
       - name: Initialize
         run: make clean init
       - name: Run CMK Demos

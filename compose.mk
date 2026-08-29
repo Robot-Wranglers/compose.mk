@@ -711,7 +711,7 @@ docker.run.base:=docker run --rm -i -v $${DOCKER_HOST_WORKSPACE:-$${PWD}}:/works
 ## * CMK_LOG_IMPORTS :: 1 to log module-level imports (default 0)
 ## * CMK_COMPILER_VERBOSE :: 1 to allow compiler debug messages
 ## * CMK_IMPORT_DISCOVER :: 1 = register-only import mode (discovery pass); default 0
-## * CMK_SANDBOX / CMK_SANDBOX_SRC :: Sandbox-partition toggles (empty = off)
+## * CMK_<name> / CMK_<name>_SRC :: Per-partition opt-in toggles, upper-cased name (empty = off)
 ## * TRACE :: 1 for extra verbosity (finer than verbose)
 ## * trace :: Alias for TRACE; very noisy (appends make -x)
 ## * verbose :: 1 to show debug output
@@ -779,7 +779,7 @@ export CMK_STAGE_DIR := $(or $(value CMK_STAGE_DIR),$(shell d='${CMK_MODULES_DIR
 CMK_NATIVE_CACHE ?= ${CMK_STAGE_DIR}/native
 # stage a make value to a native-cache file, ensuring the dir; write-if-changed via a pid temp so a concurrent reader never sees a truncated file.
 mk.native.stage = $(shell mkdir -p ${CMK_NATIVE_CACHE})$(file >${1}.${_cmk.pid},${2})$(shell if cmp -s "${1}.${_cmk.pid}" "${1}"; then rm -f "${1}.${_cmk.pid}"; else mv -f "${1}.${_cmk.pid}" "${1}"; fi)
-$(call m5.declare, CMK_SANDBOX?=, CMK_SANDBOX_SRC?=, CMK_YIELD_HOOK?=true, CMK_SUPERVISOR_STEP_HOOK?=flux.noop)
+$(call m5.declare, CMK_YIELD_HOOK?=true, CMK_SUPERVISOR_STEP_HOOK?=flux.noop)
 
 export __interpreting__?=
 
@@ -1261,7 +1261,7 @@ $(call bin.update, curl, which curl, docker run --rm ${IMG_CURL})
 $(call bin.update, cols, which tput >/dev/null 2>&1 && tput cols 2>/dev/null | grep '[1-9]', 50)
 
 # Flat-project the module onto bare names (like import tools flat=1).
-$(eval $(call lang.module.bind,tools,$(tools.__all__)))
+$(call lang.module.bind,tools,$(tools.__all__))
 
 # Cross-namespace aliases onto the now-flat-bound handles.
 stream.glow=${glow.run}
@@ -5509,7 +5509,7 @@ define __hosted__
       && ${mk.def.to.file}/$(${_ccb_lang}.buildsh),$$dir/build.sh \
       && { docker image inspect ${_ccb_base} >/dev/null 2>&1 \
            || { $(call log.io, ${dim}${_ccb_lang} ${sep} pulling ${no_ansi}${_ccb_base}${dim} (one-time)${no_ansi}) ; docker pull ${_ccb_base} 2>&1 | cat ; } } \
-      && entrypoint=sh img=${_ccb_base} cmd=/build/build.sh docker_args="$(call _code.compiled.dockerargs,${1})" ${make} docker.run.sh \
+      && entrypoint=sh img=${_ccb_base} cmd=/build/build.sh docker_args="$(call _code.compiled.dockerargs,${1})" ${make} docker.run.sh </dev/null \
       && $(call log.io, ${dim}${_ccb_lang} ${sep} built ${no_ansi}$$bin${dim} in $$(( `date +%s 2>/dev/null || echo 0` - $${_t0:-0} ))s${no_ansi})
     |)
 
@@ -5622,7 +5622,7 @@ __hosted__.loaded =$(strip $(filter ${HOSTED_CACHE},${MAKEFILE_LIST}))
 ## lowers any such region to a content-addressed cache and binds it via make's makefile-remaking,
 ## so a plain include transparently gets its targets (cold: build and restart once; warm: a hash
 ## and an `-include`).  The region name is the only structural variable, so one template drives
-## both the load-bearing `hosted` partition and the opt-in `sandbox` lab bench; running it against
+## both the boot-critical `hosted` partition and the opt-in `sandbox` lab bench; running it against
 ## `sandbox` as well as `hosted` is what proves the mechanism parametric.  This zone also holds the
 ## built-in prewarm loader, which materializes the hosted cache once before the supervised makes run.
 ##
@@ -5631,14 +5631,14 @@ __hosted__.loaded =$(strip $(filter ${HOSTED_CACHE},${MAKEFILE_LIST}))
 ## * __sandbox__ :: The sandbox region.
 ##     A lab bench for the dedent/cook/docstring hazards, run through the real
 ##     transpile pipeline but depended on by nothing.
-## * _CMK_HOSTED_BUILDING :: Re-entrancy guard so the cache-build sub-make skips this whole block
-## * partition.stage :: The staging template.
-##     Positional args: name, prefix, min-count, phony, failmsg;
-##     `CMK_<PREFIX>_SRC` overrides the body as a per-test injection hook.
-## * partition.*.failmsg :: The per-partition cold-build failure messages
-## * HOSTED_SRC :: The file that carries the regions plus the transpiler
+## * _CMK_PARTITION_BUILDING :: Re-entrancy guard so the cache-build sub-make skips this whole block
+## * partition.stage :: The staging template; call it as `name[, min-count][, phony-source]`.
+##     It derives the upper prefix and stages in one call; `CMK_<PREFIX>_SRC` overrides the body.
+## * partition.opt.in :: The shared opt-in predicate deciding whether a gated partition stages
+## * partition.failmsg :: The cold-build failure message, named by partition
+## * PARTITION_SRC :: The file that carries every region plus the transpiler
 ## * hosted instance :: Plus the whole-file `.PHONY` collision guard and core-namespace auto-help
-## * sandbox instance :: The same template, gated off unless opted in
+## * gated instances :: sandbox and omni, staged from the same template only when opted in
 ## * _cmk.prewarm.hosted :: The built-in loader that warms the hosted cache before the run
 #░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
@@ -5646,12 +5646,7 @@ __hosted__.loaded =$(strip $(filter ${HOSTED_CACHE},${MAKEFILE_LIST}))
 # their stable homes.  No forms live here now; `__future__.help` keeps the namespace registered.
 __future__.help: mk.namespace.filter/__future__.
 
-# The SANDBOX partition: a parallel of `define __hosted__` above, keyed on `define __sandbox__`.
-# Purpose: a lab bench for the recurring dedent/cook/docstring hazards.  Experimental CMK-lang
-# content dropped in here is driven through the REAL transpile pipeline (so it reproduces hosted
-# behavior exactly), but nothing depends on it and its build never touches normal operation --
-# so an unstable experiment cannot halt bootstrap the way an unstable `__hosted__` does.  The
-# staging (below, in the `ifndef _CMK_HOSTED_BUILDING` block) activates only when opted in.
+# A lab bench for the dedent/cook/docstring hazards: the real transpile pipeline, nothing depending on it.
 define __sandbox__
   sandbox.selftest:
     '''
@@ -5663,21 +5658,20 @@ define __sandbox__
     echo ok
 endef
 
-# _CMK_HOSTED_BUILDING guards re-entrancy: the cache-build sub-make (below) re-parses
-# compose.mk and would otherwise re-trigger the remaking rule -> infinite recursion.
-# Each build recipe exports _CMK_HOSTED_BUILDING=1, so that sub-make skips this whole
-# block.  (Internal only -- the leading `_` marks it private, not a user-facing knob.)
-ifndef _CMK_HOSTED_BUILDING
+# A region reserved for omnibus content; the probe holds the place until that content lands.
+define __omni__
+  omni.selftest:
+    '''
+    A trivial, non-docker probe showing that the `__omni__` region staged and loaded.
+    '''
+    cmk.log(omni partition is live)
+    echo ok
+endef
 
-# partition.stage: the parametric staging template (see the section doc-block).  Args (positional):
-#   1 lower-case partition name   -> the `define __<1>__` marker, `.tmp.<1>.` cache, prewarm hook
-#   2 UPPER prefix                -> the <2>_CACHE / <2>_HASH / CMK_<2>_SRC public symbols
-#   3 minimum target count        -> a short/truncated (cold-fail) build is warned + never promoted
-#   4 phony-manifest source (opt) -> when set, its shell value seeds a `.PHONY` line for the build
-#   5 failure-message source      -> a macro name (indirected so its commas don't split the log call)
-# The body source is a per-partition override CMK_<2>_SRC (empty default = extract from the file,
-# balancing nested define/endef); it is the per-test injection hook and feeds both the hash
-# (content-addressing each injection to its own cache) and the transpile verbatim.
+# Each build recipe exports this, so the cache-build sub-make skips the block instead of recursing.
+ifndef _CMK_PARTITION_BUILDING
+
+# The staging body; reach it through the `partition.stage` wrapper below, never directly.
 # Two hard-won invariants live in the recipe, do not "simplify" them away:
 #   - the hash folds in CMK_VERSION so a pure-seed edit that adds a new namespace root still busts
 #     an upgrader's warm cache (the region alone would not change); guarded by test_phony_collisions.
@@ -5685,23 +5679,23 @@ ifndef _CMK_HOSTED_BUILDING
 #     not corrupt each other, and only a temp with >= <3> targets is promoted onto the shared
 #     .PRECIOUS cache (a short/truncated build is warned + dropped, never promoted -- what once
 #     surfaced as a phantom `not a member`); guarded by test_hosted_cmk.
-define partition.stage
+define partition.stage.impl
 $(m5[2])_CACHE_DIR ?= $${CMK_STAGE_DIR}
 CMK_$(m5[2])_SRC ?=
-partition.$(m5[1]).body = $$(if $${CMK_$(m5[2])_SRC},cat $${CMK_$(m5[2])_SRC},awk '/^define __$(m5[1])__$$$$/{f=1;d=0;next} f{ line=$$$$0; sub(/^  /,"",line); if(line ~ /^endef[ \t]*$$$$/){ if(d==0){f=0;next} d--; print line; next } if(line ~ /^define /)d++; print line }' $${HOSTED_SRC})
+partition.$(m5[1]).body = $$(if $${CMK_$(m5[2])_SRC},cat $${CMK_$(m5[2])_SRC},awk '/^define __$(m5[1])__$$$$/{f=1;d=0;next} f{ line=$$$$0; sub(/^  /,"",line); if(line ~ /^endef[ \t]*$$$$/){ if(d==0){f=0;next} d--; print line; next } if(line ~ /^define /)d++; print line }' $${PARTITION_SRC})
 # one hash probe per run, not per boot: a child reuses the exported hash while the exported key still matches its own inputs, and any mismatch (container, assembled program, injection override) recomputes.
 $(m5[2])_HASH :=
-ifeq ($$(value _CMK_$(m5[2])_HASH_KEY),$${HOSTED_SRC}|$${CMK_$(m5[2])_SRC}|$${CMK_VERSION})
+ifeq ($$(value _CMK_$(m5[2])_HASH_KEY),$${PARTITION_SRC}|$${CMK_$(m5[2])_SRC}|$${CMK_VERSION})
 $(m5[2])_HASH := $$(_CMK_$(m5[2])_HASH)
 endif
 ifeq ($$($(m5[2])_HASH),)
 $(m5[2])_HASH := $$(shell { echo "$${CMK_VERSION}"; $${partition.$(m5[1]).body}; } | cksum | awk '{printf "%07x",$$$$1%268435456}')
 endif
-export _CMK_$(m5[2])_HASH_KEY := $${HOSTED_SRC}|$${CMK_$(m5[2])_SRC}|$${CMK_VERSION}
+export _CMK_$(m5[2])_HASH_KEY := $${PARTITION_SRC}|$${CMK_$(m5[2])_SRC}|$${CMK_VERSION}
 export _CMK_$(m5[2])_HASH := $$($(m5[2])_HASH)
 $(m5[2])_CACHE := $${$(m5[2])_CACHE_DIR}/.tmp.$(m5[1]).$${$(m5[2])_HASH}.mk
 .PRECIOUS: $${$(m5[2])_CACHE}
-ifneq ($$(__$(m5[1])__.enabled),0)
+ifneq ($$(call m5|,__$(m5[1])__.enabled,1),0)
 -include $${$(m5[2])_CACHE}
 endif
 $${$(m5[2])_CACHE}:
@@ -5710,28 +5704,31 @@ $${$(m5[2])_CACHE}:
 	&& case "$$$$_mf" in --*) ;; -*) _rest="$$$${_mf#"$$$${_mf%% *}"}" ; _w1=`printf %s "$$$${_mf%% *}" | tr -d n` ; [ "$$$$_w1" = - ] && _w1="" ; _mf="$$$$_w1$$$$_rest" ;; esac \
 	&& _t=$${@}.$$$$$$$$.build \
 	&& { $${partition.$(m5[1]).body} \
-	     | CMK_INTERNAL=1 _CMK_HOSTED_BUILDING=1 MAKEFLAGS= $$(MAKE) $$$$_mf -f $${HOSTED_SRC} lang.transpile > $$$$_t$(if $(m5[4]), \
+	     | CMK_INTERNAL=1 _CMK_PARTITION_BUILDING=1 MAKEFLAGS= $$(MAKE) $$$$_mf -f $${PARTITION_SRC} lang.transpile > $$$$_t$(if $(m5[4]), \
 	     && printf '\n.PHONY: %s\n' "`$${$(m5[4])}`" >> $$$$_t) ; } ; \
 	if [ -s "$$$$_t" ] && [ "$$$$(grep -cE '^[A-Za-z_][A-Za-z0-9._/%-]*:' $$$$_t)" -ge $(m5[3]) ]; then \
 	  mv $$$$_t $${@} ; \
 	else \
-	  $$(call log.mk, $${yellow}$${$(strip $5)}$${no_ansi}) ; \
+	  $$(call log.mk, $${yellow}$$(call partition.failmsg,$(m5[1]))$${no_ansi}) ; \
 	  rm -f $$$$_t ; \
 	fi
 mk.$(m5[1]).prewarm: $${$(m5[2])_CACHE}
 	@true
 endef
 
-# The two partition failure messages (macro-indirected so their commas don't split the log call).
-partition.hosted.failmsg = hosted partition failed to compile ${sep} hosted-only targets will be missing. The cold compiler needs GNU awk (busybox awk is not enough). Install gawk or provide a prebuilt cache (see scratch/TODO-hosted-needs-gawk.md)
-partition.sandbox.failmsg = sandbox partition failed to compile ${sep} sandbox-only targets will be missing (the cold compiler needs GNU awk)
+# The public entrypoint: derive the upper prefix, default the min-count, stage in one call.
+partition.stage = $(call m5!,$(call partition.stage.impl,$(m5[1]),$(call m5.lex.upper,$(m5[1])),$(or $(m5[2]?),1),$(m5[3]?)))
 
-# The file holding both the partition regions and the transpiler.  Normally compose.mk
-# itself; when compose.mk is inlined into a stand-alone program the running makefile
-# carries the copy, so fall back to the first entry of MAKEFILE_LIST.
-HOSTED_SRC := $(or ${cmk.self},$(abspath $(firstword ${MAKEFILE_LIST})))
+# A gated partition stages on its own CMK toggle, a source override, or a goal in its namespace.
+partition.opt.in = $(if $(filter-out 0 false no off,$(call m5|,CMK_$(call m5.lex.upper,$(m5[1])),)),1,)$(if $(call m5|,CMK_$(call m5.lex.upper,$(m5[1]))_SRC,),1,)$(if $(filter $(m5[1]).% mk.$(m5[1]).%,$(call m5|,MAKECMDGOALS,)),1,)
 
-$(eval $(call partition.stage,hosted,HOSTED,5,_cmk.phony.bare,partition.hosted.failmsg))
+# The cold-build failure message, named by partition; every region shares the one cold compiler.
+partition.failmsg = $(strip ${1}) partition failed to compile ${sep} $(strip ${1})-only targets will be missing. The cold compiler needs GNU awk (busybox awk is not enough). Install gawk or provide a prebuilt cache (see scratch/TODO-hosted-needs-gawk.md)
+
+# The file carrying every region plus the transpiler: compose.mk, or the running makefile when inlined.
+PARTITION_SRC := $(or ${cmk.self},$(abspath $(firstword ${MAKEFILE_LIST})))
+
+$(call partition.stage,hosted,5,_cmk.phony.bare)
 
 # Bind __builtins__ bare at load (floor precedence: guest read last).
 $(if $(filter 1,$(__hosted__.enabled)),$(call lang.module.bind,__builtins__,$(__builtins__.__all__)))
@@ -5741,20 +5738,16 @@ $(if $(filter 1,$(__hosted__.enabled)),$(call lang.module.bind,__builtins__,$(__
 # file/dir named like a bare target would silently shadow it; we phony only the bare (dotless)
 # core heads.  `_cmk.phony.roots` (first-segment of every head) also feeds the auto-help below,
 # which is gated on a `.help` goal so the enumeration shell runs only when help is requested.
-_cmk.seed.heads = sed '/^define /,/^endef/d' ${HOSTED_SRC} | grep -oE '^[A-Za-z_][A-Za-z0-9._/%-]*:([^=]|$$)'
+_cmk.seed.heads = sed '/^define /,/^endef/d' ${PARTITION_SRC} | grep -oE '^[A-Za-z_][A-Za-z0-9._/%-]*:([^=]|$$)'
 _cmk.hosted.heads = ${partition.hosted.body} | grep -oE '^[A-Za-z_][A-Za-z0-9._/%-]*:([^=]|$$)'
 _cmk.phony.roots = { ${_cmk.seed.heads}; ${_cmk.hosted.heads}; } | sed -E 's/:.*//; s/[./%].*//' | sort -u | tr '\n' ' '
 _cmk.phony.bare = ${__builtins__} | grep -vE '[./%]' | tr '\n' ' '
 _cmk.help.auto.roots = for r in $$(${_cmk.phony.roots}); do case "$$r" in _*) continue;; esac; grep -qE "^$$r[.]help[ :]" ${CMK_SRC} || printf '%s ' "$$r"; done
 $(if $(filter %.help,$(call m5|,MAKECMDGOALS,)),$(foreach _hr,$(shell ${_cmk.help.auto.roots}),$(call _mk.gen.help,${_hr})))
 
-# The SANDBOX instance: the same template, gated OFF by default.  Active only when opted in
-# (`CMK_SANDBOX` truthy, `CMK_SANDBOX_SRC` set, or a `sandbox.*`/`mk.sandbox.*` goal), so a normal
-# build never parses or builds it and a broken experiment is recovered by not asking for it.
-_cmk.sandbox.active := $(if $(filter-out 0 false no off,${CMK_SANDBOX}),1,)$(if ${CMK_SANDBOX_SRC},1,)$(if $(filter sandbox.% mk.sandbox.%,$(call m5|,MAKECMDGOALS,)),1,)
-ifneq (,${_cmk.sandbox.active})
-$(eval $(call partition.stage,sandbox,SANDBOX,1,,partition.sandbox.failmsg))
-endif
+# The gated instances, off by default so a broken experiment is recovered by not asking for it.
+$(if $(call partition.opt.in,sandbox),$(call partition.stage,sandbox))
+$(if $(call partition.opt.in,omni),$(call partition.stage,omni))
 endif
 
 # _cmk.prewarm.hosted: a built-in loader that materializes the hosted partition cache once,
@@ -6663,7 +6656,7 @@ dir/%:
 # __builtins__: reflective listing of the core targets compose.mk itself ships -- the
 # always-available stdlib namespace (cf. python's `__builtins__`), distinct from a guest
 # program's own targets (`mk.targets`) and from the whole loaded namespace (`__dir__`).
-# Names come from `${HOSTED_SRC}` (the seed heads plus the `__hosted__` partition), sorted
+# Names come from `${PARTITION_SRC}` (the seed heads plus the `__hosted__` partition), sorted
 # and deduped, newline-delimited and pipe-friendly.  This is the single enumerator behind
 # the `.PHONY` guard: `_cmk.phony.bare` filters it down to the bare (dotless) heads.
 # USAGE:  $(call __builtins__)   ||   ./compose.mk __builtins__

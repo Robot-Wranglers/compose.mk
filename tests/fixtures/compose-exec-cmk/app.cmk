@@ -1,0 +1,24 @@
+import io
+
+compose.import.string execsvc(|
+services:
+  testsvc:
+    image: debian/buildd:bookworm
+    command: ["sleep", "300"]
+    working_dir: /workspace
+    volumes:
+      - ${DOCKER_HOST_WORKSPACE:-${PWD}}:/workspace
+|)
+
+leave.mark:
+    '''
+    Runs inside the live container.  The sentinel file is the only
+    observable, because exec.detach discards both streams.
+    '''
+    echo exec-detach-ok > mark.txt
+
+__main__: testsvc.up.detach testsvc.exec.detach/leave.mark io.wait/15
+    '''
+    Detach-exec a target into the already-running service.
+    '''
+    cmk.log(exec.detach dispatched)
