@@ -7,28 +7,23 @@
 # USAGE: ./demos/cmk/xpra-doom.cmk serve
 
 import io
+from gui import desktop
+
+desktop doom_img(| |)
 
 export DISPLAY=:10
-export XPRA_PORT_INTERNAL?=14500
-export XPRA_ARGS?=--mdns=no --printing=no --speaker=no --sharing=yes --audio=no --pulseaudio=no --webcam=no --microphone=off --html=on --daemon=no --window-close=disconnect --file-transfer=no --tray=no --system-tray=no --exit-with-children=yes --terminate-children=yes 
-export XPRA_PORT_EXTERNAL?=9091
-export XPRA_SOURCES=https://raw.githubusercontent.com/Xpra-org/xpra/master/packaging/repos/noble/xpra-lts.sources
+export XPRA_PORT_EXTERNAL=9091
+export IMG_GUI_DESKTOP := $(doom_img.img)
 export CMK_POST=doom.stop
 
-compose.import.string gui.services(|
+compose.import.string doom.services(|
 services:
   doom:
     build:
       context: .
       dockerfile_inline: |
-        FROM ${IMG_UBUNTU_BASE:-ubuntu:noble}
-        ENV DEBIAN_FRONTEND=noninteractive
-        RUN apt-get update -qq 
-        RUN apt-get install -qq -y wget apt-transport-https software-properties-common ca-certificates
-        RUN wget -O "/usr/share/keyrings/xpra.asc" https://xpra.org/xpra.asc
-        RUN wget -O "/etc/apt/sources.list.d/xpra.sources" ${XPRA_SOURCES}
-        RUN apt-get update -qq 
-        RUN apt-get install -qq -y xpra woof-doom
+        FROM ${IMG_GUI_DESKTOP}
+        RUN apt-get install -qq -y woof-doom
     command: >-
       xpra start ${DISPLAY} --bind-tcp=0.0.0.0:${XPRA_PORT_INTERNAL:-14500}
         ${XPRA_ARGS} --start-child /usr/games/boom
@@ -42,7 +37,7 @@ services:
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
 |)
 
-serve: doom.stop doom.build doom.up.detach flux.timeout/5/doom.logs
+serve: doom_img.build doom.stop doom.build doom.up.detach flux.timeout/5/doom.logs
     '''
     Rebuild the doom container if necessary, then start/detach it
     and tail the logs.  Serves the game over HTML5 to a host browser.

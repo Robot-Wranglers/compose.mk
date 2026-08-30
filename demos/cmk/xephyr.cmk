@@ -4,23 +4,23 @@
 #
 # USAGE: ./demos/cmk/xephyr.cmk gui
 
+from gui import desktop
+
+desktop i3_img(| |)
+
 export APP_DIMS?=1024x500
 export APP_DISPLAY?=:23
+export IMG_GUI_DESKTOP := $(i3_img.img)
 
-# Begin containerized version of i3 window manager and support files.
-compose.import.string gui.services(|
+# The window manager, its clients, and both configs arrive with the base image.
+compose.import.string i3.services(|
 services:
   i3:
-    image: compose.mk:i3
     hostname: i3
     build:
       context: .
       dockerfile_inline: |
-        FROM ${IMG_UBUNTU_BASE:-ubuntu:22.04}
-        ENV DEBIAN_FRONTEND=noninteractive
-        RUN apt-get update -qq 
-        RUN apt-get install -qq -y make
-        RUN apt-get install -qq -y i3 i3status x11-apps xterm feh mesa-utils
+        FROM ${IMG_GUI_DESKTOP}
     entrypoint: i3
     working_dir: /workspace
     volumes:
@@ -29,53 +29,8 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix
     environment:
       DISPLAY: ${APP_DISPLAY:-23}
-    configs:
-      - source: i3conf
-        target: /root/.config/i3/config
-      - source: i3statconf
-        target: /root/.config/i3status/config
-configs:
-  # https://i3wm.org/i3status/manpage.html
-  # https://github.com/i3/i3status
-  i3statconf:
-    content: |
-      general {
-        output_format = "i3bar"
-        colors = true
-        interval = 5
-      }
-      order += "cpu_usage"
-      order += "disk /"
-      order += "tztime local"
-      cpu_usage { format = "CPU: %usage" }
-      disk "/" { format = "Disk: %free" }
-      tztime local { format = "%Y-%m-%d %H:%M:%S" }
-  # See https://i3wm.org/docs/userguide.html for a complete reference
-  # Set mod key to Alt (Mod1)
-  # Use Mouse+$mod to drag floating windows
-  # Kill focused window
-  # Change focus between windows
-  # Split window
-  # Toggle fullscreen
-  # Layout toggle (stacked, tabbed, default)
-  # Floating toggle
-  i3conf:
-    content: |
-      set $$mod Mod1
-      floating_modifier $$mod
-      bindsym $$mod+Shift+q kill
-      bindsym $$mod+h focus left
-      bindsym $$mod+j focus down
-      bindsym $$mod+k focus up
-      bindsym $$mod+l focus right
-      bindsym $$mod+v split v
-      bindsym $$mod+b split h
-      bindsym $$mod+f fullscreen toggle
-      bindsym $$mod+s layout stacking
-      bindsym $$mod+w layout tabbed
-      bindsym $$mod+e layout toggle split
-      bindsym $$mod+Shift+space floating toggle
-      bar { status_command i3status }
+      # re-entry inside this container resolves `from gui import ..` against this path
+      CMK_PLUGINS_DIR: .cmk
 |)
 
 # Top-level helpers, these require Xephyr 
@@ -91,7 +46,7 @@ xephyr.start:
     '''Start Xephyr in the background.'''
     Xephyr -ac -screen ${APP_DIMS} -br -reset -terminate ${APP_DISPLAY} &
 
-gui: xephyr.init i3.stop i3.build i3.up.detach i3.exec/i3.start_apps 
+gui: i3_img.build xephyr.init i3.stop i3.build i3.up.detach i3.exec/i3.start_apps
     '''
     Main Entrypoint
     Start an XOrg server, rebuild the i3 container if necessary.

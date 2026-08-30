@@ -1,11 +1,10 @@
 """Smoke sweep for the committed CMK-language demos.
 
 A thin guard that every committed top-level demo still runs -- or, for the heavy
-and interactive ones, still transpiles. Demos are not a substitute for tests:
-anything needing real behavioral coverage carries its own dedicated test tagged
-via the covers-demo marker, and this sweep only handles what no such test claims.
-Scope is git-tracked top-level demos only, so uncommitted work-in-progress and the
-demos in the tui subfolder (driven by their own tests) are out.
+and interactive ones, still transpiles. Anything needing real behavioral coverage
+carries its own dedicated test tagged via the covers-demo marker. Scope is
+git-tracked top-level demos only: uncommitted work, the tui subfolder, and the
+experimental subfolder (swept by the experimental suite alone) are all out.
 """
 
 import re
@@ -19,17 +18,15 @@ CMK_DEMOS = REPO / "demos" / "cmk"
 TESTS_DIR = REPO / "tests"
 
 
-def _tracked_top_level_demos():
+def _tracked_demos(pathspec, pattern):
   out = subprocess.run(
-    ["git", "ls-files", "demos/cmk/*.cmk"],
+    ["git", "ls-files", pathspec],
     cwd=str(REPO), capture_output=True, text=True,
   ).stdout
-  return sorted(
-    Path(p).name for p in out.split() if re.fullmatch(r"demos/cmk/[^/]+\.cmk", p)
-  )
+  return sorted(Path(p).name for p in out.split() if re.fullmatch(pattern, p))
 
 
-ALL_DEMOS = _tracked_top_level_demos()
+ALL_DEMOS = _tracked_demos("demos/cmk/*.cmk", r"demos/cmk/[^/]+\.cmk")
 
 _COVERS_CALL = re.compile(r"covers_demo\(([^)]*)\)")
 _CMK_LIT = re.compile(r"""["']([^"']+\.cmk)["']""")
@@ -61,26 +58,30 @@ def _is_interactive(name):
   return "tux.repl" in (CMK_DEMOS / name).read_text(errors="replace")
 
 
-# the beam platform is in-flight and not certified: run under the experimental suite instead
-EXPERIMENTAL = {d for d in ALL_DEMOS if d.startswith("beam")}
+# in-flight work lives in its own folder, so it never enters the top-level sweep
+EXPERIMENTAL = set(
+  _tracked_demos(
+    "demos/cmk/experimental/*.cmk", r"demos/cmk/experimental/[^/]+\.cmk"
+  )
+)
 
 INTERACTIVE = {d for d in ALL_DEMOS if d not in COVERED and _is_interactive(d)}
-COMPILE_ONLY = sorted((HEAVY | INTERACTIVE) - COVERED - EXPERIMENTAL)
+COMPILE_ONLY = sorted((HEAVY | INTERACTIVE) - COVERED)
 RUN = [
   d
   for d in ALL_DEMOS
-  if d not in COVERED and d not in HEAVY and d not in INTERACTIVE and d not in EXPERIMENTAL
+  if d not in COVERED and d not in HEAVY and d not in INTERACTIVE
 ]
 EXPERIMENTAL_RUN = sorted(EXPERIMENTAL - COVERED)
 
 
-def _run_demo(runner, demo):
+def _run_demo(runner, relpath):
   r = runner(
-    "cmk", "run", f"demos/cmk/{demo}",
+    "cmk", "run", relpath,
     cwd=REPO, timeout=300, env={"CMK_SUPERVISOR": "1"},
   )
   assert r.returncode == 0, (
-    f"`cmk run demos/cmk/{demo}` failed (rc={r.returncode})\n{r.stderr[-2000:]}"
+    f"`cmk run {relpath}` failed (rc={r.returncode})\n{r.stderr[-2000:]}"
   )
 
 
@@ -89,7 +90,7 @@ def _run_demo(runner, demo):
 @pytest.mark.parametrize("demo", RUN)
 def test_committed_cmk_demo_runs(demo, docker_cmk):
   # every committed demo no dedicated test claims must run clean end to end
-  _run_demo(docker_cmk, demo)
+  _run_demo(docker_cmk, f"demos/cmk/{demo}")
 
 
 @pytest.mark.experimental
@@ -99,7 +100,7 @@ def test_experimental_cmk_demo_runs(demo, docker_cmk):
   # in-flight demos, carried by no gating suite so a failure never reddens a PR
   if demo == "<none>":
     pytest.skip("no experimental demos")
-  _run_demo(docker_cmk, demo)
+  _run_demo(docker_cmk, f"demos/cmk/experimental/{demo}")
 
 
 @pytest.mark.compiler

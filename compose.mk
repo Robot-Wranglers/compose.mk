@@ -4413,7 +4413,8 @@ define __hosted__
   container.content.key = $(file > ${container.content.tmp},$(call container.content,$(1)))$(shell set -- `cksum < ${container.content.tmp}`; rm -f ${container.content.tmp}; echo $$1)
   # read on demand, not at mint, since a file can bind itself to an instance that already minted
   container.tag = $(if $(call container.buildable,$(1)),$($(1).img)-$(call container.content.key,$(1)),$($(1).img))
-  container.ensure = $(if $(call container.owner,$(1)),docker image inspect $(call container.tag,$(call container.owner,$(1))) >/dev/null 2>&1 || ${make} $(call container.owner,$(1)).build &&)
+  # probes the launched tag alongside the content-hashed one, since either can go missing alone
+  container.ensure = $(if $(call container.owner,$(1)),docker image inspect $(call container.tag,$(call container.owner,$(1))) $($(1).img) >/dev/null 2>&1 || ${make} $(call container.owner,$(1)).build &&)
   _crun/%:; @$(call container.ensure,$(firstword $(subst $(comma), ,${*}))) $(call container.exec,$(firstword $(subst $(comma), ,${*})),$(lastword $(subst $(comma), ,${*})))
   *[|
     cmk.class cmk.container.capabilities[|

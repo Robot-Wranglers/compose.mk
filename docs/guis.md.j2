@@ -96,7 +96,7 @@ This example uses the 'seamless' mode for xpra instead of the desktop mode.
 
 With the doom example out of the way.. the structure of our [earlier xephyr demo](#xephyr-demo) is more practical in terms of combining multiple apps, providing tiling geometry with `i3`, and shipping with enough structure so that it is easily configured and extended.
 
-This example returns to `i3` and adds a few variations: we'll drop the status-bar config from the previous example, and add usage of `i3-layout` [^6] (very similar to the `dwindle` tool[^7] that handles spiral layouts with the embedded TUI).
+This example returns to `i3` and adds usage of `i3-layout` [^6] (very similar to the `dwindle` tool[^7] that handles spiral layouts with the embedded TUI).  The window-manager config is no longer written out per-demo: it ships with the shared `gui` module as a file bound to the base image, so every example here gets the same keybindings and status bar.
 
 ```bash {.cli_example .language-bash}
 $ ./demos/cmk/xpra.cmk serve 

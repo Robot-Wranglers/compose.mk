@@ -398,7 +398,7 @@ def test_nslint_clean_import_anchored_use(ir):
   "point of the flag, but nl_use only counts a qualified `ns.*` send as a use.  So a flat "
   "import whose members are used bare is reported dead, and the warning goes away only if "
   "you also spell one use qualified.  Same false-positive family as the predicate and "
-  "cmk-anchored cases above.  Live example: demos/cmk/beam-tramp.cmk.",
+  "cmk-anchored cases above.  Live example: demos/cmk/experimental/beam-tramp.cmk.",
 )
 def test_nslint_clean_flat_import_bare_use(ir):
   # a flat import binds members bare, so a bare use must count as using the namespace.

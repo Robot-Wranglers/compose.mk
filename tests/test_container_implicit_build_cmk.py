@@ -158,3 +158,48 @@ def test_dispatch_builds_the_tag_owner(implicit):
   r, built = implicit("dispatch")
   assert r.ok, r.stderr
   assert built
+
+
+@pytest.fixture
+def redropped(request, docker_cmk, runid):
+  """Build the probe, drop only its plain tag, then dispatch the same form again."""
+  base = f"cmktest_{runid}_{request.node.name.split('[')[0]}"
+  tag = f"compose.mk:{base}"
+  src = REPO / f".tmp.{base}.cmk"
+  src.write_text(PREAMBLE.format(base=base, marker=MARKER))
+
+  def run(target):
+    def invoke():
+      return docker_cmk(
+        "cmk",
+        "run",
+        src.name,
+        target,
+        cwd=REPO,
+        timeout=600,
+        env={"CMK_SUPERVISOR": "1"},
+      )
+
+    first = invoke()
+    assert first.ok, first.stderr
+    assert _image_exists(tag), "probe tag must exist after the first dispatch"
+    subprocess.run(["docker", "rmi", "-f", tag], capture_output=True)
+    assert not _image_exists(tag), "the plain tag must be gone before the retry"
+    return invoke(), _image_exists(tag)
+
+  yield run
+  src.unlink(missing_ok=True)
+  ids = subprocess.run(
+    ["docker", "images", "-q", "--filter", f"reference={tag}*"],
+    capture_output=True, text=True,
+  ).stdout.split()
+  if ids:
+    subprocess.run(["docker", "rmi", "-f", *ids], capture_output=True)
+
+
+def test_run_dispatch_reensures_the_runtime_tag(redropped):
+  # a surviving content-hashed tag is no proof the launched tag is still present
+  r, rebuilt = redropped("in_container")
+  assert r.ok, r.stderr
+  assert rebuilt
+  assert MARKER in r.stdout

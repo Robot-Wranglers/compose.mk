@@ -5,27 +5,22 @@
 # USAGE: ./demos/cmk/xpra.cmk serve
 
 import io
-from gui import xpra_base
+from gui import desktop
 
-xpra_base xpra_img(| |)
+desktop xpra_img(| |)
 
 export CMK_POST=xpra.stop
-export XPRA_PORT_EXTERNAL=9090
-export IMG_XPRA_BASE := $(xpra_img.img)
+export IMG_GUI_DESKTOP := $(xpra_img.img)
 export XPRA_ARGS := ${XPRA_ARGS} --resize-display="1200x768"
 
-# The i3 keymap arrives with the base image, so only packages are declared here.
+# The desktop and its configs arrive with the base image.
 compose.import.string xpra.services(|
 services:
   xpra:
     build:
       context: .
       dockerfile_inline: |
-        FROM ${IMG_XPRA_BASE}
-        RUN apt-get install -qq -y make i3 i3status xterm x11-apps mesa-utils
-        # Required for i3-layouts
-        RUN apt-get install -qq -y python3-pip xdotool
-        RUN pip3 install --break-system-packages i3-layouts
+        FROM ${IMG_GUI_DESKTOP}
         # We'll volume-mount this later, swap out the default splash screen
         RUN rm /usr/share/xpra/www/background.png
     ports:

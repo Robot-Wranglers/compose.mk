@@ -28,15 +28,15 @@ pytestmark = [
 SRC = """\
 from cmk import Dockerfile, container, dsl
 
-Dockerfile pyseam(|
+Dockerfile pyimg(|
   FROM python:3.11-slim
   ENTRYPOINT ["python3"]
 |)
 
-container pybox(img=${pyseam.img} entrypoint=python3)(| |)
+container pybox(img=${pyimg.img} entrypoint=python3)(| |)
 dsl pylang(machine=pybox)(| |)
 
-pyseam.polyglot via_polyglot(|
+pyimg.polyglot via_polyglot(|
   def f(x):
       if x > 1:
           return "polyglot-nested-ok"
@@ -82,9 +82,13 @@ def seams(request, docker_cmk, runid, tmp_path):
 
   yield run
   src.unlink(missing_ok=True)
-  subprocess.run(
-    ["docker", "rmi", "-f", "compose.mk:pyseam"], capture_output=True
-  )
+  # by id, so the content-hashed tag goes with the plain one and each arm rebuilds
+  ids = subprocess.run(
+    ["docker", "images", "-q", "--filter", "reference=compose.mk:pyimg*"],
+    capture_output=True, text=True,
+  ).stdout.split()
+  if ids:
+    subprocess.run(["docker", "rmi", "-f", *ids], capture_output=True)
 
 
 def test_polyglot_preserves_nested_indentation(seams):
