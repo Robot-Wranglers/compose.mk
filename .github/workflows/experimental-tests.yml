@@ -1,0 +1,24 @@
+# On-demand only: no push/pull_request trigger, so a failure here can never block a PR.
+name: Experimental Tests
+on:
+  workflow_dispatch: {}
+  workflow_call: {}
+permissions:
+  contents: read
+jobs:
+  experimental:
+    name: Experimental (pytest via tox)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Initialize
+        run: make clean init
+      - name: Run experimental-tests
+        run: make experimental-test

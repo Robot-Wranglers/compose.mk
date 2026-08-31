@@ -46,10 +46,10 @@ _PROBE = (
 )
 
 
-def _run(src, *targets, docker=False, timeout=180):
+def _run(src, *targets, docker=False, timeout=180, env=None):
     f = REPO / ".tmp.compose.machine.cmk"
     f.write_text("#!/usr/bin/env -S ./compose.mk cmk run\n" + src)
-    env = dict(os.environ)
+    env = {**os.environ, **(env or {})}
     if not docker:
         env["COMPOSE_MISSING"] = "1"
     try:
@@ -127,6 +127,71 @@ def test_composeservice_wraps_body_into_one_service(probe):
     line = next(l for l in probe.splitlines() if l.startswith("CSCONTENT="))
     assert "services:<NL>  box:<NL>" in line, line  # services: / <self>: preamble auto-added
     assert "image: alpine" in line, line
+
+
+# -- a kind that rewrites its body says so, and can show what it wrote --
+
+_RENDER_SRC = (
+    "compose.service box(|\n"
+    "image: alpine\n"
+    "volumes:\n"
+    "  - /var/run/docker.sock:/var/run/docker.sock\n"
+    "|)\n"
+    "__main__:; @true\n"
+)
+
+
+def test_composeservice_announces_its_artifacts(tmp_path):
+    # Silent rewriting of user input is the failure mode; the mint says what it wrote.
+    rc, out = _run(_RENDER_SRC)
+    assert rc == 0, out
+    assert "compose.kind" in out, out
+    assert ".tmp.box.yml" in out, out
+    assert ".tmp.cmk.svc-defaults.json" in out, out
+    assert "extends" in out, out
+
+
+def test_composeservice_announce_is_silent_when_quiet(tmp_path):
+    # quiet forces verbose off, so the rewrite notice goes with it.
+    rc, out = _run(_RENDER_SRC, env={"quiet": "1"})
+    assert rc == 0, out
+    assert "compose.kind" not in out, out
+
+
+def test_composeservice_render_shows_both_files(tmp_path):
+    # render answers what was done to the body without building or running.
+    rc, out = _run(_RENDER_SRC, "box.render", env={"quiet": "1"})
+    assert rc == 0, out
+    assert "# .tmp.box.yml" in out, out
+    assert "# .tmp.cmk.svc-defaults.json" in out, out
+    assert '"working_dir":"/workspace"' in out, out
+    assert "/var/run/docker.sock" in out, out
+
+
+# -- the workspace defaults merge with the body rather than colliding with it --
+
+@pytest.mark.docker
+@pytest.mark.needs_docker
+def test_composeservice_body_volumes_merge_with_the_defaults(tmp_path):
+    # Prepending the defaults as text made any body with volumes a duplicate key.
+    src = (
+        "compose.service box(|\n"
+        "image: alpine\n"
+        "volumes:\n"
+        "  - /var/run/docker.sock:/var/run/docker.sock\n"
+        "|)\n"
+        "__main__:; @true\n"
+    )
+    rc, out = _run(src, docker=True)
+    assert rc == 0, out
+    cfg = subprocess.run(
+        ["docker", "compose", "-f", ".tmp.box.yml", "config"],
+        cwd=str(REPO), capture_output=True, text=True,
+    )
+    assert cfg.returncode == 0, cfg.stderr
+    assert "target: /workspace" in cfg.stdout, cfg.stdout
+    assert "/var/run/docker.sock" in cfg.stdout, cfg.stdout
+    assert "working_dir: /workspace" in cfg.stdout, cfg.stdout
 
 
 # -- needs_docker: the round-trip (a body runs in the service and prints) --

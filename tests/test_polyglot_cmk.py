@@ -121,7 +121,6 @@ def test_polyglot_imports_cleanly():
 
 @pytest.mark.docker
 @pytest.mark.needs_docker
-@pytest.mark.cache
 def test_polyglot_golang_builds_and_runs():
   # First run cross-builds in docker (or cache HIT if already built), then execs the binary.
   r = subprocess.run(

@@ -144,15 +144,13 @@ Platforms used in development for `compose.mk` include recentish docker, GNU mak
 
 <hr style="width:95%;border-bottom:1px dashed black;">
 
-**For MacOS,** once a modern make is installed (see above), the [standard library]({{_}}/standard-lib) should mostly Just Work.  For more [advanced]({{_}}/cmk/compiler) [features]({{_}}/bridge) though, there are the usual problems with BSD vs GNU tools, particularly `sed` and `awk`.
+**For MacOS,** once a modern make is installed (see above), the [standard library]({{_}}/standard-lib) should mostly Just Work.  For more [advanced]({{_}}/cmk/compiler) [features]({{_}}/bridge) though, there are the usual problems with BSD vs GNU tools, particularly `sed`.
+
+The stock `awk` is fine.  The [compiler]({{_}}/cmk/compiler) runs on gawk, mawk, busybox awk, or the one-true-awk that MacOS ships, with identical output, so no awk install is needed.
 
 Typically `/usr/local/bin` comes before `/usr/bin` in PATH, so this should leave your base installation untouched and still prefer GNU by default:
 
 ```bash {.cli_example}
-# Install a GNU awk
-$ brew install gawk
-$ cp /usr/local/bin/gawk /usr/local/bin/awk
-
 # Install a GNU sed
 $ brew install gnu-sed
 $ cp /usr/local/bin/gsed /usr/local/bin/sed

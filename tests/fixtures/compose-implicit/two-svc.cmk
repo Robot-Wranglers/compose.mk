@@ -1,0 +1,33 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+# Two services off one base, so a per-service stamp is distinguishable from a per-file one.
+
+from cmk import Dockerfile
+
+Dockerfile probe_base(|
+  FROM alpine:3.21.2
+  RUN true
+|)
+
+export IMG_PROBE := $(probe_base.img)
+
+compose.import.string probe.services(|
+services:
+  alpha:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${IMG_PROBE}
+        RUN echo alpha > /marker
+    entrypoint: sh
+  beta:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${IMG_PROBE}
+        RUN echo beta > /marker
+    entrypoint: sh
+|)
+
+__main__:
+    true

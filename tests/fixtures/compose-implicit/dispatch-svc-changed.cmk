@@ -1,0 +1,31 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+# The dispatch-svc program with a different marker, same service and stem.
+
+from cmk import Dockerfile
+
+Dockerfile probe_base(|
+  FROM alpine:3.21.2
+  RUN apk add -q --update --no-cache coreutils bash gawk make
+|)
+
+export IMG_PROBE := $(probe_base.img)
+
+compose.import.string probe.services(|
+services:
+  solo:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM ${IMG_PROBE}
+        RUN echo changed > /marker
+    working_dir: /workspace
+    volumes:
+      - ${PWD}:/workspace
+|)
+
+show.marker:
+    cat /marker
+
+__main__:
+    true

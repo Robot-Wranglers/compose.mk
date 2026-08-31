@@ -1,0 +1,17 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+# A public base owns no registry cell, so the ensure must emit nothing and not fault.
+
+compose.import.string probe.services(|
+services:
+  solo:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM alpine:3.21.2
+        RUN echo solo > /marker
+    entrypoint: sh
+|)
+
+__main__:
+    true

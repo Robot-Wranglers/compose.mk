@@ -44,10 +44,10 @@ include $(_cmk)
 ## Requirements
 
 Same runtime tools as the other install paths (basher only handles the
-clone + PATH linking): `make`, `bash`, `jq`, and **GNU** `awk` (Debian: `gawk`, the
-CMK compiler's awk stages need gawk, not `mawk`/busybox awk). basher itself needs
-`git`. (No `ps`/`procps`: on Linux the supervisor self-detects `MAKE_CLI` from
-`/proc`; `ps` is only used on macOS, which always ships it.)
+clone + PATH linking): `make`, `bash`, `jq`, and any `awk` (the CMK compiler's awk
+stages run identically on gawk, `mawk`, busybox awk, and one-true-awk). basher
+itself needs `git`. (No `ps`/`procps`: on Linux the supervisor self-detects
+`MAKE_CLI` from `/proc`; `ps` is only used on macOS, which always ships it.)
 
 The `basher-installer` tox env exercises all of this inside a `debian:bookworm-slim`
 container (installing basher from git plus `make jq gawk`), so neither
