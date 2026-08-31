@@ -13,7 +13,7 @@ Makefile twin.  Docs: robot-wranglers.github.io/compose.mk/matrioshka
 
 import io, stage
 
-export BUILD_TARGET ?= none
+export BUILD_TARGET ?= flux.noop
 
 compose.import.string inlined.services(|
 services:
@@ -69,11 +69,13 @@ demo.dispatch:
   '''
   Run the same generic task inside each differentiated container, via the
   scaffolded per-service dispatch call-form.  Unlike provisioning, this
-  runs after build completes.
+  runs after build completes.  Each dispatch carries the provisioning
+  target its service was built with, since that value is part of the
+  service spec and dispatch checks the spec before it runs.
   '''
   stage.enter(RUN)
-  ${make} alice.dispatch/internal_task
-  ${make} bob.dispatch/internal_task
+  BUILD_TARGET=alice.provision ${make} alice.dispatch/internal_task
+  BUILD_TARGET=bob.provision ${make} bob.dispatch/internal_task
   
 internal_task:
   '''

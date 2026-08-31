@@ -64,16 +64,6 @@
 
 * [bash-if.cmk](./bash-if.cmk) (96 lines)
 
-* [beam-pool.cmk](./beam-pool.cmk) (27 lines)
-
-* [beam-portfolio.cmk](./beam-portfolio.cmk) (28 lines)
-
-* [beam-swarm.cmk](./beam-swarm.cmk) (48 lines)
-
-* [beam-tramp.cmk](./beam-tramp.cmk) (28 lines)
-
-* [beam.cmk](./beam.cmk) (37 lines)
-
 * [bind-file.cmk](./bind-file.cmk) (14 lines)
 
 * [bind-script.cmk](./bind-script.cmk) (30 lines)
@@ -214,7 +204,7 @@
 
 * [logging.cmk](./logging.cmk) (60 lines)
 
-* [machine-qemu-exfile.cmk](./machine-qemu-exfile.cmk) (53 lines)
+* [machine-qemu-exfile.cmk](./machine-qemu-exfile.cmk) (49 lines)
 
 * [machine.cmk](./machine.cmk) (53 lines)
 
@@ -296,8 +286,6 @@
 
 * [stdlib-stream-io.cmk](./stdlib-stream-io.cmk) (56 lines)
 
-* [strat-2.cmk](./strat-2.cmk) (145 lines)
-
 * [strat.cmk](./strat.cmk) (109 lines)
 
 * [structured-io-nushell.cmk](./structured-io-nushell.cmk) (28 lines)
@@ -330,12 +318,12 @@
 
 * [vm-steer.cmk](./vm-steer.cmk) (38 lines)
 
-* [xephyr.cmk](./xephyr.cmk) (117 lines)
+* [xephyr.cmk](./xephyr.cmk) (72 lines)
 
-* [xpra-doom.cmk](./xpra-doom.cmk) (58 lines)
+* [xpra-doom.cmk](./xpra-doom.cmk) (53 lines)
 
-* [xpra-net.cmk](./xpra-net.cmk) (61 lines)
+* [xpra-net.cmk](./xpra-net.cmk) (56 lines)
 
-* [xpra.cmk](./xpra.cmk) (112 lines)
+* [xpra.cmk](./xpra.cmk) (69 lines)
 
 * [zahn.cmk](./zahn.cmk) (108 lines)

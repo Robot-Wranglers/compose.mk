@@ -7,29 +7,24 @@ directory of that name exists, so without `.PHONY` a client project that has a
 compose.mk target into a no-op -- and `-s` suppresses even the "up to date"
 line, so the shadowed target looks like a clean exit-0 success.
 
-The fix (route 2b): the remade `__hosted__` cache appends a generated `.PHONY:`
-manifest listing the BARE (dotless) core targets -- the exact set a client file/dir
-can forward-shadow (`help`, `mkparse`, `cmk`, `yq`, ...). It rides the existing warm
-`-include`, so it costs nothing at parse time.
+The fix: compose.mk ships a literal `.PHONY:` manifest in the seed, listing the bare
+(dotless) core targets -- the exact set a client file/dir can forward-shadow (`help`,
+`mkparse`, `cmk`, `yq`, ...). Every one of them is a seed head, so the manifest is
+correct whatever the `__hosted__` partition does, including when it is disabled.
 
 Scope, by design:
-  * BARE core targets ARE guarded: `help`, `cmk`, `mkparse`, ... A client file/dir
-    of that name no longer shadows the target.
-  * NAMESPACE-ONLY roots (`io`, `flux`, `comp` -- core ships `io.foo` but no bare
-    `io:`) are intentionally NOT phony'd: they protect nothing on our side and would
-    wrongly force a client's real same-named target to always rebuild (the reverse
-    collision). See `test_manifest_excludes_namespace_only_roots`.
-  * dotted LEAVES (`flux.ok`, `io.bash`) are intentionally OUT of scope -- a file
-    named literally `flux.ok` is implausible, and covering every leaf would bloat
-    `.PHONY` to ~400 names. See `test_dotted_leaf_out_of_scope`.
+  * bare core targets are guarded: `help`, `cmk`, `mkparse`, ...
+  * namespace-only roots (`io`, `flux`) are not, since core ships no bare `io:` and
+    phony'ing one would wrongly force a client's real same-named target to rebuild.
+  * dotted leaves (`flux.ok`) are out of scope; covering them would bloat `.PHONY`
+    to ~400 names.
 
-`_cmk.phony.bare` (compose.mk) is the source of the manifest; this module's
-`_source_bare` recomputes the same set so `test_manifest_covers_all_bare_targets`
-fails loudly if a newly-added bare target ever drifts out of the shipped manifest.
+The manifest is a literal line in compose.mk, so it cannot regenerate itself.
+`_source_bare` recomputes the set from source, and the manifest tests below fail
+loudly the moment a newly-added bare target drifts out of the shipped line.
 """
 
 import re
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -143,41 +138,39 @@ def _source_bare():
   return {h for h in _source_heads() if not re.search(r"[./%]", h)}
 
 
-def _built_manifest(tmp_path):
-  """Build the hosted cache into an isolated dir and return its .PHONY set."""
-  env = {"HOSTED_CACHE_DIR": str(tmp_path), "NO_COLOR": "1"}
-  subprocess.run(
-    [str(COMPOSE_MK), "flux.ok"],
-    cwd=str(tmp_path),
-    env={**__import__("os").environ, **env},
-    capture_output=True,
-    text=True,
-  )
-  caches = list(tmp_path.glob(".tmp.hosted.*.mk"))
-  assert caches, "hosted cache was not built"
-  for line in caches[0].read_text().splitlines():
+def _shipped_manifest():
+  """The literal `.PHONY:` line compose.mk ships in the seed, as a set of names."""
+  for line in COMPOSE_MK.read_text().splitlines():
     if line.startswith(".PHONY:"):
       return set(line[len(".PHONY:"):].split())
   return set()
 
 
-def test_manifest_covers_all_bare_targets(tmp_path):
-  # The manifest must guard every bare (dotless) core target -- the real
-  # forward-shadow surface. Recomputed from source so a newly-added bare target that
-  # drifts out of the shipped manifest fails loudly.
-  manifest = _built_manifest(tmp_path)
-  missing = _source_bare() - manifest
-  assert not missing, (
-    f"bare core targets missing from the shipped .PHONY manifest: {sorted(missing)} "
-    f"-- regenerate the hosted cache or check _cmk.phony.bare in compose.mk"
+def test_manifest_is_shipped_in_the_seed():
+  # A cache-built manifest vanishes with `__hosted__.enabled=0`; the seed one cannot.
+  assert _shipped_manifest(), (
+    ".PHONY manifest missing from compose.mk -- the seed must ship it literally, "
+    "not build it into the hosted cache"
   )
 
 
-def test_manifest_excludes_namespace_only_roots(tmp_path):
+def test_manifest_covers_all_bare_targets():
+  # The manifest must guard every bare (dotless) core target -- the real
+  # forward-shadow surface. Recomputed from source so a newly-added bare target that
+  # drifts out of the shipped manifest fails loudly.
+  manifest = _shipped_manifest()
+  missing = _source_bare() - manifest
+  assert not missing, (
+    f"bare core targets missing from the shipped .PHONY manifest: {sorted(missing)} "
+    f"-- add them to the literal .PHONY line in compose.mk"
+  )
+
+
+def test_manifest_excludes_namespace_only_roots():
   # The reverse-collision fix: namespace-only roots (core has `io.foo`/`flux.foo` but
   # no bare `io:`/`flux:`) must NOT be phony'd -- else a client's real same-named
   # file-target gets wrongly forced always-rebuild. Only bare heads belong here.
-  manifest = _built_manifest(tmp_path)
+  manifest = _shipped_manifest()
   namespace_only = (_source_roots() - _source_bare()) & manifest
   assert not namespace_only, (
     f"namespace-only roots wrongly marked .PHONY: {sorted(namespace_only)} -- these "
@@ -185,10 +178,9 @@ def test_manifest_excludes_namespace_only_roots(tmp_path):
   )
 
 
-def test_manifest_excludes_embedded_yaml_and_assignments(tmp_path):
-  # `services`/`volumes` (embedded compose YAML) and `SHELL`/`MAKEFLAGS`
-  # (assignments) must NOT be phony -- a client's real `services/` dir would break.
-  manifest = _built_manifest(tmp_path)
+def test_manifest_excludes_embedded_yaml_and_assignments():
+  # These are not targets; a client's real `services/` dir would break if they were.
+  manifest = _shipped_manifest()
   junk = {"services", "volumes", "windows", "options", "SHELL", "MAKEFLAGS"}
   leaked = junk & manifest
   assert not leaked, f"non-target names wrongly marked .PHONY: {sorted(leaked)}"

@@ -15,7 +15,7 @@ overrides); the defaults shown are what ships.
 | `CMK_SUPERVISOR` | `1` | Run under the supervisor/trampoline; `0` disables it (e.g. a nested subcommand dispatch). |
 | `CMK_MODULES_DIR` | `.cmk` | Directory searched for importable modules; its first element also seeds the staging dir. |
 | `CMK_PLUGINS_DIR` | `.cmk` | Directory searched for plugin `.cmk` blocks. |
-| `CMK_XDG_CACHE` | `~/.cache/compose.mk` | Cache root (honors `XDG_CACHE_HOME`); the `CMK_STAGE_DIR` fallback for read-only / global installs. |
+| `CMK_XDG_CACHE` | `~/.cache/compose.mk` | Cache root (honors `XDG_CACHE_HOME`, and falls back to a per-uid dir under `TMPDIR` when `HOME` is unset); the `CMK_STAGE_DIR` fallback for read-only / global installs. |
 | `CMK_COMPILER_VERBOSE` | `1` | Compiler-logging chatter; a direct `cmk run` forces `0`. |
 | `CMK_LOG_IMPORTS` | `0` | Log routine import chatter (errors always print). |
 | `verbose` | `1` | Show `compose.mk` internal logging (`0` = quieter). |
