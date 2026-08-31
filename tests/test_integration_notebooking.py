@@ -120,6 +120,7 @@ def lab_built():
   return True
 
 
+@pytest.mark.integration
 @pytest.mark.notebooking
 @pytest.mark.needs_docker
 def test_mk_pipeline(lab_built):
@@ -131,6 +132,7 @@ def test_mk_pipeline(lab_built):
   assert "sat" in (NOTEBOOKS / "z3-python.ipynb").read_text()
 
 
+@pytest.mark.integration
 @pytest.mark.notebooking
 @pytest.mark.needs_docker
 def test_cmk_pipeline(lab_built):

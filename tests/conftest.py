@@ -956,11 +956,11 @@ _TOPIC_NODE_SUBSTRINGS = {
   "docstring": ("docstring", "moduledoc", "targetdoc", "target_doc", "doc_accessor", "__doc__"),
   "self": ("self",),
   "banana": ("banana",),
-  "namespace": ("namespace",),
-  "module_system": ("module", "import", "include"),
+  "namespace": ("namespace", "collision"),
+  "module_system": ("module", "import", "include", "unit_plugins"),
   "vm": ("vm_", "::vm", "/vm.", "vm.py", "vm_cmk"),
   "machine": ("machine",),
-  "protocol": ("protocol",),
+  "protocol": ("protocol", "dunder_json"),
   "classvar": ("classvar",),
   "class_system": ("class_", "class.", "inheritance", "dot_operator"),
   "callform": ("callform",),
@@ -972,18 +972,19 @@ _TOPIC_NODE_SUBSTRINGS = {
   "dsl": ("dsl",),
   "jqlang": ("jqlang",),
   "awklang": ("awklang",),
+  "awk": ("awk",),
   "polyglot": ("polyglot",),
   "repl": ("repl",),
   "m5": ("m5_", "m5.", "mtable", "m5table"),
   "ambient": ("ambient",),
   "pragma": ("pragma",),
-  "bootloader": ("bootloader", "pragma_boot", "boot.py"),
+  "bootloader": ("bootloader", "pragma_boot", "boot.py", "busybox"),
   "stack": ("stack",),
   "overlay": ("overlay",),
   "completion": ("completion",),
   "reflection": ("reflect",),
   "lambda": ("lambda",),
-  "kwargs": ("kwarg",),
+  "kwargs": ("kwarg", "bind_args", "bind_posargs", "unpack_args", "bind_def"),
   "ctor": ("ctor", "instance_new"),
   "iface": ("iface",),
   "fault": ("_fault", "errno", "mk_error"),  # NOT 'fault'/'fault_' -- both hit 'default'/'default_'
@@ -999,14 +1000,35 @@ _TOPIC_NODE_SUBSTRINGS = {
   "hooks": ("hook",),
   "glob": ("intermediate_glob", "globbing"),  # NOT bare 'glob'/'_glob' -- hits 'global'
   "logging": ("loggable", "logger", "logging"),
-  "capture": ("capture",),
+  "capture": ("capture", "body_xform"),
   "tools": ("tool",),
   "streams": ("stream",),
   "entrypoint": ("entrypoint", "__main__", "has_main", "main_callable"),
   "dockerfile": ("dockerfile",),
-  "compose": ("unit_compose", "compose_machine", "integration_compose", "composefile"),
+  "compose": (
+    "unit_compose",
+    "compose_machine",
+    "integration_compose",
+    "composefile",
+    "notebooking",
+  ),
   "seed": ("seed",),
   "feed": ("feed",),
+  # --- the legacy .mk / CLI / packaging surfaces the cmk names missed ---
+  "io": ("_io_", "unit_io", "docker_io"),  # NOT bare 'io_' -- hits 'lowprio_'
+  # a bare 'mk_' is unusable here -- it hits every 'cmk_' name
+  "mk": ("::test_mk_", "unit_mk", "docker_mk", "mk_stat"),
+  "cli": ("cmk_cli",),
+  "subcommands": ("subcommand",),
+  "packaging": (
+    "packaging",
+    "global_install",
+    "installer",
+    "mk_pkg",
+    "mk_fork",
+  ),
+  "demos": ("test_demo", "demos_cmk", "integration_demos"),
+  "help": ("help_render", "::test_help"),
 }
 
 
@@ -1095,6 +1117,9 @@ _SUITE_MARKERS = (
   "integration",
   "compiler",
 )
+
+# On-demand suites: own tox env, but outside the gate and coverage credit.
+_ONDEMAND_SUITE_MARKERS = ("experimental", "perf")
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -1253,17 +1278,38 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 
 # Printed right after "collected N items", before the run starts.
 def pytest_report_collectionfinish(config, items):
-  suites = ("unit", "smoke", "docker", "integration", "compiler")
-  gates = ("needs_docker", "network", "nushell", "tui")
+  gates = (
+    "needs_docker",
+    "network",
+    "nushell",
+    "tui",
+    "awk_matrix",
+    "dind",
+    "notebooking",
+  )
+  runnable = _SUITE_MARKERS + _ONDEMAND_SUITE_MARKERS
   by_marker = Counter()
   by_file = Counter()
+  orphans = Counter()
   for item in items:
     by_file[item.location[0]] += 1
-    for mark in suites + gates:
+    for mark in runnable + gates:
       if mark in item.keywords:
         by_marker[mark] += 1
+    suites = {m for m in runnable if m in item.keywords}
+    # the unit env deselects needs_docker, so unit alone runs no container arm
+    if suites == {"unit"} and "needs_docker" in item.keywords:
+      suites = set()
+    if not suites:
+      orphans[item.location[0]] += 1
   markers = ", ".join(f"{k}={v}" for k, v in sorted(by_marker.items()))
   lines = [f"collection summary: {len(items)} tests ({markers})"]
+  if orphans:
+    # a test no tox env selects is a test nothing ever runs
+    n = sum(orphans.values())
+    lines.append(f"  unreachable: {n} tests no tox env selects")
+    for path, count in sorted(orphans.items()):
+      lines.append(f"    {path}: {count}")
   for path, count in sorted(by_file.items()):
     lines.append(f"  {path}: {count}")
   return lines

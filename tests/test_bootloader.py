@@ -227,6 +227,7 @@ def test_make_version_floor_fires_with_named_error(tmp_path):
   assert "missing separator" not in r.stderr, r.stderr[-800:]
 
 
+@pytest.mark.docker
 @pytest.mark.needs_docker
 def test_make_version_floor_real_old_make(tmp_path):
   """First-contact UX on Apple's frozen toolchain: real GNU make 3.81 (via a
@@ -309,6 +310,7 @@ def test_bsd_sed_is_not_a_silent_noop(cmk, tmp_path):
   assert ran or failed_loudly, (r.returncode, r.stdout, r.stderr)
 
 
+@pytest.mark.docker
 @pytest.mark.needs_docker
 def test_busybox_awk_runs_hosted_and_lean(tmp_path):
   """The busybox-awk first-contact pin, post dialect-port: without gawk, both

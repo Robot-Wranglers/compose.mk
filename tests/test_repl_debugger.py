@@ -23,7 +23,11 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = [pytest.mark.external_plugin, pytest.mark.covers_demo("debugger-example.cmk")]
+pytestmark = [
+  pytest.mark.unit,
+  pytest.mark.external_plugin,
+  pytest.mark.covers_demo("debugger-example.cmk"),
+]
 
 REPO = Path(__file__).resolve().parent.parent
 COMPOSE = REPO / "compose.mk"

@@ -95,6 +95,7 @@ def test_container_recipe_body_folds_like_dockerfile():
   assert "$(call lang.grammar.dot.run,$(__fold_" in low, low
 
 
+@pytest.mark.docker
 @pytest.mark.needs_docker
 def test_fold_builds_then_runs_in_the_image():
   # the round-trip: build alpine, run the operand body as a shell script on it.
@@ -104,6 +105,7 @@ def test_fold_builds_then_runs_in_the_image():
   assert "Linux" in out, out
 
 
+@pytest.mark.docker
 @pytest.mark.needs_docker
 def test_container_recipe_body_builds_then_runs():
   # NEW FORM end-to-end: a named `container NAME(kwargs)(| FROM .. |)` with a recipe body builds

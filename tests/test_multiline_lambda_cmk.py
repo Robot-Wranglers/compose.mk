@@ -144,6 +144,7 @@ def test_multiline_cooked_bracket_lambda_runs():
   assert "cooked-multi 1" in out and "cooked-multi 3" in out, out
 
 
+@pytest.mark.docker
 @pytest.mark.needs_docker
 def test_multiline_lambda_in_container():
   # the original goal: an inline multi-line body run in a container ambient.

@@ -131,6 +131,7 @@ def test_composeservice_wraps_body_into_one_service(probe):
 
 # -- needs_docker: the round-trip (a body runs in the service and prints) --
 
+@pytest.mark.docker
 @pytest.mark.needs_docker
 def test_composeservice_runs_a_body(tmp_path):
     src = (
