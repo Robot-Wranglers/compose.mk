@@ -35,7 +35,7 @@ networks:
     name: app_network
 |)
 
-gui: xscreensaver_img.build xscreensaver.stop xscreensaver.build \
+gui: xscreensaver.stop xscreensaver.build \
   xscreensaver.up.detach flux.timeout/4/xscreensaver.logs \
   app.open
 

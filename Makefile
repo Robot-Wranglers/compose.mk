@@ -25,6 +25,8 @@ $(call import.module, file=fossil.cmk prefix=.cmk flat=1 plugin=1)
 # alias the tracker to a shorter name; a slash-bearing verb needs its own rule, since make matches a slashless pattern against the basename alone
 bugs.%:
 	${make} fossil.${*}
+bugs.amend/%:
+	${make} fossil.amend/${*}
 bugs.run/%:
 	${make} fossil.run/${*}
 bugs.ticket/%:

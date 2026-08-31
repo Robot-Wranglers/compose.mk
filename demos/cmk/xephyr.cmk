@@ -46,7 +46,7 @@ xephyr.start:
     '''Start Xephyr in the background.'''
     Xephyr -ac -screen ${APP_DIMS} -br -reset -terminate ${APP_DISPLAY} &
 
-gui: i3_img.build xephyr.init i3.stop i3.build i3.up.detach i3.exec/i3.start_apps
+gui: xephyr.init i3.stop i3.build i3.up.detach i3.exec/i3.start_apps
     '''
     Main Entrypoint
     Start an XOrg server, rebuild the i3 container if necessary.

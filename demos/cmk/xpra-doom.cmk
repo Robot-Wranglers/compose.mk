@@ -37,7 +37,7 @@ services:
       - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
 |)
 
-serve: doom_img.build doom.stop doom.build doom.up.detach flux.timeout/5/doom.logs
+serve: doom.stop doom.build doom.up.detach flux.timeout/5/doom.logs
     '''
     Rebuild the doom container if necessary, then start/detach it
     and tail the logs.  Serves the game over HTML5 to a host browser.

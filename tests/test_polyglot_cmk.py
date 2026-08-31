@@ -56,6 +56,7 @@ def _strip(s):
 
 
 @pytest.mark.unit
+@pytest.mark.cache
 def test_skeleton_is_core_resident():
   # The generic cross-build skeleton was promoted from a plugin into __hosted__ core (the golang +
   # rust shims delegate here).  It must resolve with NO plugin import: a code.compiled.* target
@@ -120,6 +121,7 @@ def test_polyglot_imports_cleanly():
 
 @pytest.mark.docker
 @pytest.mark.needs_docker
+@pytest.mark.cache
 def test_polyglot_golang_builds_and_runs():
   # First run cross-builds in docker (or cache HIT if already built), then execs the binary.
   r = subprocess.run(

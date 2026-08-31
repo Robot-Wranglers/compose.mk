@@ -1443,6 +1443,26 @@ compose.get.stem/%:; basename -s .yml `basename -s .yaml ${*}`
 	@#
 	@# USAGE: ./compose.mk compose.get.stem/<fname>
 
+compose.cached/%:
+	@# Answers whether the given compose file's images are built and still match
+	@# its resolved spec.  The key is taken over the resolved config, not the raw
+	@# file, so a change reaching the services through interpolation counts too.
+	@#
+	@# This never fails; it echoes "yes" or "no".  It honors 'force=1' (always
+	@# "no"), and answers "no" whenever any image the config names is missing.
+	@#
+	@# USAGE: ./compose.mk compose.cached/<compose_file>
+	@#
+	if $(call compose.cached.test,${*}); then echo yes; else echo no; fi
+
+compose.cached.record/%:
+	@# Records the current spec key for the given compose file, so a later
+	@# compose.cached probe can tell whether the build is still current.
+	@#
+	@# USAGE: ./compose.mk compose.cached.record/<compose_file>
+	@#
+	$(call compose.cached.stamp,${*})
+
 compose.images/%:; ${docker.compose} -f ${*} config --images
 	@# Returns all images used with the given compose file.
 
@@ -4415,6 +4435,16 @@ define __hosted__
   container.tag = $(if $(call container.buildable,$(1)),$($(1).img)-$(call container.content.key,$(1)),$($(1).img))
   # probes the launched tag alongside the content-hashed one, since either can go missing alone
   container.ensure = $(if $(call container.owner,$(1)),docker image inspect $(call container.tag,$(call container.owner,$(1))) $($(1).img) >/dev/null 2>&1 || ${make} $(call container.owner,$(1)).build &&)
+  # the base tags a compose file builds from, read straight out of the file
+  compose.from.tags = $(shell awk '/^[ \t]*FROM[ \t]/{print $$2}' $(strip $(1)) 2>${devnull} | sort -u)
+  # the compose-side counterpart of container.ensure; a base that names no registered tag emits nothing
+  compose.ensure = $(foreach _t,$(call compose.from.tags,$(1)),$(foreach _o,$(call container.owner.registered,$(call container.owner.key,$(call mk.expand,${_t}))),$(call container.ensure,${_o})))
+  # a key over the resolved spec, stamped per service selection rather than per file
+  compose.key.file = ${CMK_NATIVE_CACHE}/.tmp.compose.key.$$(basename $(1)).$$(echo "$${svc:-all}" | tr ',' '_')
+  compose.key.now = ${docker.compose} -f $(1) config 2>${devnull} | cksum | tr ' ' '-'
+  # the probe as inline shell, so a hit costs docker calls without re-entering make
+  compose.cached.test = [ "$${force:-0}" = 0 ] && _k="$(call compose.key.file,$(1))" && [ -f "$$_k" ] && [ "`cat $$_k`" = "`$(call compose.key.now,$(1))`" ] && docker image inspect `${docker.compose} -f $(1) config --images 2>${devnull}` >${devnull} 2>&1
+  compose.cached.stamp = mkdir -p ${CMK_NATIVE_CACHE} && $(call compose.key.now,$(1)) > "$(call compose.key.file,$(1))"
   _crun/%:; @$(call container.ensure,$(firstword $(subst $(comma), ,${*}))) $(call container.exec,$(firstword $(subst $(comma), ,${*})),$(lastword $(subst $(comma), ,${*})))
   *[|
     cmk.class cmk.container.capabilities[|
@@ -9589,9 +9619,15 @@ ${compose_file_stem}.build $(target_namespace).build:
 	@# WARNING: This is not actually safe for all legal compose files, because
 	@# compose handles run-ordering for defined services, but not build-ordering.
 	@#
-	$$(call log.docker, ${compose.ctx.display} ${bold_cyan}build ${sep} ${dim_ital}all services) \
-	&&  $(trace_maybe) \
-	&& ${docker.compose} $${COMPOSE_EXTRA_ARGS} -f ${compose_file} build $${docker._quiet_flag}
+	$$(call compose.ensure,${compose_file}) \
+	if $$(call compose.cached.test,${compose_file}); then \
+		$$(call log.docker, ${compose.ctx.display} ${bold_cyan}build ${sep} ${dim_ital}cached) ; \
+	else \
+		$$(call log.docker, ${compose.ctx.display} ${bold_cyan}build ${sep} ${dim_ital}all services) \
+		&&  $(trace_maybe) \
+		&& ${docker.compose} $${COMPOSE_EXTRA_ARGS} -f ${compose_file} build $${docker._quiet_flag} \
+		&& $$(call compose.cached.stamp,${compose_file}) ; \
+	fi
 
 ${compose_file_stem}.build.quiet $(target_namespace).build.quiet:
 	@# Quiet build for all services in the given file.
@@ -9623,9 +9659,16 @@ ${compose_file_stem}.build/% $(target_namespace).build/%:
 	@# USAGE: 
 	@#   ./compose.mk <stem>.build/<svc1>,<svc2>,..<svcN>
 	@#
-	$$(call log.docker, ${target_namespace} ${sep} ${green}$${*} ${sep} ${no_ansi_dim}building..) 
-	echo $${*} | ${stream.comma.to.nl} \
-	| xargs -I% sh ${dash_x_maybe} -c "${docker.compose} $${COMPOSE_EXTRA_ARGS} -f ${compose_file} build %"
+	$$(call compose.ensure,${compose_file}) \
+	export svc=$${*} \
+	&& if $$(call compose.cached.test,${compose_file}); then \
+		$$(call log.docker, ${target_namespace} ${sep} ${green}$${*} ${sep} ${no_ansi_dim}cached) ; \
+	else \
+		$$(call log.docker, ${target_namespace} ${sep} ${green}$${*} ${sep} ${no_ansi_dim}building..) \
+		&& echo $${*} | ${stream.comma.to.nl} \
+		| xargs -I% sh ${dash_x_maybe} -c "${docker.compose} $${COMPOSE_EXTRA_ARGS} -f ${compose_file} build %" \
+		&& $$(call compose.cached.stamp,${compose_file}) ; \
+	fi
 
 
 
