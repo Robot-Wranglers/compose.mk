@@ -62,6 +62,9 @@
         //   cmk-line-feed 🡄 🡆 …   operator       keyword.operator.flow.cmk
         //   cmk-compose-keyword   keyword        keyword.control.dispatch.cmk
         //   cmk-dockerfile-kw     keyword        keyword.other.dockerfile.cmk
+        //   cmk-compose-pair      (container)    meta.compose.cmk (image: alpine / entrypoint=sh)
+        //    - cmk-compose-key     (none)         keyword.other.compose.cmk (bold + oblique)
+        //    - cmk-compose-value   (none)         meta.value.compose.cmk (a shade larger)
         //   cmk-dunder __main__ … constant       constant.language.dunder.cmk
         //   cmk-fpath ./path      string         string.unquoted.path.cmk
         //   cmk-fxn io. flux. …   function       entity.name.function.namespaced.cmk
@@ -109,6 +112,57 @@
         // Prism's `bash`/`make` languages -- `cli_example` (language-bash) blocks get
         // PLAIN, orthogonal Prism bash highlighting, uninvolved with the cmk grammar.
 
+        // Docker-compose service/build/deploy keys, recognized by the trailing separator so the
+        // same names light up in inlined compose yaml and in callform kwargs alike.
+        // MIRROR: cmk.tmLanguage.json #compose-key.
+        var composeKeys = [
+            'annotations', 'attach', 'blkio_config', 'build', 'cache_from', 'cache_to',
+            'cap_add', 'cap_drop', 'cgroup', 'cgroup_parent', 'command', 'configs',
+            'container_name', 'context', 'cpu_count', 'cpu_percent', 'cpu_period', 'cpu_quota',
+            'cpu_rt_period', 'cpu_rt_runtime', 'cpu_shares', 'cpus', 'cpuset', 'credential_spec',
+            'depends_on', 'deploy', 'develop', 'device_cgroup_rules', 'devices', 'dns', 'dns_opt',
+            'dns_search', 'dockerfile', 'dockerfile_inline', 'domainname', 'driver_opts',
+            'endpoint_mode', 'entrypoint', 'env_file', 'environment', 'expose', 'extends',
+            'external_links', 'extra_hosts', 'gpus', 'group_add', 'healthcheck', 'hostname',
+            'image', 'init', 'ipc', 'isolation', 'labels', 'logging', 'mac_address', 'mem_limit',
+            'mem_reservation', 'mem_swappiness', 'memswap_limit', 'network_mode', 'networks',
+            'no_cache', 'oom_kill_disable', 'oom_score_adj', 'pid', 'pids_limit', 'platform',
+            'platforms', 'ports', 'post_start', 'pre_stop', 'privileged', 'profiles',
+            'pull_policy', 'read_only', 'replicas', 'restart', 'restart_policy', 'retries',
+            'rollback_config', 'runtime', 'secrets', 'security_opt', 'services', 'shm_size',
+            'start_interval', 'start_period', 'stdin_open', 'stop_grace_period', 'stop_signal',
+            'storage_opt', 'sysctls', 'tmpfs', 'tty', 'ulimits', 'update_config', 'user',
+            'userns_mode', 'uts', 'volumes', 'volumes_from', 'working_dir',
+        ].join('|');
+        // the value runs to end of line, except that a further word carrying its own `=` ends it
+        // (so one kwarg cannot swallow its siblings) and so does a banana closer.
+        var composeValue = '[^\\s,)\\r\\n]*(?:[ \\t]+(?![^\\s,)\\r\\n]*=)(?!\\|[)\\]}])[^\\s,)\\r\\n]+)*';
+        // the pair carries no color alias: weight and slant do the work (see base.css), so a
+        // compose key reads quieter than a keyword while its value reads a shade bigger.
+        var composePairInside = {
+            'cmk-compose-key': new RegExp('^(?:' + composeKeys + ')'),
+            'punctuation': /^[ \t]*[:=]/,
+            'cmk-compose-value': {
+                pattern: /\S(?:[^\r\n]*\S)?/,
+                inside: {
+                    'string': { pattern: /'[^'\r\n]*'|"[^"\r\n]*"/, greedy: true },
+                    'variable': /\$\{[^{}]*\}|\$+\w+/,
+                },
+            },
+        };
+        // top-level form: the key must follow a space/tab/open-delimiter, so a column-0
+        // makefile rule head (build:) stays a target rather than becoming a compose key.
+        var composePairDef = {
+            pattern: new RegExp('(?<=[ \\t,({\\[])(?:' + composeKeys + ')[ \\t]*[:=][ \\t]*(?:' + composeValue + ')'),
+            inside: composePairInside,
+        };
+        // nested form, for grammars whose inside sees only the matched span (kwargs, triple
+        // strings): a word boundary is all that is available to anchor on.
+        var composePairKvDef = {
+            pattern: new RegExp('(?<![\\w.+-])(?:' + composeKeys + ')[ \\t]*[:=][ \\t]*(?:' + composeValue + ')'),
+            inside: composePairInside,
+        };
+
         // Reusable token defs (used on the base and/or on cmk below).
         var cmkPragmaDef = {
             pattern: /#[ \t]*(?:CMK_PRAGMA|cmk_pragma)[ \t]*:::[\s\S]*?:::/,
@@ -137,6 +191,7 @@
                 'callform-kv': {
                     pattern: /[\w.+-]+=[^\s()]*/,
                     inside: {
+                        'cmk-compose-pair': composePairKvDef,
                         'attr-name': /^[\w.+-]+/,
                         'operator': /=/,
                         'variable': /\$\{[^{}]*\}|\$+\w+/,
@@ -155,6 +210,7 @@
             greedy: true, alias: 'string',
             inside: {
                 'variable': /\$\{[^{}]*\}|\$+\w+/,
+                'cmk-compose-pair': composePairKvDef,
                 'attr-name': /[\w.+-]+(?==)/,
                 'operator': /=/,
                 'punctuation': /"""|'''/,
@@ -169,6 +225,7 @@
             greedy: true, alias: 'string',
             inside: {
                 'variable': /\$\{[^{}]*\}|\$+\w+/,
+                'cmk-compose-pair': composePairKvDef,
                 'attr-name': /[\w.+-]+(?==)/,
                 'operator': /=/,
                 'punctuation': /"""|'''/,
@@ -222,6 +279,7 @@
                 'callform-kv': {
                     pattern: /[\w.+-]+=[^\s()]*/,
                     inside: {
+                        'cmk-compose-pair': composePairKvDef,
                         'attr-name': /^[\w.+-]+/,
                         'operator': /=/,
                         'variable': /\$\{[^{}]*\}|\$+\w+/,
@@ -251,6 +309,7 @@
         var compose_keywords = { 'cmk-compose-keyword': { pattern: /\b(?:stop|build|ps)\b/, alias: "keyword" } };
         Prism.languages.insertBefore('makefile', 'keyword',
             { 'cmk-dockerfile-kw': { pattern: /(RUN |FROM |ENV |SHELL |ENTRYPOINT |COMMAND )/, alias: "keyword" } });
+        Prism.languages.insertBefore('makefile', 'keyword', { 'cmk-compose-pair': composePairDef });
 
         var cmk_cli_token = { 'cmk-cli-token': { pattern: / (?:compose[.]mk|[.]\/compose.mk)/, alias: "builtin" } };
         Prism.languages.insertBefore('makefile', 'keyword', cmk_cli_token);
@@ -295,6 +354,7 @@
                 'callform-kv': {
                     pattern: /[\w.+-]+=\S*/,
                     inside: {
+                        'cmk-compose-pair': composePairKvDef,
                         'attr-name': /^[\w.+-]+/,
                         'operator': /=/,
                         'variable': /\$\{[^{}]*\}|\$+\w+/,
@@ -615,6 +675,7 @@
                     'callform-kv': {
                         pattern: /[\w.+-]+=[^\s()]*/,
                         inside: {
+                            'cmk-compose-pair': composePairKvDef,
                             'attr-name': /^[\w.+-]+/,
                             'operator': /=/,
                             'variable': /\$\{[^{}]*\}|\$+\w+/,

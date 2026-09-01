@@ -26,10 +26,10 @@ handler/%:
   done
   $(call __vm__.setenv, chosen, ${*})
   case "${*}" in \
-    a) $(call mk.exit.code,0) ;; \
+    a) $(call mk.super.status,0) ;; \
     b) echo 1 > ".tmp.mk.super.$${MAKE_SUPER}" ;; \
     c) exit 3 ;; \
-    *) $(call mk.exit.code,0) ;; \
+    *) $(call mk.super.status,0) ;; \
   esac
 
 __main__:

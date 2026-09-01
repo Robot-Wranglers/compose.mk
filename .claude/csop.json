@@ -5,6 +5,12 @@
     "default_enabled": true
   },
 
+  // mem: enabled per matt, 2026-08-31, after two memories formed mid-turn without surfacing as reviewable edits.
+  "mem": {
+    "default_enabled": true,
+    "mode": "approval"
+  },
+
   "freeze": {
     "default_enabled": true,
     "frozen": [

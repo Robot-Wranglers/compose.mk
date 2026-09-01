@@ -34,6 +34,13 @@
   greedy rule from mis-reading a banana body's `:` (e.g. inside a `sed` script or a target
   template) as a rule head. Previously none of this was scoped in either grammar.
 
+- **Docker-compose keys.** The compose service/build/deploy vocabulary (`image`, `entrypoint`,
+  `working_dir`, `volumes`, `depends_on`, …) scopes wherever it appears with a trailing `:` or
+  `=`: inlined compose yaml, triple-string bodies, callform kwargs, recipe lines, and `.mk`
+  files via the makefile injection. The key takes `keyword.other.compose.cmk` (bold + oblique,
+  deliberately quieter than a keyword) and the value beside it takes `meta.value.compose.cmk`.
+  A column-0 rule head (`build:`) stays a target. Mirrors the docs' Prism `cmk-compose-pair`.
+
 - **Grammar tests.** A self-contained regression harness (`test/`, run with `npm test`) loads
   the grammar with VSCode's own `vscode-textmate` + `vscode-oniguruma` engine and asserts the
   scope of representative spans (assignments, `$(shell)`, recipe→shell, pseudo-paths, callform

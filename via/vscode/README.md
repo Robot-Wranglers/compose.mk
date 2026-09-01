@@ -59,6 +59,7 @@ Representative scopes:
 | `import`/`declare` callform | `meta.function-call.import-declare.cmk` |
 | `define ... endef` | `meta.definition.makefile.cmk` |
 | `__main__` | `constant.language.dunder.cmk` |
+| compose key `image:` / `entrypoint=` | `keyword.other.compose.cmk` + `meta.value.compose.cmk` |
 | flow arrows | `keyword.operator.{flow,sigil}.cmk` |
 
 ## Develop / try it locally

@@ -302,7 +302,7 @@ def test_pre_multiple_targets_all_run(tmp_path):
 
 # --- exact exit-code propagation (record-and-continue) -----------------------
 # GNU make collapses any recipe failure to exit 2 at every sub-make boundary.
-# `mk.exit.code/<N>` records the EXACT code out-of-band (the supervisor pidfile)
+# `mk.super.status/<N>` records the exact code out-of-band (the supervisor mailbox)
 # and fails normally, so the make stack unwinds (finally/cleanup arms still run)
 # and the bash supervisor wrapper -- the only non-flattening exit point -- delivers
 # <N> to the OS. These are the first tests to assert SPECIFIC nonzero codes; they
@@ -310,13 +310,13 @@ def test_pre_multiple_targets_all_run(tmp_path):
 
 # Minimal program exercising the exact-code paths.
 EXITBODY = (
-  "rerr:; @$(call mk.exit.code,42)\n"  # macro form
+  "rerr:; @$(call mk.super.status,42)\n"  # macro form
   "fin:; @echo SENTINEL-FINALLY\n"
   "okx:; @echo OKX\n"
   "boom7:; @echo MAIN ; exit 7\n"
   "atx:; @echo AT-EXIT-SENTINEL\n"
   # hand-rolled swallow that must clear the recorded code to recover:
-  "handled:; @${make} rerr </dev/null || { echo HANDLED ; ${make} mk.exit.clear ; } ; echo CONTINUED\n"
+  "handled:; @${make} rerr </dev/null || { echo HANDLED ; ${make} mk.super.status.clear ; } ; echo CONTINUED\n"
   "leaked:; @${make} rerr </dev/null || true ; echo CONTINUED\n"
   "__main__:; @echo D\n"
 )
@@ -324,12 +324,12 @@ EXITBODY = (
 
 def test_exit_code_exact_record_and_continue(tmp_path):
   # The headline: the top-level process exits with the EXACT code, not make's 2.
-  r = _interpret(tmp_path, EXITBODY, "mk.exit.code/42")
+  r = _interpret(tmp_path, EXITBODY, "mk.super.status/42")
   assert r.returncode == 42, (r.returncode, r.stderr)
 
 
 def test_exit_code_macro_form(tmp_path):
-  # `$(call mk.exit.code,42)` inline inside a recipe delivers the same exact code.
+  # `$(call mk.super.status,42)` inline inside a recipe delivers the same exact code.
   r = _interpret(tmp_path, EXITBODY, "rerr")
   assert r.returncode == 42, (r.returncode, r.stderr)
 
@@ -351,7 +351,7 @@ def test_exit_code_recovery_clears(tmp_path):
 
 
 def test_exit_code_ordinary_failure_still_two(tmp_path):
-  # Backward-compat: a plain failure with no mk.exit.code still flattens to 2.
+  # Backward-compat: a plain failure with no mk.super.status still flattens to 2.
   r = _interpret(tmp_path, EXITBODY, "boom7")
   assert r.returncode == 2, (r.returncode, r.stderr)
   assert "MAIN" in r.stdout
@@ -370,14 +370,14 @@ def test_exit_code_success_zero_no_stale(tmp_path):
 def test_exit_code_with_at_exit_handler(tmp_path):
   # An exact exit code and the CMK_POST handler coexist: handler runs,
   # and the exact code is still delivered.
-  r = _interpret(tmp_path, EXITBODY, "mk.exit.code/42", env={"CMK_POST": "atx"})
+  r = _interpret(tmp_path, EXITBODY, "mk.super.status/42", env={"CMK_POST": "atx"})
   assert r.returncode == 42, (r.returncode, r.stderr)
   assert "AT-EXIT-SENTINEL" in r.stdout, r.stdout
 
 
 def test_exit_clear_recovers_in_custom_handler(tmp_path):
   # A hand-rolled swallow (`|| { ... }`) only fully recovers if it also calls
-  # `mk.exit.clear` to retract the recorded code -> exit 0.
+  # `mk.super.status.clear` to retract the recorded code -> exit 0.
   r = _interpret(tmp_path, EXITBODY, "handled")
   assert r.returncode == 0, (r.returncode, r.stderr)
   assert "HANDLED" in r.stdout and "CONTINUED" in r.stdout, r.stdout
@@ -385,7 +385,7 @@ def test_exit_clear_recovers_in_custom_handler(tmp_path):
 
 def test_exit_code_leaks_without_clear(tmp_path):
   # Counterpoint: a bare `|| true` swallow continues execution but does NOT clear
-  # the recorded code, so it still reaches the top (the sharp edge mk.exit.clear fixes).
+  # the recorded code, so it still reaches the top (the sharp edge mk.super.status.clear fixes).
   r = _interpret(tmp_path, EXITBODY, "leaked")
   assert "CONTINUED" in r.stdout, (
     r.stdout

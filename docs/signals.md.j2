@@ -150,24 +150,24 @@ The symmetric counterpart runs *before* the main pipeline: `CMK_PRE` (pragma `cm
 
 GNU `make` collapses *any* recipe failure to exit code **2** at every sub-make boundary, so a meaningful code (say, a tool's exit status, or an unhandled-exception code) normally never reaches the OS.  The supervisor can carry an **exact** code to the top because the bash wrapper, not `make`, is the process that finally exits.
 
-Use `mk.exit.code/<N>` to set it: it records the code out-of-band and fails *normally*, so the stack unwinds as usual (`flux.*.finally` and other cleanup still runs) and the top-level `./compose.mk` exits with exactly `<N>`:
+Use `mk.super.status/<N>` to set it: it records the code out-of-band and fails *normally*, so the stack unwinds as usual (`flux.*.finally` and other cleanup still runs) and the top-level `./compose.mk` exits with exactly `<N>`:
 
 ```bash
-$ ./your-program.cmk          # somewhere inside: $(call mk.exit.code,42)
+$ ./your-program.cmk          # somewhere inside: $(call mk.super.status,42)
 $ echo $?
 42
 ```
 
-It's the "record-and-continue" cousin of [`mk.yield`](#positional-arguments-yield): where `mk.yield` short-circuits the whole stack immediately via signal (skipping `finally` arms), `mk.exit.code` unwinds so cleanup runs first.  Both need an interpreter-style invocation; without the supervisor there is no out-of-band channel and failures flatten to 2.  OS codes wrap mod 256, so keep the value in `0..255`.
+It's the "record-and-continue" cousin of [`mk.yield`](#positional-arguments-yield): where `mk.yield` short-circuits the whole stack immediately via signal (skipping `finally` arms), `mk.super.status` unwinds so cleanup runs first.  Both need an interpreter-style invocation; without the supervisor there is no out-of-band channel and failures flatten to 2.  OS codes wrap mod 256, so keep the value in `0..255`.
 
-Because the code is read at the very end, *swallowing* a failure with a trailing or-true or or-fallback guard continues execution but does **not** retract a code already recorded.  To truly recover (continue **and** exit 0), retract it with `mk.exit.clear`:
+Because the code is read at the very end, *swallowing* a failure with a trailing or-true or or-fallback guard continues execution but does **not** retract a code already recorded.  To truly recover (continue **and** exit 0), retract it with `mk.super.status.clear`:
 
 ```make
 risky:
-	@${make} something || { handle_it ; ${make} mk.exit.clear ; }
+	@${make} something || { handle_it ; ${make} mk.super.status.clear ; }
 ```
 
-`flux.try.except.finally` does this for you automatically: when its `except` arm *recovers* (succeeds), it calls `mk.exit.clear` and the construct returns 0.  Only hand-rolled error handling (outside the `flux.try.*` family) that intends to recover needs to call `mk.exit.clear` explicitly.
+`flux.try.except.finally` does this for you automatically: when its `except` arm *recovers* (succeeds), it calls `mk.super.status.clear` and the construct returns 0.  Only hand-rolled error handling (outside the `flux.try.*` family) that intends to recover needs to call `mk.super.status.clear` explicitly.
 
 ### Bootloader
 <hr class="section-rule lvl-3">

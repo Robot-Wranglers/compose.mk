@@ -59,6 +59,9 @@
       "include": "#target"
     },
     {
+      "include": "#compose-key"
+    },
+    {
       "include": "#callform-name"
     },
     {
@@ -146,6 +149,9 @@
           "include": "#operators"
         },
         {
+          "include": "#compose-key"
+        },
+        {
           "include": "source.shell"
         }
       ]
@@ -229,6 +235,9 @@
       },
       "patterns": [
         {
+          "include": "#compose-key"
+        },
+        {
           "include": "#callform-kv"
         },
         {
@@ -238,6 +247,29 @@
           "include": "#variables"
         }
       ]
+    },
+    "compose-key": {
+      "comment": "Docker-compose service/build/deploy keys and their values, in inlined compose yaml, in triple-string bodies, and in callform kwargs alike.  Listed AFTER `#target` so a column-0 makefile rule head (`build:`) stays a target, and BEFORE `#callform-kv` wherever kwargs are parsed so the pair is claimed whole.  The value runs to end of line, except that a further word carrying its own `=` ends it (so one kwarg cannot swallow its siblings) and so does a banana closer.  MIRRORS the Prism `cmk-compose-pair` token (keep the two key lists in sync).",
+      "match": "(?<![\\w.+-])(annotations|attach|blkio_config|build|cache_from|cache_to|cap_add|cap_drop|cgroup|cgroup_parent|command|configs|container_name|context|cpu_count|cpu_percent|cpu_period|cpu_quota|cpu_rt_period|cpu_rt_runtime|cpu_shares|cpus|cpuset|credential_spec|depends_on|deploy|develop|device_cgroup_rules|devices|dns|dns_opt|dns_search|dockerfile|dockerfile_inline|domainname|driver_opts|endpoint_mode|entrypoint|env_file|environment|expose|extends|external_links|extra_hosts|gpus|group_add|healthcheck|hostname|image|init|ipc|isolation|labels|logging|mac_address|mem_limit|mem_reservation|mem_swappiness|memswap_limit|network_mode|networks|no_cache|oom_kill_disable|oom_score_adj|pid|pids_limit|platform|platforms|ports|post_start|pre_stop|privileged|profiles|pull_policy|read_only|replicas|restart|restart_policy|retries|rollback_config|runtime|secrets|security_opt|services|shm_size|start_interval|start_period|stdin_open|stop_grace_period|stop_signal|storage_opt|sysctls|tmpfs|tty|ulimits|update_config|user|userns_mode|uts|volumes|volumes_from|working_dir)([ \\t]*[:=])[ \\t]*([^\\s,)\\r\\n]*(?:[ \\t]+(?![^\\s,)\\r\\n]*=)(?!\\|[)\\]}])[^\\s,)\\r\\n]+)*)",
+      "captures": {
+        "1": {
+          "name": "keyword.other.compose.cmk"
+        },
+        "2": {
+          "name": "punctuation.separator.key-value.compose.cmk"
+        },
+        "3": {
+          "name": "meta.value.compose.cmk",
+          "patterns": [
+            {
+              "include": "#strings"
+            },
+            {
+              "include": "#variables"
+            }
+          ]
+        }
+      }
     },
     "callform-kv": {
       "comment": "key=value kwargs.  The value may be QUOTED (and then contain spaces, e.g.\n `targets='ul.* underload'`) -- match the whole quoted run so a space doesn't split it\n and leave a dangling quote that eats the rest of the file.",
@@ -291,6 +323,9 @@
           },
           "patterns": [
             {
+              "include": "#compose-key"
+            },
+            {
               "include": "#callform-kv"
             },
             {
@@ -335,6 +370,9 @@
         },
         "3": {
           "patterns": [
+            {
+              "include": "#compose-key"
+            },
             {
               "include": "#callform-kv"
             },
@@ -439,6 +477,9 @@
             },
             "5": {
               "patterns": [
+                {
+                  "include": "#compose-key"
+                },
                 {
                   "include": "#cmk-import-kwargs"
                 }
@@ -550,6 +591,9 @@
           "end": "\"\"\"|'''",
           "patterns": [
             {
+              "include": "#compose-key"
+            },
+            {
               "include": "#variables"
             }
           ]
@@ -559,6 +603,9 @@
           "begin": "\"\"\"|'''",
           "end": "\"\"\"|'''",
           "patterns": [
+            {
+              "include": "#compose-key"
+            },
             {
               "include": "#variables"
             }

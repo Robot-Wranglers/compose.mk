@@ -4,7 +4,7 @@
   * mk.error       -- expansion-time root emitter (thin $(error) wrapper); stamps
                       the curated code for supervisor fidelity, aborts with a
                       parseable `cmk-fault errno=.. code=.. :: msg :: meta` payload.
-  * mk.die         -- recipe-time twin; themed line + exact exit via mk.exit.code.
+  * mk.die         -- recipe-time twin; themed line + exact exit via mk.super.status.
   * assert.env.var -- dogfood: routes through mk.die (no inline fault switch).
 
 Core-only (no fault module): the emitters EMIT, they do not throw.  These run
@@ -57,12 +57,14 @@ def test_mk_error_emits_parseable_schema(tmp_path):
   assert "ctx=foo" in out, out
 
 
+@pytest.mark.supervisor
 def test_mk_die_exits_mapped_code(tmp_path):
   # recipe-time: the curated code (39) surfaces via the supervisor.
   r, out = _run("__main__:; $(call mk.die, boom, errno=ENVVAR_UNSET)\n", tmp_path)
   assert r.returncode == 39, out
 
 
+@pytest.mark.supervisor
 def test_assert_env_var_routes_through_mk_die(tmp_path):
   # dogfood: unset var -> the themed message + exit 39, no fault module present.
   r, out = _run("__main__:; $(call assert.env.var, DEFINITELY_UNSET_XYZ)\n", tmp_path)
@@ -70,6 +72,7 @@ def test_assert_env_var_routes_through_mk_die(tmp_path):
   assert "required variable" in out and "unset" in out, out
 
 
+@pytest.mark.supervisor
 def test_compile_time_errno_surfaces_exit_code(tmp_path):
   # An EXPANSION-time mk.error (an $(error), not a recipe exit) still surfaces its
   # curated errno as the OS exit code: mk.validate records code=N from the

@@ -26,7 +26,7 @@ This page covers the **core** runtime model: how a [supervised program]({{_}}/si
 Two related core primitives round out the picture; both are documented with the supervisor on the [Signals]({{_}}/signals) page:
 
 * `mk.yield`: a process-oriented escape: it runs its target inline and then interrupts the make stack (so repeated use *nests*).  A general-purpose escape continuation.
-* `mk.exit.code`: record-and-continue exit: stash an exact exit code out-of-band, then unwind *normally* so cleanup arms still run.
+* `mk.super.status`: record-and-continue exit: stash an exact exit code out-of-band, then unwind *normally* so cleanup arms still run.
 
 The trampoline's own state is a small **reflection surface**: seven read-only value-dunders exported on every dispatch hop.  They default empty, so an unsupervised read is safe, and the [`__vm__` snapshot]({{_}}/modules/virtual-machine) reads them as its always-on layer.
 

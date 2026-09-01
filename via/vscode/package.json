@@ -112,6 +112,15 @@
           {
             "scope": "keyword.operator.capture.cmk",
             "settings": { "foreground": "#ffffff", "fontStyle": "bold italic" }
+          },
+          {
+            "comment": "a compose key reads by weight and slant, not by color -- it should sit quieter than a keyword, with the value beside it carrying the emphasis (the docs render that value a shade larger; vscode has no per-token font size, so it takes a brighter foreground instead).",
+            "scope": "keyword.other.compose.cmk",
+            "settings": { "foreground": "#b9c0c6", "fontStyle": "bold italic" }
+          },
+          {
+            "scope": "meta.value.compose.cmk",
+            "settings": { "foreground": "#e8e8e8" }
           }
         ]
       }

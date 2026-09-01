@@ -17,7 +17,10 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = [pytest.mark.unit, pytest.mark.covers_demo("graal-interop.cmk")]
+pytestmark = [
+    pytest.mark.unit,
+    pytest.mark.covers_demo("graal-interop.cmk", "machine-compose.cmk"),
+]
 
 REPO = Path(__file__).resolve().parent.parent
 COMPOSE = REPO / "compose.mk"
@@ -214,3 +217,36 @@ def test_composeservice_runs_a_body(tmp_path):
     rc, out = _run(src, docker=True, timeout=400)
     assert rc == 0, out
     assert "COMPOSE-RAN-OK" in out, out
+
+
+# -- a group mints a machine for every service in the file, not just the first --
+
+_GROUP_SRC = (
+    "compose.group pair(|\n"
+    "services:\n"
+    "  left:\n"
+    "    image: alpine\n"
+    "    entrypoint: sh\n"
+    "  right:\n"
+    "    image: alpine\n"
+    "    entrypoint: sh\n"
+    "|)\n"
+    "$(info CGALL=[$(pair.__all__)])\n"
+    "$(info CGRIGHT=[$(call isinstance,right,cmk.machine)])\n"
+    "__main__:; @true\n"
+)
+
+
+def test_composekinds_scaffold_the_classical_targets():
+    # Both kinds route through compose.import.generic, so the file verbs exist under the kind name.
+    rc, out = _run(_GROUP_SRC, "pair.services")
+    assert rc == 0, out
+    assert "left" in out and "right" in out, out
+
+
+def test_composegroup_mints_every_service():
+    # The service scan rewrote the record before the stop rule read it, so it quit after one.
+    rc, out = _run(_GROUP_SRC)
+    assert rc == 0, out
+    assert "CGALL=[left right]" in out, out
+    assert "CGRIGHT=[1]" in out, out

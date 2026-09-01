@@ -18,6 +18,7 @@
     { "include": "#cmk-dunder" },
     { "include": "#cmk-embed-fence" },
     { "include": "#cmk-capture" },
+    { "include": "#cmk-compose-key" },
     { "include": "#cmk-glyphs" }
   ],
   "repository": {
@@ -60,6 +61,21 @@
     "cmk-capture": {
       "name": "keyword.operator.capture.cmk",
       "match": "(?<![<$])<-"
+    },
+    "cmk-compose-key": {
+      "comment": "Docker-compose keys and their values in a .mk file.  This injection runs before the host makefile rules, so the key must also follow a space/tab/open-delimiter -- that is what keeps a column-0 rule head (`build:`) a target.  MIRRORS `#compose-key` in cmk.tmLanguage.json (keep the key list and the value shape in sync).",
+      "match": "(?<=[ \\t,({\\[])(annotations|attach|blkio_config|build|cache_from|cache_to|cap_add|cap_drop|cgroup|cgroup_parent|command|configs|container_name|context|cpu_count|cpu_percent|cpu_period|cpu_quota|cpu_rt_period|cpu_rt_runtime|cpu_shares|cpus|cpuset|credential_spec|depends_on|deploy|develop|device_cgroup_rules|devices|dns|dns_opt|dns_search|dockerfile|dockerfile_inline|domainname|driver_opts|endpoint_mode|entrypoint|env_file|environment|expose|extends|external_links|extra_hosts|gpus|group_add|healthcheck|hostname|image|init|ipc|isolation|labels|logging|mac_address|mem_limit|mem_reservation|mem_swappiness|memswap_limit|network_mode|networks|no_cache|oom_kill_disable|oom_score_adj|pid|pids_limit|platform|platforms|ports|post_start|pre_stop|privileged|profiles|pull_policy|read_only|replicas|restart|restart_policy|retries|rollback_config|runtime|secrets|security_opt|services|shm_size|start_interval|start_period|stdin_open|stop_grace_period|stop_signal|storage_opt|sysctls|tmpfs|tty|ulimits|update_config|user|userns_mode|uts|volumes|volumes_from|working_dir)([ \\t]*[:=])[ \\t]*([^\\s,)\\r\\n]*(?:[ \\t]+(?![^\\s,)\\r\\n]*=)(?!\\|[)\\]}])[^\\s,)\\r\\n]+)*)",
+      "captures": {
+        "1": {
+          "name": "keyword.other.compose.cmk"
+        },
+        "2": {
+          "name": "punctuation.separator.key-value.compose.cmk"
+        },
+        "3": {
+          "name": "meta.value.compose.cmk"
+        }
+      }
     },
     "cmk-glyphs": {
       "patterns": [

@@ -4651,7 +4651,7 @@ define __hosted__
       self.content = $(value self)
       self.__artifacts__ = self.compose
       self.__rewrite__ = ${dim}verbatim
-      self.__all__ = $(shell awk '/^services:/{s=1;next} s&&/^  [A-Za-z0-9_]+:/{gsub(/:.*/,"");gsub(/^ +/,"");print} s&&/^[^ ]/{s=0}' self.compose 2>/dev/null)
+      self.__all__ = $(shell awk '/^services:/{s=1;next} s&&/^  [A-Za-z0-9_]+:/{gsub(/:.*/,"");gsub(/^ +/,"");print;next} s&&/^[^ ]/{s=0}' self.compose 2>/dev/null)
       self.__minted__ = $(if $(filter-out 1,${CMK_INTERNAL}),$(file > self.compose,self.content)$(call compose.kind.announce,self.__im_self__,$(${self}.__artifacts__),$(${self}.__rewrite__)))$(eval $(call compose.import.generic, self.__im_self__, FALSE, self.compose))$(foreach _svc,self.__all__,$(eval $(_svc).stem = self.stem)$(eval $(call compose.machine, def=$(_svc))))
       self.render:
         $(foreach _a,$(${self}.__artifacts__),printf -- '---\n# %s\n' $(_a) && cat $(_a) && ) true
@@ -6913,6 +6913,9 @@ mk.interrupt=CMK_INTERNAL=1 ${MAKE} -f ${MAKEFILE} mk.interrupt
 # mk.super.once: deprecated alias for m5.memoize! (run-scoped once).
 mk.super.once=$(call m5.memoize!,$(1))
 
+# The supervisor's out-of-band mailbox; the status channel guards on MAKE_SUPER, not CMK_SUPERVISOR.
+mk.super.pidfile=.tmp.mk.super.$${MAKE_SUPER}
+
 ifeq (${CMK_SUPERVISOR},0)
 mk.super.interrupt/% mk.interrupt/%:
 	@# CMK_SUPERVISOR is 0; signals are disabled.
@@ -6922,12 +6925,21 @@ mk.super.interrupt/% mk.interrupt/%:
 mk.super.pid/%: #; $(call log.base ${GLYPH_COMPOSE} ${@} ${sep} ${dim}Supervisor is disabled.)
 	@# CMK_SUPERVISOR is 0; signals are disabled.
 	@#
+# With signals disabled there are no supervised children; both degrade to shell no-ops.
+mk.super.children=true
+mk.super.reap=true
 else
 # Single source for supervisor-pid detection: the child make whose PPid is
 # MAKE_SUPER (returns empty when MAKE_SUPER is unset/has no child). Inlined by
 # both the pid query and the interrupt path so the hot interrupt path computes
 # it in-process instead of paying a full sub-make re-parse.
 _mk.super.pid.find=case "${OS_NAME}" in Darwin) ps -axo pid=,ppid=|awk -v me="$${MAKE_SUPER}" '$$2==me{print $$1}';; *) awk -v me="$${MAKE_SUPER}" 'FNR==1{n=split(FILENAME,a,"/"); p=a[n-1]} /^PPid:/{if($$2==me) print p}' /proc/[0-9]*/status 2>/dev/null || true;; esac
+
+# Recipe-context shell snippet: pids of this supervisor's children (portable; no pgrep).
+mk.super.children=${_mk.super.pid.find}
+# Recipe-context shell snippet: portably terminate those children (no-op without a supervisor).
+mk.super.reap=${_mk.super.pid.find} | xargs -I% kill -TERM % 2>/dev/null || true
+
 mk.super.pid:
 	@# Returns the pid for the supervisor process which is responsible for trapping signals.
 	@# See 'mk.interrupt' docs for more details.
@@ -7070,6 +7082,26 @@ mk.super.enter/%:
 	$(call io.safe_rm,.tmp.mk.super.${*}) \
 	&& { [ -z "$(strip $(filter-out flux.noop,$(__cmk_post__.targets)))" ] || : > .tmp.cmk.mbox.${*}.post ; } \
 	&& $(call log.trace, ${GLYPH_MK} ${@} ${sep} ${red}started pid ${no_ansi}$${MAKE_SUPER})
+
+# The exact-exit-code channel; the targets below are thin wrappers over these.
+mk.super.status=([ -z "$${MAKE_SUPER}" ] || echo "${1}" > ${mk.super.pidfile}) ; exit ${1}
+mk.super.status.clear=([ -z "$${MAKE_SUPER}" ] || $(call io.safe_rm,${mk.super.pidfile}))
+
+mk.super.status/%:
+	@# Records an exact exit-code in the supervisor mailbox, then fails so the stack unwinds
+	@# normally and cleanup arms still run.  Needs CMK_SUPERVISOR=1, else make flattens to 2.
+	@# Contrast mk.yield, which short-circuits via signal and skips finally arms.
+	@#
+	@# USAGE: ... || make mk.super.status/42
+	$(call mk.super.status,${*})
+
+mk.super.status.clear:
+	@# Retracts a pending exit-code recorded by mk.super.status.  A handler that swallows a
+	@# failure and means to succeed must call this, else the code still reaches the top.
+	@# flux.try.except.finally calls it automatically when its except arm recovers.
+	@#
+	@# USAGE: ... || { make this.thing.handled ; make mk.super.status.clear ; }
+	$(call mk.super.status.clear)
 
 mk.super.stderr.filter:; ${stream.stdin} | awk "$${_cmk_blk_super_split}" | awk "$${_cmk_blk_super_filter}"
 	@# The supervisor's stderr filter, as a testable target (make-child transport of the same
@@ -7306,7 +7338,7 @@ lang.lint.deep:; ${make} lang.lint.deep/-
 # Curated-divergent twins: intentionally-diverging, must not be smart-routed as pure stand-ins
 # (arg-shape mismatch, impure `exit`, a path var). The collisions lint classifies against it;
 # the receivers stage is threaded it so a compile-time send to a divergent opened member warns.
-lang.lint.divergent=io.env io.env.log mk.exit.code stage.file
+lang.lint.divergent=io.env io.env.log mk.super.status stage.file
 # Predicate: non-empty iff the named twin is curated-divergent.
 lang.lint.divergent.p=$(strip $(filter $(m5[1]),${lang.lint.divergent}))
 
@@ -7390,54 +7422,23 @@ endef
 # is disabled" and exit 1 (noise + a spurious error).  So we skip it and propagate `rc` directly;
 # the real top-level yield still fires its own interrupt to unwind the whole stack once.
 
-mk.exit.code/%:; [ -z "$${MAKE_SUPER}" ] || echo "${*}" > .tmp.mk.super.$${MAKE_SUPER} ; exit ${*}
-	@# Records an EXACT process exit-code, then fails so the make stack unwinds
-	@# NORMALLY (flux.*.finally / cleanup arms still run).  The bash supervisor
-	@# wrapper reads it out-of-band and the top-level `./compose.mk` exits with <N>.
-	@# Requires CMK_SUPERVISOR=1 (no out-of-band channel without it; degrades to the
-	@# usual make exit 2).  Contrast `mk.yield`, which short-circuits via signal and
-	@# SKIPS intermediate finally arms.
-	@#
-	@# USAGE: ... || make mk.exit.code/42      (or the `mk.exit.code` macro form, inline)
-	@#
-
-# Macro form of `mk.exit.code/<N>` for inline use inside other recipes.
-mk.exit.code=([ -z "$${MAKE_SUPER}" ] || echo "${1}" > .tmp.mk.super.$${MAKE_SUPER}) ; exit ${1}
-
-#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-
-mk.exit.clear:; @[ -z "$${MAKE_SUPER}" ] || $(call io.safe_rm,.tmp.mk.super.$${MAKE_SUPER})
-	@# Retracts any pending exact exit-code recorded by `mk.exit.code` (drops the
-	@# supervisor pidfile).  Custom handlers that SWALLOW a failure (e.g. `|| true`)
-	@# and intend to succeed must call this, else the recorded code still reaches the
-	@# top-level process.  `flux.try.except.finally` calls it automatically when its
-	@# `except` arm recovers, so this is only for hand-rolled error handling.
-	@#
-	@# USAGE: ... || { make this.thing.handled ; make mk.exit.clear ; }
-	@#        (or the `mk.exit.clear` macro form, inline)
-
-# Macro form of `mk.exit.clear` for inline use inside other recipes.
-mk.exit.clear=([ -z "$${MAKE_SUPER}" ] || $(call io.safe_rm,.tmp.mk.super.$${MAKE_SUPER}))
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+## BEGIN: mk.error :: Typed faults and exit codes
+##
+## The parse-time and recipe-time error emitters, over the errno table.  The exact
+## exit code itself travels the supervisor mailbox (see `mk.super.status`).
+##
+## * mk.errno :: Curated symbol to exit-code table (default 1)
+## * mk.error :: Expansion-time root emitter
+## * mk.die   :: Recipe-time twin; themed line + exact exit code
+##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 
 # mk.errno: curated symbol to exit-code table (default 1).
 $(call m5.table, mk.errno, GENERIC=1 ENVVAR_UNSET=39 MODULE_MISSING=66 MODULE_ARGS=64 INCLUDE_MISSING=66 IMPORT_NOT_FOUND=66 DUPLICATE_KWARG=64 REGISTRY_ASSERT=70 NOT_IMPLEMENTED=70 GRAMMAR=65 IMPORT_DEF=66 IMPORT_TARGET=66 IMPORT_SYNTAX=64 NO_FORMATTER=69 KWARG_MISSING=64 BIND_ARGS=64 NOT_CALLABLE=70 NOT_RUNNABLE=70 CLASS_DECL=65 MODULE_MEMBER=65 DSL_BACKING=70, 1)
 # mk.error: expansion-time root emitter (thin error wrapper, errno=).
 mk.error = $(eval _mkerr_sym := $(patsubst errno=%,%,$(m5[2]?)))$(eval _mkerr_code := $(call mk.errno.resolve,$(_mkerr_sym),1))$(eval _mkerr_meta := $(strip $(m5[3]?) $(m5[4]?) $(m5[5]?) $(m5[6]?)))$(error cmk-fault errno=$(_mkerr_sym) code=$(_mkerr_code) :: $(strip $(m5[1]))$(if $(_mkerr_meta), :: $(_mkerr_meta)))
 # mk.die: recipe-time twin; themed line + exact exit code.
-mk.die = $(call log.mk, ${red}${bold}error${no_ansi} ${sep}${dim} $(patsubst errno=%,%,$(m5[2]?)) ${no_ansi}${sep} $(strip $(m5[1]))) ; $(call mk.exit.code,$(call mk.errno.resolve,$(patsubst errno=%,%,$(m5[2]?)),1))
-
-# __supervisor__.*: stable accessors over the core supervisor's identity + lifecycle, so
-# callers (e.g. flux.pool) depend on this surface instead of poking MAKE_SUPER /
-# _mk.super.pid.find directly.  Thin wrappers -- no reimplementation.
-__supervisor__.run_id    = ${_mk.run.id}
-__supervisor__.pid       = $${MAKE_SUPER}
-# Recipe-context shell snippet: PIDs of this supervisor's children (portable; no pgrep).
-__supervisor__.children  = ${_mk.super.pid.find}
-# Recipe-context shell snippet: portably TERM those children (no-op without a supervisor).
-__supervisor__.reap      = ${_mk.super.pid.find} | xargs -I% kill -TERM % 2>/dev/null || true
-# Inline macro forms of the exact-exit-code channel (wrap the existing recipes/macros).
-__supervisor__.exit_code  = $(call mk.exit.code,${1})
-__supervisor__.exit_clear = $(call mk.exit.clear)
+mk.die = $(call log.mk, ${red}${bold}error${no_ansi} ${sep}${dim} $(patsubst errno=%,%,$(m5[2]?)) ${no_ansi}${sep} $(strip $(m5[1]))) ; $(call mk.super.status,$(call mk.errno.resolve,$(patsubst errno=%,%,$(m5[2]?)),1))
 
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ## BEGIN: flux.* :: A miniature workflow library
@@ -7886,7 +7887,7 @@ flux.try.except.finally/%:
 	&& ${make} $${try} && exit_status=0 || exit_status=1 \
 	&& case $${exit_status} in \
 		0) true; ;; \
-		1) $(call log.flux, ${underline}${cyan}except${no_ansi_dim} ${sep} $${except}) && ${make} $${except} && { $(call mk.exit.clear); exit_status=0; } || exit_status=1; ;; \
+		1) $(call log.flux, ${underline}${cyan}except${no_ansi_dim} ${sep} $${except}) && ${make} $${except} && { $(call mk.super.status.clear); exit_status=0; } || exit_status=1; ;; \
 	esac \
 	&& $(call log.flux, ${underline}${cyan}finally${no_ansi_dim} ${sep} $${finally}) && ${make} $${finally} \
 	&& exit $${exit_status}

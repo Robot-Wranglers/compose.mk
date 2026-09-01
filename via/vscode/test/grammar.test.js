@@ -145,6 +145,34 @@ const CASES = [
   { line: '##░░░░░░ Section ░░░░', find: '##', scope: 'comment.line.divider.cmk' },
   // a bare ░ outside any divider (e.g. figlet-style banner art) still takes the shade scope.
   { line: '░██  ░██ ██░░░░██', find: '░██', scope: 'constant.character.shade.cmk' },
+
+  // --- docker-compose keys, wherever they appear (#compose-key) ---
+  // inlined compose yaml -- the key is scoped, the value is not.
+  { line: '    image: alpine:3.19', find: 'image', scope: 'keyword.other.compose.cmk' },
+  { line: '    working_dir: /workspace', find: 'working_dir', scope: 'keyword.other.compose.cmk' },
+  { line: '    entrypoint: ["/bin/sh"]', find: 'entrypoint', scope: 'keyword.other.compose.cmk' },
+  { line: '    volumes:', find: 'volumes', scope: 'keyword.other.compose.cmk' },
+  { line: '    image: alpine:3.19', find: 'alpine', scope: 'keyword.other.compose.cmk', absent: true },
+  // a longer key must win over its own prefix (`dns` must not eat `dns_search`).
+  { line: '    dns_search: example.com', find: 'dns_search', scope: 'keyword.other.compose.cmk' },
+  // callform kwargs, on a decl head and on an import directive alike.
+  { line: 'container job hello(image=alpine)(| FROM alpine |)', find: 'image', scope: 'keyword.other.compose.cmk' },
+  { line: '@args.from_json(shape working_dir=/tmp)', find: 'working_dir', scope: 'keyword.other.compose.cmk' },
+  { line: 'import ./demos/foo.cmk as foo image=debian', find: 'image', scope: 'keyword.other.compose.cmk' },
+  // recipe body (the shell embed must not shadow the key).
+  { block: ['t:', '\tcompose.run image=alpine'], line: 1, find: 'image', scope: 'keyword.other.compose.cmk' },
+  // a column-0 makefile rule head keeps its target scope -- `build:` is a target, not a key.
+  { line: 'build: dep', find: 'build', scope: 'entity.name.function.target.cmk' },
+  { line: 'build: dep', find: 'build', scope: 'keyword.other.compose.cmk', absent: true },
+  // a compose word with no trailing `:`/`=` is left alone.
+  { line: 'multistage image greeter(| FROM alpine |)', find: 'image', scope: 'keyword.other.compose.cmk', absent: true },
+  // the value side scopes separately (rendered a shade larger in the docs, brighter in vscode).
+  { line: '    image: alpine:3.19', find: 'alpine:3.19', scope: 'meta.value.compose.cmk' },
+  { line: '    image: alpine:3.19', find: ':', scope: 'punctuation.separator.key-value.compose.cmk' },
+  { line: '    command: sh -c hello', find: 'sh -c hello', scope: 'meta.value.compose.cmk' },
+  // a value stops at a sibling kwarg, and at a banana closer.
+  { line: 'container job hello(image=alpine entrypoint=sh)', find: 'entrypoint', scope: 'keyword.other.compose.cmk' },
+  { line: 'container job hello(| image=alpine entrypoint=sh |)', find: '|)', scope: 'meta.value.compose.cmk', absent: true },
 ];
 
 function tokenScopesAt(grammar, lines, lineIdx, substr) {

@@ -335,6 +335,25 @@ def test_dsl_kind_single_identity(tmp_path):
   assert "isa_kind=1 isa_frag=1" in out, out
 
 
+@pytest.mark.xfail(
+  reason="a dsl named after a make builtin loses its machine at instance declaration: the kind "
+  "records `machine=`, but the instance gets an empty `__machine__` and runs on the host instead.  "
+  "Silent -- no warning, and a body that works both places hides the wrong runtime.  Tracked as "
+  "`9b2244941b`; the fix is a reserved-name check at declaration."
+)
+def test_instance_of_a_dsl_named_after_a_make_builtin(tmp_path):
+  # identical to test_named_instance_runs_through_machine but for the kind's name.
+  p = _run(
+    tmp_path,
+    HDR + "dsl shell(entrypoint=bc)(| |)\n"
+    "shell area(| 3.14159 * 5 ^ 2 |)\n"
+    "__main__:\n\tarea()\n",
+  )
+  out = p.stdout + p.stderr
+  assert p.returncode == 0, out
+  assert "78.53975" in out, out
+
+
 def test_dsl_manifest_populates_and_imports(tmp_path):
   # every `dsl NAME` self-registers in the `dsl` module manifest, so `from dsl import NAME` binds the
   # bare name -- the same module machinery as the built-in `dsl.jqlang` (no manual manifest seed).

@@ -49,6 +49,14 @@ def _run(tmp_path, body, *targets, timeout=180):
   )
 
 
+def test_throw_fails_the_recipe(tmp_path):
+  # unswallowed raise: a throw fails the recipe, it does not merely log.  The only pin on that.
+  r = _run(tmp_path, "boom:; $(call fault.throw,MyFault)\n", "boom")
+  txt = r.stdout + r.stderr
+  assert r.returncode != 0, txt
+  assert "MyFault" in txt, txt
+
+
 # swallow-then-drain wrapper: throw in an isolated sub-make, keep the event in flight, drain it.
 _DRAIN = "run:\n\t@${make} boom </dev/null || true\n\t@${make} fault.dispatch.by_type\n"
 
