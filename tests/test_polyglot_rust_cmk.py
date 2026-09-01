@@ -90,8 +90,8 @@ def test_rust_native_construction_builds_and_runs(tmp_path):
   rc, out = _run(tmp_path, "greeter")
   assert rc == 0, out
   assert "hi world!" in out, out
-  # the shared cache log fires either way (MISS+built on the first run, HIT afterwards)
-  assert "dsl.rust" in out and "cache" in out, out
+  # the cache probe logs on both paths; the miss/hit split is pinned by the isolated-cache test
+  assert "checking for cache" in out, out
 
 
 @pytest.mark.docker

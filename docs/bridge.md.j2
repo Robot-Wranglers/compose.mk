@@ -481,12 +481,21 @@ compose.import.string(def=embedded_compose.yml import_to_root=FALSE)
 {% endset %}
 {{site.inline_mirror('mirror_embed_noroot', embed_noroot_mk, embed_noroot_cmk, default='left')}}
 
+### Services as Machines
+<hr class="section-rule lvl-3">
+
+Dynamically scaffolding targets that wrap container lifecycle and dispatch stuff is a fancy abstraction from the perspective of classic Makefiles.  But this is also *low-level support* for a much more interesting abstraction in [the CMK language](#claude-link).
+
+Compose services are a kind of [machine]({{_}}/cmk/concepts/#machines), and machines are [ambients](#claude-link). Ambients are a kind of "place" that computation can happen, and by adding the concept of space we can generalize callable/runnable, and have thus introduced the concept of *code mobility*.  
+
+{{site.embed_twin('demos/compose-machines.mk', 'demos/cmk/machine-compose.cmk', github=github, default='cmk', see_also=_+'/cmk/concepts/#machines', see_also_text='Concepts: machines')}}
+
 ### But Why? 🤔
 <hr class="section-rule lvl-3">
 
-At first glance, maybe you're thinking this looks like lots of magic to save a little bit of typing and simply using `docker compose -f ..` from your Makefiles.  Well, it's true that this method of "importing" compose services as `make` targets is often just paving the way for [container dispatch]({{_}}) later.
+The teaser in the last section goes to show that this definitely isn't just about cleaning up the `docker compose -f ..` from your Makefiles.. but it does that too.  
 
-Even without dispatch though, native support for containers as primitives is useful, especially when you start to use **actions on those containers as prerequisite tasks**.  So far we've seen that scaffolded targets effectively create an API over tool containers, but what's not emphasized yet is just how composable that API really is.
+Scaffolded targets pave the way for [container dispatch]({{_}}), but even without that, native support for containers as primitives is especially useful when you start to use **actions on those containers as prerequisite tasks**.  So far we've seen that scaffolded targets effectively create an API over tool containers, but what's not emphasized yet is just how composable that API really is.
 
 If you're unconvinced on this point, you might like to skip ahead to some more advanced stuff that is digging into this topic, like [the TUI docs]({{_}}/embedded-tui) or [the notebooking demo]({{_}}/demos/notebooking).
 

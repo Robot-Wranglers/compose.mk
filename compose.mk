@@ -267,8 +267,8 @@ make=make ${MAKE_FLAGS} $(call twin.map,${makefile_list})
 # vars expand empty when compose.mk already lives in the workspace, leaving vendored dispatch unchanged;
 # one instead binds the host-built cache in so the container reuses it. A shared probe computes the
 # source path, workspace, and relative form; its escaped comment char stops make truncating the value.
-# Compiled-program runs carry no compose.mk in their makefile list; the inherited interpreter path fills in.
-cmk.self = $(abspath $(or $(call twin.unmap,$(firstword $(filter %compose.mk,$(MAKEFILE_LIST)))),${__interpreter__}))
+# Every twin is named `<id>.compose.mk`, so the filter is re-tested post-unmap; compiled-program runs carry no compose.mk of their own, and the inherited interpreter path fills in.
+cmk.self = $(abspath $(or $(filter %compose.mk,$(call twin.unmap,$(firstword $(filter %compose.mk,$(MAKEFILE_LIST))))),${__interpreter__}))
 $(call m5.declare, CMK_VERSION:=0.0.0-dev, CMK_DOCKER_PATH:=/usr/local/bin/compose.mk, CMK_DOCKER_CACHE:=/cmk-cache)
 # In-container the interpreter lives under the local mount point, so the host anchor misses; retry on cwd.
 _cmk.ws.probe=s='${cmk.self}'; ws="$${DOCKER_HOST_WORKSPACE:-$$PWD}"; rel="$${s\#$$ws/}"; case "$$rel" in "$$s") rel="$${s\#$$PWD/}";; esac
@@ -4666,7 +4666,7 @@ define __hosted__
       '''
       self.content = ${compose.svc.defaults.stage}services:$(nl)  $(addsuffix :,self.__im_self__)$(nl)    extends:$(nl)      file: ${compose.svc.defaults.file}$(nl)      service: defaults$(nl)    $(subst $(nl),$(nl)    ,$(value self))
       self.__artifacts__ = self.compose ${compose.svc.defaults.file}
-      self.__rewrite__ = ${dim}wrapped as one service${no_ansi_dim}, workspace defaults by extends
+      self.__rewrite__ = workspace defaults
       self.__all__ =
     |)
 
@@ -5947,7 +5947,7 @@ mk.interpret/%:
 # Stays in seed (not hosted awklang): it powers `cmk` completion/help, which must run cold on
 # busybox/make+bash -- hosting would need gawk to build the partition first, breaking that cold path.
 # See scratch/TODO-hosted-needs-gawk.md.
-#:phase RUN seed=0 awklang=yes
+#:phase RUN seed=1 awklang=no
 define .awk.completion.scan
   function jrep(s, fs, rep,   n, p, i, r) { n = split(s, p, fs); r = p[1]; for (i = 2; i <= n; i++) r = r rep p[i]; return r }
   function jesc(s) { s = jrep(s, "\\\\", "\\\\"); s = jrep(s, "\"", "\\\""); s = jrep(s, "\t", "\\t"); s = jrep(s, "\r", "\\r"); return "\"" s "\"" }

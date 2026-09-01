@@ -12,7 +12,7 @@ so these are the first "external-module" *behavioral* tests -- distinct from the
 `plugin` suite.  See the follow-up on organizing dedicated external-modules / external-plugins
 suites.
 
-The structured emit runs `jb` (a docker coprocess), so routing needs a daemon -> needs_docker.
+The structured emit runs `jb` (a docker coprocess), so each routing test carries needs_docker.
 """
 import os
 import subprocess
@@ -24,7 +24,7 @@ REPO = Path(__file__).resolve().parent.parent
 COMPOSE = REPO / "compose.mk"
 CMK_DIR = REPO / ".cmk"
 
-pytestmark = [pytest.mark.external_module, pytest.mark.integration, pytest.mark.needs_docker, pytest.mark.module_system]
+pytestmark = [pytest.mark.external_module, pytest.mark.integration, pytest.mark.module_system]
 
 
 def _run(tmp_path, body, *targets, timeout=180):
@@ -61,6 +61,7 @@ def test_throw_fails_the_recipe(tmp_path):
 _DRAIN = "run:\n\t@${make} boom </dev/null || true\n\t@${make} fault.dispatch.by_type\n"
 
 
+@pytest.mark.needs_docker
 def test_throw_routes_to_typed_handler(tmp_path):
   # fault.throw emits a typed event and fails; at the drain it routes to `fault/<Type>:` --
   # routing is just make rule precedence, no handler registry to maintain.
@@ -72,6 +73,7 @@ def test_throw_routes_to_typed_handler(tmp_path):
   assert "HANDLED-MyFault" in r.stdout + r.stderr
 
 
+@pytest.mark.needs_docker
 def test_specific_handler_beats_fallback(tmp_path):
   # An explicit `fault/<Type>:` wins over the module's `fault/%:` fallback (rule precedence).
   r = _run(tmp_path,
@@ -83,6 +85,7 @@ def test_specific_handler_beats_fallback(tmp_path):
   assert "no handler registered" not in txt  # the fault/%: fallback message
 
 
+@pytest.mark.needs_docker
 def test_guarded_bridges_subprocess_failure(tmp_path):
   # fault.guarded catches a raw nonzero exit and re-throws a typed SubprocessFault, drained to
   # the module's built-in `fault/SubprocessFault:` handler.
@@ -92,6 +95,7 @@ def test_guarded_bridges_subprocess_failure(tmp_path):
   assert "SubprocessFault" in r.stdout + r.stderr, r.stderr
 
 
+@pytest.mark.needs_docker
 def test_assert_env_var_upgrades_when_module_loaded(tmp_path):
   # Core's assert.env.var degrade-switch: with fault.cmk loaded, a failed assertion raises a
   # typed EnvVarUnset fault (routes to a handler) instead of a bare `exit 39`.
