@@ -11852,7 +11852,8 @@ endef
 # triplequote stage. Reuses the shared literal parser and warn helpers.
 #:phase COMPILE seed=1 awklang=no
 define .awk.cmk.moduledoc
-  BEGIN { seen = 0; want_tdoc = 0; bd = 0 }
+  BEGIN { seen = 0; want_tdoc = 0; bd = 0; tdn = 0 }
+  END { tdeco_flush() }
   # A doc-bearing banana's leading docstring is always lifted OUT to
   # a sibling `<name>.__doc__` via fragdoc_capture; the ns-qualifier
   # prefixes a nested member's name, so a docstring never lands in
@@ -11865,21 +11866,19 @@ define .awk.cmk.moduledoc
     if (_dn != "") { _db = _dn; sub(/^.*\./, "", _db)
       if ($0 ~ /docstrings[ \t]*=[ \t]*0([^0-9]|$)/) { RAW[_dn] = 1; RAW[_db] = 1 } } }
   is_delim(substr($0, 1, 3)) {
-    if (bd > 0 && (bstk[bd] == "x" || braw[bd])) { print; next }   # payload triple-quote in a capture/lambda/assign banana, or a `docstrings=0` raw-shape instance -- not a docstring
+    if (is_payload()) { print; next }
     want_tdoc = 0; want_mdoc = 0
-    START_NR = NR; START_SRC = $0
-    parse_literal($0, "moduledoc")
-    if (REM_ ~ /^[ \t]*$/) { if (bd > 0) { if (bfrag[bd] != "") fragdoc_capture(bd) } else moduledoc_emit(); next }
+    if (doc_lift($0) == 1) { if (bd > 0) { if (bfrag[bd] != "") fragdoc_capture(bd) } else moduledoc_emit(); next }
     print LIT_ REM_; next }
+  # Hold back a decorator relocated to the recipe head, so the docstring behind it still lifts first.
+  want_tdoc && $0 ~ /^[ \t]+؆/ { tdeco[++tdn] = $0; next }
   want_tdoc {
     want_tdoc = 0
     if ($0 ~ /^[ \t]+/) {
-      match($0, /^[ \t]+/); lead = substr($0, 1, RLENGTH); body0 = substr($0, RLENGTH + 1)
-      if (is_delim(substr(body0, 1, 3))) {
-        START_NR = NR; START_SRC = $0
-        parse_literal(body0, "moduledoc")
-        if (REM_ ~ /^[ \t]*$/) { targetdoc_emit(lead); next }
-        print lead LIT_ REM_; next } }
+      match($0, /^[ \t]+/); lead = substr($0, 1, RLENGTH); _d = doc_lift(substr($0, RLENGTH + 1))
+      if (_d == 1) { targetdoc_emit(lead); tdeco_flush(); next }
+      if (_d == 2) { tdeco_flush(); print lead LIT_ REM_; next } }
+    tdeco_flush()
   }
   # A SPACE-indented `'''..'''` as the first body line of a doc-bearing banana (the encapsulation
   # `*[| .. |]` block indents its members) is a member docstring -- strip the lead, emit scoped.
@@ -11887,12 +11886,9 @@ define .awk.cmk.moduledoc
     want_mdoc = 0
     if (braw[bd]) { print; next }   # `docstrings=0` raw-shape instance -- leave the triple-quote literal
     if ($0 ~ /^[ ]+/) {
-      match($0, /^[ ]+/); lead = substr($0, 1, RLENGTH); body0 = substr($0, RLENGTH + 1)
-      if (is_delim(substr(body0, 1, 3))) {
-        START_NR = NR; START_SRC = $0
-        parse_literal(body0, "moduledoc")
-        if (REM_ ~ /^[ \t]*$/) { if (bfrag[bd] != "") fragdoc_capture(bd); next }
-        print lead LIT_ REM_; next } }
+      match($0, /^[ ]+/); lead = substr($0, 1, RLENGTH); _d = doc_lift(substr($0, RLENGTH + 1))
+      if (_d == 1) { if (bfrag[bd] != "") fragdoc_capture(bd); next }
+      if (_d == 2) { print lead LIT_ REM_; next } }
   }
   # A triple-quote that opens a multi-line literal away from a docstring position (mid-line,
   # after other content) is consumed whole here, so its closing line is not later taken for a
@@ -11901,6 +11897,13 @@ define .awk.cmk.moduledoc
     START_NR = NR; START_SRC = $0
     parse_literal(substr($0, TQ_POS), "moduledoc")
     print substr($0, 1, TQ_POS - 1) LIT_ REM_; next }
+  # One-line spelling of a doc-bearing banana whose whole body is a docstring: same lift, empty body.
+  is_doc_banana() {
+    if (doc_lift(DOCB_BODY) == 1) {
+      bfrag[bd + 1] = DOCB_NAME; bfrag_doc[bd + 1] = ""; fragdoc_capture(bd + 1)
+      print DOCB_HEAD " " substr($0, length(DOCB_HEAD) + length(DOCB_BODY) + 1)
+      print bfrag_doc[bd + 1]; bfrag_doc[bd + 1] = ""; next }
+  }
   # Track banana nesting so a `'''..'''` is scoped right.  Each multi-line banana open is pushed as
   # "doc" -- a named kind/instance/class/constructor/dsl decl, whose first line may be a member
   # docstring -- or "x" -- a recipe-embedded or `<-`/`:=`/`=` capture/lambda, whose dedented body may
@@ -11908,8 +11911,9 @@ define .awk.cmk.moduledoc
   # A decl may be col-0 or space-indented (an encapsulation `*[| .. |]` block indents its members);
   # a tab-indented open is a recipe lambda, so the `^[ ]*` (spaces only, no tab) keeps those "x".
   { if ($0 ~ /[([{]\|[ \t]*$/) { bd++
-      if ($0 ~ /^[ ]*[^ \t#].*[([{]\|[ \t]*$/ && $0 !~ /(<-|:=|=)[ \t]*[([{]\|[ \t]*$/) { bstk[bd] = "doc"; want_mdoc = 1
-        _bn = $0; sub(/[ \t]*[([{]\|[ \t]*$/, "", _bn); sub(/\(.*$/, "", _bn); sub(/^.*[ \t]/, "", _bn); bfrag[bd] = _bn; bfrag_doc[bd] = ""; braw[bd] = ($1 in RAW) }
+      _bn = $0; sub(/[ \t]*[([{]\|[ \t]*$/, "", _bn)
+      if (is_doc_decl(_bn)) { bstk[bd] = "doc"; want_mdoc = 1
+        bfrag[bd] = doc_name(_bn); bfrag_doc[bd] = ""; braw[bd] = ($1 in RAW) }
       else { bstk[bd] = "x"; bfrag[bd] = ""; braw[bd] = 0 } }
     else if ($0 ~ /^[ \t]*\|[])}]/ && bd > 0) { _cd = bd; bd--
       if (bfrag_doc[_cd] != "") { print; print bfrag_doc[_cd]; bfrag_doc[_cd] = ""; next } }
@@ -11938,6 +11942,27 @@ define .awk.cmk.moduledoc
       print ln }
     print "endef"
     print "$(if ${__name__},$(eval define ${__name__}.__doc__${nl}$(value __doc__)${nl}endef))" }
+  # is_payload -- the innermost frame holds literal payload, so a triple-quote in it is not a docstring.
+  function is_payload() { return (bd > 0 && (bstk[bd] == "x" || braw[bd])) }
+  # doc_lift -- 0: not a literal.  1: exactly a docstring.  2: a literal plus trailing content.
+  function doc_lift(text) {
+    sub(/^[ \t]+/, "", text); sub(/[ \t]+$/, "", text)
+    if (!is_delim(substr(text, 1, 3))) return 0
+    START_NR = NR; START_SRC = $0
+    parse_literal(text, "moduledoc")
+    return (REM_ ~ /^[ \t]*$/) ? 1 : 2 }
+  # is_doc_decl -- a banana prefix declaring a name, so its body may open with a docstring.
+  function is_doc_decl(p) { return ($0 ~ /^[ ]*[^ \t#]/ && _isnamed(p) && p !~ /(<-|:=|=)[ \t]*$/) }
+  # doc_name -- the declared name from a banana prefix: drop ctor kwargs, keep the last word.
+  function doc_name(p) { sub(/\(.*$/, "", p); sub(/[ \t]+$/, "", p); sub(/^.*[ \t]/, "", p); return p }
+  # is_doc_banana -- the one-line spelling of the above, setting DOCB_HEAD/DOCB_BODY/DOCB_NAME.
+  function is_doc_banana() {
+    if (is_payload() || !_bnext($0) || _bk != "o" || !is_doc_decl(_bp)) return 0
+    DOCB_HEAD = _bp _bch "|"; DOCB_NAME = doc_name(_bp); DOCB_BODY = _brest
+    if (!_bnext(DOCB_BODY) || _bk != "c" || _brest !~ /^[ \t]*$/) return 0
+    DOCB_BODY = _bp
+    return (DOCB_NAME != "" && !(DOCB_NAME in RAW) && !($1 in RAW)) }
+  function tdeco_flush(   k) { for (k = 1; k <= tdn; k++) print tdeco[k]; tdn = 0 }
   function targetdoc_emit(lead,   body, n, a, i, ln) {
     body = substr(LIT_, 4, length(LIT_) - 6)
     sub(/^[ \t\n]+/, "", body); sub(/[ \t\n]+$/, "", body)   # drop framing ws/newlines (incl. the indented close-delim line)
@@ -12627,7 +12652,7 @@ $(call lang.awk.stage.frag, main=.awk.cmk.m5wrap pipeline=.awk.cmk.litparse:.awk
 # of the source list).
 $(call lang.awk.stage.frag, main=.awk.cmk.dedent pipeline=.awk.cmk.errors:.awk.cmk.banana)
 
-$(call lang.awk.stage.frag, main=.awk.cmk.moduledoc pipeline=.awk.cmk.litparse:.awk.cmk.defskip:.awk.cmk.errors, -v MODULEDOC_LINT="$$$${CMK_MODULEDOC_LINT:-1}")
+$(call lang.awk.stage.frag, main=.awk.cmk.moduledoc pipeline=.awk.cmk.litparse:.awk.cmk.banana:.awk.cmk.defskip:.awk.cmk.errors, -v MODULEDOC_LINT="$$$${CMK_MODULEDOC_LINT:-1}")
 
 $(call lang.awk.stage.frag, main=.awk.cmk.indent pipeline=.awk.cmk.errors)
 

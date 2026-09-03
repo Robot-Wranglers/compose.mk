@@ -484,9 +484,9 @@ compose.import.string(def=embedded_compose.yml import_to_root=FALSE)
 ### Services as Machines
 <hr class="section-rule lvl-3">
 
-Dynamically scaffolding targets that wrap container lifecycle and dispatch stuff is a fancy abstraction from the perspective of classic Makefiles.  But this is also *low-level support* for a much more interesting abstraction in [the CMK language](#claude-link).
+Dynamically scaffolding targets that wrap container lifecycle and dispatch stuff is a fancy abstraction from the perspective of classic Makefiles.  But this is also *low-level support* for a much more interesting abstraction in [the CMK language]({{_}}/cmk/intro).
 
-Compose services are a kind of [machine]({{_}}/cmk/concepts/#machines), and machines are [ambients](#claude-link). Ambients are a kind of "place" that computation can happen, and by adding the concept of space we can generalize callable/runnable, and have thus introduced the concept of *code mobility*.  
+Compose services are a kind of [machine]({{_}}/cmk/concepts/#machines), and machines are [ambients]({{_}}/cmk/concepts/#ambients). Ambients are a kind of "place" that computation can happen, and by adding the concept of space we can generalize callable/runnable, and have thus introduced the concept of *code mobility*.  
 
 {{site.embed_twin('demos/compose-machines.mk', 'demos/cmk/machine-compose.cmk', github=github, default='cmk', see_also=_+'/cmk/concepts/#machines', see_also_text='Concepts: machines')}}
 

@@ -1,20 +1,13 @@
-"""A docstring on a DECORATED target leaks into the recipe as a runtime statement.
+"""A body docstring is inert on a decorated target, exactly as on a plain one.
 
-A leading `'''docstring'''` on a plain target is inert: the `moduledoc` stage
-lifts it out of the recipe and lowers it to an `@#` make comment.  Put a
-decorator above that same target and the docstring is no longer inert -- it
-lowers to a live `printf '%s' '<docstring>'` in the recipe body, printing the
-prose to stdout every time the target runs.
+A leading `'''docstring'''` lifts out of the recipe to an `@#` make comment, and
+a decorator above the target does not change that.  The `decorators` stage
+relocates the `@`-decorator to the recipe head before `moduledoc` runs, so
+moduledoc holds that line back to keep the docstring in first position; the
+lifted `@#` stays the first recipe line, where joinbody preserves it verbatim.
 
-The cause is stage ordering: `decorators` relocates the `@`-decorator to the
-head of the recipe BEFORE `moduledoc` runs, so the docstring is no longer the
-first recipe line and moduledoc no longer recognises it, leaving it to lower as
-an ordinary inline string statement.
-
-The practical fallout (recorded by demos/cmk/dirhandler.cmk, the prototype this
-guards): a decorated target must be documented with a `#` comment above the
-decorator, never a body docstring.  Promoting `io.dirhandler` into core should
-either fix the ordering or make the compiler reject the combination.
+Without that, the displaced docstring lowered to a live `printf '%s'` that
+printed the prose to stdout on every run.
 """
 
 import pytest
@@ -44,15 +37,9 @@ def test_plain_target_docstring_is_inert(ir):
   assert "printf 'body" in recipe, recipe
 
 
-@pytest.mark.xfail(
-  reason="the decorators stage relocates the decorator ahead of the docstring "
-  "before moduledoc runs, so the docstring is no longer first and lowers to a "
-  "live `printf '%s' '<docstring>'` that leaks to stdout instead of an inert "
-  "`@#` comment",
-  strict=True,
-)
 def test_decorated_target_docstring_is_inert(ir):
   # REPRO: identical but for the decorator above the target.  Desired: the
   # docstring stays inert exactly as in the control (no runtime `printf '%s'`).
   recipe = _recipe(ir, decorated=True)
   assert "printf '%s'" not in recipe, recipe
+  assert "@# DOC-MARKER for the target." in recipe, recipe
