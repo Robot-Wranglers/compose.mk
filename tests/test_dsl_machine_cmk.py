@@ -335,14 +335,8 @@ def test_dsl_kind_single_identity(tmp_path):
   assert "isa_kind=1 isa_frag=1" in out, out
 
 
-@pytest.mark.xfail(
-  reason="a dsl named after a make builtin loses its machine at instance declaration: the kind "
-  "records `machine=`, but the instance gets an empty `__machine__` and runs on the host instead.  "
-  "Silent -- no warning, and a body that works both places hides the wrong runtime.  Tracked as "
-  "`9b2244941b`; the fix is a reserved-name check at declaration."
-)
-def test_instance_of_a_dsl_named_after_a_make_builtin(tmp_path):
-  # identical to test_named_instance_runs_through_machine but for the kind's name.
+def test_dsl_named_after_a_make_builtin_is_rejected(tmp_path):
+  # the declaration is refused instead of silently running the body on the host.
   p = _run(
     tmp_path,
     HDR + "dsl shell(entrypoint=bc)(| |)\n"
@@ -350,8 +344,48 @@ def test_instance_of_a_dsl_named_after_a_make_builtin(tmp_path):
     "__main__:\n\tarea()\n",
   )
   out = p.stdout + p.stderr
+  assert p.returncode != 0, out
+  assert "errno=CLASS_DECL" in out and "collides with a make builtin" in out, out
+  assert "3.14159: command not found" not in out, out
+
+
+def test_class_named_after_a_make_builtin_is_rejected(tmp_path):
+  # the hazard is the kind name heading each instance declaration, so it is not dsl-specific.
+  p = _run(
+    tmp_path,
+    "cmk.class shell(| ${self}.hello:; echo HELLO-DISPATCHED |)\n"
+    "shell t(| |)\n"
+    "__main__:\n\tthis.t.hello\n",
+  )
+  out = p.stdout + p.stderr
+  assert p.returncode != 0, out
+  assert "errno=CLASS_DECL" in out and "collides with a make builtin" in out, out
+
+
+def test_dotted_dsl_name_over_a_builtin_basename_is_legal(tmp_path):
+  # only the bare name collides: a dotted name is not a make function.
+  p = _run(
+    tmp_path,
+    HDR + "dsl bashish.if(entrypoint=bc)(| |)\n"
+    "bashish.if area(| 3.14159 * 5 ^ 2 |)\n"
+    "__main__:\n\tarea()\n",
+  )
+  out = p.stdout + p.stderr
   assert p.returncode == 0, out
   assert "78.53975" in out, out
+
+
+def test_instance_named_after_a_make_builtin_is_legal(tmp_path):
+  # an instance name is not a declarator head, so it does not collide and stays allowed.
+  p = _run(
+    tmp_path,
+    "cmk.class calcish(| ${self}.hello:; echo HELLO-DISPATCHED |)\n"
+    "calcish sort(| |)\n"
+    "__main__:\n\tthis.sort.hello\n",
+  )
+  out = p.stdout + p.stderr
+  assert p.returncode == 0, out
+  assert "HELLO-DISPATCHED" in out, out
 
 
 def test_dsl_manifest_populates_and_imports(tmp_path):

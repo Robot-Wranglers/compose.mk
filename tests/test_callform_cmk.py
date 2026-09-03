@@ -400,3 +400,36 @@ def test_env_in_assignment_value_is_kept(ir):
   r = ir("MOD := cmk.f{e=v}\n")
   assert "{env} at module scope" not in r.stderr
   assert "MOD := e=v $(call f)" in r.stdout
+
+
+# --- adjacent callforms keep their shell separator -------------------------
+
+DECL = 'import log\nopen .zz\n.zz.exec = echo "exec ${1}"\n'
+
+
+@pytest.mark.parametrize(
+  "body",
+  [
+    pytest.param("log.io(first)\n  log.io(second)", id="smart-then-smart"),
+    pytest.param(".zz.exec(one)\n  log.io(two)", id="macro-then-smart"),
+    pytest.param("log.io(a (paren) b)\n  log.io(c)", id="nested-parens"),
+    pytest.param("this.helper(one)\n  log.io(two)", id="target-then-smart"),
+  ],
+)
+def test_adjacent_callform_lines_keep_a_separator(ir, body):
+  # two callforms stay two lines and keep their connector, absent a fluent continuation.
+  r = ir(f"{DECL}two:\n  {body}\nhelper/%:\n  echo helper ${{*}}\n")
+  recipe = [ln for ln in r.stdout.splitlines() if ln.startswith("\t")]
+  joined = [ln for ln in recipe if "log.io" in ln or "zz.exec" in ln or "helper/one" in ln]
+  assert len(joined) >= 2, r.stdout
+  assert joined[0].endswith("&& \\"), joined[0][-60:]
+
+
+def test_leading_dot_receiver_folds_into_a_fluent_chain(ir):
+  # the counterpart: a leading-dot receiver after a call-close merges into one piped chain.
+  r = ir(f"{DECL}two:\n  .zz.exec(one)\n  .log.io(two)\n")
+  recipe = [ln for ln in r.stdout.splitlines() if ln.startswith("\t")]
+  assert len(recipe) == 1, recipe
+  assert "&&" not in recipe[0], recipe[0]
+  assert ".zz.exec/one" in recipe[0] and "log.io/two" in recipe[0], recipe[0]
+  assert ")) | $(if" in recipe[0], recipe[0]

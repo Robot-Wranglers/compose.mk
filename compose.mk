@@ -1182,9 +1182,16 @@ $(call m5.def.!, lang.banana.fragment!, lang.banana.fragment)
 ## * cmk.__all__ :: names bound bare by open / star-import
 ## * __args__ / __target__ :: instance ambient vars (args / target)
 ##░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-cmk.class       = $(call lang.class!, $(m5.__splat__))
-cmk.constructor = $(call lang.ctor!, $(m5.__splat__)$(if $(filter-out MKID_NONE,$(call m5.ctx?,$(m5.__splat__),umbrella)),$(if $(filter ns=%,$(m5.__splat__)),, ns=.)))
-cmk.dsl         = $(call lang.dsl!, $(m5.__splat__))
+# Make builtins, reserved against a bare kind name; a dotted name never collides.
+lang.lint.reserved.kind = subst patsubst strip findstring filter filter-out sort word wordlist words \
+	firstword lastword dir notdir suffix basename addsuffix addprefix join wildcard realpath abspath \
+	if or and foreach let call value eval origin flavor error warning info file guile intcmp shell
+# A kind name heads every instance declaration of that kind, where a make builtin does not survive.
+lang.lint.reserved.check = $(if $(filter $(call m5.ctx?,${1},def),${lang.lint.reserved.kind}),$(call mk.error, cmk: kind `$(call m5.ctx?,${1},def)` collides with a make builtin -- its instances silently lose their machine and dispatch; rename the kind, errno=CLASS_DECL))
+
+cmk.class       = $(call lang.lint.reserved.check,$(m5.__splat__))$(call lang.class!, $(m5.__splat__))
+cmk.constructor = $(call lang.lint.reserved.check,$(m5.__splat__))$(call lang.ctor!, $(m5.__splat__)$(if $(filter-out MKID_NONE,$(call m5.ctx?,$(m5.__splat__),umbrella)),$(if $(filter ns=%,$(m5.__splat__)),, ns=.)))
+cmk.dsl         = $(call lang.lint.reserved.check,$(m5.__splat__))$(call lang.dsl!, $(m5.__splat__))
 
 __args__=$(m5[1]?)
 
@@ -1992,6 +1999,19 @@ docker.rmi:
 	force=`case $${force:-} in 1) echo '--force';; *) echo ;; esac` \
 	&& set -x && docker rmi $${force} $${img} 2>/dev/null|| true
 
+docker.rm/%:
+	@# Force-removes the named container, idempotently (fine if it never existed).
+	docker rm -f ${*} >/dev/null 2>&1 || true
+
+docker.is.running/%:
+	@# Liveness predicate: exit status says whether the named container is running.
+	[ "`docker inspect -f '{{.State.Running}}' ${*} 2>/dev/null`" = "true" ]
+
+docker.exec/%:
+	@# Executes `cmd` inside the named running container, proxying stdin.
+	@# USAGE: cmd='...' ./compose.mk docker.exec/<name>
+	docker exec -i $${docker_args:-} ${*} $${cmd:-bash}
+
 docker.run.def:
 	@# Treats the named define-block as a script, then runs it inside the given container.
 	@#
@@ -2028,9 +2048,11 @@ docker.run.sh:
 	@# USAGE:
 	@#   img=... entrypoint=... cmd=... env=var1,var2 docker_args=.. ./compose.mk docker.run.sh
 	@#
+	@# Pass detach=1 (optionally name=..) for a resident container: -d, named, no rm/init/stdin/tty.
+	@#
 	${trace_maybe} \
 	&& image_tag="$${img}" \
-	&& _cmk_run_id="$${MAKE_SUPER:-$${CMK_RUN_ID:-none}}-$${CMK_REAP_SALT:-0}" \
+	&& _cmk_run_id=`case "$${detach:-0}" in 1) echo "$${MAKE_SUPER:-none}";; *) echo "$${MAKE_SUPER:-$${CMK_RUN_ID:-none}}-$${CMK_REAP_SALT:-0}";; esac` \
 	&& entry=`[ "$${entrypoint:-}" == "none" ] && echo ||  echo "--entrypoint $${entrypoint:-bash}"` \
 	&& net=`[ "$${net:-}" == "" ] && echo ||  echo "--net=$${net}"` \
 	&& case "$${hostname:-}"  in \
@@ -2052,8 +2074,9 @@ docker.run.sh:
 		|| true ) \
 	&& extra_env=`[ -z $${env:-} ] && true || ${make} .docker.proxy.env/$${env}` \
 	&& tty=`[ -z $${tty:-} ] && echo \`${io.tty.stdin} && echo "-t"|| true\` || echo "-t"` \
+	&& mode=`case "$${detach:-0}" in 1) echo "-d $${name:+--name $${name}}";; *) echo "--rm --init -i $${tty}";; esac` \
 	&& cmd_args="\
-		--rm --init -i $${tty} $${extra_env} \
+		$${mode} $${extra_env} \
 		--label cmk.run=$${_cmk_run_id} \
 		$${hostname} \
 		-e CMK_INTERNAL=1 -e CMK_IN_CONTAINER=1 \
@@ -2067,7 +2090,7 @@ docker.run.sh:
 		$${entry} \
 		$${docker_args:-}" \
 	&& dcmd="docker run -q $${net} $${cmd_args}" \
-	&& ([ -p ${stdin} ] && dcmd="${stream.stdin} | eval $${dcmd}" || true) \
+	&& ([ -p ${stdin} ] && [ "$${detach:-0}" != 1 ] && dcmd="${stream.stdin} | eval $${dcmd}" || true) \
 	&& eval $${dcmd} $${image_tag} $${cmd}
 .docker.proxy.env/%:
 	@# Internal usage only.  This generates code that has to be used with eval.
@@ -11871,7 +11894,7 @@ define .awk.cmk.moduledoc
     if (doc_lift($0) == 1) { if (bd > 0) { if (bfrag[bd] != "") fragdoc_capture(bd) } else moduledoc_emit(); next }
     print LIT_ REM_; next }
   # Hold back a decorator relocated to the recipe head, so the docstring behind it still lifts first.
-  want_tdoc && $0 ~ /^[ \t]+؆/ { tdeco[++tdn] = $0; next }
+  want_tdoc && $0 ~ /^[ \t]+؆[A-Za-z0-9._]+\(.*\)[ \t]*$/ { tdeco[++tdn] = $0; next }
   want_tdoc {
     want_tdoc = 0
     if ($0 ~ /^[ \t]+/) {
@@ -11897,28 +11920,7 @@ define .awk.cmk.moduledoc
     START_NR = NR; START_SRC = $0
     parse_literal(substr($0, TQ_POS), "moduledoc")
     print substr($0, 1, TQ_POS - 1) LIT_ REM_; next }
-  # One-line spelling of a doc-bearing banana whose whole body is a docstring: same lift, empty body.
-  is_doc_banana() {
-    if (doc_lift(DOCB_BODY) == 1) {
-      bfrag[bd + 1] = DOCB_NAME; bfrag_doc[bd + 1] = ""; fragdoc_capture(bd + 1)
-      print DOCB_HEAD " " substr($0, length(DOCB_HEAD) + length(DOCB_BODY) + 1)
-      print bfrag_doc[bd + 1]; bfrag_doc[bd + 1] = ""; next }
-  }
-  # Track banana nesting so a `'''..'''` is scoped right.  Each multi-line banana open is pushed as
-  # "doc" -- a named kind/instance/class/constructor/dsl decl, whose first line may be a member
-  # docstring -- or "x" -- a recipe-embedded or `<-`/`:=`/`=` capture/lambda, whose dedented body may
-  # hold a triple-quote that is payload (left verbatim).  bd==0 (top level) is the module docstring.
-  # A decl may be col-0 or space-indented (an encapsulation `*[| .. |]` block indents its members);
-  # a tab-indented open is a recipe lambda, so the `^[ ]*` (spaces only, no tab) keeps those "x".
-  { if ($0 ~ /[([{]\|[ \t]*$/) { bd++
-      _bn = $0; sub(/[ \t]*[([{]\|[ \t]*$/, "", _bn)
-      if (is_doc_decl(_bn)) { bstk[bd] = "doc"; want_mdoc = 1
-        bfrag[bd] = doc_name(_bn); bfrag_doc[bd] = ""; braw[bd] = ($1 in RAW) }
-      else { bstk[bd] = "x"; bfrag[bd] = ""; braw[bd] = 0 } }
-    else if ($0 ~ /^[ \t]*\|[])}]/ && bd > 0) { _cd = bd; bd--
-      if (bfrag_doc[_cd] != "") { print; print bfrag_doc[_cd]; bfrag_doc[_cd] = ""; next } }
-    if ($0 ~ /^[^ \t#][^=]*:([^=]|$)/) want_tdoc = 1
-    print }
+  { walk_line(); next }
   # Lift a doc-bearing banana's leading docstring OUT to a sibling define; flushed at close.
   function fragdoc_capture(d,   delim, body, n, a, i, out) {
     delim = substr(LIT_, 1, 3); body = substr(LIT_, 4, length(LIT_) - 6)
@@ -11955,13 +11957,26 @@ define .awk.cmk.moduledoc
   function is_doc_decl(p) { return ($0 ~ /^[ ]*[^ \t#]/ && _isnamed(p) && p !~ /(<-|:=|=)[ \t]*$/) }
   # doc_name -- the declared name from a banana prefix: drop ctor kwargs, keep the last word.
   function doc_name(p) { sub(/\(.*$/, "", p); sub(/[ \t]+$/, "", p); sub(/^.*[ \t]/, "", p); return p }
-  # is_doc_banana -- the one-line spelling of the above, setting DOCB_HEAD/DOCB_BODY/DOCB_NAME.
-  function is_doc_banana() {
-    if (is_payload() || !_bnext($0) || _bk != "o" || !is_doc_decl(_bp)) return 0
-    DOCB_HEAD = _bp _bch "|"; DOCB_NAME = doc_name(_bp); DOCB_BODY = _brest
-    if (!_bnext(DOCB_BODY) || _bk != "c" || _brest !~ /^[ \t]*$/) return 0
-    DOCB_BODY = _bp
-    return (DOCB_NAME != "" && !(DOCB_NAME in RAW) && !($1 in RAW)) }
+  # walk_line -- step the frame stack over every banana boundary on the line, as dedent's walk does.
+  function walk_line(   s, out, dg, pn, i, opened, pend) {
+    s = $0; out = ""; pn = 0; opened = 0
+    if ($0 ~ /^[^ \t#][^=]*:([^=]|$)/) want_tdoc = 1
+    while (_bnext(s)) {
+      dg = substr(s, length(_bp) + 1, 2)
+      if (_bk == "o") { bd++; opened = 1; bline[bd] = NR
+        if (is_doc_decl(_bp)) { bstk[bd] = "doc"; bfrag[bd] = doc_name(_bp); bfrag_doc[bd] = ""; braw[bd] = ($1 in RAW) }
+        else { bstk[bd] = "x"; bfrag[bd] = ""; braw[bd] = 0 }
+        out = out _bp dg }
+      else { opened = 0
+        if (bd == 0) out = out _bp dg
+        else { _cd = bd; bd--
+          if (bline[_cd] == NR && bstk[_cd] == "doc" && !braw[_cd] && bfrag[_cd] != "" && doc_lift(_bp) == 1) { fragdoc_capture(_cd); out = out " " dg }
+          else out = out _bp dg
+          if (bfrag_doc[_cd] != "") { pend[++pn] = bfrag_doc[_cd]; bfrag_doc[_cd] = "" } } }
+      s = _brest }
+    want_mdoc = (opened && s ~ /^[ \t]*$/ && bstk[bd] == "doc")
+    print out s
+    for (i = 1; i <= pn; i++) print pend[i] }
   function tdeco_flush(   k) { for (k = 1; k <= tdn; k++) print tdeco[k]; tdn = 0 }
   function targetdoc_emit(lead,   body, n, a, i, ln) {
     body = substr(LIT_, 4, length(LIT_) - 6)

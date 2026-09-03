@@ -43,3 +43,9 @@ def test_decorated_target_docstring_is_inert(ir):
   recipe = _recipe(ir, decorated=True)
   assert "printf '%s'" not in recipe, recipe
   assert "@# DOC-MARKER for the target." in recipe, recipe
+
+
+def test_anchored_first_recipe_line_opening_a_literal(ir):
+  # the hold-back matches a relocated decorator only, never a hand-written anchored line.
+  r = ir("x:\n\tcmk.h['''L1\nL2'''\n]\n")
+  assert "printf '%s\\n%s' 'L1' 'L2' | $(call h)" in r.stdout, r.stdout
