@@ -4632,10 +4632,12 @@ define __hosted__
       rather than falling through to the host.
       '''
       self.__exec__ = $(addsuffix .exec,self.__im_self__)
+      # a group sets the stem before minting each service; this default covers the standalone case.
+      self.stem ?= $(addprefix .tmp.,${self})
       self.run = self.stem/self.__im_self__
       self.__in__ = ${make} self.__exec__/$(strip ${__args__})
       self.__call__ = cmd="$(strip ${__args__}) $${CMK_LAMBDA_ARGV:-}" ${make} self.run
-      self.build: $(addsuffix .build,self.stem)/self.__im_self__
+      self.build: $(addsuffix .build,$(${self}.stem))/${self}
       self.exec/%:
         cmk.io.mktemp() && this.mk.def.to.file(${*},$${tmpf}) && cmd=$${tmpf} env=$${env:-} this.self.run()
     |)
@@ -9486,7 +9488,9 @@ ${target_namespace}.$(compose_service_name).restart: ${compose_file_stem}.restar
 ${target_namespace}.$(compose_service_name).stop: ${compose_file_stem}/$(compose_service_name).stop
 ${target_namespace}.$(compose_service_name).up: ${compose_file_stem}.up/$(compose_service_name)
 ${target_namespace}.$(compose_service_name).up.detach: ${compose_file_stem}.up.detach/$(compose_service_name)
+${target_namespace}.$(compose_service_name).clean: ${compose_file_stem}.clean/$(compose_service_name)
 ${target_namespace}.up.detach: ${compose_file_stem}.up.detach
+${target_namespace}.clean: ${compose_file_stem}.clean
 ${target_namespace}.restart: ${compose_file_stem}.restart
 ${target_namespace}.restart.fg: ${compose_file_stem}.restart.fg
 # ${target_namespace}.down: ${compose_file_stem}.down

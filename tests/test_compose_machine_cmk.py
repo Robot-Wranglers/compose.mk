@@ -117,6 +117,32 @@ def test_composeservice_build_is_cleanly_defined(probe):
     assert "ignoring old recipe" not in probe, probe
 
 
+_BUILD_SRC = (
+    "compose.service box(|\n"
+    "image: alpine\n"
+    "entrypoint: sh\n"
+    "|)\n"
+    "compose.group duo(|\n"
+    "services:\n"
+    "  left:\n"
+    "    image: alpine\n"
+    "    entrypoint: sh\n"
+    "|)\n"
+    "__main__:; @true\n"
+)
+
+
+@pytest.mark.docker
+@pytest.mark.needs_docker
+def test_compose_machine_build_resolves(tmp_path):
+    # being defined once is not enough, so run it: box takes its own stem, left takes the group's.
+    for svc in ("box", "left"):
+        rc, out = _run(_BUILD_SRC, "%s.build" % svc, docker=True)
+        assert rc == 0, out
+        assert "No rule to make target" not in out, out
+        assert ".stem" not in out, out
+
+
 # -- machine= dsl-backing (mirrors test_dsl_machine_cmk.test_bind_existing_machine) --
 
 def test_dsl_records_the_composeservice_machine(probe):
@@ -151,7 +177,6 @@ def test_composeservice_announces_its_artifacts(tmp_path):
     assert "compose.kind" in out, out
     assert ".tmp.box.yml" in out, out
     assert ".tmp.cmk.svc-defaults.json" in out, out
-    assert "extends" in out, out
 
 
 def test_composeservice_announce_is_silent_when_quiet(tmp_path):
@@ -169,6 +194,15 @@ def test_composeservice_render_shows_both_files(tmp_path):
     assert "# .tmp.cmk.svc-defaults.json" in out, out
     assert '"working_dir":"/workspace"' in out, out
     assert "/var/run/docker.sock" in out, out
+
+
+def test_composeservice_pulls_defaults_by_extends(tmp_path):
+    # the defaults arrive by compose extends, so a body declaring its own keys merges.
+    rc, out = _run(_RENDER_SRC, "box.render", env={"quiet": "1"})
+    assert rc == 0, out
+    assert "extends:" in out, out
+    assert "file: .tmp.cmk.svc-defaults.json" in out, out
+    assert "service: defaults" in out, out
 
 
 # -- the workspace defaults merge with the body rather than colliding with it --

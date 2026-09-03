@@ -67,8 +67,8 @@ demo.group: left.exec/alpine.release right.exec/debian.release
 # Access by individual or by group.
 demo.classic: \
   alpha.services pair.images \
-	$(pair.stem).up.detach/daemon \
-	$(pair.stem)/daemon.ps $(pair.stem).clean/daemon
+	pair.daemon.up.detach \
+	pair.daemon.ps pair.daemon.clean
 
 # Shows the generated compose files, no docker needed.
 render: alpha.render pair.render

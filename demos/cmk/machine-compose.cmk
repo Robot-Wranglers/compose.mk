@@ -68,10 +68,10 @@ demo.classic:
   log(classic ${sep} file verbs answer to the kind name)
   this.alpha.services
   this.pair.images
-  log(classic ${sep} service verbs answer under the compose stem)
-  this.${pair.stem}.up.detach/daemon
-  this.${pair.stem}/daemon.ps
-  this.${pair.stem}.clean/daemon
+  log(classic ${sep} service verbs answer under the kind name)
+  this.pair.daemon.up.detach
+  this.pair.daemon.ps
+  this.pair.daemon.clean
 
 render:
   '''Shows the generated compose files, no docker needed'''
