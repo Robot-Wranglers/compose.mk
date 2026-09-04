@@ -1,10 +1,10 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 
 ## Quickstart
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-2">
 
 ### Basic Installation
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 Just copy the `compose.mk` file and  make it executable:
 
@@ -14,7 +14,7 @@ $ cd myproject
 
 # Download the compose.mk automation lib
 $ curl -sL \
-  https://raw.githubusercontent.com/Robot-Wranglers/compose.mk/master/compose.mk \
+  https://raw.githubusercontent.com/Robot-Wranglers/compose.mk/main/compose.mk \
     > compose.mk
 
 # Make it executable
@@ -24,23 +24,70 @@ $ chmod +x compose.mk
 $ ./compose.mk ...
 ```
 
-If you have `make` and `docker`, that's all the setup you'll need for stand-alone [tool mode]({{mkdocs.site_relative_url}}/tool-overview) usage.  
+If you have `make` and `docker`, that's all the setup you'll need for stand-alone [tool mode]({{_}}/tool-overview) usage.  
 
-Note that since [various containers]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) are only pulled on demand, initial usage might be slow.  *(For example, you might need a `jq` container before `compose.mk` can work with JSON)*.  Subsequent runs however will take advantage of cache.
+Note that since [various containers]({{_}}/tool-overview/#tool-wrappers) are only pulled on demand, initial usage might be slow.  *(For example, you might need a `jq` container before `compose.mk` can work with JSON)*.  Later runs will take advantage of cache.
 
 If you want to keep `compose.mk` out of your project root, you could use a `.cmk/` folder, and while it's not really necessary or recommended.. you could also track upstream with a git submodule. *(See the [Plugins, Forks, and Versioning section](#forks-versioning) for more details.)*
 
+### Global Install
+<hr class="section-rule lvl-3">
+
+Besides the vendored drop-in above, `compose.mk` ships package-manager shims under {{macros.repo_link('the `via/` folder', name='via/', github=github)}} which install to `PATH`.  Currently supported, mostly untested, contributions welcome:
+
+* {{macros.repo_link('via/basher', name='basher', github=github)}}
+* {{macros.repo_link('via/npm', name='npm', github=github)}}
+* {{macros.repo_link('via/pip', name='pip', github=github)}}
+* {{macros.repo_link('via/docker', name='docker', github=github)}} (runs `compose.mk` *from a container*, see [below](#run-from-a-container))
+
+Pip has good support for the common use-cases, but see also [these remarks](#forks-versioning) about versioning.  You can install from the repo subdirectory (no PyPI package needed):
+
+```bash {.cli_example}
+# Install from the `via/pip` subdir on the default branch:
+$ pip install "git+https://github.com/Robot-Wranglers/compose.mk.git#subdirectory=via/pip"
+
+# Pin to a specific branch (or tag / commit) with `@<ref>`:
+$ pip install "git+https://github.com/Robot-Wranglers/compose.mk.git@main#subdirectory=via/pip"
+```
+
+After a global install you can `include` compose.mk by its resolved path (as found on your `PATH`) from any Makefile, anywhere.
+
 Read on for details about tighter integration with projects, and see the [compatibility notes](#compatibility-notes) for details about docker versions / possible gotchas in OSX.
 
-### Project Integration
-<hr style="width:100%;border-bottom:3px solid black;">
+### Run from a Container
+<hr class="section-rule lvl-3">
 
-For using the [standard library]({{mkdocs.site_relative_url}}/standard-lib), just write `include compose.mk` in your Makefile.  If you brought your own tool containers, you'll probably be interested in setting up the [Make/Compose Bridge]({{mkdocs.site_relative_url}}/bridge), preparing for [Container Dispatch]({{mkdocs.site_relative_url}}/container-dispatch), or using [docker more directly]({{mkdocs.site_relative_url}}/raw-docker).  
+Rather than installing anything on the host, you can run `compose.mk` *from a container* using the {{macros.repo_link('via/docker', name='via/docker', github=github)}} shim.  Build the image straight from a git ref + subdirectory (no checkout needed):
+
+```bash {.cli_example}
+$ docker build -t compose.mk \
+    https://github.com/Robot-Wranglers/compose.mk.git#main:via/docker
+```
+
+Because `compose.mk`'s whole model is running tools *in containers*, a containerized `compose.mk` needs the **host docker socket shared** so it can start those as *sibling* containers on the host daemon:
+
+```bash {.cli_example}
+$ docker run --rm -it \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "$PWD:$PWD" -w "$PWD" \
+    -e DOCKER_HOST_WORKSPACE="$PWD" \
+    compose.mk flux.ok
+```
+
+!!! warning "Mount at the same path"
+    Mount your project at its *own* host path (`-v "$PWD:$PWD" -w "$PWD"`), not remapped to `/workspace`.  Sibling tool-containers are created by the *host* daemon, so any path compose.mk hands to docker must be valid on the host; same-path mounting makes in-container paths equal host paths.  (Remapping to `/workspace` is fine for trivial host-only targets but breaks container-dispatch.)  See the README for running *your* project's dispatch targets.
+
+The image is also `FROM`-able as a base for your own app, and its `--target test` stage can run compose.mk's own test suite from inside the container.  See the {{macros.repo_link('via/docker README', name='via/docker README', github=github)}} for those plus prebuilt GHCR images and caveats (file ownership, `DOCKER_SOCKET`).  See also the [raw-docker docs]({{_}}/raw-docker) for how dispatch and the shared socket work.
+
+### Project Integration
+<hr class="section-rule lvl-3">
+
+For using the [standard library]({{_}}/standard-lib), just write `include compose.mk` in your Makefile.  If you brought your own tool containers, you'll probably be interested in setting up the [Make/Compose Bridge]({{_}}/bridge), preparing for [Container Dispatch]({{_}}/container-dispatch), or using [docker more directly]({{_}}/raw-docker).  
 
 See that full documentation for more details, or if you already know what you're doing, read on for the copy/paste stuff.
 
 #### Makefile Integration
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 A quick example of what your project Makefile could look like:
 
@@ -62,9 +109,9 @@ self.test:
 ```
 
 #### Docker Compose Integration
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
-Working with docker compose is optional if you're just interested in [stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview/) or the [standard library offerings]({{mkdocs.site_relative_url}}/standard-lib).  And if you *are* using docker-compose, then simple access to tools-containers from your compose files will *just work* for many use-cases, via the [Makefile integration](makefile-integration) in the last section and via the [scaffolded targets]({{mkdocs.site_relative_url}}/bridge).  But, more complicated use-cases will usually need a volume-mount for your project directory so that tool containers can read/write files, and, [using container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) means that your tool containers need `make` and `bash`.
+Working with docker compose is optional if you're just interested in [stand-alone mode]({{_}}/tool-overview/) or the [standard library offerings]({{_}}/standard-lib).  And if you *are* using docker-compose, then simple access to tools-containers from your compose files will *just work* for many use-cases, via the [Makefile integration](makefile-integration) in the last section and via the [scaffolded targets]({{_}}/bridge).  But, more complicated use-cases will usually need a volume-mount for your project directory so that tool containers can read/write files, and, [using container dispatch]({{_}}/container-dispatch) means that your tool containers need `make` and `bash`.
 
 Here is some fairly complete boilerplate that's usually a good starting place:
 
@@ -83,28 +130,34 @@ This example above is typical, but not necessarily minimal, so let's discuss a f
     1. It's optional, but **there are cases where you'll want `docker` to be available inside tool-containers** and you also might want to share the hosts docker-socket.[^1]  The boilerplate above goes half way, defaulting to using a volume mount but stopping short of actually installing docker.  
 
 ### Compatibility Notes
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-Platforms used in development for `compose.mk` include recentish docker, recentish make (*3.8+*) and bash (*5+*) on both Linux and MacOS.  Testing done in CI only uses Linux and won't try every possible combination of versions, but the goal is to support most things you'll encounter in the wild.
+Platforms used in development for `compose.mk` include recentish docker, GNU make (*4.2+*) and bash (*5+*) on both Linux and MacOS.  Testing done in CI only uses Linux and won't try every possible combination of versions, but the goal is to support most things you'll encounter in the wild.
 
--------------------
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+**For make,** the hard floor is GNU make 4.2 (released 2016; anything from a 2019-or-later distro is fine).  Older makes cannot even parse the file, so `compose.mk` checks the version first thing and fails with instructions instead of a cryptic parse error.  The usual way to hit this is stock MacOS, which ships make 3.81 (frozen since 2006) with the command-line tools: `brew install make`, then either invoke `gmake` or put brew's gnubin directory first on PATH.
+
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 **For docker,** recentish means a client at least 25+, engine at 20+ and while it's not a strict requirement, using docker-compose at 2.17.0+ is *strongly recommended*.  Otherwise you won't have access to `dockerfile_inline`, which is inconvenient and also breaks many demos.
 
----------------
+<hr style="width:95%;border-bottom:1px dashed black;">
 
-**For MacOS,** the [standard library]({{mkdocs.site_relative_url}}/standard-lib) should mostly Just Work.  For more [advanced]({{mkdocs.site_relative_url}}/compiler) [features]({{mkdocs.site_relative_url}}/bridge) though, there are the usual problems with BSD vs GNU tools, particularly `sed` and `awk`.
+**For MacOS,** once a modern make is installed (see above), the [standard library]({{_}}/standard-lib) should mostly Just Work.  For more [advanced]({{_}}/cmk/compiler) [features]({{_}}/bridge) though, there are the usual problems with BSD vs GNU tools, particularly `sed`.
+
+The stock `awk` is fine.  The [compiler]({{_}}/cmk/compiler) runs on gawk, mawk, busybox awk, or the one-true-awk that MacOS ships, with identical output, so no awk install is needed.
 
 Typically `/usr/local/bin` comes before `/usr/bin` in PATH, so this should leave your base installation untouched and still prefer GNU by default:
 
 ```bash {.cli_example}
-# Install a GNU awk
-$ brew install gawk
-$ cp /usr/local/bin/gawk /usr/local/bin/awk
-
 # Install a GNU sed
 $ brew install gnu-sed
 $ cp /usr/local/bin/gsed /usr/local/bin/sed
+
+# Clear cached lookups, then confirm you're on the GNU versions
+$ hash -r
+$ make --version
 ```
 
 Usage of other tools like `xargs` should be BSD/GNU agnostic so please report any issues!  Opting in to GNU tools on MacOS *everywhere* is a matter of taste, but might be worthwhile. See documentation for example here[^3].
@@ -112,7 +165,7 @@ Usage of other tools like `xargs` should be BSD/GNU agnostic so please report an
 Another edge case is that docker desktop in OSX is *increasingly problematic in general*, and also officially unsupported these days if you're still on Intel instead of Apple silicon.  Rancher-desktop is one possible work around.
 
 ### For Developers
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 For development on `compose.mk` itself, here's how you can clone the project, build related containers, and run the test suites.
 
@@ -130,21 +183,23 @@ $ make clean build
 $ make demos
 ```
 
-You can also test just the [CMK-lang]({{mkdocs.site_relative_url}}/compiler) demos to exercise the features involving compilers, interpreters, and special syntax:
+To exercise the [cmk-lang]({{_}}/cmk/compiler) features (compilers, interpreters, and special syntax), run the integration suite, which drives the CMK demos through the real interpreter with assertions:
 
 ```bash {.cli_example}
-# Run only  CMK-lang Demos
-$ make demos/cmk
+# Run the integration suite (covers the cmk-lang demos)
+$ make integration-test
 ```
 
+Any individual demo can also be run directly via its shebang, e.g. `./demos/cmk/underload.cmk`.
+
 ### Plugins, Forks, & Versioning
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 <a name=forks-version></a><a name=forks-versioning></a>
 
-Given the advice above to simply embed `compose.mk` directly into your project repositories, some people might be reading this and thinking **what if compose.mk changes upstream?**  Eventually `compose.mk` might get a pypi installer option[^2], but for now the main things you can do are:
+Given the advice above to simply embed `compose.mk` directly into your project repositories, some people might be reading this and thinking **what if compose.mk changes upstream?**  The [global-install shims](#global-install) can help here too, but for a vendored copy, the main things you can do are:
 
 **Fork-and-Forget:**
-:   The [standard library]({{mkdocs.site_relative_url}}/standard-lib) for `compose.mk` is approaching *frozen*, so especially if you're not using [CMK-lang]({{mkdocs.site_relative_url}}/compiler), this is a pretty reasonable option.
+:   The [standard library]({{_}}/standard-lib) for `compose.mk` is approaching *frozen*, so especially if you're not using [cmk-lang]({{_}}/cmk/compiler), this is a pretty reasonable option.
 : &nbsp;
 
 **Git Submodule:**
@@ -153,13 +208,10 @@ Given the advice above to simply embed `compose.mk` directly into your project r
 To check details about the version you're using:
 
 ```bash {.cli_example}
-$ ./compose.mk mk.stat
+$ ./compose.mk mk.stat | jq '{make_version, version, "compose.mk", bin}'
 ```
 ```json {.cli_output}
-{
-  "make_version": "4.3",
-  "compose.mk": "d998bdc7598a4deeacf613bee2e9fddd"
-}
+{{bash('./compose.mk mk.stat 2>/dev/null | jq \'{make_version, version, "compose.mk", bin}\'')}}
 ```
 
 ```bash {.cli_example}
@@ -177,12 +229,18 @@ $ ./compose.mk docker.stat
 }
 ```
 
-### References
-<hr style="width:100%;border-bottom:3px solid black;">
+### See Also
+<hr class="section-rule lvl-3">
 
-[^1]: For example, remote controlling the TUI relies on docker-sockets.  Also [tool wrappers]({{mkdocs.site_relative_url}}/tool-overview/#tool-wrappers) fall back to docker, so using them with [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) means docker-in-docker.
-[^2]: If you're interested in a pypi installer, see [this issue]({{git.repo_url}}/issues/17).
-[^3]: Linuxifing for macos with gnu utilities: [gist://skyzyx](https://gist.github.com/skyzyx/3438280b18e4f7c490db8a2a2ca0b9da) [github://pkill37/linuxify](https://github.com/pkill37/linuxify)
+* [Tool Overview]({{_}}/tool-overview): stand-alone usage with no project integration.
+* [Make/Compose Bridge]({{_}}/bridge): wiring compose files into scaffolded targets.
+* [Container Dispatch]({{_}}/container-dispatch): running targets inside your tool containers.
+
+### References
+<hr class="section-rule lvl-3">
+
+[^1]: For example, remote controlling the TUI relies on docker-sockets.  Also [tool wrappers]({{_}}/tool-overview/#tool-wrappers) fall back to docker, so using them with [container dispatch]({{_}}/container-dispatch) means docker-in-docker.
+[^3]: Linuxifing for macos with gnu utilities: {{ tufte.gist(link='https://gist.github.com/skyzyx/3438280b18e4f7c490db8a2a2ca0b9da', label='skyzyx')|trim }} {{ tufte.github('pkill37/linuxify')|trim }}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

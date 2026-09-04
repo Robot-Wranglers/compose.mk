@@ -1,0 +1,382 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/cmk_math.j2' as cmkmath -%}
+
+{{ macros.section(2, "Concepts", id="concepts") }}
+
+Beyond the [compiler]({{_}}/cmk/compiler) syntax and the [banana block]({{_}}/cmk/banana), a small set of runtime concepts recur across CMK-Lang.  This page is a landing outline that collects them; each has its fuller treatment on the page it links to.
+
+These build on each other.  An **ambient** is the top idea, a named place a block can *move*, and it carries the whole mobility algebra (`in` / `out` / `open` / `|` / `+`).  A **machine** is an ambient a block can *run in*; a **host** runs it on the local machine and a **container** runs it in docker.  A **namespace** is an ambient a block can *dissolve into*, and a **module** (a runnable namespace) is one a block can also *exec in*: `(| code |) in M` runs the code against the module's own targets, the way `(| .. |) in <container>` runs it in docker.  Machine, namespace, and module are kinds of ambient that wire up different parts of the same algebra.  **Goals**, finally, are the unit of work the runtime actually resolves.
+
+{{ macros.img_link("concepts.png", mkdocs, "90%", class=" ") }}
+
+{{ macros.section(3, "Ambients", id="ambients") }}
+
+**Ambients** are like a kind of folder / membrane that makes the idea of *inside vs outside* concrete.  If you like the folder *(=namespace)* analogy, you can also imagine little sticky-notes inside *(=data)*, and event throw in some ants *(=agents)* crawling around.  Notice that the folders themselves are as mobile as the notes and the ants.  Neat model, huh?
+
+
+So, ambients are an abstraction for *a block of mobile computation*.  Since [banana-brackets](#) and the other abstractions obey an [ambient-algebra](#ambient-algebra), they can **move between execution contexts**.
+
+ In CMK one rarely reaches for ambients *directly*, but the algebra itself sits beneath many other concepts on this page.  For example [namespaces](#namespaces), [machines](#machines), and their subkinds all specialize it.
+
+{{ macros.img_link("ambients.png", mkdocs, "85%", class=" ") }}
+
+{% include "includes/ambient-algebra.md" %}
+
+{{ macros.section(5, "Ambient Inwards", id="ambient-inwards") }}
+
+`in` names a **destination**: it relocates a block into an ambient and runs it there.  The destination may be any [machine](#machines) -- a host interpreter, a [container](#containers), or a service -- so the *same* block runs unchanged wherever you send it.  Its dual is [`out`](#ambient-outwards).
+
+{% set in_host %}
+# a host interpreter: runs locally, no docker
+(| echo "hi from $(hostname)" |) in host.native.bash
+{% endset %}
+{% set in_container %}
+# the same block, relocated into docker: declare the
+# image once, then send the block in
+container ubuntu(img=ubuntu:22.04)(| |)
+(| echo "hi from $(hostname)" |) in ubuntu
+{% endset %}
+{{ site.inline_mirror('mirror_ambient_in', in_host, in_container,
+    label_left='Host', type_left='cmk', lang_left='cmk',
+    label_right='Container', default='left') }}
+
+{{ macros.section(5, "Ambient Open", id="ambient-open") }}
+
+`open` names a **boundary to dissolve**.  Where [`in`](#ambient-inwards) runs a block *inside* an ambient, `open` brings an ambient's contents *out* into the caller: it merges a module or [namespace](#namespaces)'s definitions into the current scope rather than relocating a block into it.  A [machine](#machines) is what you `in`; a namespace is what you `open`.
+
+It is the [`Openable`](#ambient-protocol) protocol: each target kind supplies its own opener, so the one word dissolves a plugin, a file, or the prelude, and a star form dissolves an anonymous block in place:
+
+{% set open_mk %}
+# a bare name -> include a plugin
+$(call include.plugins, strict=0 some.plugin.cmk)
+
+# a /-path -> import a file, members merged flat
+$(call import.module, file=./lib.cmk flat=1)
+
+# the prelude -> bind the declaration keywords bare
+$(call cmk.__open__)
+
+# no call form: the star's body is spliced flat, in place
+helper:; @echo hi
+{% endset %}
+{% set open_cmk %}
+open some.plugin          # a bare name -> include a plugin
+open ./lib.cmk            # a /-path    -> import a file
+open cmk                  # the prelude -> bind the keywords bare
+*(| helper:; @echo hi |)  # star form   -> dissolve a block in place
+{% endset %}
+{{ site.inline_mirror('mirror_ambient_open', open_mk, open_cmk, default='cmk') }}
+
+{{ macros.section(5, "Ambient Outwards", id="ambient-outwards") }}
+
+`out` is the dual of [`in`](#ambient-inwards): it names no destination, it moves the block *one level out*, to whatever ambient encloses it.  "Encloses" is a runtime fact -- resolved **dynamically** against the call chain rather than the lexical structure -- so where the block lands depends on where the recipe is called from:
+
+{% set out_recipe %}
+# top-level recipe: the enclosing ambient is the host,
+# so `out` escapes to host.local and runs there (default)
+(| echo "on $(hostname)" |) out
+{% endset %}
+{% set out_container %}
+# inside a container: `out` escapes to the host daemon
+# via the mounted docker socket (the "exit capability")
+(| echo "on $(hostname)" |) out
+{% endset %}
+{{ site.inline_mirror('mirror_ambient_out', out_recipe, out_container,
+    label_left='From a recipe', type_left='cmk', lang_left='cmk',
+    label_right='From a container', default='left') }}
+
+Three cases fall out: from a **top-level recipe** the enclosing ambient is the host; from a **named ambient** `out` navigates into that parent; and from **inside `host.local`** there is nothing further out, so `out` raises a named fault, `OutwardsUndefined: this is the top`.
+
+**What moves, and what does not.**  An ambient is a *recipe for constructing a place*, not a place that already exists, so `out` **re-dispatches** the block into a freshly built instance of the enclosing ambient.  It never migrates a running computation.  What that costs depends on what is being left, so each kind says how a block leaves it through `__out__`:
+
+| leaving a | means | so |
+|---|---|---|
+| host machine or interpreter | run in the enclosing shell context | nothing relocates |
+| namespace member | the group has no kernel | the chain updates, the block stays put |
+| container, toward a container | build a fresh instance of the enclosing image | the container you came from is *not* the one you land in |
+| container, toward the host | the mounted socket confers daemon powers, not host execution | the block lands in `host.daemon`, a root of its own |
+
+A kind with no channel back refuses rather than landing somewhere adjacent, with `OutwardsUnavailable`.  Naming the ambient you are leaving (`out <name>`) asserts it, and faults with `OutwardsUnexpected` when that is not where the block is.
+
+{{ macros.section(4, "Ambient Protocol", id="ambient-protocol", protocols=['__ambients__', 'Openable']) }}
+
+Besides the algebra, there's the [ambient protocol](#protocols): the ambient superkind conforms to `__ambients__` and `Openable`.
+
+{{ macros.see_also([
+    ['Banana Blocks: As Ambient', '@/cmk/banana/#banana-ambient'],
+    'the `demos/cmk/ambients.cmk` (recipe algebra) and `demos/cmk/ambients-open.cmk` (module `open`) demos',
+], mkdocs) }}
+
+{{ macros.section(3, "Machines", id="machines", protocols=['Runnable']) }}
+
+A **machine** is an ambient a block can *run in*: any *run context* a block can execute in, the kind of ambient you `in`.  Every runnable block runs through some machine's `.run` hook.  Two subkinds fix *where* that hook runs: a **host** on the local machine, a **container** in docker.  Both derive the abstract base [`cmk.machine`]({{_}}/cmk/banana/#banana-declare), so every runnable ambient is a host or a container.
+
+{{ macros.img_link("concepts-machine.png", mkdocs, "70%", class=" ") }}
+
+*Where* it runs (the is-a tree above) is separate from its *capabilities* (structural interfaces, via [`cmk.protocol`](#protocols)): a machine conforms to [`Runnable`](#protocols) (the `in`-dual: it executes a block), [`Callable`](#protocols), and [`Ambient`](#protocols) (the mobility-tree membership a [namespace](#namespaces) also has).  A **code-object** (an inline `code` / `polyglot` block) is *content*, not a machine: it sits off the machine axis, but still carries capabilities -- it is [`Materializable`](#protocols) (its body can be handed to a tool as a file) and a [`Templatable`](#protocols) (it renders, filling holes).  It *may be* **bound** to a machine, gaining runnability by delegation, or left **unbound** -- materializable, templatable source, but not directly runnable.  So "polyglot is-a machine" is wrong: a code-object *has-a* binding, and runs only once hydrated by one.
+
+{{ macros.see_also([
+    ['Banana Blocks: As Machine', '@/cmk/banana/#banana-machine'],
+], mkdocs) }}
+
+{{ macros.section(4, "Host", id="host", kind="Machine") }}
+
+A **host** *is a machine*: one that runs on the local machine (no docker).  The always-present singleton **`host.local`** is the default shell, the canonical `out` target, and the home for host capabilities, and the native interpreters (**`host.native.*`**, one per shell) back the bare {{ cmkmath.imath("(|..|) #in #bash") }} / {{ cmkmath.imath("#in #python") }} forms.
+
+{{ macros.section(4, "Containers", id="containers", kind="Machine") }}
+
+A **container** *is a machine*: the twin of `host`, one whose `.run` is pinned to a docker container instead of the local machine.  Declared inline ({{ cmkmath.imath("#container @NAME (|..|)") }}) or imported from a compose service, it is the bridge between CMK-Lang blocks and the wider container-dispatch machinery.
+
+{{ macros.img_link("concepts-container.png", mkdocs, "55%", class=" ") }}
+
+A banana handed to the built-in **`container`** constructor names a runnable image; the ambient operator [`in`](#ambient-inwards) then runs any block *inside* it.  You declare the container from an image and send a block in; the block is materialized and executed in the image, so a Python body runs under a stock image with no Dockerfile in sight.
+
+{% set container_declare %}
+# name a runnable image (entrypoint optional)
+container box(img=python:3.12-slim entrypoint=python3)(| |)
+{% endset %}
+{% set container_use %}
+# send any block in; it runs inside the image
+(| print("6 * 7 =", 6 * 7) |) in box
+{% endset %}
+{{ site.inline_mirror('mirror_container', container_declare, container_use,
+    label_left='Declare', type_left='cmk', lang_left='cmk',
+    label_right='Send a block in', default='left') }}
+
+Being a [machine](#machines), `container` plugs into the same run-side [ambient algebra](#ambient-algebra) as the host runners.  It is a prelude keyword, bare after opening the prelude, `cmk.container` otherwise.
+
+{{ site.embed_demo('demos/cmk/banana-in.cmk', github=github) }}
+
+{{ macros.see_also([
+    ['Container Dispatch', '@/container-dispatch'],
+    ['Import Services from Compose', '@/bridge'],
+], mkdocs) }}
+
+{{ macros.section(3, "Namespaces", id="namespaces", protocols=['Ambient', 'Openable']) }}
+
+A **namespace** is the *other* kind of ambient: one a block **dissolves into** rather than runs in.  [`open`](#ambient-open) merges its definitions into the current scope, and a {{ cmkmath.imath("#namespace @NAME [|..|]") }} (or an imported **module**) qualifies its own heads under a fully-qualified prefix.  Where a machine wires the `in` side of the algebra, a namespace wires `open`; its [dual](#ambients) -- running a block with that namespace in scope -- is the natural completion.
+
+{{ macros.see_also([
+    ['Modules', '@/cmk/modules', 'the module system built on namespaces (`import` / `open` / packaging)'],
+    ['Banana Blocks: As Ambient', '@/cmk/banana/#banana-ambient'],
+], mkdocs) }}
+
+{{ macros.section(3, "Goals", id="goals") }}
+
+{{ macros.see_also([
+    ['Runtime', '@/runtime/#flat-dispatch', 'the trampoline behind goal dispatch'],
+    ['CMK Virtual Machine', '@/modules/virtual-machine', 'the swappable resolver'],
+], mkdocs) }}
+
+{{ macros.section(3, "Protocols", id="protocols") }}
+
+{{ macros.img_link("concepts-protocol.png", mkdocs, "80%", class=" ") }}
+
+*Where* a kind sits in the is-a tree is separate from *what capabilities* it exposes.  A **protocol** is CMK's take on Python's data model: an interface for a dunder (or member family), created by `cmk.protocol` and checked **structurally** -- conformance is by *having* the members (`.provided_by`, Python's `__subclasshook__`), no registration needed.  `cmk.protocol` is itself a metaclass, so protocols are first-class objects that publish `.abstract` / `.__mro__`, and a kind mixes several in via `bases=` (`cmk.Fragment(bases=Callable, Materializable)`).
+
+Each protocol names a required member; the **body** sets the tier.  A docstring-only body is **structural** -- a contract with no default, conformance incidental.  A body that assigns a real member is **concretized** -- it ships a default implementation, so it has implementors and stamps that default onto conformers via `bases=`.
+
+| Protocol | Requires | Tier | Capability |
+|---|---|---|---|
+| [`Documented`](#documented-protocols) | `__doc__` | Structural | Documentation string |
+| [`Named`](#named-protocols) | `__name__` | Structural | Qualified identity |
+| [`Registry`](#registry-protocols) | `.has` / `.require` | Structural | Queryable named collection (`__plugins__` / `__modules__` / `__ambients__` / `__goals__`) |
+| [`Directory`](#directory-protocols) | `__all__` / `__dir__` | Structural | Reflection: export manifest + live member listing |
+| [`Callable`](#callable-protocols) | `__call__` | Concretized | Bare invocation |
+| [`Loggable`](#loggable-protocols) | `.log` | Concretized | Name-bound logger (built on `Named`) |
+| [`Runnable`](#runnable-protocols) | `.run` | Concretized | Execute a block, the `in`-dual |
+| [`Program`](#program-protocols) | `__main__` | Concretized | Entrypoint |
+| [`Feedable`](#feedable-protocols) | `feed` | Concretized | How a program file reaches its entrypoint (arg / stdin / flag) |
+| [`Openable`](#openable-protocols) | `__open__` | Concretized | The `open` / dissolve hook |
+| [`Templatable`](#templatable-protocols) | `__mod__` / `render` | Concretized | Compile-time symbol injection |
+| [`Materializable`](#materializable-protocols) | `__blockref__` / `.fd` / `.file` | Concretized | Expose a body as a process-substitution FD or tmpfile |
+| [`Ambient`](#ambient-protocols) | `__ambient_parent__` | Concretized | Mobility-tree membership |
+| [`Language`](#language-protocols) | `__symbols__` | Concretized | Structural reflection over a fragment's own symbols / blocks / tokens |
+
+So a **machine** conforms to `Runnable` + `Callable` + `Ambient`; a **`dsl`** kind to `Callable` + `Materializable` + `Program`; a **`blockref`** to `Materializable` alone (materialization without a call).  A **`module`** adds `Runnable` -- it *runs* foreign code against its own namespace (`(| code |) in M`) -- plus `Openable`, so `in` reaches host, container, and module through the one `Runnable` contract.  Crucially, a **namespace** also conforms to `Ambient`: a base class could never span both a machine and a namespace, but a **protocol** can, which is exactly why the ambient superkind is a protocol and not a class.
+
+Each protocol carries a collapsed card below; the concept headings above badge the protocols they conform to, linking here.
+
+{{ macros.protocol('Documented',
+    capability='The documentation-string interface every documented module, class, and target satisfies.',
+    requires='`__doc__`', tier='Structural',
+    surface='A `.__doc__` member, or a registered source-reader for targets.',
+    notes='A triple-quoted literal at the top of a body reifies here. A target carries no literal member, so its text is read back from source at recipe time. Conformance is incidental.',
+    mkdocs=mkdocs) }}
+
+{{ macros.protocol('Named',
+    capability='A qualified identity a construct answers to.',
+    requires='`__name__`', tier='Structural',
+    surface='A `.__name__` member.',
+    notes='A namespace instance satisfies it structurally. It is the base that identity-bearing protocols like [`Loggable`](#loggable-protocols) build on.',
+    mkdocs=mkdocs) }}
+
+{{ macros.protocol('Registry',
+    capability='A named collection you can query membership of and demand a member from.',
+    requires='`.has` / `.require`', tier='Structural',
+    surface='A `.has` predicate and a `.require` demand over the collection.',
+    notes='One interface over four core tables: `__plugins__`, `__modules__`, [`__ambients__`](#ambients-protocols), and lifted [`__goals__`](#goals-protocols). Plugin loading, ambient movement, and goal-resolution all reach the same surface.',
+    mkdocs=mkdocs) }}
+
+{{ macros.protocol('Directory',
+    capability='Reflection, Python\'s pair: an export manifest beside the live member listing.',
+    requires='`__all__` / `__dir__`', tier='Structural',
+    surface='An `__all__` export manifest plus a `__dir__` member listing.',
+    notes='`__all__` is the curated intent; `__dir__` is the computed contents. Both already exist: every instance is stamped with its listing, and the core namespaces carry a manifest.',
+    mkdocs=mkdocs) }}
+
+{{ macros.protocol('Callable',
+    capability='Bare invocation: a `${self}()` call routes here.',
+    requires='`__call__`', tier='Concretized',
+    surface='A `.__call__` method; the default is overridden per kind.',
+    notes='The default errors with "no invoke". The [`cmk.Fragment`](#dsls) mixin routes every language instance to its guest interpreter. The default lives in the seed prelude, shared with any seed-resident carrier.',
+    mkdocs=mkdocs) }}
+
+{{ macros.protocol('Loggable',
+    capability='A name-bound logger, so a conformer logs under its own identity.',
+    requires='`.log`', tier='Concretized',
+    surface='A `.log` info call plus `.log.warn` / `.log.error` / `.log.debug`.',
+    notes='Built on [`Named`](#named-protocols). Bare `.log` is the info line; the rest are the severity ladder. Each delegates to the themed core loggers for the running-target header, while the mixin supplies the conformer name.',
+    mkdocs=mkdocs) }}
+
+{{ macros.protocol('Runnable',
+    capability='Machine execution, the `in`-dual: `(| .. |) in X` invokes X\'s `.run`.',
+    requires='`.run`', tier='Concretized',
+    surface='A `.run` method dispatching a block through `${self}/%:`.',
+    notes='An abstract default a real machine overrides. A `host` pins it to the local machine, a `container` to docker, and a `module` runs foreign code against its own namespace. So `in` reaches all three through one contract.',
+    mkdocs=mkdocs) }}
+
+{{ macros.protocol('Program',
+    capability='The entrypoint a runnable program starts from.',
+    requires='`__main__`', tier='Concretized',
+    surface='A `.__main__` entrypoint member.',
+    notes='The default reports that no entrypoint was declared and fails with `CMK_NO_MAIN`. A program kind overrides it with a real entry.',
+    mkdocs=mkdocs) }}
+
+{{ macros.protocol('Feedable',
+    capability='How a run\'s materialized program file reaches its entrypoint.',
+    requires='`feed`', tier='Concretized',
+    surface='A `feed` member naming the delivery discipline: arg, stdin, or flag.',
+    notes='The default passes a trailing file argument; other disciplines pipe on stdin or pass a named flag. Members are read from the declaration keywords or the instance body. The [machine](#machines) hierarchy carries it, so an interpreter picks the discipline its tool expects.',
+    mkdocs=mkdocs) }}
+
+{{ macros.protocol('Openable',
+    capability='The `open` hook: `open <ns>` / `import <mod>` dissolves a module into scope.',
+    requires='`__open__`', tier='Concretized',
+    surface='A per-kind `.__open__` method.',
+    notes='An abstract default the load-kinds override: `module` includes a plugin, `path` imports a file, and the core modules `cmk` / `dsl` bind keywords bare.',
+    mkdocs=mkdocs) }}
+
+{{ macros.protocol('Templatable',
+    capability='Compile-time symbol injection: fill a quoted body\'s holes and create a fresh fragment.',
+    requires='`__mod__` / `render`', tier='Concretized',
+    surface='A `.__mod__` (the `%` fill operator) / `.render` method.',
+    notes='The fresh fragment is the same kind; a code-object `.render`s the same way. The working default lives in the seed prelude and is prepended to the mixin, so a seed code-object and this protocol share one body.',
+    mkdocs=mkdocs) }}
+
+{{ macros.protocol('Materializable',
+    capability='Expose a body as a file, so an external tool reads it as a file argument.',
+    requires='`__blockref__` / `.fd` / `.file`', tier='Concretized',
+    surface='A `.__blockref__` naming the materializable rep, plus `.fd` / `.file` handles.',
+    notes='The body becomes a process-substitution FD (`⬦`) or a real tmpfile (`⬥`). A working default bottoms out at the body itself. The blockref operator dispatches through `__blockref__`, so `⬦${self}` on any conformer resolves without naming a member.',
+    mkdocs=mkdocs) }}
+
+{{ macros.protocol('Ambient',
+    capability='Mobility-tree membership: the superkind that lets a block move between contexts.',
+    requires='`__ambient_parent__`', tier='Concretized',
+    surface='An `.__ambient_parent__` naming the enclosing ambient.',
+    notes='A [machine](#machines), a [namespace](#namespaces), and a module all conform, so `in` / `out` / `open` reach any of them. It is a protocol, not a base class, precisely because it must span both a machine-class and a namespace-constructor.',
+    mkdocs=mkdocs) }}
+
+{% include "includes/language-protocol.md" %}
+
+{{ macros.protocol('__ambients__',
+    capability='The registry of named ambients.',
+    requires='`.has` / `.require`', tier='Structural (a [`Registry`](#registry-protocols) carrier)',
+    surface='`.has` / `.require` over the named-ambient set.',
+    notes='Each declared ambient registers one, for example `container NAME(||)`. The third registry beside `__plugins__` / `__modules__`. A block relocates between them with `in` / `out` / `|` / `+`.',
+    mkdocs=mkdocs) }}
+
+{{ macros.protocol('__goals__',
+    capability='The unit of work the runtime resolves.',
+    requires='`.has` / `.require`', tier='Structural (a [`Registry`](#registry-protocols) carrier)',
+    surface='Lift and register a goal with `goal NAME = <expr>`; the virtual machine swaps the resolver.',
+    notes='Names are lifted and registered as goals. Goal-resolution is itself a protocol, so an extension can replace it, for example backtracking or swarms.',
+    mkdocs=mkdocs) }}
+
+{{ macros.see_also([
+    'the `demos/cmk/protocol.cmk` demo (the data model end-to-end)',
+    ['`protocol` declaration', '@/macros/#declare-namespace'],
+], mkdocs) }}
+
+{{ macros.section(3, "DSLs", id="dsls", protocols=['Materializable']) }}
+
+A **DSL** is a [`constructor`]({{_}}/cmk/banana/#banana-declare) that creates a *sub-language*: its instances carry a banana body written in a **guest language** -- `jq`, `awk`, `python`, ... -- rather than in `make`.  It is a **metaclass** (`dsl NAME[| .. |]` is `class NAME(bases=cmk.Fragment)[| .. |]`), so an instance like `jqlang addone(| .n + 1 |)` is a **fragment**: a quoted piece of guest code that is both [`Callable`](#protocols) (invoke it bare, feeding stdin to the guest program) and [`Materializable`](#protocols) (reference it as a file), and composes with its siblings into a *closed algebra* -- the result is itself a fragment, re-composable rather than a one-shot string.
+
+{{ macros.img_link("dsl.png", mkdocs, "45%", class=" ") }}
+
+**Where it sits.**  A DSL is on the [protocol](#protocols) axis, not the ambient one: a fragment is `Callable` and `Materializable` but **not** `Runnable` or `Ambient` -- it is not a [machine](#machines) and has no `in` / `out`.  A fragment's `.__call__` *invokes* (hands stdin to a guest interpreter), where a machine's `.run` is a *run-context* (dispatches a whole block).  It is also distinct from a bare [code-object](#machines): both are materializable, but a fragment is callable on its own, while a code-object runs only once bound to a machine.  A language kind may additionally reflect on its own body via the [`Language`](#language-protocols) protocol.
+
+The [DSLs page]({{_}}/cmk/dsls) makes it concrete: the built-in `dsl.jqlang` / `dsl.awklang` kinds, creating your own (like a `python` DSL), `dsl` as a `cmk` prelude member, and the closed composition algebra in action.
+
+{{ macros.see_also([
+    ['DSLs', '@/cmk/dsls', 'jqlang / awklang, and `dsl` as a `cmk` prelude member'],
+    ['Banana Blocks: Constructors', '@/cmk/banana/#banana-declare', 'the constructor family a DSL is created by'],
+    'the `demos/cmk/jqlang.cmk` demo (fragments and their closed composition algebra)',
+], mkdocs) }}
+
+{{ macros.section(3, "Callforms", id="callforms") }}
+
+A **callform** is CMK's unified call syntax: one grammar for invoking any of the three callable kinds, with optional callform-channels for passing arguments, a stream, and an environment.
+
+{% set callform_collapsed = false %}
+{% include "includes/callform-algebra.md" %}
+
+Two points the card leaves implicit are worth drawing out.  The *anchor* (a `this` prefix for a target, a `cmk` prefix for a macro, or none for a receiver) is a **prefix, not a keyword**, so [the dialect]({{_}}/cmk/metaprogramming) can re-set its value.  And the **`[stream]`** channel accepts more than a literal command: what you pipe in may be a verbatim command, an (interpolating) [triple-quote literal]({{_}}/cmk/compiler/#triple-quote-literals), a [block-reference]({{_}}/cmk/compiler/#block-references), or several of these nested and composed to any depth.
+
+{{ macros.see_also([
+    ['Quick Reference: Call Forms', '@/cmk/quickref/#call-forms', 'the grammar table'],
+    ['Banana Blocks: As Callables', '@/cmk/banana/#banana-channels', 'the same callform-channels on blocks'],
+    ['Compiler Tutorial: Receiver Form', '@/cmk/compiler/#receiver-form', 'the anchorless form + the declaration-forms grammar it is discovered from'],
+], mkdocs) }}
+
+{{ macros.section(3, "Handles", id="handles") }}
+
+A **handle** is a *deferred, named call*: a first-class reference to a [callform](#callforms) that is **bound but not run**.  It is the lazy twin of the [`<-` capture operator]({{_}}/cmk/compiler/#capture-operator): where a plain `x <- RHS` runs the right-hand side *now* and captures its stdout, the **handle-assignment form** `&name <- RHS` binds the RHS and leaves it **unrun**.  Calling the handle later, `name()`, is what runs it.
+
+The leading `&` reads as a *reference declaration* (C++-style `&`): it marks the bind as *by-reference* rather than *by-value*.  Either way the left-hand name is registered as a [receiver](#callforms), so a handle is callable bare, `name()`, `name(args)`, with no anchor.  The two differ in kind: the eager `<-` captures a *value*, while `&` binds a lazy *deferred call*.
+
+The canonical use is **object-centric dispatch**: an unbound [code-object](#machines) holds source and a [machine](#machines) supplies the runtime, and a handle gives that pairing a name so the call site reads like a method (`bound()`) rather than a `machine/object` path.  The demo below binds a handle to an inline elixir snippet's dispatch with `&bound <- ..`, then calls it as `bound()`:
+
+{{ site.embed_demo('demos/cmk/handles.cmk', github=github) }}
+
+**Fluent Fragments.**  This is the [fluent banana]({{_}}/cmk/banana/#banana-fluent) chain -- `foo().bar()`, whose operands fold left-to-right through a per-operator dunder -- but *bound* rather than run.  Because the `&` form binds a *callable* (not a captured string), its RHS may be a **fragment expression**: operands joined by the infix composition operators (`|`, `/`, `+`, and `%` for template [fill]({{_}}/cmk/quickref/#string-algebra)), which fold left-associatively into a single composed call (`&pipeline <- addone|double|wrap`).  It is the same fold either way; where the fluent form runs the chain inline, the handle form names it for later.  Bare `<-` stays unambiguously a shell capture, where `/`, `|`, and `%` are ordinary shell characters; the composition algebra lives only inside `&`.
+
+**Handle Dispatch.**  A handle is a receiver, so besides calling it as `name()` you can dispatch it into a [machine](#machines) with `in`: `&greet in host.native.sh` runs the handle in that machine, and `&out <- greet in host.native.sh` captures the run into a recipe variable.  The same *`&`-selects-cmk-lang* rule applies: a plain `greet in host.native.sh` is an ordinary shell command, and `out <- greet in host.native.sh` an ordinary shell capture, so the `&` is exactly what tells the compiler to read the line as cmk rather than hand it to the shell.  This closes the loop with the string algebra: fill a template, bind the result under a handle, then run that handle, all without ever re-embedding its text.
+
+{{ macros.see_also([
+    ['Compiler Tutorial: Capture Operator', '@/cmk/compiler/#capture-operator', 'the eager `<-` twin'],
+    ['String Algebra', '@/cmk/quickref/#string-algebra', 'The`+`/`%` block operators a handle can fold'],
+    'the `demos/cmk/handles.cmk` (handle bind) and `demos/cmk/jqlang.cmk` (fragment folds) demos',
+], mkdocs) }}
+
+{{ macros.section(3, "Kinds", id="kinds") }}
+
+"**Kind**" is the word this page reaches for whenever a construct's *category* matters more than its place in the object model -- a [machine](#machines), a [namespace](#namespaces), a [`dsl`](#dsls), a [code-object](#machines), a [`protocol`](#protocols).  It is worth naming the nuance, because "kind" is deliberately looser than `class` / `metaclass` / `instance` / `type`, and the looseness is load-bearing.
+
+**Why not just say "class".**  CMK's object model is a single uniform tower: every construct -- a protocol, a machine, a fragment, an instance -- is created by the *same* class machinery, and the makers are themselves first-class objects (`cmk.protocol` is a metaclass, yet publishes its own `.abstract` / `.__mro__`).  So `class` / `metaclass` / `instance` / `type` are **positional** terms -- they answer "what is this *relative to* something else."  `jqlang` is a *class* relative to `addone`, an *instance* relative to `dsl`, and a *metaclass* only if you ask what creates *its* members.  There is no absolute stratum to pin the word to.
+
+**What "kind" pins instead.**  A kind is that same node named *without committing to a tower level*: the **constructor genus, plus the [protocol](#protocols)-conformance bundle it stamps via `bases=`**.  Saying "a `dsl` kind conforms to `Callable` + `Materializable`", or "`machine`, `namespace`, and `module` are kinds of ambient", is a claim about *what capabilities the category confers*, not about where it sits in an is-a chain.  That is why the one word covers the factory (`dsl`), the class it creates (`jqlang`), and the family it belongs to (`machine`): each is answering "what *sort* of construct is this," which is orthogonal to the created-by relation.
+
+**It is prose, not a primitive.**  There is no `__kind__` dunder, and nothing in the object model dispatches on "kind"; a construct's category lives implicitly in its `.__metaclass__` plus the [protocol](#protocols) set it satisfies, and "kind" is the gloss over that pair.  The one place the word is reified is narrow -- the [`Openable`](#ambient-open) router carries a `kind=` selector to pick a load-subkind's `.__open__` (`module` includes a plugin, `path` imports a file) -- and that is a *kind of open*, not the general term.  Everywhere else, read "kind" as: the category, agnostic to whether you are looking at the mould or the thing it casts.
+
+{{ macros.see_also([
+    ['DSLs', '@/cmk/dsls', 'a kind whose instances are themselves kinds'],
+    ['Protocols', '@/cmk/concepts/#protocols', 'the capability bundles a kind stamps via `bases=`'],
+    'the `demos/cmk/protocol.cmk` demo (the object tower end-to-end)',
+], mkdocs) }}
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Banana Blocks]({{_}}/cmk/banana): the block syntax all of these attach to.
+* [Compiler & Dialects]({{_}}/cmk/compiler): the syntax these forms are written in.
+* [Runtime]({{_}}/runtime): the control model behind goals.

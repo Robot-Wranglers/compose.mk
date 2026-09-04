@@ -1,13 +1,15 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
-# Demonstrates doing some LLM stuff with compose.mk, using docker-compose, 
-# ollama and langchain.  This includes a small RAG pipeline, and 
-# also demonstrates tool-usage.  No host dependencies, no host ports.
+#!/usr/bin/env -S ./compose.mk cmk run
 #
-# This demo ships with the `compose.mk` repository, but does NOT 
-# run as part of the default test-suite (model requirements are ~5GB).
+# rag.cmk:
+#   A small RAG pipeline (docker-compose + ollama + langchain), including
+#   tool-use.  No host dependencies, no host ports.
+#   (Not in the default test-suite: model downloads are ~5GB.)
+#   See the main docs [1].
 #
-# See the main docs:
-#   https://robot-wranglers.github.io/compose.mk/demos/ai
+# REFS:
+#   [1]: https://robot-wranglers.github.io/compose.mk/demos/ai
+
+import log
 
 
 # This create target-scaffolding for all containers in the compose file
@@ -17,51 +19,58 @@ compose.import(file=demos/data/docker-compose.rag.yml)
 export quiet=1
 export LLM_MODEL_NAME?=mistral
 export EBD_MODEL_NAME?=all-MiniLM-L6-v2
-export CMK_AT_EXIT_TARGETS=ollama_server.stop
+export CMK_POST=ollama_server.stop
 
 # Helper macros to script invocation, and showing 
 # the file-counts for the glob being used.
 llm_tools=demos/data/llm_tools.mjs
 llm_rag=set -x -o noglob && python demos/data/llm_rag.py
 corpus_count=$${glob} (${yellow}`ls $${glob} \
-	| ${stream.count.lines}`${no_ansi_dim} files total)
+    | ${stream.count.lines}`${no_ansi_dim} files total)
 
 # Tools demo.
-tools.js: ᝏcompose.bind.target(ollama_node, env=query)
+@compose.bind.target(ollama_node, env=query)
+tools.js:
 self.tools.js:
-	cp /workspace/${llm_tools} /app
-	cd /app && node llm_tools.mjs
+    cp /workspace/${llm_tools} /app
+    cd /app && node llm_tools.mjs
 
 # Ensure given model is available to ollama, downloading if needed.
 # Implied by `ingest`, `ask`, and `chat`.
-init: ᝏcompose.bind.target(ollama_python)
+@compose.bind.target(ollama_python)
+init:
 self.init:
-	cmk.log.target(Initializing model: $${LLM_MODEL_NAME})
-	${llm_rag} init
+    log(Initializing model: $${LLM_MODEL_NAME})
+    ${llm_rag} init
 
 # Slurp any files matching the pattern.  
 # This is implied by `ask` or `chat`, and no-op if content already indexed.
-ingest: ᝏcompose.bind.target(ollama_python, env=glob)
+@compose.bind.target(ollama_python, env=glob)
+ingest:
 self.ingest:
-	cmk.log.target(Ingesting corpus: ${corpus_count})
-	${llm_rag} ingest "$${glob}"
+    log(Ingesting corpus: ${corpus_count})
+    ${llm_rag} ingest "$${glob}"
 
 # Ask a question about files that match the given pattern.
-ask: ᝏcompose.bind.target(ollama_python, env='glob query')
+@compose.bind.target(ollama_python, env='glob query')
+ask:
 self.ask:
-	cmk.log.target(Answering query with corpus: ${corpus_count})
-	${llm_rag} query "$${glob}" "$${query:-describe it}"
+    log(Answering query with corpus: ${corpus_count})
+    ${llm_rag} query "$${glob}" "$${query:-describe it}"
  
 # Interactive chat about files that match the given pattern.
-chat: ᝏcompose.bind.target(ollama_python, env=glob)
+@compose.bind.target(ollama_python, env=glob)
+chat:
 self.chat:
-	cmk.log.target(Chatting with corpus: ${corpus_count})
-	${llm_rag} chat "$${glob}"
+    log(Chatting with corpus: ${corpus_count})
+    ${llm_rag} chat "$${glob}"
 
-# New verb: builds on top of the script's API instead of just using it.
-# An alias for `ask` that summarizes files matching the given pattern.
 summarize:
-	query="summarize all of the content" this.ask
+    '''
+    New verb: builds on top of the script's API instead of just using it.
+    An alias for `ask` that summarizes files matching the given pattern.
+    '''
+    query="summarize all of the content" this.ask
 
 __main__:
-	cmk.log(${red}USAGE: See https://robot-wranglers.github.io/compose.mk/demos/ai/)
+    cmk.log(${red}USAGE: See https://robot-wranglers.github.io/compose.mk/demos/ai/)

@@ -1,0 +1,4 @@
+# Python test harness dependencies (installed by tox into its own venv).
+pytest>=8,<9
+pytest-xdist
+ruff>=0.12,<1

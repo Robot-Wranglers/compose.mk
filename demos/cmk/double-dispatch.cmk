@@ -1,0 +1,22 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# double-dispatch.cmk:
+#   Dispatching one target to multiple containers via namespaced
+#   ("absolute path") invocation.
+#
+# USAGE: ./demos/cmk/double-dispatch.cmk
+
+compose.import(file=demos/data/docker-compose.yml namespace=▰)
+
+# User-facing top-level default target, with two dependencies
+
+__main__: ▰/debian/self.demo ▰/alpine/self.demo
+
+self.demo:
+    '''
+    Displays platform info to show where target is running.
+    Since this target is intended to be private, the "self" prefix
+    indicates it should not run on host.
+    '''
+    source /etc/os-release && printf "$${PRETTY_NAME}\n"
+    uname -n -v

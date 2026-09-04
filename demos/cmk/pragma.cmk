@@ -1,0 +1,27 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# pragma.cmk: 
+#   compiler_verbose=0 compiles quietly; 
+#   target_locals lets a recipe read back its own shell vars.
+#
+# cmk_pragma ::: { 
+#   "compiler_verbose": 0, 
+#   "target_locals": true  } :::
+#
+# USAGE: ./demos/cmk/pragma.cmk
+
+import flux, stream
+
+locals.demo:
+    '''
+    Demonstrating pragma to enable cmk.__locals__.
+    After we set any local context, the JSON keys/values
+    are available automatically, so we'll stream them to
+    the logger.
+    '''
+    user <- flux.echo/alice
+    role <- flux.echo/admin
+    export TOKEN=hunter2
+    # after some local context exists, stream the JSON to logs.
+    stream.as.log[ cmk.__locals__() ]
+
+__main__: locals.demo

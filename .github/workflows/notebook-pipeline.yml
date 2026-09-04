@@ -1,14 +1,9 @@
 # See also: https://docs.github.com/en/actions
 name: Notebook Pipeline
+# On-demand only: run manually from the Actions tab, or when called by another workflow.
 on:
   workflow_dispatch: {}
   workflow_call: {}
-  push:
-    branches: [ "main" ]
-    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg', '.cmk']
-  pull_request:
-    branches: [ "main" ]
-    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg', '.cmk']
 permissions:
   contents: read
 jobs:
@@ -22,8 +17,14 @@ jobs:
           submodules: recursive
       - name: Initialize
         run: make clean init
-      - name: Run Notebook Pipeline
+      # Both twins compose.import the same kernel + jupyter containers, so the
+      # first pipeline builds them and the second reuses the docker cache.
+      - name: Run Notebook Pipeline (plain make)
         run: ./demos/notebooking.mk tux.require lab.pipeline
+        env:
+          COLUMNS: 150
+      - name: Run Notebook Pipeline (CMK-lang twin)
+        run: ./demos/cmk/notebooking.cmk tux.require lab.pipeline
         env:
           COLUMNS: 150
       # https://til.simonwillison.net/github-actions/debug-tmate

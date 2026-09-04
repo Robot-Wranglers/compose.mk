@@ -1,0 +1,28 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# structured-io-nushell.cmk:
+#   Nushell interop, in CMK-lang.  Pipe a stream through nushell commands
+#   (no host install -- nushell runs dockerized), plus line-pattern and
+#   column parsing.  Ported from demos/structured-io-nushell.mk.
+#
+# USAGE: ./demos/cmk/structured-io-nushell.cmk
+
+import stream
+
+__main__: nushell.generic nushell.pipeline pattern.matching parse.cols
+
+nushell.generic:
+    cmk.log.io(pipe a literal stream (triple-quote) through nushell commands via cmd=...)
+    '''{"foo":"bar"}''' | cmd='from json | to yaml' this.stream.nushell
+
+nushell.pipeline:
+    cmk.log.io(or name the nushell stages as args -- triple-quote literal as the [stream])
+    stream.nushell(from_json,to_yaml)['''{"foo":"bar"}''']
+
+pattern.matching:
+    cmk.log.io(pattern-match + parse a line-oriented triple-quote literal)
+    '''libfoobar@2.5.3 -- A library for doing foobars''' | pattern='{lib}@{version} -- {description}' this.stream.parse.patterns
+
+parse.cols:
+    cmk.log.io(autodetect + parse column-oriented input, then take the last row)
+    stream.parse.cols[df -h] | ${jq} '.[-1]'

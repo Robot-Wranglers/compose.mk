@@ -1,25 +1,26 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
-# Demonstrating compose.mk GUI capabilities with Xephyr and i3 window manager.
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# xephyr.cmk: GUI capabilities with Xephyr and the i3 window manager.
 #
 # USAGE: ./demos/cmk/xephyr.cmk gui
 
+from gui import desktop
+
+desktop i3_img(| |)
+
 export APP_DIMS?=1024x500
 export APP_DISPLAY?=:23
+export IMG_GUI_DESKTOP := $(i3_img.img)
 
-# Begin containerized version of i3 window manager and support files.
-⋘ gui.services
+# The window manager, its clients, and both configs arrive with the base image.
+compose.import.string i3.services(|
 services:
   i3:
-    image: compose.mk:i3
     hostname: i3
     build:
       context: .
       dockerfile_inline: |
-        FROM ${IMG_UBUNTU_BASE:-ubuntu:22.04}
-        ENV DEBIAN_FRONTEND=noninteractive
-        RUN apt-get update -qq 
-        RUN apt-get install -qq -y make procps
-        RUN apt-get install -qq -y i3 i3status x11-apps xterm feh mesa-utils
+        FROM ${IMG_GUI_DESKTOP}
     entrypoint: i3
     working_dir: /workspace
     volumes:
@@ -28,54 +29,9 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix
     environment:
       DISPLAY: ${APP_DISPLAY:-23}
-    configs:
-      - source: i3conf
-        target: /root/.config/i3/config
-      - source: i3statconf
-        target: /root/.config/i3status/config
-configs:
-  # https://i3wm.org/i3status/manpage.html
-  # https://github.com/i3/i3status
-  i3statconf:
-    content: |
-      general {
-        output_format = "i3bar"
-        colors = true
-        interval = 5
-      }
-      order += "cpu_usage"
-      order += "disk /"
-      order += "tztime local"
-      cpu_usage { format = "CPU: %usage" }
-      disk "/" { format = "Disk: %free" }
-      tztime local { format = "%Y-%m-%d %H:%M:%S" }
-  # See https://i3wm.org/docs/userguide.html for a complete reference
-  # Set mod key to Alt (Mod1)
-  # Use Mouse+$mod to drag floating windows
-  # Kill focused window
-  # Change focus between windows
-  # Split window
-  # Toggle fullscreen
-  # Layout toggle (stacked, tabbed, default)
-  # Floating toggle
-  i3conf:
-    content: |
-      set $$mod Mod1
-      floating_modifier $$mod
-      bindsym $$mod+Shift+q kill
-      bindsym $$mod+h focus left
-      bindsym $$mod+j focus down
-      bindsym $$mod+k focus up
-      bindsym $$mod+l focus right
-      bindsym $$mod+v split v
-      bindsym $$mod+b split h
-      bindsym $$mod+f fullscreen toggle
-      bindsym $$mod+s layout stacking
-      bindsym $$mod+w layout tabbed
-      bindsym $$mod+e layout toggle split
-      bindsym $$mod+Shift+space floating toggle
-      bar { status_command i3status }
-⋙
+      # re-entry inside this container resolves `from gui import ..` against this path
+      CMK_PLUGINS_DIR: .cmk
+|)
 
 # Top-level helpers, these require Xephyr 
 # on the host and starts a stand-alone XOrg server.
@@ -83,28 +39,34 @@ configs:
 xephyr.init: xephyr.require xephyr.start
 
 xephyr.require:
-	@# Assert Xephyr is available or fail with error message
-	cmk.require.tool(Xephyr, Try installing package 'xserver-xephyr' to continue.)
+    '''Assert Xephyr is available or fail with error message'''
+    cmk.assert.tool.required(Xephyr, Try installing package 'xserver-xephyr' to continue.)
 
 xephyr.start:
-	@# Start Xephyr in the background.
-	Xephyr -ac -screen ${APP_DIMS} -br -reset -terminate ${APP_DISPLAY} &
+    '''Start Xephyr in the background.'''
+    Xephyr -ac -screen ${APP_DIMS} -br -reset -terminate ${APP_DISPLAY} &
 
-gui: xephyr.init i3.stop i3.build i3.up.detach i3.exec/i3.start_apps 
-	@# Main Entrypoint
-	@# Start an XOrg server, rebuild the i3 container if necessary.
-	@# Then start/detach i3 WM, and start a few apps inside.
+gui: xephyr.init i3.stop i3.up.detach i3.exec/i3.start_apps
+    '''
+    Main Entrypoint
+    Start an XOrg server, rebuild the i3 container if necessary.
+    Then start/detach i3 WM, and start a few apps inside.
+    '''
 
 i3.start_apps:
-	@# Private helper, intended to run in container.
-	@# Use I3's RPC tool to drive the display.  
-	@# Runs in the container, so using tools unavailable to host is ok.
-	i3-msg exec glxgears
-	i3-msg exec "feh -B black --scale ./demos/data/droste.png"
-	i3-msg exec xeyes
+    '''
+    Private helper, intended to run in container.
+    Use I3's RPC tool to drive the display.
+    Runs in the container, so using tools unavailable to host is ok.
+    '''
+    i3-msg exec glxgears
+    i3-msg exec "feh -B black --scale ./demos/data/droste.png"
+    i3-msg exec xeyes
 
 __main__:
-	@# Print usage info and exit.
-	@# Main entrypoint does not actually start the GUI
-	@# because we don't want this running from main test-suite
-	cmk.log(${red}USAGE: ${__file__} gui)
+    '''
+    Print usage info and exit.
+    Main entrypoint does not actually start the GUI
+    because we don't want this running from main test-suite
+    '''
+    cmk.log(${red}USAGE: ${__file__} gui)

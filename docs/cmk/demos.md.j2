@@ -1,0 +1,478 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+## CMK Demo Index
+<hr class="section-rule lvl-2">
+<a name=all-demos></a>
+
+Every CMK demo that's featured elsewhere in these docs, cross-referenced to where it appears and to its plain-Makefile twin[^twin] (where one exists).  The full set of sources lives in the {{macros.repo_link('demos/cmk', github=github)}} folder.  For how to run and compile these, see [Running Demos]({{_}}/cmk/compiler/#running-demos) on the [Compiler &amp; Dialects]({{_}}/cmk/compiler) page.
+
+### Basics & Structured IO
+<hr class="section-rule lvl-3">
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile Twin</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/structured-io.cmk', name='structured-io', github=github)}}</td>
+      <td><a href="{{_}}/cmk/compiler/#basic-example">Basic Example</a></td>
+      <td>{{macros.repo_link('demos/structured-io.mk', name='structured-io.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/example.cmk', name='example', github=github)}}</td>
+      <td><a href="{{_}}/cli-overview">CLI Overview</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/space-indented.cmk', name='space-indented', github=github)}}</td>
+      <td><a href="{{_}}/cmk/compiler/#indentation">Indentation</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/callforms.cmk', name='callforms', github=github)}}</td>
+      <td><a href="{{_}}/macros/#calling-conventions">Macros &amp; Functions</a></td>
+      <td>{{macros.repo_link('demos/callforms.mk', name='callforms.mk', github=github)}}</td>
+    </tr>  </tbody>
+</table>
+
+### Containers & Dispatch
+<hr class="section-rule lvl-3">
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile Twin</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/container-dispatch.cmk', name='container-dispatch', github=github)}}</td>
+      <td><a href="{{_}}/container-dispatch">Container Dispatch</a></td>
+      <td>{{macros.repo_link('demos/container-dispatch.mk', name='container-dispatch.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/container-dispatch-2.cmk', name='container-dispatch-2', github=github)}}</td>
+      <td><a href="{{_}}/container-dispatch">Container Dispatch</a></td>
+      <td>{{macros.repo_link('demos/container-dispatch-2.mk', name='container-dispatch-2.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/bind-script.cmk', name='bind-script', github=github)}}</td>
+      <td><a href="{{_}}/container-dispatch">Container Dispatch</a>, <a href="{{_}}/cmk/compiler/#bind-script">Bind-Script</a></td>
+      <td>{{macros.repo_link('demos/bind-script.mk', name='bind-script.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/bind-target.cmk', name='bind-target', github=github)}}</td>
+      <td><a href="{{_}}/container-dispatch">Container Dispatch</a>, <a href="{{_}}/cmk/compiler/#bind-target">Bind-Target</a></td>
+      <td>{{macros.repo_link('demos/bind-target.mk', name='bind-target.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/io.pushd.cmk', name='io.pushd', github=github)}}</td>
+      <td><a href="{{_}}/cmk/compiler/#bind-target">Bind-Target</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/host-native-bash.cmk', name='host-native-bash', github=github)}}</td>
+      <td><a href="{{_}}/demos/polyglots">Polyglots</a></td>
+      <td>{{macros.repo_link('demos/host-native-bash.mk', name='host-native-bash.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/script-dispatch-stock.cmk', name='script-dispatch-stock', github=github)}}</td>
+      <td><a href="{{_}}/raw-docker">Raw Docker</a></td>
+      <td>{{macros.repo_link('demos/script-dispatch-stock.mk', name='script-dispatch-stock.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/script-dispatch-custom.cmk', name='script-dispatch-custom', github=github)}}</td>
+      <td><a href="{{_}}/cmk/compiler/#local-context-embedded-containers">Local-Context & Embedded Containers</a></td>
+      <td>{{macros.repo_link('demos/script-dispatch-custom.mk', name='script-dispatch-custom.mk', github=github)}}</td>
+    </tr>  </tbody>
+</table>
+
+### Compose Files & Dockerfiles
+<hr class="section-rule lvl-3">
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile Twin</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/inlined-composefile.cmk', name='inlined-composefile', github=github)}}</td>
+      <td><a href="{{_}}/demos/matrioshka">Matrioshka</a></td>
+      <td>{{macros.repo_link('demos/inlined-composefile.mk', name='inlined-composefile.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/inlined-dockerfile.cmk', name='inlined-dockerfile', github=github)}}</td>
+      <td><a href="{{_}}/demos/inlined-dockerfiles">Inlined Dockerfiles</a></td>
+      <td>{{macros.repo_link('demos/inlined-dockerfile.mk', name='inlined-dockerfile.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/import-file.cmk', name='import-file', github=github)}}</td>
+      <td><a href="{{_}}/cmk/compiler/#files-as-targets">Files as Targets</a></td>
+      <td>{{macros.repo_link('demos/import-file.mk', name='import-file.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/bind-file.cmk', name='bind-file', github=github)}}</td>
+      <td><a href="{{_}}/cmk/compiler/#files-as-targets">Files as Targets</a></td>
+      <td>{{macros.repo_link('demos/bind-file.mk', name='bind-file.mk', github=github)}}</td>
+    </tr>  </tbody>
+</table>
+
+### Polyglots
+<hr class="section-rule lvl-3">
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile Twin</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/code-objects.cmk', name='code-objects', github=github)}}</td>
+      <td><a href="{{_}}/demos/polyglots">Polyglots</a></td>
+      <td>{{macros.repo_link('demos/code-objects.mk', name='code-objects.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/local-interpreter.cmk', name='local-interpreter', github=github)}}</td>
+      <td><a href="{{_}}/demos/polyglots">Polyglots</a></td>
+      <td>{{macros.repo_link('demos/local-interpreter.mk', name='local-interpreter.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/underload.cmk', name='underload', github=github)}}</td>
+      <td><a href="{{_}}/demos/underload">Underload</a></td>
+      <td>{{macros.repo_link('demos/underload.mk', name='underload.mk', github=github)}}</td>
+    </tr>  </tbody>
+</table>
+
+### Compiler &amp; CMK Internals
+<hr class="section-rule lvl-3">
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile Twin</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/blockrefs.cmk', name='blockrefs', github=github)}}</td>
+      <td><a href="{{_}}/cmk/compiler/#block-references">Block References</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/pragma.cmk', name='pragma', github=github)}}</td>
+      <td><a href="{{_}}/cmk/compiler">Compiler &amp; Dialects</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/pragma-boot.cmk', name='pragma-boot', github=github)}}</td>
+      <td><a href="{{_}}/cmk/compiler">Compiler &amp; Dialects</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/pragma-stepwise.cmk', name='pragma-stepwise', github=github)}}</td>
+      <td><a href="{{_}}/cmk/compiler">Compiler &amp; Dialects</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/repl.cmk', name='repl', github=github)}}</td>
+      <td><a href="{{_}}/cmk/compiler">Compiler &amp; Dialects</a></td>
+      <td>-</td>
+    </tr>  </tbody>
+</table>
+
+### Argument Parsing
+<hr class="section-rule lvl-3">
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile Twin</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/kwarg-parsing.cmk', name='kwarg-parsing', github=github)}}</td>
+      <td><a href="{{_}}/argument-parsing">Argument Parsing</a></td>
+      <td>{{macros.repo_link('demos/kwarg-parsing.mk', name='kwarg-parsing.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/kwarg-parsing-2.cmk', name='kwarg-parsing-2', github=github)}}</td>
+      <td><a href="{{_}}/argument-parsing">Argument Parsing</a></td>
+      <td>{{macros.repo_link('demos/kwarg-parsing-2.mk', name='kwarg-parsing-2.mk', github=github)}}</td>
+    </tr>  </tbody>
+</table>
+
+### CLI: Help, Subcommands &amp; OOP
+<hr class="section-rule lvl-3">
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile Twin</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/cli-help.cmk', name='cli-help', github=github)}}</td>
+      <td><a href="{{_}}/cli-help/#docstring-style">CLI Help</a></td>
+      <td>{{macros.repo_link('demos/cli-help.mk', name='cli-help.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/subcommands.cmk', name='subcommands', github=github)}}</td>
+      <td><a href="{{_}}/subcommands">Subcommands</a></td>
+      <td>{{macros.repo_link('demos/subcommands.mk', name='subcommands.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/oop-subcommand.cmk', name='oop-subcommand', github=github)}}</td>
+      <td><a href="{{_}}/demos/oop">Subcommands as OOP</a></td>
+      <td>{{macros.repo_link('demos/oop-subcommand.mk', name='oop-subcommand.mk', github=github)}}</td>
+    </tr>  </tbody>
+</table>
+
+### Stages &amp; Stacks
+<hr class="section-rule lvl-3">
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile Twin</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/stages.cmk', name='stages', github=github)}}</td>
+      <td><a href="{{_}}/stages">Stages</a></td>
+      <td>{{macros.repo_link('demos/stages.mk', name='stages.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/stages-idiom.cmk', name='stages-idiom', github=github)}}</td>
+      <td><a href="{{_}}/stages/#stage-idioms">Stage Idioms</a></td>
+      <td>{{macros.repo_link('demos/stages-idiom.mk', name='stages-idiom.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/stage-wrapper.cmk', name='stage-wrapper', github=github)}}</td>
+      <td><a href="{{_}}/stages/#stage-idioms">Stage Idioms</a></td>
+      <td>{{macros.repo_link('demos/stage-wrapper.mk', name='stage-wrapper.mk', github=github)}}</td>
+    </tr>  </tbody>
+</table>
+
+### Flow Control
+<hr class="section-rule lvl-3">
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile Twin</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/events.cmk', name='events', github=github)}}</td>
+      <td><a href="{{_}}/demos/flow-control/#an-event-loop">Flow Control</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/channel.cmk', name='channel', github=github)}}</td>
+      <td><a href="{{_}}/demos/flow-control/#events-channels">Flow Control</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/zahn.cmk', name='zahn', github=github)}}</td>
+      <td><a href="{{_}}/demos/flow-control/#a-multi-exit-search-loop">Flow Control</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/exceptions.cmk', name='exceptions', github=github)}}</td>
+      <td><a href="{{_}}/demos/flow-control/#typed-exceptions">Flow Control</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('.cmk/fault.cmk', name='fault', github=github)}}</td>
+      <td><a href="{{_}}/plugins/faults">Faults (plugin)</a></td>
+      <td>{{macros.repo_link('demos/fault.mk', name='fault.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/vm-coroutines.cmk', name='vm-coroutines', github=github)}}</td>
+      <td><a href="{{_}}/demos/flow-control/#coroutines">Flow Control</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/flow_control.cmk', name='flow_control', github=github)}}</td>
+      <td><a href="{{_}}/demos/flow-control/#going-further">Flow Control</a></td>
+      <td>-</td>
+    </tr>  </tbody>
+</table>
+
+### Modules &amp; Plugins
+<hr class="section-rule lvl-3">
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile Twin</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/module-system.cmk', name='module-system', github=github)}}</td>
+      <td><a href="{{_}}/cmk/modules">Modules</a></td>
+      <td>{{macros.repo_link('demos/module-system.mk', name='module-system.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/plugin-system.cmk', name='plugin-system', github=github)}}</td>
+      <td><a href="{{_}}/plugins/overview">Plugin System</a></td>
+      <td>{{macros.repo_link('demos/plugin-system.mk', name='plugin-system.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/golang.cmk', name='golang', github=github)}}</td>
+      <td><a href="{{_}}/plugins/code.golang">Golang Plugin</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/overlay.cmk', name='overlay', github=github)}}</td>
+      <td><a href="{{_}}/modules/virtual-machine">CMK Virtual Machine</a></td>
+      <td>{{macros.repo_link('demos/overlay.mk', name='overlay.mk', github=github)}}</td>
+    </tr>  </tbody>
+</table>
+
+### Extending CMK
+<hr class="section-rule lvl-3">
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile Twin</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/user-dialect.cmk', name='user-dialect', github=github)}}</td>
+      <td><a href="{{_}}/cmk/metaprogramming/#user-defined-dialects">User-Defined Dialects</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/user-sugar.cmk', name='user-sugar', github=github)}}</td>
+      <td><a href="{{_}}/cmk/metaprogramming/#user-defined-sugar">User-Defined Sugar</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/user-sugar-regex.cmk', name='user-sugar-regex', github=github)}}</td>
+      <td><a href="{{_}}/cmk/metaprogramming/#user-defined-sugar">User-Defined Sugar</a></td>
+      <td>-</td>
+    </tr>  </tbody>
+</table>
+
+### AI & LLMs
+<hr class="section-rule lvl-3">
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile Twin</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/ollama.cmk', name='ollama', github=github)}}</td>
+      <td><a href="{{_}}/demos/ai">AI Demos</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/rag.cmk', name='rag', github=github)}}</td>
+      <td><a href="{{_}}/demos/ai">AI Demos</a></td>
+      <td>-</td>
+    </tr>  </tbody>
+</table>
+
+### GUIs (X11)
+<hr class="section-rule lvl-3">
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile Twin</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/xephyr.cmk', name='xephyr', github=github)}}</td>
+      <td><a href="{{_}}/guis">GUIs</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/xpra.cmk', name='xpra', github=github)}}</td>
+      <td><a href="{{_}}/guis">GUIs</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/xpra-doom.cmk', name='xpra-doom', github=github)}}</td>
+      <td><a href="{{_}}/guis">GUIs</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/xpra-net.cmk', name='xpra-net', github=github)}}</td>
+      <td><a href="{{_}}/guis">GUIs</a></td>
+      <td>-</td>
+    </tr>  </tbody>
+</table>
+
+### Platform & Formal Methods
+<hr class="section-rule lvl-3">
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile Twin</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/platform.cmk', name='platform', github=github)}}</td>
+      <td><a href="{{_}}/demos/platform/#basic-platforming">Platform</a></td>
+      <td>{{macros.repo_link('demos/platform.mk', name='platform.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/platform-lme.cmk', name='platform-lme', github=github)}}</td>
+      <td><a href="{{_}}/demos/platform/#extension-with-lme">Platform</a></td>
+      <td>{{macros.repo_link('demos/platform-lme.mk', name='platform-lme.mk', github=github)}}</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/lean.cmk', name='lean', github=github)}}</td>
+      <td><a href="{{_}}/demos/lean">Lean</a></td>
+      <td>{{macros.repo_link('demos/lean.mk', name='lean.mk', github=github)}}</td>
+    </tr>  </tbody>
+</table>
+
+### Banana Forms
+<hr class="section-rule lvl-3">
+
+<table>
+  <thead>
+    <tr><th>CMK Demo</th><th>Featured in</th><th>Makefile Twin</th></tr>
+  </thead>
+  <tbody>
+{# BONEYARD -- banana-blocks.cmk row: its "Featured in" target ("The Block",
+   #banana-block) was parked on the banana page, so this row would dangle.
+   Restore alongside the section if it returns.
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/banana-blocks.cmk', name='banana-blocks', github=github)}}</td>
+      <td><a href="{{_}}/cmk/banana/#banana-block">The Block</a></td>
+      <td>-</td>
+    </tr>
+#}
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/banana-callforms.cmk', name='banana-callforms', github=github)}}, {{macros.repo_link('demos/cmk/banana-args.cmk', name='banana-args', github=github)}}</td>
+      <td><a href="{{_}}/cmk/banana/#banana-channels">Composition Channels</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/banana-composition.cmk', name='banana-composition', github=github)}}</td>
+      <td><a href="{{_}}/cmk/banana/#banana-multibody">Multi-body (Currying)</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/banana-oop.cmk', name='banana-oop', github=github)}}</td>
+      <td><a href="{{_}}/cmk/banana/#banana-cooked">Squashed Bananas</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/banana-user-defined.cmk', name='banana-user-defined', github=github)}}</td>
+      <td><a href="{{_}}/cmk/banana/#banana-cooked">Squashed Bananas</a></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>{{macros.repo_link('demos/cmk/banana-callables.cmk', name='banana-callables', github=github)}}</td>
+      <td><a href="{{_}}/cmk/banana/#banana-declare">Constructors (declare.*)</a></td>
+      <td>-</td>
+    </tr>
+  </tbody>
+</table>
+
+See also the [Compiler &amp; Dialects]({{_}}/cmk/compiler) walk-through and the [CMK Quick Reference]({{_}}/cmk/quickref) cheat-sheet.
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Quick Reference]({{_}}/cmk/quickref): the one-page syntax cheat-sheet.
+* [Compiler Tutorial]({{_}}/cmk/compiler): the concrete syntax, hands-on.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^twin]: {{ tufte.wiki('GNU_Make')|trim }}

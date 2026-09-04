@@ -1,0 +1,37 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# user-sugar-regex.cmk:
+#   Extending the compiler with a custom fenced-block syntax via regex
+#   sugar markers.
+#
+#   Sugar markers are matched as regexes (unlike dialect rules, which are
+#   literal): one rule opens a whole family of blocks and can anchor them
+#   to the start of a line.  Below, `^@@` opens a block named by whatever
+#   follows it, `^@@end` closes it, and the `^` guarantees a stray `@@`
+#   inside a recipe never false-triggers a block.
+#
+#   USAGE: ./demos/cmk/user-sugar-regex.cmk
+#
+# cmk_dialect ::: [["this.","${make} "]] ::: cmk_sugar :::
+# [["^@@","^@@end","$(call code, def=__NAME__ __WITH__)"]]
+# :::
+
+# Two `@@<name>` blocks -- the same rule matches both names (the family) --
+# each bound to the host python3 interpreter declared below, so they
+# actually run.  The `__NAME__` placeholder is the block name and `__WITH__`
+# is the `with ..` clause (here `bind=hostpy`), both filled at compile time.
+@@hello
+print("hello from a @@-fenced python block")
+@@end with bind=hostpy
+
+@@compute
+print("1 + 2 + ... + 9 =", sum(range(10)))
+@@end with bind=hostpy
+
+# A one-line host interpreter: run the block's staged file with python3.
+hostpy/%:; python3 ${*}
+
+__main__: hello compute
+    @# Anchoring in action: the `^` in `^@@` means this literal `@@hello`,
+    @# sitting mid-recipe, is plain text -- it does not open a block.
+    echo "inert: the text @@hello here is just a string"

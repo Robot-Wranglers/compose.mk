@@ -1,0 +1,122 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# cmk_pragma ::: { "target_locals": true } :::
+#
+# banana-recipes.cmk: callable objects built from banana-forms, via the core jqlang kind.
+#
+# USAGE: ./demos/cmk/banana-recipes.cmk
+
+'''
+Building callable objects out of banana-forms, via the builtin jqlang kind.
+
+dsl.jqlang NAME(| program |) wraps a jq-program banana into a callable object.
+Its core call-forms:
+  NAME()                         run the program over stdin (plus trailing jq args)
+  NAME.locals()                  feed the whole recipe locals JSON instead of stdin
+  dsl.jqlang(| .. |).method()    an anonymous single-use inline object
+  (| filter |)[cmd]              the stream form
+A subclass adds one more, since core jqlang has no typed var injection:
+  NAME(str=.. json=..)           explicit, typed selection of recipe vars
+
+Each demo.* isolates one.
+
+Docker-free.
+'''
+
+import log
+from cmk import dsl, class
+
+# typed argument builders: ( selected recipe vars become jq variables )
+#   str= binds each listed var with --arg (jq string); json= with --argjson (jq's
+#   typed analog: numbers/bools/objects).  The jq var name matches the recipe var.
+jqn.str=$(foreach v,$(strip ${1}),--arg ${v} "$$${v}" )
+jqn.json=$(foreach v,$(strip ${1}),--argjson ${v} "$$${v}" )
+
+# typed-selection subkind: ( the caller picks which recipe vars go in, and each type )
+#   Overrides the base call so str= and json= select recipe vars as jq
+#   variables; the program reads them by name, so there is no stdin (jq -n).
+#   Both lists default to empty, so a no-kwarg call degrades to a bare jq -n.
+class subjq(bases=dsl.jqlang)[|
+  ${self} = $(strip $(call mk.unpack.kwargs, ${__args__}, str= json=))${jq} -n $(call jqn.str,${kwargs_str})$(call jqn.json,${kwargs_json}) -f ${self}.fd()
+|]
+
+# named-input program: ( the caller picks which recipe vars go in, and each type )
+#   The jq program is a (| .. |) banana, so a jq variable stays literal (jq's
+#   own syntax).  It names its inputs, so the caller picks which recipe vars
+#   go in, and each one's jq type (str= gives --arg, json= gives --argjson).
+subjq jqlang_prog(|
+  { who: $user, team: $role, ready: $ready }
+|)
+
+demo.jqn:
+  '''
+  Explicit form: name the inputs once.  secret is never listed, so it
+  stays out of the object; ready is json=, so it lands as a real bool.
+  '''
+  log(jq object ${sep} explicit + typed var selection)
+  user <- whoami
+  role=admin
+  ready=true
+  secret=hunter2
+  jqlang_prog(str='user role' json='ready')
+
+# jq object from target locals: ( the whole locals JSON read from . )
+#   The target_locals pragma (top of file) lets __locals__ snapshot the vars a recipe
+#   defines.  This program reads them from . (the whole locals JSON), so the locals
+#   form gets every recipe var with no list -- jq works the object as a whole (here:
+#   echo it back + count its keys).
+dsl.jqlang jqlang_prog2(|
+  { vars: ., total: (. | length) }
+|)
+
+demo.locals:
+  '''
+  Implicit form: no str=/json=.  Every var this recipe defines flows in as
+  . (all strings), so secret shows up too -- convenience vs control.
+  '''
+  log(jq object ${sep} implicit whole-locals passthrough)
+  user <- whoami
+  role=admin
+  ready=true
+  secret=hunter2
+  jqlang_prog2.locals()
+
+# graceful degradation: ( a program that needs no inputs )
+#   Called with no str=/json=, the subkind degrades to a bare jq -n (both lists
+#   default to empty).
+subjq jqlang_prog4(|
+  { status: "ok", inputs: "none needed" }
+|)
+
+demo.empty:
+  '''No vars, no kwargs -- jqlang_prog4 still produces its constant object.'''
+  log(jq object ${sep} no inputs, empty str=/json=)
+  jqlang_prog4()
+
+# fully inline: ( anonymous, single-use )
+#   The program is declared and called in one expression, with no module-level
+#   decl: the inline banana builds a single-use anonymous object and invokes .locals
+#   on it.  The body lifts to a gensym define, the ctor application hoists to module
+#   scope, and the method call stays inline -- the lambda-style lift, nothing left behind.
+demo.inlined:
+  '''Same object as demo.locals, but nothing is named or left in scope.'''
+  log(jq object ${sep} anonymous single-use inline object)
+  user <- whoami
+  role=admin
+  ready=true
+  secret=hunter2
+  dsl.jqlang(| { vars: ., total: (. | length) } |).locals()
+
+# stream callform: ( (| filter |)[cmd] runs cmd | filter, captures stdout )
+#   Captures stdout into a make var.  A jb call on foo=bar builds a one-key
+#   object and pipes it through a jqlang-shape jq program as a filter.  The
+#   body is raw shell, so the program is inlined (a jqlang_prog reference
+#   would need the make-expansion the materialized body can't do).
+stream_result = (| jq -c '{ vars: ., total: (. | length) }' |)[${jb} foo=bar]
+
+demo.stream:
+  '''The captured value: jb JSON transformed by the inline jqlang filter.'''
+  log(stream callform ${sep} jb piped through a jqlang filter)
+  printf '%s\n' '${stream_result}'
+
+__main__: demo.jqn demo.locals demo.empty demo.inlined demo.stream

@@ -1,0 +1,63 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-fluent.cmk:
+#   An operator between two banana constructions -- foo(| a |) <op> bar(| b |) -- is a binary
+#   operator, dispatched through a dunder each kind implements.  The banana fold recognizes a
+#   catalog of operator chars, each mapping to a dunder: `.`->__dot__, `/`->__div__, `|`->__pipe__.
+#   A kind implements the ones it wants; the same chain syntax composes differently per kind.
+#
+# USAGE: ./demos/cmk/banana-fluent.cmk
+
+'''
+At a recipe, foo(| a |) <op> bar(| b |) <op> baz(| c |) lifts to: each operand is constructed as a
+throwaway instance (hoisted to module scope), then folded left-to-right through the running operand's
+dunder for <op> -- foo1.<dunder>(bar1).<dunder>(baz1) -- and the result's __call__ runs inline.  So an
+operator is a dispatch protocol, the sibling of the __call__ invoke dunder: a kind implements
+<dunder>(rhs) to define what the operator means for its operands, and returns the (accumulated) operand
+so the fold chains.
+
+The banana-operator catalog (each char maps to a dunder):
+   .  -> __dot__      /  -> __div__      |  -> __pipe__
+The `seq` kind below implements the whole catalog (one kind, three operators); the `pipe` kind implements
+only __dot__, overridden to pipe -- so the identical `.` syntax means something different per kind.  The
+operator char may be written with or without surrounding whitespace.
+
+Operands may be single-line (lifted by lambdalift) or multiline -- a multiline operand is opened at end
+of line and closed with a leading |), and the chain is lifted in sugar (see demos/cmk/bash-if.cmk for a
+multiline if/then/else built this way).
+'''
+
+# seq: implements the whole operator catalog.  __cmd__ seeds from the first operand's body; each operator
+# dunder appends its own shell joiner then the rhs body and returns self so the fold continues; __call__
+# runs the accumulated command in the recipe shell.
+#    .  -> __dot__   joins with ` ; `   (sequence)
+#    /  -> __div__   joins with ` && `  (and-then)
+#    |  -> __pipe__  joins with ` | `   (pipe)
+from cmk import constructor
+constructor seq[|
+  ${self}.__cmd__ := $(value ${self})
+  ${self}.__dot__  = $(eval ${self}.__cmd__ := ${self}.__cmd__() ; $(value ${__args__}))${self}
+  ${self}.__div__  = $(eval ${self}.__cmd__ := ${self}.__cmd__() && $(value ${__args__}))${self}
+  ${self}.__pipe__ = $(eval ${self}.__cmd__ := ${self}.__cmd__() | $(value ${__args__}))${self}
+  ${self}.__call__ = ${self}.__cmd__()
+|]
+
+# pipe: implements only __dot__, overridden to pipe -- so `.` means pipe for this kind.
+constructor pipe[|
+  ${self}.__cmd__ := $(value ${self})
+  ${self}.__dot__ = $(eval ${self}.__cmd__ := ${self}.__cmd__() | $(value ${__args__}))${self}
+  ${self}.__call__ = ${self}.__cmd__()
+|]
+
+__main__:
+  '''
+  the catalog, one operator each (all on the `seq` kind):
+    .  -> __dot__  (sequence)
+  '''
+  seq(| echo one |).seq(| echo two |).seq(| echo three |)
+  @#   /  -> __div__  (and-then: the rhs runs only if the lhs succeeded)
+  seq(| true |) / seq(| echo reached |)
+  @#   |  -> __pipe__ (pipe)
+  seq(| echo alpha |) | seq(| tr a-z A-Z |) | seq(| rev |)
+  @# per-kind override: pipe's `.` means pipe, so the same `.` syntax threads a pipeline
+  pipe(| echo hello world |).pipe(| tr a-z A-Z |).pipe(| rev |)

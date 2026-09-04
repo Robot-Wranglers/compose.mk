@@ -1,0 +1,21 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# cli-help.cmk:
+#   CLI-help and supported syntax for docstrings, in CMK-lang.  The
+#   docstring convention is identical to plain Makefiles: a target's
+#   leading `@#` recipe comments are its docstring, and markdown inside
+#   them is rendered by `help`. Ported from demos/cli-help.mk.
+#
+# USAGE:  ./demos/cmk/cli-help.cmk
+
+__main__: my-target my-parametric-target/FOO
+
+my-target:
+    @# Comment line one
+    @# **Markdown is supported.**
+    echo your implementation here
+
+my-parametric-target/%:
+    @# Comment line one
+    @# **Markdown is supported.**
+    echo your implementation here

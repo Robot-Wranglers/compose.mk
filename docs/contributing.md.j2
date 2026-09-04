@@ -1,11 +1,49 @@
+{% import 'macros/tufte.j2' as tufte -%}
 
 ## Contributing
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-2">
 
-Since this project generally aims at providing extensible boilerplate for use with other projects, we use [the unlicense](https://choosealicense.com/licenses/unlicense/) and hope that accomodates any kind of spin-offs and variations that might be of interest to people.
+Since this project generally aims at providing extensible boilerplate for use with other projects, we use the unlicense[^1] and hope that accomodates any kind of spin-offs and variations that might be of interest to people.
 
-You're free to copy this code into your repository and start ripping out pieces and adding new ones.  Forking aggressively and not looking back doesn't make sense for many kinds of upstreams, but there is no package manager for `make` and no one wants a submodule for a few files.  Besides, in some cases removing parts of the API you know you don't need may improve performance (for example with target tab completion). See the [forks and versioning section]({{mkdocs.site_relative_url}}/quickstart#forks-versioning) of the installation docs for more discussion.
+You're free to copy this code into your repository and start ripping out pieces and adding new ones.  Forking aggressively and not looking back doesn't make sense for many kinds of upstreams, but there is no package manager for `make` and no one wants a submodule for a few files.  Besides, in some cases removing parts of the API you know you don't need may improve performance (for example with target tab completion). See the [forks and versioning section]({{_}}/quickstart#forks-versioning) of the installation docs for more discussion.
 
 If you can keep the maiming to a minimum though and make something cool that also feels sufficiently generic, please do consider contributing back to upstream!
 
 As mentioned elsewhere, `compose.mk` is still changing slowly but the goal is to freeze the API in place fairly soon.  That said.. any interesting feature requests will definitely be considered.  If you're up for it, the best way to spec out a feature-request is always to add a new failing testing with interface you're proposing.
+
+### Self-Audit / Linting
+<hr class="section-rule lvl-3">
+
+A self-audit checks *the framework's own source* (the `CMK_SRC` file), distinct from `cmk lint`, which vets *user* programs.  It is maintainer dev-tooling, so it ships in the `.automation.cmk` project module rather than core.  Load that module (this repo does, from its `Makefile`), then run it directly or from CI:
+
+```bash
+make lint.self
+```
+
+It bundles two checks:
+
+* **`lint.self.collisions`**: reports macro/target name collisions ("twins") and their smart-route safety class.  Fails *only* on the one mechanically-provable hazard: an arg-dropping trampoline over a parametric target.
+* **`lint.self.phase`**: audits the `#:phase` markers on every embedded-awk block, in one awk pass.  Fails (exit 48) on a missing/inconsistent marker, a `SUPERVISOR` block that holds a `@@` placeholder or lives inside `__hosted__`, or a parse-time reference to a hosted/undefined block (the "seed quarantine").
+
+**Editing embedded awk?**  Each `define .awk.*` block carries a structured marker naming the compiler phase it runs in:
+
+```
+#:phase <SUPERVISOR|SEED-PARSE|COMPILE|RUN> seed=<0|1> awklang=<yes|no>
+define .awk.<name>
+```
+
+Keep it accurate when you add or move a block, then re-run `lint.self.phase`; it is the source of truth for which blocks may be hosted (`awklang=yes` iff `seed=0`).
+
+### See Also
+<hr class="section-rule lvl-3">
+
+Before hacking, some orientation.
+
+* [Developer Notes]({{_}}/dev): for hacking on `compose.mk` itself.
+* [Style & Idioms]({{_}}/style): conventions to follow in contributions.
+* [Motivation & Design Philosophy]({{_}}/but-why): what the project is and isn't trying to be.
+
+### References
+<hr class="section-rule lvl-3">
+
+[^1]: {{ tufte.wiki('Unlicense')|trim }}

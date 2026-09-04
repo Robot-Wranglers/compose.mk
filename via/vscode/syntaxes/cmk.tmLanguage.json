@@ -1,0 +1,801 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "cmk-lang",
+  "scopeName": "source.cmk",
+  "information_for_contributors": [
+    "cmk-lang TextMate grammar.  SINGLE SOURCE OF TRUTH is the token -> scope taxonomy in",
+    "compose.mk/docs/theme/js/prism-cmk.js (the same table that drives the docs Prism",
+    "grammar).  cmk extends GNU Makefile: shared constructs (targets, define, variables,",
+    "recipes) plus cmk-lang sugar (pragmas, @# docstrings, ## doc-comments, import/declare",
+    "callforms, embed fences, integral/flow glyphs).  Keep scopes in sync with that table."
+  ],
+  "patterns": [
+    {
+      "include": "#divider"
+    },
+    {
+      "include": "#shade"
+    },
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#pragma"
+    },
+    {
+      "include": "#module-call"
+    },
+    {
+      "include": "#decorator"
+    },
+    {
+      "include": "#receiver"
+    },
+    {
+      "include": "#decl-head"
+    },
+    {
+      "include": "#banana-instance"
+    },
+    {
+      "include": "#banana-name"
+    },
+    {
+      "include": "#define-block"
+    },
+    {
+      "include": "#cmk-import"
+    },
+    {
+      "include": "#cmk-include"
+    },
+    {
+      "include": "#assignment"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#target"
+    },
+    {
+      "include": "#compose-key"
+    },
+    {
+      "include": "#callform-name"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#embed-fence"
+    },
+    {
+      "include": "#cmk-sugar"
+    },
+    {
+      "include": "#dunder"
+    },
+    {
+      "include": "#variables"
+    },
+    {
+      "include": "#handle"
+    },
+    {
+      "include": "#capture"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#recipe"
+    }
+  ],
+  "repository": {
+    "assignment": {
+      "comment": "Variable assignment `name := value` (also `?= += != = ::=`).  Scopes the LHS name + the assign operator; the value runs on so an inner `${..}`/string still highlights.  An `export`/`override`/`private` modifier keeps its keyword scope (capture 1) so it is not silently swallowed.  Optional leading whitespace so cmk's 2-space-indented block assignments (`  ${self}.run ?= run`) are caught too.  A `:=`/`?=` never collides with the rule head (`#target` guards `(?!=)`).  MIRRORS the Prism `cmk-assignment` token.",
+      "match": "^[ \\t]*((?:export|override|private)\\b)?[ \\t]*([\\w.+-]+)[ \\t]*(::?=|[?+!]?=)",
+      "captures": {
+        "1": {
+          "name": "keyword.control.cmk"
+        },
+        "2": {
+          "name": "variable.other.readwrite.cmk"
+        },
+        "3": {
+          "name": "keyword.operator.assignment.cmk"
+        }
+      }
+    },
+    "recipe": {
+      "comment": "Tab-indented recipe body -- embed `source.shell` so genuine shell recipe lines get real shell highlighting, WITHOUT shadowing the cmk token rules that already colored recipe content (strings, banana, capture, make-refs, operators).  A `begin`/`while` region shadows the top-level patterns, so every cmk token include that used to apply to a recipe line is re-listed FIRST; `source.shell` is only the final fallback for the plain-shell leftovers (bare commands like `echo`/`for`).  NOTE: anchored on a literal TAB, matching the host makefile grammar; author-form 2-space cmk recipe bodies are a separate follow-up.",
+      "name": "meta.scope.recipe.cmk",
+      "begin": "^\\t",
+      "while": "^\\t",
+      "patterns": [
+        {
+          "name": "keyword.operator.recipe-prefix.cmk",
+          "match": "\\G[-@+]+"
+        },
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#keywords"
+        },
+        {
+          "include": "#callform-name"
+        },
+        {
+          "include": "#strings"
+        },
+        {
+          "include": "#variables"
+        },
+        {
+          "include": "#capture"
+        },
+        {
+          "include": "#cmk-sugar"
+        },
+        {
+          "include": "#dunder"
+        },
+        {
+          "include": "#embed-fence"
+        },
+        {
+          "include": "#operators"
+        },
+        {
+          "include": "#compose-key"
+        },
+        {
+          "include": "source.shell"
+        }
+      ]
+    },
+    "divider": {
+      "comment": "decorative section-divider run -- 4+ U+2591 light-shade chars (░░░░…), optionally after a `#`/`##`.  Placed BEFORE #comments so it wins over the comment/doc-comment rules.  Split into captures so the `#` prefix stays a divider comment while the ░ run itself takes the bright-red `constant.character.shade.cmk` scope.  MIRRORS the Prism `cmk-divider` token (colors via the package.json textMateRules).",
+      "match": "(#*)(\\x{2591}{4,})",
+      "captures": {
+        "1": { "name": "comment.line.divider.cmk" },
+        "2": { "name": "constant.character.shade.cmk" }
+      }
+    },
+    "shade": {
+      "comment": "the U+2591 light-shade glyph (░) on its own -- decorative section boxes and figlet-style banner art use it heavily.  Given a dedicated scope so it renders bright red via the package.json textMateRule.  The #divider rule (listed first) already carves the ░ out of `##░░░` comment lines; this catches ░ everywhere else.  MIRROR: keep a matching `cmk-shade` token in the Prism grammar.",
+      "name": "constant.character.shade.cmk",
+      "match": "\\x{2591}+"
+    },
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.shebang.cmk",
+          "match": "^#!.*$"
+        },
+        {
+          "name": "comment.line.documentation.double.cmk",
+          "match": "^[ \\t]*##.*$"
+        },
+        {
+          "name": "comment.line.documentation.cmk",
+          "match": "@#.*$"
+        },
+        {
+          "name": "comment.line.number-sign.cmk",
+          "begin": "(?<![\\\\$])#",
+          "end": "$"
+        }
+      ]
+    },
+    "pragma": {
+      "name": "meta.preprocessor.pragma.cmk",
+      "begin": "^[ \\t]*(#)[ \\t]*(CMK_PRAGMA|cmk_pragma)[ \\t]*(:::)",
+      "beginCaptures": {
+        "1": {
+          "name": "comment.line.number-sign.cmk"
+        },
+        "2": {
+          "name": "keyword.control.directive.cmk"
+        },
+        "3": {
+          "name": "punctuation.definition.pragma.cmk"
+        }
+      },
+      "end": "(:::)",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.pragma.cmk"
+        }
+      },
+      "patterns": [
+        {
+          "include": "source.json"
+        }
+      ]
+    },
+    "module-call": {
+      "name": "meta.function-call.import-declare.cmk",
+      "begin": "^((?:[\\w+-]+\\.)*(?:import|declare)(?:\\.[\\w+-]+)*)[ \\t]*(\\()",
+      "beginCaptures": {
+        "1": {
+          "name": "entity.name.function.cmk"
+        },
+        "2": {
+          "name": "punctuation.cmk"
+        }
+      },
+      "end": "(\\))",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.cmk"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#compose-key"
+        },
+        {
+          "include": "#callform-kv"
+        },
+        {
+          "include": "#strings"
+        },
+        {
+          "include": "#variables"
+        }
+      ]
+    },
+    "compose-key": {
+      "comment": "Docker-compose service/build/deploy keys and their values, in inlined compose yaml, in triple-string bodies, and in callform kwargs alike.  Listed AFTER `#target` so a column-0 makefile rule head (`build:`) stays a target, and BEFORE `#callform-kv` wherever kwargs are parsed so the pair is claimed whole.  The value runs to end of line, except that a further word carrying its own `=` ends it (so one kwarg cannot swallow its siblings) and so does a banana closer.  MIRRORS the Prism `cmk-compose-pair` token (keep the two key lists in sync).",
+      "match": "(?<![\\w.+-])(annotations|attach|blkio_config|build|cache_from|cache_to|cap_add|cap_drop|cgroup|cgroup_parent|command|configs|container_name|context|cpu_count|cpu_percent|cpu_period|cpu_quota|cpu_rt_period|cpu_rt_runtime|cpu_shares|cpus|cpuset|credential_spec|depends_on|deploy|develop|device_cgroup_rules|devices|dns|dns_opt|dns_search|dockerfile|dockerfile_inline|domainname|driver_opts|endpoint_mode|entrypoint|env_file|environment|expose|extends|external_links|extra_hosts|gpus|group_add|healthcheck|hostname|image|init|ipc|isolation|labels|logging|mac_address|mem_limit|mem_reservation|mem_swappiness|memswap_limit|network_mode|networks|no_cache|oom_kill_disable|oom_score_adj|pid|pids_limit|platform|platforms|ports|post_start|pre_stop|privileged|profiles|pull_policy|read_only|replicas|restart|restart_policy|retries|rollback_config|runtime|secrets|security_opt|services|shm_size|start_interval|start_period|stdin_open|stop_grace_period|stop_signal|storage_opt|sysctls|tmpfs|tty|ulimits|update_config|user|userns_mode|uts|volumes|volumes_from|working_dir)([ \\t]*[:=])[ \\t]*([^\\s,)\\r\\n]*(?:[ \\t]+(?![^\\s,)\\r\\n]*=)(?!\\|[)\\]}])[^\\s,)\\r\\n]+)*)",
+      "captures": {
+        "1": {
+          "name": "keyword.other.compose.cmk"
+        },
+        "2": {
+          "name": "punctuation.separator.key-value.compose.cmk"
+        },
+        "3": {
+          "name": "meta.value.compose.cmk",
+          "patterns": [
+            {
+              "include": "#strings"
+            },
+            {
+              "include": "#variables"
+            }
+          ]
+        }
+      }
+    },
+    "callform-kv": {
+      "comment": "key=value kwargs.  The value may be QUOTED (and then contain spaces, e.g.\n `targets='ul.* underload'`) -- match the whole quoted run so a space doesn't split it\n and leave a dangling quote that eats the rest of the file.",
+      "match": "([\\w.+-]+)(=)('[^'\\r\\n]*'|\"[^\"\\r\\n]*\"|[^\\s()]*)",
+      "captures": {
+        "1": {
+          "name": "entity.other.attribute-name.cmk"
+        },
+        "2": {
+          "name": "keyword.operator.cmk"
+        },
+        "3": {
+          "patterns": [
+            {
+              "name": "string.quoted.single.cmk",
+              "match": "'[^'\\r\\n]*'"
+            },
+            {
+              "name": "string.quoted.double.cmk",
+              "match": "\"[^\"\\r\\n]*\""
+            },
+            {
+              "name": "string.unquoted.cmk",
+              "match": ".+"
+            }
+          ]
+        }
+      }
+    },
+    "decorator": {
+      "comment": "@name(args) binding/annotation decorator at COLUMN 0, e.g. `@args.from_json(shape color=blue name=default)` or bare `@fault.guarded`.  The `^@` anchor keeps a recipe `\\t@echo` (tab-indented) untouched.  MIRRORS the Prism `cmk-decorator` token (keep scopes in sync).",
+      "patterns": [
+        {
+          "begin": "(^@)([\\w.+-]+)[ \\t]*(\\()",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.operator.decorator.cmk"
+            },
+            "2": {
+              "name": "entity.name.function.decorator.cmk"
+            },
+            "3": {
+              "name": "punctuation.cmk"
+            }
+          },
+          "end": "(\\))",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.cmk"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#compose-key"
+            },
+            {
+              "include": "#callform-kv"
+            },
+            {
+              "include": "#strings"
+            },
+            {
+              "include": "#variables"
+            },
+            {
+              "match": "[\\w.+-]+",
+              "name": "variable.parameter.cmk"
+            }
+          ]
+        },
+        {
+          "match": "(^@)([\\w.+-]+)",
+          "captures": {
+            "1": {
+              "name": "keyword.operator.decorator.cmk"
+            },
+            "2": {
+              "name": "entity.name.function.decorator.cmk"
+            }
+          }
+        }
+      ]
+    },
+    "receiver": {
+      "comment": "receiver STREAM-form name -- a dotted name immediately before a `[` stream bracket (e.g. `inbox.emit[\"\"\"...\"\"\"]`), the receiver being piped into.  MIRRORS the Prism `cmk-receiver-name` token (keep scopes in sync).",
+      "match": "[\\w+-][\\w.+-]*(?=\\[)",
+      "name": "entity.name.function.cmk"
+    },
+    "decl-head": {
+      "comment": "cmk declaration head -- a KIND-introducing keyword + the name it mints: `class Cook`, `constructor jqlang`, `code demo_one(| .. |)`, `strategy portfolio(| .. |)`, bodyless `container ubuntu`.  Keyword set = the `cmk` prelude declaration keywords (compose.mk `cmk.prelude.names`) plus the `strategy`/`mixin` companions; `code` is the code-object minter (`polyglot` is kept as its back-compat alias).  Requires whitespace + a name after the keyword, so a target `class:` or an assignment `class = x` is untouched.  Capture 1 is the keyword (`storage.type`), capture 2 the minted KIND/type name (`entity.name.type`).  Capture 3 is an OPTIONAL metaclass callform `(k=v ..)` -- CONSUMED here (not the banana opener `(|`, which the `|`-excluded char class stops before) and re-tokenized as kwargs via #callform-kv, so a metaclass head like `code demo_two(img=elixir:otp-27-alpine entrypoint=elixir)(| .. |)` highlights its kwargs instead of leaving `(img=.. entrypoint=..)` as bare text.  The trailing lookahead requires the name (past the optional callform) be immediately followed by a banana opener or EOL -- so a KIND+instance head like `container job hello(|`, where a 2nd bareword sits between the keyword-name and the banana, is NOT mis-claimed as a declaration; it falls to #banana-instance.  MIRRORS the Prism `cmk-decl-head` token.",
+      "match": "^[ \\t]*(class|code|constructor|container|machine|dsl|factory|namespace|polyglot|protocol|strategy|mixin)\\b[ \\t]+([A-Za-z_][\\w.+-]*)([ \\t]*\\([^()\\r\\n|]*\\))?(?=[ \\t]*(?:[(\\[{]\\||$))",
+      "captures": {
+        "1": {
+          "name": "storage.type.cmk"
+        },
+        "2": {
+          "name": "entity.name.type.cmk"
+        },
+        "3": {
+          "patterns": [
+            {
+              "include": "#compose-key"
+            },
+            {
+              "include": "#callform-kv"
+            },
+            {
+              "include": "#variables"
+            },
+            {
+              "match": "[()]",
+              "name": "punctuation.cmk"
+            }
+          ]
+        }
+      }
+    },
+    "banana-instance": {
+      "comment": "module-level named-banana INSTANCE head -- a KIND (one or more dotted words, the space-form of a dotted constructor: `container job` = `container.job`) followed by the instance NAME, then a banana opener: `container job hello(| .. |)`, `multistage image greeter(| .. |)`, `jqlang git_status(| .. |)`.  Capture 1 (the KIND words) is `entity.name.type.cmk`; capture 2 (the final NAME) is `entity.name.function.cmk`.  Requires 2+ words so a bare `portfolio(|` stays a plain #banana-name; included AFTER #decl-head so a `constructor container.job[|` DECLARATION is claimed there first (its banana/EOL lookahead lets this multi-word instance form fall through).  This is what makes the keyword-led (`container ..`) and plain (`multistage ..`) instance heads scope IDENTICALLY instead of one mis-firing as a declaration.  MIRRORS the Prism `cmk-banana-instance` token.",
+      "match": "^[ \\t]*([A-Za-z_][\\w.+-]*(?:[ \\t]+[A-Za-z_][\\w.+-]*)*)[ \\t]+([A-Za-z_][\\w.+-]*)(?=[(\\[{]\\|)",
+      "captures": {
+        "1": {
+          "name": "entity.name.type.cmk"
+        },
+        "2": {
+          "name": "entity.name.function.cmk"
+        }
+      }
+    },
+    "banana-name": {
+      "comment": "the NAME immediately before a banana opener `(|` / `[|` / `{|` -- the thing a named banana block constructs (`portfolio(| .. |)`, `git_status(| .. |)`), including the name in a user-KIND head (`jqlang git_status(| .. |)`, whose KIND is not a fixed keyword).  A `decl-head` keyword line wins over this by leftmost-match, so `strategy portfolio(|` keeps its keyword+type scopes.  Same `entity.name.function.cmk` as the stream receiver.",
+      "match": "[\\w+-][\\w.+-]*(?=[(\\[{]\\|)",
+      "name": "entity.name.function.cmk"
+    },
+    "callform-name": {
+      "comment": "namespaced callform name -- a known cmk namespace root + dotted members immediately before a `(` or `/` (e.g. `log.target(..)`, `cmk.log.io(..)`, `io.foo/bar`).  The commonest kind of 2-space recipe line in cmk, otherwise unscoped.  Restricted to the Prism `cmk-fxn` namespace set so it never repaints an ordinary dotted shell/word token; INCLUDED AFTER `#target` so a pattern-rule head like `mk.foo/%:` stays a target rather than being grabbed by the `/` lookahead.  MIRRORS the Prism `cmk-fxn` token (entity.name.function.namespaced.cmk).",
+      "match": "(?<![\\w.])(?:io|log|cmk|docker|Dockerfile|flux|stage|mk|stream|tux)(?:\\.[\\w+-]+)+(?=[(/])",
+      "name": "entity.name.function.namespaced.cmk"
+    },
+    "define-block": {
+      "name": "meta.definition.makefile.cmk",
+      "begin": "^[ \\t]*(define)[ \\t]+([^\\r\\n]+)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.define.cmk"
+        },
+        "2": {
+          "name": "entity.name.function.define.cmk"
+        }
+      },
+      "end": "^[ \\t]*(endef)\\b",
+      "endCaptures": {
+        "1": {
+          "name": "keyword.control.define.cmk"
+        }
+      },
+      "patterns": [
+        {
+          "include": "$self"
+        }
+      ]
+    },
+    "cmk-import": {
+      "comment": "cmk-lang namespace directives (MIRROR: prism-cmk.js `cmk-import`).  Col-0 forms, differing by INTENT: `import <ns>[, ..]` USE (assert-resolves), `open <ns>[, ..] [except A B]` MODIFY (load-if-exists, drop names), `import <src>[, ..] as <ns>[, ..] [kw=v..]` load source(s) + route namespace(s), `from <mod> import <*|names> [except A B]` Pythonic selective bind of a module's members.",
+      "patterns": [
+        {
+          "comment": "`from <mod> import <*|names> [except A B]` -- Pythonic selective bind of a core module's prelude members (twin of `open`).",
+          "match": "^[ \\t]*(from)[ \\t]+([A-Za-z0-9._-]+)[ \\t]+(import)[ \\t]+(\\*|[A-Za-z0-9._-]+(?:[ \\t]*,[ \\t]*[A-Za-z0-9._-]+)*)(?:[ \\t]+(except)[ \\t]+([A-Za-z0-9._-]+(?:[ \\t]*,?[ \\t]*[A-Za-z0-9._-]+)*))?[ \\t]*$",
+          "captures": {
+            "1": {
+              "name": "keyword.control.import.from.cmk"
+            },
+            "2": {
+              "name": "entity.name.namespace.cmk"
+            },
+            "3": {
+              "name": "keyword.control.import.cmk"
+            },
+            "4": {
+              "name": "entity.name.namespace.cmk"
+            },
+            "5": {
+              "name": "keyword.control.import.except.cmk"
+            },
+            "6": {
+              "name": "entity.name.namespace.cmk"
+            }
+          }
+        },
+        {
+          "comment": "`import <src>[, <src2>] as <ns>[, <ns2>] [kw=v..]` -- the aliasing/loading form.",
+          "match": "^[ \\t]*(import)[ \\t]+([A-Za-z0-9._/-]+(?:[ \\t]*,[ \\t]*[A-Za-z0-9._/-]+)*)[ \\t]+(as)[ \\t]+([A-Za-z0-9._-]+(?:[ \\t]*,[ \\t]*[A-Za-z0-9._-]+)*)((?:[ \\t]+[\\w.+-]+=[^\\r\\n]*)?)[ \\t]*$",
+          "captures": {
+            "1": {
+              "name": "keyword.control.import.cmk"
+            },
+            "2": {
+              "name": "entity.name.namespace.cmk"
+            },
+            "3": {
+              "name": "keyword.control.import.as.cmk"
+            },
+            "4": {
+              "name": "entity.name.namespace.cmk"
+            },
+            "5": {
+              "patterns": [
+                {
+                  "include": "#compose-key"
+                },
+                {
+                  "include": "#cmk-import-kwargs"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "comment": "`open <ns>[, <ns2>] [except A B]` -- MODIFY intent (own scope so themes can distinguish it from `import`); optional `except` list drops named members (twin of `from .. import * except`).",
+          "match": "^[ \\t]*(open)[ \\t]+([A-Za-z0-9._-]+(?:[ \\t]*,[ \\t]*[A-Za-z0-9._-]+)*)(?:[ \\t]+(except)[ \\t]+([A-Za-z0-9._-]+(?:[ \\t]*,?[ \\t]*[A-Za-z0-9._-]+)*))?[ \\t]*$",
+          "captures": {
+            "1": {
+              "name": "keyword.control.import.open.cmk"
+            },
+            "2": {
+              "name": "entity.name.namespace.cmk"
+            },
+            "3": {
+              "name": "keyword.control.import.except.cmk"
+            },
+            "4": {
+              "name": "entity.name.namespace.cmk"
+            }
+          }
+        },
+        {
+          "comment": "`import <ns>[, <ns2>]` -- USE intent (bare, no `as`).",
+          "match": "^[ \\t]*(import)[ \\t]+([A-Za-z0-9._-]+(?:[ \\t]*,[ \\t]*[A-Za-z0-9._-]+)*)[ \\t]*$",
+          "captures": {
+            "1": {
+              "name": "keyword.control.import.cmk"
+            },
+            "2": {
+              "name": "entity.name.namespace.cmk"
+            }
+          }
+        }
+      ]
+    },
+    "cmk-import-kwargs": {
+      "comment": "trailing `key=value` kwargs on an `import .. as ..` directive.",
+      "match": "([\\w.+-]+)(=)([^\\s]*)",
+      "captures": {
+        "1": {
+          "name": "variable.parameter.cmk"
+        },
+        "2": {
+          "name": "keyword.operator.assignment.cmk"
+        },
+        "3": {
+          "name": "string.unquoted.cmk"
+        }
+      }
+    },
+    "cmk-include": {
+      "comment": "`include` / `-include` / `sinclude` directive -- split from #keywords so it can render brighter than ordinary keywords (MIRROR: prism-cmk.js `keyword-include`)",
+      "name": "keyword.control.import.include.cmk",
+      "match": "(?<![\\w-])(?:-include|sinclude|include)\\b"
+    },
+    "keywords": {
+      "name": "keyword.control.cmk",
+      "match": "\\b(?:define|endef|else|endif|export|ifn?def|ifn?eq|override|private|undefine|unexport|vpath)\\b"
+    },
+    "target": {
+      "comment": "Rule head: NAME(s) up to the `:`/`::` (never `:=`) + prerequisites.  Capture 3 = the deps, run to EOL or an inline `;`-recipe (left for the recipe grammar), so they can be weighted separately (oblique via the package.json textMateRule).  MIRRORS the Prism `prereq` token (entity.name.function.target.prereq.cmk).  The leading `(?![^:=\\r\\n]*[(\\[{]\\|)` negative-lookahead REFUSES the match when a banana opener (`(|`/`[|`/`{|`) precedes the colon -- a real target/pattern-rule head never contains one, so this stops a KIND-prefixed named-banana head like `jqlang wrap(|   { result: . } |)` from being mis-read as a target up to the `:` inside the (jq) body (#banana-name only preempts col-0 heads; a KIND prefix pushes the name off column 0).",
+      "match": "^(?![\\t ])(?![^:=\\r\\n]*[(\\[{]\\|)(\\.[A-Z][A-Za-z]+\\b|[^\\s:=#][^:=\\r\\n]*?)[ \\t]*(::?)(?!=)([^;\\r\\n]*)",
+      "captures": {
+        "1": {
+          "patterns": [
+            {
+              "name": "support.function.target.cmk",
+              "match": "^\\.[A-Z][A-Za-z]+$"
+            },
+            {
+              "include": "#variables"
+            },
+            {
+              "name": "entity.name.function.target.cmk",
+              "match": ".+"
+            }
+          ]
+        },
+        "2": {
+          "name": "keyword.operator.rule.cmk"
+        },
+        "3": {
+          "patterns": [
+            {
+              "include": "#variables"
+            },
+            {
+              "name": "keyword.operator.rule.cmk",
+              "match": "\\|"
+            },
+            {
+              "name": "entity.name.function.target.prereq.cmk",
+              "match": "[^\\s|]+"
+            }
+          ]
+        }
+      }
+    },
+    "strings": {
+      "patterns": [
+        {
+          "comment": "Pythonic DOCSTRING -- a triple-quote group that OPENS a line (col-0 = module `__doc__`, tab-indented first recipe line = target docstring).  The `^[ \\t]*` anchor excludes an inline triple-string VALUE (which follows `=`/`(`/a command mid-line), so a docstring can render muted+italic (see package.json textMateRule).  MUST precede the generic triple-string below.  MIRRORS the Prism `cmk-docstring-triple` token.",
+          "name": "string.quoted.docstring.cmk",
+          "begin": "^[ \\t]*(?:\"\"\"|''')",
+          "end": "\"\"\"|'''",
+          "patterns": [
+            {
+              "include": "#compose-key"
+            },
+            {
+              "include": "#variables"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.triple.cmk",
+          "begin": "\"\"\"|'''",
+          "end": "\"\"\"|'''",
+          "patterns": [
+            {
+              "include": "#compose-key"
+            },
+            {
+              "include": "#variables"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.double.cmk",
+          "begin": "\"",
+          "end": "\"|$",
+          "patterns": [
+            {
+              "name": "constant.character.escape.cmk",
+              "match": "\\\\."
+            },
+            {
+              "include": "#variables"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.cmk",
+          "begin": "'",
+          "end": "'|$"
+        },
+        {
+          "name": "string.interpolated.cmk",
+          "begin": "`",
+          "end": "`|$",
+          "patterns": [
+            {
+              "include": "#variables"
+            }
+          ]
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.shell.cmk",
+          "match": "\\$\\$\\{[^}]*\\}|\\$\\$[A-Za-z_]\\w*"
+        },
+        {
+          "name": "constant.character.escape.dollar.cmk",
+          "match": "\\$\\$(?![({\\w])"
+        },
+        {
+          "name": "variable.language.automatic.cmk",
+          "match": "\\$[@*<^?+|]|\\$\\([@*<^?+|][DF]\\)"
+        },
+        {
+          "match": "(\\$\\(call)[ \\t]+([\\w.+-]+)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.cmk"
+            },
+            "2": {
+              "name": "entity.name.function.macro.cmk"
+            }
+          }
+        },
+        {
+          "comment": "GNU Make builtin function library -- `$(shell ..)`, `$(wildcard ..)`, `$(patsubst ..)` etc.  The `$(` opener + the function word scope; arguments fall through to the surrounding patterns (so an inner `${..}` still highlights).  MIRRORS the Prism stock-makefile `function` token (support.function.builtin.cmk).",
+          "match": "(\\$[({])(shell|wildcard|patsubst|subst|foreach|if|or|and|eval|strip|dir|notdir|suffix|basename|addsuffix|addprefix|join|word|words|wordlist|firstword|lastword|filter|filter-out|sort|origin|flavor|error|warning|info|value|abspath|realpath|file|guile|call)\\b",
+          "captures": {
+            "1": {
+              "name": "punctuation.cmk"
+            },
+            "2": {
+              "name": "support.function.builtin.cmk"
+            }
+          }
+        },
+        {
+          "comment": "`${mk.def.read}/hello_world` -- a var-ref used like a path (a compose.mk idiom): the `${..}` head splits from the `/tail`.  Placed BEFORE the plain var-ref below so the head is not consumed alone.  MIRRORS the Prism `pseudo-path` token (entity.name.path.tail.cmk).",
+          "match": "(\\$)([{(])([\\w.+-]+)([})])(/)([\\w.+*?/-]+)",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.variable.cmk"
+            },
+            "2": {
+              "name": "punctuation.cmk"
+            },
+            "3": {
+              "name": "variable.cmk"
+            },
+            "4": {
+              "name": "punctuation.cmk"
+            },
+            "5": {
+              "name": "punctuation.cmk"
+            },
+            "6": {
+              "name": "entity.name.path.tail.cmk"
+            }
+          }
+        },
+        {
+          "match": "(\\$)([{(])([\\w.+-]+)([})])",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.variable.cmk"
+            },
+            "2": {
+              "name": "punctuation.cmk"
+            },
+            "3": {
+              "name": "variable.cmk"
+            },
+            "4": {
+              "name": "punctuation.cmk"
+            }
+          }
+        }
+      ]
+    },
+    "dunder": {
+      "name": "constant.language.dunder.cmk",
+      "match": "__(?:main|init|name)__"
+    },
+    "embed-fence": {
+      "name": "punctuation.definition.embed.cmk",
+      "comment": "U+2AFB triple-solidus and U+1F7B9 as the Dockerfile / config embed fences",
+      "match": "\\x{2AFB}|\\x{1F7B9}"
+    },
+    "cmk-sugar": {
+      "comment": "integral U+2A16; flow arrows U+21D0 U+1409 U+1F844 U+1F846 U+2B26 U+2B25 U+174F; sigil U+25B0; bracket-pair U+27E6 U+27E7; chevron-pair U+22D9 U+22D8 (both promoted to their own scope -- MIRRORS Prism cmk-bracket/cmk-chevron)",
+      "patterns": [
+        {
+          "name": "keyword.operator.integral.cmk",
+          "match": "\\x{2A16}"
+        },
+        {
+          "name": "keyword.operator.flow.cmk",
+          "match": "[\\x{21D0}\\x{1409}\\x{1F844}\\x{1F846}\\x{2B26}\\x{2B25}\\x{174F}]"
+        },
+        {
+          "name": "punctuation.definition.bracket.cmk",
+          "match": "[\\x{27E6}\\x{27E7}]"
+        },
+        {
+          "name": "keyword.operator.chevron.cmk",
+          "match": "[\\x{22D9}\\x{22D8}]"
+        },
+        {
+          "name": "keyword.operator.sigil.cmk",
+          "match": "[\\x{25B0}]"
+        },
+        {
+          "match": "[(\\[{]\\||\\|[)\\]}]",
+          "name": "keyword.operator.banana.cmk"
+        },
+        {
+          "match": "\\{[^{}\\r\\n]*=[^{}\\r\\n]*\\}",
+          "name": "keyword.operator.env.cmk"
+        }
+      ]
+    },
+    "handle": {
+      "comment": "the `&NAME` HANDLE bind LHS -- the `&` marks a DEFERRED bind (`&bound <- ..`): store the callable but do NOT run it.  Capture 1 (the `&` sigil) is an operator; capture 2 (the name) is a variable, so the name isn't left as plain text and the `&` isn't mis-tagged as the shell `&&`/background operator.  A trailing `<-` lookahead scopes it to the bind site ONLY, so a YAML anchor (`alice: &base`) inside an inlined compose file is left alone.  Included BEFORE #operators so its bare `&` doesn't win first.  MIRRORS the Prism `cmk-handle` token.",
+      "match": "(?<![\\w&])(&)([A-Za-z_][\\w.+-]*)(?=[ \\t]*<-)",
+      "captures": {
+        "1": {
+          "name": "keyword.operator.handle.cmk"
+        },
+        "2": {
+          "name": "variable.other.handle.cmk"
+        }
+      }
+    },
+    "capture": {
+      "comment": "the `<-` capture operator (rendered EXTREMELY bright/bold/oblique via the package.json textMateRule).  Lookbehind `(?<![<$])` keeps `<<-` heredocs / `$<` auto-vars clear.  MIRRORS the Prism `cmk-capture` token.",
+      "name": "keyword.operator.capture.cmk",
+      "match": "(?<![<$])<-"
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.heredoc.cmk",
+          "match": "<<<?-?"
+        },
+        {
+          "name": "keyword.operator.shell.cmk",
+          "match": "&&|\\|\\||[|&;]"
+        },
+        {
+          "name": "punctuation.separator.continuation.cmk",
+          "match": "\\\\$"
+        }
+      ]
+    }
+  }
+}

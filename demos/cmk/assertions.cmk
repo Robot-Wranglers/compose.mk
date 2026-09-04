@@ -1,0 +1,44 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# assertions.cmk: the `assert.*` defensive checks.
+#
+# Same contract: pass quietly when the condition holds, fail loudly (red
+# log + nonzero exit) otherwise.  Macros use the `cmk.assert.X(..)`
+# callform; target forms ride as prerequisites (`demo.tools:
+# assert.tool.required/bash`).
+#
+# USAGE: ./demos/cmk/assertions.cmk
+
+import stream, log
+
+demo.env: assert.env/HOME,PATH
+    '''
+    environment: the prereq uses the multi-var assert.env target
+    (comma-separated); inline, `assert.env.var` is the single-var macro.
+    (Passes -- HOME/PATH are set.)
+    '''
+    cmk.assert.env.var(HOME)
+    log(environment assertions passed)
+
+demo.tools: assert.tool.required/bash
+    '''
+    tools: a CLI tool is on PATH (wraps `which`).  The prereq asserts
+    `bash`; the inline macro takes an optional install hint.  Great as a
+    prerequisite for release targets.
+    '''
+    cmk.assert.tool.required(make, Install GNU make and retry)
+    log(tool assertions passed)
+
+demo.stream:
+    '''
+    streams: stdin is a real stream (not a tty), for targets that must
+    consume a pipe.
+    '''
+    cmk.assert.stream.stdin.required()
+    stream.as.log[${stream.stdin}]
+
+__main__:
+    this.demo.env
+    this.demo.tools
+    @# feed demo.stream a stream so its assertion passes:
+    echo 'piped input -> stream assertion passes' | this.demo.stream

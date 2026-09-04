@@ -1,0 +1,107 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+{{ macros.non_core('fault.cmk', detail='Core ships only a tiny *degrade-hook* so that loading the plugin transparently upgrades error paths like `assert.env.var`; see [below](#the-assert-upgrade).', mkdocs=mkdocs) }}
+
+{{ macros.section(3, "Faults (Typed Exceptions)", id="faults-typed-exceptions") }}
+
+
+A **fault** is a *typed exception*[^exc] for `compose.mk`, built directly on the
+[Events / channel stdlib]({{_}}/standard-lib).  A target "raises" by calling `fault.throw`, which emits a
+typed event onto the `fault` channel and then **fails**.  Failures are typically *swallowed* at the
+call-site; at end of run an at-exit drain routes each in-flight event to a handler target named for its
+type (`fault/<Type>:`), or the `fault/%:` fallback.
+
+The trick is that **routing is just `make`'s own rule precedence** (an explicit rule beats a pattern
+rule), so there is no handler registry to maintain: a fault is "caught" if and only if a target by that
+name exists.  This is the same [homoiconic-on-targets]({{_}}/cmk/paradigm/#homoiconic)
+idea behind the rest of CMK's [flow control]({{_}}/demos/flow-control).
+
+### Two flavors of error handling
+<hr class="section-rule lvl-3">
+
+`compose.mk` gives you two complementary tools.  Reach for `flux.try.*` for **local, synchronous**
+recovery around a known target; reach for **faults** when errors are **typed and cross-cutting** and you
+want to *defer* handling to a single place.
+
+| | {{site.api_link('flux.try.except.finally', mkdocs)}} (core) | Faults / `fault.cmk` (this plugin) |
+| --- | --- | --- |
+| **When it runs** | synchronous, inline at the failure site | deferred: dispatched at-exit (or an explicit drain) |
+| **Granularity** | one named try / except / finally target | many faults accumulate, dispatched together |
+| **Typing** | untyped (a target failed) | typed events (`fault/<Type>:`) |
+| **Routing** | you name the except target | `make` rule precedence picks the handler |
+| **Dependencies** | none (pure core) | the channel stdlib; structured emit is best-effort |
+| **Use it for** | retry / cleanup around a step | exception taxonomies, dead-letter routing, error reporting |
+
+### Fault surface
+<hr class="section-rule lvl-3">
+
+Constructing the channel with `channel fault(..)` generates the underlying channel operators (see the
+[channel operators]({{_}}/standard-lib)); the module layers the exception
+vocabulary on top:
+
+| Member | Kind | Role |
+| --- | --- | --- |
+| `fault.throw(<Type>[, k=v ...])` | macro | **raise**: emit a typed event (recording `target` + `file`), then fail.  Bootstrap-safe: a missing toolchain can never mask the real fault. |
+| `fault.guarded` / `@fault.guarded` | macro / [decorator]({{_}}/cmk/compiler/#receivers) | **inline catch**: run on a command's failure; capture its exit code and re-throw it as a typed `SubprocessFault`. |
+| `fault/<Type>:` | target | **handler**: registered simply by existing; beats the module's `fault/%:` fallback via rule precedence. |
+| `fault.dispatch.by_type` | target | the at-exit **drain**: pops each in-flight event and routes it to its handler. |
+| `fault.show` / `fault.log` | macro | per-event presentation (an FTA-kind glyph + the fault header) and the red structured logger. |
+
+### Fault kinds (FTA taxonomy)
+<hr class="section-rule lvl-3">
+
+The FTA-kind glyph is drawn from Fault Tree Analysis's event taxonomy, set per-fault via the
+`kind=` meta on `fault.throw`:
+
+| `kind=` | glyph | meaning |
+| --- | :-: | --- |
+| `basic` | ● | a root component / tool failure |
+| `external` | ⌂ | an expected occurrence |
+| `undeveloped` | ◆ | unknown / no info |
+| `conditioning` | ⬭ | a gate / precondition |
+
+### Importing it
+<hr class="section-rule lvl-3">
+
+The plugin **owns** the `fault` vocabulary and the `fault/` route verbatim (a fixed convention, not an
+aliasable namespace), so you just load it:
+
+```make
+include compose.mk
+$(call include.plugins, fault.cmk)
+```
+
+Because it is authored in [cmk-lang]({{_}}/cmk/compiler) but JIT-compiled at
+include-time, the resulting macros and targets are callable from **plain Makefiles** too.  Toggle between
+the plugin itself (cmk-lang) and a vanilla-`make` consumer that loads it:
+
+{{site.embed_mirror('demos/fault.mk', '.cmk/fault.cmk', github=github, default='cmk')}}
+
+<a name="the-assert-upgrade"></a>
+### Upgrade: `assert.env.var`
+<hr class="section-rule lvl-3">
+
+Core's {{site.api_link('assert.env', mkdocs)}} contains a degrade switch keyed on whether `fault.throw`
+is defined.  On its own, a failed assertion is a plain hard exit.  But once
+`fault.cmk` is imported, `fault.throw` *is* defined, so the very same assertion instead **raises a typed
+`EnvVarUnset` fault** that routes to a handler, with **no change to the asserting code**.  This is the
+pattern that lets the core stdlib adopt the exception idiom without gaining a hard docker / `json.bash`
+dependency on its error paths.
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Flow Control: Typed Exceptions]({{_}}/demos/flow-control/#typed-exceptions): the from-scratch `exceptions.cmk` walkthrough this plugin was distilled from; read it to *understand* the mechanism, import `fault.cmk` to *use* it.
+* [Standard Library]({{_}}/standard-lib): the Events / channel primitives faults are built on.
+* [Functional]({{_}}/functional): the `flux.try.*` synchronous try/except/finally operators.
+* [Assertions]({{_}}/assertions): `assert.env` and friends, which the module upgrades.
+* [Plugin Overview]({{_}}/plugins/overview/#plugin-api-usage): how plugins load and bind (the import / JIT-compile mechanism).
+
+{{ macros.section(3, "References", id="references") }}
+
+[^exc]: {{ tufte.wiki('Exception_handling')|trim }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+    addImageToHeader('faults-typed-exceptions','/{{mkdocs.config.site_name}}/img/boom.svg')
+}, 100);});
+</script>

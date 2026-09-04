@@ -1,0 +1,34 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# j2-templating.cmk: jinja templates as a machine-backed dsl.
+
+'''
+A jinja dsl bound to the jinjanator container: each template renders by running
+jinjanate on its body, with the JSON context proxied in on stdin.
+'''
+
+import io
+from cmk import dsl, Dockerfile
+
+# jinjanator has no stock image; the body is its Dockerfile.
+Dockerfile jinjanator(|
+  FROM python:3.11-slim-bookworm
+  RUN pip install jinjanator --break-system-packages
+|)
+
+# jinja: a machine-backed dsl; jinjanate renders each template.
+dsl jinja(img=compose.mk:jinjanator entrypoint=jinjanate cmd=--quiet flag=-fjson feed=flag)(| |)
+
+jinja hello_template.j2(|
+  {% for i in range(3) %}
+  hello {{name}}! ( {{loop.index}} )
+  {% endfor %}
+|)
+
+jinja bye_template.j2(|
+  bye {{name}}!
+|)
+
+__main__:
+    '''Feed JSON into each template; the image builds on first use.'''
+    io.json_builder(name=foo) | hello_template.j2()
+    io.json_builder(name=foo) | bye_template.j2()

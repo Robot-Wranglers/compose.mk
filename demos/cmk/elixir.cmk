@@ -1,0 +1,24 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# elixir.cmk:
+#   Run an inline elixir snippet in a container.  An unbound code-object
+#   holds the source and a module-level container ambient gives the
+#   runtime; the container dispatches the object source (container/object).
+#
+# USAGE: ./demos/cmk/elixir.cmk
+
+from cmk import container
+
+# The elixir runtime as a container ambient: image + interpreter.
+container elixir(img=elixir:otp-27-alpine entrypoint=elixir)(| |)
+
+# An unbound code-object; the banana body is the snippet source.
+code unbound(|
+  import IO, only: [puts: 1]
+  puts("elixir World! (dispatched into the container)")
+  System.halt(0)
+|)
+
+__main__:
+  # container-centric: run the unbound object's source in the container.
+  this.elixir/unbound

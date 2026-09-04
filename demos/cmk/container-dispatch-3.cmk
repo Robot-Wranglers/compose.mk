@@ -1,0 +1,22 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# container-dispatch-3.cmk:
+#   Toolboxes via multiple compose files, imported to separate
+#   namespaces with compose.import.as (no root clutter).
+#
+# USAGE: ./demos/cmk/container-dispatch-3.cmk
+
+compose.import.as(namespace=▰ \
+    file=demos/data/docker-compose.build-tools.yml)
+compose.import.as(namespace=🜹 \
+    file=demos/data/docker-compose.docs-tools.yml)
+
+__main__: build docs
+
+build: ▰/golang/self.code.gen
+self.code.gen:
+    echo "pretending to use golang"
+
+docs: 🜹/latex/self.docs.gen
+self.docs.gen:
+    echo "pretending to use LaTeX"

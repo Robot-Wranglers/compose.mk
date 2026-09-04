@@ -1,0 +1,33 @@
+# See also: https://docs.github.com/en/actions
+# The docker.* pytest suite (via tox). Needs a docker daemon, which
+# ubuntu-latest provides. One suite per workflow; integration has its own
+# (integration-tests.yml). Network builds stay off unless CMK_TEST_NETWORK=1.
+name: Docker Tests
+on:
+  workflow_dispatch: {}
+  workflow_call: {}
+  push:
+    branches: [ "main", "[0-9]+.[0-9]+" ]
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
+  pull_request:
+    branches: [ "main", "[0-9]+.[0-9]+" ]
+    paths-ignore: ['**.gif', '**.md', '**.md.j2', '**.mmd', '**.png', '**.svg']
+permissions:
+  contents: read
+jobs:
+  docker:
+    name: docker.* suite (pytest via tox)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Initialize
+        run: make clean init
+      - name: Docker tests
+        run: make docker-test

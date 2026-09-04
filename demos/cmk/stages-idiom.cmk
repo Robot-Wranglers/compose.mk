@@ -1,0 +1,33 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# stages-idiom.cmk:
+#   Stages as an explicit
+#   enter/exit context manager.  The JSON pushes use the square-bracket
+#   [stream] call-form: `stage.push(<stage>)[S]` lowers to `S |
+#   ${make} stage.push/<stage>` (the `[...]` supplies stdin; the
+#   triple-quote literal protects the JSON's own brackets).
+#
+#   See the docs for more discussion [1].
+#
+# USAGE: ./demos/cmk/stages-idiom.cmk
+#
+# REFS:
+#   [1]: https://robot-wranglers.github.io/compose.mk/stages
+
+import stage
+
+__main__: validate
+
+# Wrap targets with stage enter/exit as an explicit context-manager (a
+# plain prerequisite list, exactly like the Makefile twin).
+validate: \
+    stage.enter/VALIDATION \
+        project.scan \
+        project.analyze \
+    stage.exit/VALIDATION
+
+project.scan:
+    stage.push(VALIDATION)["""["results"]"""]
+
+project.analyze:
+    stage.push(VALIDATION)["""["other results"]"""]

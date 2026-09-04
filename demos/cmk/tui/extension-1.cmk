@@ -1,0 +1,32 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# extension-1.cmk: a minimal demo for extending the embedded TUI.
+#
+# USAGE: ./demos/cmk/tui/extension-1.cmk
+
+'''
+An inlined Dockerfile builds a nixos+yazi
+image, that image is mapped onto a target (a "widget"), and tux.open tiles two of the
+widgets into a horizontal layout.
+'''
+
+# A nixos container with yazi.
+# https://yazi-rs.github.io/docs/installation/#nix
+open cmk
+Dockerfile yazi(|
+    FROM nixos/nix
+    RUN nix-channel --update && nix-env -iA nixpkgs.yazi
+    ENTRYPOINT ["yazi"]
+|)
+
+widget.yazi:
+    '''
+    Maps the yazi container invocation onto a target.  This works the way
+    you'd expect without the TUI too, so we leave it a public target.
+    '''
+    docker.image.run(compose.mk:yazi){cmd="demos/" tty=1}
+
+# Main top-level / public entrypoint.  Extending the TUI usually starts with a
+# call to tux.open (basic tmux backend session info); here we opt for a
+# horizontal layout and instantiate two of the yazi widgets.
+__main__: yazi.build tux.open.horizontal/widget.yazi,widget.yazi

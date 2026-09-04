@@ -1,0 +1,56 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# stdlib-stream-io.cmk: a guided
+# tour of the stream.* standard library (stdin->stdout filters).
+#
+# Same tour as the plain Makefile: delimiter conversion, line-numbering,
+# folding, indenting, previews, and syntax-highlighting.  Where the Makefile
+# pipes into a `${stream.X}` macro, the twin uses the receiver form
+# `stream.X[ <producer> ]`; env-prefixed / chained steps stay ordinary pipes.
+#
+# USAGE: ./demos/cmk/stdlib-stream-io.cmk
+
+import log, stream
+
+__main__:
+    @# --- delimiter conversions: reshape a flat list between separators
+    @# ----------
+    log.io(space-delimited  ->  newline-delimited)
+    stream.space.to.nl[echo foo bar baz]
+    log.io(newline-delimited  ->  space-delimited)
+    stream.nl.to.space[printf 'foo\nbar\nbaz']
+    log.io(newline-delimited  ->  comma-delimited)
+    stream.nl.to.comma[printf 'foo\nbar\nbaz']
+
+    @# --- shaping text: number lines, fold long ones, indent
+    @# --------------------
+    log.io(prefix each line with its index)
+    stream.nl.enum[printf 'first\nsecond']
+    log.io(fold long lines to a fixed width)
+    ls docs/*.md.j2 | width=45 ${stream.fold}
+    log.io(indent every line)
+    stream.indent[printf 'a\nb']
+
+    @# --- previews: inspect a stream without disturbing the pipe
+    @# ---------------- `stream.peek` (alias: stream.as.log) tees its input to
+    @# stderr and passes stdout through untouched -- handy for debugging
+    @# mid-pipeline.
+    log.io(peek at a stream mid-pipe -- stdout is unchanged)
+    stream.peek[ls README.md] > /dev/null
+    @# `stream.markdown` (alias: stream.glow) renders Markdown; `stream.img`
+    @# (alias: stream.chafa) renders an image -- both dockerized, no host
+    @# install.
+    log.io(render markdown / preview an image in the terminal)
+    stream.markdown[cat README.md]
+    stream.img[cat docs/img/icon.png]
+
+    @# --- syntax highlighting
+    @# ---------------------------------------------------
+    log.io(colorize yaml / csv)
+    stream.yaml.pygmentize[printf 'foo: bar']
+    stream.csv.pygmentize[printf 'foo, bar']
+
+    @# --- composition: stream filters chain like any unix pipe
+    @# ------------------
+    log.io(chain helpers -- render markdown, then indent the result)
+    cat README.md | ${stream.glow} | ${stream.indent}

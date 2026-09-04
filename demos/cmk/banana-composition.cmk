@@ -1,0 +1,66 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-composition.cmk: pass several block bodies to a constructor (currying).
+#
+# USAGE: ./demos/cmk/banana-composition.cmk
+
+'''
+Multi-body composition: [ctor] NAME(| A |) + (| B |).. hands N block bodies to a
+constructor.  The + reads as composition; bare adjacency (| A |)(| B |) is the
+same thing with the + left implicit.  A constructor is declared in one block with
+the constructor keyword; its body is a template that auto-binds the bodies
+positionally as `body1`, `body2`, `body3`, .. (`self` aliases `body1`).  So
+the template is pure intent -- no mk.unpack.kwargs prologue, no `kwargs_def`
+accessors.
+
+The template is a [| .. |] cook bracket, so recipe lines can use this.X(..)
+callforms.  (| versus ( distinguishes a second block from an (args) trailer, so
+they never collide.  Two demos, both docker payloads:
+
+  1. build+run   -- body1 = Dockerfile, body2 = script run in the image
+  2. multi-stage -- body1 = build stage, body2 = runtime (COPY --from)
+
+Needs docker.
+'''
+
+# `from cmk import` binds just these two keywords bare (see the compiler prelude docs).
+from cmk import constructor, container
+constructor container.job[|
+  '''
+  build the image from `body1`, then stream `body2` (a script) into a fresh sh
+  inside it.  bodies are read at recipe time via mk.def.read (⬥NAME lowers before
+  the ctor's eval, so it can't be used here).
+  '''
+  self:
+    this.mk.def.read(${body2}) | cmd=sh this.docker.lambda(${body1})
+|]
+
+container job hello(|
+    FROM alpine:3.21.2
+|) + (|
+    echo "== hello from the container =="
+    cat /etc/alpine-release
+|)
+
+constructor multistage.image[|
+  '''
+  concatenate `body1` (build stage) and `body2` (runtime) into one multi-stage
+  Dockerfile, build it, and run the final image.  stage 2 inherits via COPY --from.
+  '''
+  ${body1}:
+    { this.mk.def.read(${body1}); this.mk.def.read(${body2}); } \
+    | docker build -q - | xargs -I@ docker run --rm @
+|]
+
+# greeter uses bare adjacency (| .. |)(| .. |), leaving the `+` implicit.
+
+multistage image greeter(|
+    FROM alpine:3.21.2 AS build
+    RUN echo "artifact built in stage-1" > /out.txt
+|)(|
+    FROM alpine:3.21.2
+    COPY --from=build /out.txt /out.txt
+    CMD cat /out.txt
+|)
+
+__main__: hello greeter

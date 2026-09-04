@@ -1,0 +1,36 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# platform.cmk:
+#   A way to organize platform lifecycle automation with `compose.mk`, in
+#   CMK-lang.  Namespace-style dispatch runs commands in docker-compose
+#   managed containers, and `compose.mk` workflows describe the data-flow.
+#   Ported from demos/platform.mk.
+#
+# USAGE: ./demos/cmk/platform.cmk
+
+import log
+
+__main__: platform.setup.basic
+
+# Import the platform compose file: scaffolds terraform/ansible container
+# targets and sets up target-dispatch sugar under the "▰" namespace.
+compose.import(file=demos/data/docker-compose.platform.yml namespace=▰)
+
+# Map targets to containers.  A public, top-level target.
+platform.setup.basic: \
+    ▰/terraform/self.infra.setup \
+    ▰/ansible/self.app.setup
+
+self.infra.setup:
+    '''
+    Two "private" targets below, bound to specific containers by the target
+    above.  Each emits a JSON event using the arrow operator (simulating
+    terraform/ansible output).
+    '''
+    log(pretending to use terraform..)
+    🡄 log="infra setup done" metric=123 \
+        event="terraform container task"
+self.app.setup:
+    log(pretending to use ansible..)
+    🡄 log="app setup done" metric=456 \
+        event="ansible container task"

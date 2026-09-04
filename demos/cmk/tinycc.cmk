@@ -1,0 +1,28 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# tinycc.cmk: a compiled-language (C) polyglot via tinycc.
+#
+# USAGE: ./demos/cmk/tinycc.cmk
+
+'''
+A Dockerfile whose entrypoint is `tcc -x c -run`; its `.polyglot` creates the C code-object.
+'''
+
+from cmk import Dockerfile
+
+Dockerfile tcc(|
+  FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
+  RUN apt-get update -qq; apt-get install -qq -y tcc
+  ENTRYPOINT ["tcc", "-x", "c", "-run"]
+|)
+
+tcc.polyglot hello_world(|
+  #include <stdio.h>
+  int main() {
+      printf("Hello, World from TinyCC!\n");
+      return 0;
+  }
+|)
+
+# Build the tcc image, preview the code, then compile+run it.
+__main__: hello_world.preview hello_world

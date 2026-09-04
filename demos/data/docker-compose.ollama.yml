@@ -27,4 +27,4 @@ services:
         FROM python:3.11-slim-bookworm
         RUN pip install --no-cache-dir ollama==0.4.7
         RUN apt-get update -qq && apt-get install -qq -y \
-          make procps curl iputils-ping curl
+          make curl iputils-ping curl

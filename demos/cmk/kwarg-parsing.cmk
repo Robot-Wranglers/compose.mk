@@ -1,12 +1,23 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
-# CMK-lang translation of ./demos/kwarg-parsing.mk
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# kwarg-parsing.cmk:
+#   Parse keyword args from JSON into a target's locals, via the
+#   `@bind.args(from=json, ..)` decorator.  Ported from demos/kwarg-parsing.mk.
+#
 # USAGE: ./demos/cmk/kwarg-parsing.cmk
 
-emit: 
-	🡄 shape=triangle color=red
+import log
 
-consume: ᝏargs.from_json(shape color=blue name=default)
-	printf "shape=$${shape} color=$${color} name=$${name}\n"
+emit:
+    '''
+    Emit JSON for the downstream consumer to parse.
+    '''
+    log.io(emit ${sep} shape=triangle color=red)
+    🡄 shape=triangle color=red
+
+# bind.args binds a subset of the JSON keys as locals, defaulting the absent ones.
+@bind.args(from=json, shape color=blue name=default)
+consume:
+    log.io(consume ${sep} shape=$${shape} color=$${color} name=$${name})
 
 __main__:; this.emit | this.consume

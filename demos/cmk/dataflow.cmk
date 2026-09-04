@@ -1,0 +1,57 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+'''
+dataflow generalizes the banana handle fold that writes pn as p1 plus p2 plus p3 plus p4: a left-fold of one binary dunder over named fragments (graal adds via __add__ over a shared heap, jqlang pipes via __pipe__), yielding a fresh closed fragment; the operator glyph freezes the combinator and admits only the four rows of the core operator table.
+The reification lifts the combinator out of the glyph into a parameter, so any dunder drives the fold even one with no glyph: the two-paren form dataflow pipeline with combinator=__pipe__ over the operand list addone double wrap, realized here as a plain banana ctor named dataflow with no core keyword. __add__ reads as a reduce-to-value, __pipe__ as a real stage-to-stage dataflow, hence the name.
+Same shape as the flux target-algebra one layer down (flux.and and flux.pipeline fold logical-and or pipe over make goals at run time), but this folds typed values at parse time via user-extensible dunders, not goals via a fixed process algebra. Sketch only: demo-level make on lang.banana.as plus a kind binary dunder, no core edits.
+'''
+
+import io
+from cmk import dsl
+
+# dataflow: a banana ctor folding combinator over its body operands.
+dataflow = $(call lang.banana.as,$(strip $(call mk.kwargs.get,${1},def)),$(call _dataflow.reduce,$(strip $(call mk.kwargs.get,${1},combinator)),$(value $(strip $(call mk.kwargs.get,${1},def)))))
+
+# foldl1: combine the first two via the combinator, prepend, recurse.
+_dataflow.reduce = $(if $(word 2,${2}),$(call _dataflow.reduce,${1},$(call $(firstword ${2}).${1},$(word 2,${2})) $(wordlist 3,$(words ${2}),${2})),${2})
+
+# example A: combinator=__pipe__, the dataflow (pipe) reading.
+dsl.jqlang addone(| .n + 1 |)
+dsl.jqlang double(| . * 2 |)
+dsl.jqlang wrap(|   { result: . } |)
+dataflow pipeline(combinator=__pipe__)(| addone double wrap |)
+
+# example B: combinator=__add__, the fold (merge) reading.
+dsl.cmklang lib(|
+  say:; cmk.log(composed then cooked)
+|)
+dsl.cmklang entry(|
+  __main__: say
+|)
+dataflow app(combinator=__add__)(| lib entry |)
+
+# native glyph form, for the demo.equiv side-by-side.
+&glyph_pipeline <- addone|double|wrap
+
+__main__: demo.pipe demo.merge demo.equiv
+
+demo.pipe:
+  '''
+  combinator=__pipe__: the folded jq program runs over stdin as one
+  first-class fragment (n=4, +1, *2, wrapped to {result:10}).
+  '''
+  io.json_builder(n:raw=4) | pipeline()
+
+demo.merge:
+  '''
+  combinator=__add__: the folded cmklang cooks and runs its merged
+  __main__, which invokes the say target lib supplied.
+  '''
+  app()
+
+demo.equiv:
+  '''
+  same fold, native glyph form: the handle bakes the combinator into
+  the pipe between operands; dataflow takes it as a parameter.
+  '''
+  io.json_builder(n:raw=7) | this.glyph_pipeline

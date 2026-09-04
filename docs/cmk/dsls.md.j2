@@ -1,0 +1,114 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/cmk_math.j2' as cmkmath -%}{% import 'macros/tufte.j2' as tufte -%}
+
+{{ macros.section(2, "DSLs", id="dsls") }}
+
+DSLs[^dsl] in CMK are a first-class concept that can help to create, embed, and manage arbitrary "sub-languages".  This is related to the concept of *bound or unbound code objects* that is [also supported]({{_}}/cmk/concepts/#machines), but DSLs are the more flexible, powerful, and structured approach.  See the [concepts page]({{_}}/cmk/concepts/#dsls) for a quick summary, or read on for more involved discussion and examples.
+
+{# {{ macros.road_map([
+    ['Banana Forms', '@/cmk/banana', 'the block family a fragment is built from, with a demo per idiom'],
+    ['Concepts', '@/cmk/concepts/#dsls', 'the metaclass / fragment model this page makes concrete'],
+    ['Metaprogramming', '@/cmk/metaprogramming', 'where DSLs sit among sugar, dialects, and pragma'],
+    ['Compiler Tutorial', '@/cmk/compiler', 'how the compiler lowers a guest-language block'],
+], mkdocs) }} #}
+
+Before getting into examples, let's prime the intuition.
+
+Pseudo-keyword
+:   Usage of `dsl` looks like a keyword, even though it's actually imported!  That's something you'll see elsewhere in CMK, and besides merely keeping the root namespace tidy, it's keeping the grammar itself clean and consistent with the "[extensible language]({{_}}/cmk/paradigm/#language-properties)" goals.
+
+As a Metaclass
+:   It's no coincidence that usage of `dsl` resembles [usage of `class`]({{_}}/cmk/banana/#banana-cooked), and these are in fact siblings in the [compiler's tower]({{_}}/cmk/compiler).  Another way to put it: just as the `class` keyword creates **classes** and *not* instances, the `dsl` keyword creates **languages** and does *not* create polyglots / code objects.
+
+Language-Kind and Language-Shapes
+:   The last section begins to show that we need a bit of terminology here for a clean mental model.  The concept of a "kind" is [described here]({{_}}/cmk/concepts/#kinds) in more detail, but let's summarize.  An "instance" of the `dsl` metaclass is a language or a language-kind.  We prefer "kind" since thinking of it as instance risks missing the point: the instance itself is *still a constructor*.  We think of the internal code-block as a "shape", because there's really no general guarantee that it qualifies as something more specific (e.g. a runnable or a callable). Language-kind's are a specification that describes how shapes will reach a guest interpreter.
+
+{{ macros.section(3, "Simple Example", id="dsl-examples") }}
+
+To keep it simple for the first example, let's look at wrapping the `bc` tool.  (If you're not familiar with it, this little guy is a simple calculator that's been baked into most linux distributions forever.)
+
+{{site.embed_demo('demos/cmk/dsl-bclang.cmk', github=github)}}
+
+Above we see that the *easy* way for a shape to reach a guest interpreter is to make your DSL [machine-backed]({{_}}/cmk/concepts/#machines), i.e. providing kwargs for `entrypoint`, `img`, or `machine`.   After that, the DSL fragment is *callable* and can delegate invocation.  Given an `img`, the shape runs in a container, given an `entrypoint`, there is a custom interpreter, etc.
+
+
+{{ macros.section(3, "Builtin DSLs", id="builtin-dsls") }}
+
+Two guest languages ship in the box, reached qualified as `dsl.jqlang` / `dsl.awklang`.
+
+{{ macros.section(4, "dsl.jqlang", id="jqlang") }}
+
+{{ cmkmath.imath("`dsl.jqlang` @NAME (|..jq program..|)") }} wraps a `jq` program into a callable JSON builder: `NAME(..)` runs it over stdin (any extra words become `jq` flags), and `NAME.locals()` feeds the recipe's target-locals instead.  An anonymous single-use form {{ cmkmath.imath("`dsl.jqlang`(|..|).locals()") }} works too.  It is how `mk.stat` builds its report; the [Banana Forms]({{_}}/cmk/banana) page walks the whole family.
+
+The demo below puts this to work: it creates jq programs as first-class fragments, gives them a callable form, and composes them with a closed pipe algebra, which is exactly the compile-time metaprogramming DSLs are built for.
+
+{{site.embed_demo('demos/cmk/jqlang.cmk', github=github)}}
+
+{{ macros.section(4, "dsl.awklang", id="awklang") }}
+
+{{ cmkmath.imath("`dsl.awklang` @NAME (|..awk program..|)") }} creates an awk stage or utility from the block.  This is the same machinery the [compiler stages]({{_}}/cmk/pragmas/#pragma-compiler_pre_post) are built from, so `awklang` lets a plugin ship a preprocessor pass.  The raw `dsl.awklang(def=<block> run=<tgt> stem=<var>)` form additionally creates a stdin runner target.
+
+{{ macros.see_also([
+    ['Banana Forms', '@/cmk/banana', 'the jqlang / awklang family, with a demo per idiom'],
+    ['Compiler Pragmas', '@/cmk/pragmas/#pragma-compiler_pre_post', 'the compiler-stage machinery `awklang` builds on'],
+], mkdocs) }}
+
+{{ macros.section(3, "Module DSLs", id="module-dsls") }}
+
+Other DSLs ship as importable modules rather than in the box.  Each loads on demand and wraps a real toolchain, so an inline fragment becomes a callable that builds and runs the guest language.
+
+{{ macros.admonition("warning", "Optional Plugin / Module", "The DSLs in this section (`dsl.python`, `dsl.rust`, `dsl.golang`) are non-core plugins, not part of always-loaded `compose.mk`; load each via the [plugin system](" ~ mkdocs.site_relative_url ~ "/plugins/overview).  All need a docker daemon: instance bodies build and run inside a container, and nothing is installed on the host.") }}
+
+{{ macros.section(4, "python", id="python") }}
+
+The `dsl.python` kind wraps a real interpreter.  The demo builds a **Python-scripting** DSL: {{ cmkmath.imath("python @NAME (|..python..|)") }} wraps `python3`, so a task that is fussy in `jq` or shell (arithmetic, f-strings, stdlib) becomes a few lines of Python.  Instances are callable like a built-in: call one to run the script (extra words become arguments), or stream a stdin pipe through it.
+
+{{site.embed_demo('demos/cmk/dsl-python.cmk', github=github)}}
+
+{{ macros.section(4, "dsl.rust", id="rust") }}
+
+This is where the fragment abstraction earns its keep: `dsl.rust` wraps a *compiler*, not an interpreter, so a single inline block stands in for a whole `cargo` project and still presents as one callable.
+
+{{site.embed_demo('demos/cmk/rust.cmk', github=github)}}
+
+{{ macros.section(4, "dsl.golang", id="golang") }}
+
+Same idea, different toolchain.  The point isn't Go specifically; swapping the guest compiler is just a plugin import, and nothing downstream of the callable has to change.
+
+{{site.embed_demo('demos/cmk/golang.cmk', github=github)}}
+
+{{ macros.section(3, "Language Protocol", id="language-protocol", protocols=['Language']) }}
+
+Beyond *running* a guest language, a DSL can also *reflect* on it.  A language kind that conforms to the [`Language`](#language-protocols) protocol exposes `__symbols__`, `__blocks__`, and `__tokens__`: structural views over the concrete syntax of the guest code an instance carries, so a fragment can list its own declarations, balanced blocks, and identifiers.
+
+Reflection here is *structural*, not semantic.  It reads the concrete syntax without a full parse or any execution, which keeps it cheap and language-parametric.  The default provider is [comby](https://comby.dev), a structural matcher reached through the `lang.parser` interface; a `matcher` hint (`.go`, `.py`, `.rs`, ...) selects the guest grammar, and comby is only the swappable implementation *behind* that interface.
+
+A kind opts in through the [`ifaces=`]({{_}}/cmk/concepts/#protocols) slot, mixing the protocol onto an existing language.  The [`python` demo](#python) above does this: `dsl.python` both runs a fragment *and* reflects it onto its own symbols and tokens.  Each kind also picks a *grammar family* that supplies the patterns behind `__symbols__` and `__blocks__`: brace-delimited languages (Go, Rust, C) use the default `braces` family, and an indentation language like `python` sets `__grammar__=python`, so it reflects its own symbols and blocks too, not just tokens.
+
+{% set card_open = true %}{% include "includes/language-protocol.md" %}
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Banana Blocks]({{_}}/cmk/banana): the {{ cmkmath.imath("(|..|)") }} block family and the jqlang / awklang demos, one per idiom.
+* [Concepts: DSLs]({{_}}/cmk/concepts/#dsls): the metaclass / fragment model.
+* [Metaprogramming]({{_}}/cmk/metaprogramming): sugar, dialects, and pragma.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^dsl]: {{ tufte.wiki('Domain-specific_language')|trim }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+{{macros.header_images([
+      ['dsl-examples','abc'],
+      ['bclang','terminal-2'],
+      ['python','python'],
+      ['builtin-dsls','implementation'],
+      ['module-dsls','implementation'],
+      ['rust','implementation'],
+      ['golang','implementation'],
+      ['jqlang','implementation'],
+      ['awklang','implementation'],
+      ['language-protocol','implementation'],
+    ], mkdocs)}}
+}, 100);});
+</script>

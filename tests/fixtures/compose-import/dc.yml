@@ -1,0 +1,8 @@
+services:
+  testsvc:
+    image: debian/buildd:bookworm
+    entrypoint: sh
+    working_dir: /workspace
+    volumes:
+      # The project dir is mounted so the dispatched `make` finds the Makefile.
+      - ${DOCKER_HOST_WORKSPACE:-${PWD}}:/workspace

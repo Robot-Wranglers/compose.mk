@@ -1,0 +1,31 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-blocks.cmk: the generic block constructor NAME(| body |).
+#
+# USAGE: ./demos/cmk/banana-blocks.cmk
+
+'''
+The body lowers to define NAME .. endef, then a prefix constructor is
+applied.  The constructor is a leading dotpath (code.unbound hello(| .. |))
+or space-separated words (code unbound goodbye(| .. |)); a using k=v
+trailer threads it kwargs.
+'''
+
+# shell code-block: ( bound via the leading code.unbound path )
+#   The name hello is now a first-class target, and a receiver.
+code.unbound hello(|
+    echo "hello from a banana code-block"
+|)
+
+# constructor path: ( the words before the name spell the constructor )
+#   The word touching (| is the block name; a one-liner works too.
+code unbound goodbye(| echo "and goodbye" |)
+
+__main__:
+    '''
+    Dispatch each code-block to a local sh interpreter.  hello was
+    declared as a receiver, so no this.  or cmk.  anchor is needed to
+    send to it.
+    '''
+    ${make} host.dispatch/sh,hello
+    ${make} host.dispatch/sh,goodbye

@@ -1,26 +1,24 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 
 ## TUI Overview
 
-<hr style="width:100%;border-bottom:3px solid black;">
-!!! info "Overview"
-    A TUI is a **text user interface**.  Not to be confused with a CLI, a TUI implies something more like a "console application".  The TUI capabilities of `compose.mk` are best thought of as an **interface-builder rather than a specific interface.**  
+<hr class="section-rule lvl-2">
+!!! terminology "What's a TUI?"
+    A TUI is a **text user interface**.  Not to be confused with a CLI, a TUI implies something more like a "console application".  The TUI capabilities of `compose.mk` are best thought of as an **interface-builder rather than a specific interface.**
     
-    Support for the TUI requires no dependencies except for `make` and `docker`.  It aims for low-config and sane defaults, so for high level usage it [requires no configuration at all]({{mkdocs.site_relative_url}}/zero-config-tuis).  Under the hood, the TUI uses a dockerized version of [tmux](https://github.com/tmux/tmux) for core drawing and geometry.
+    Support for the TUI requires no dependencies except for `make` and `docker`.  It aims for low-config and sane defaults, so for high level usage it [requires no configuration at all]({{_}}/zero-config-tuis).  Under the hood, the TUI uses a dockerized version of [tmux](https://github.com/tmux/tmux) for core drawing and geometry.[^tmux]
 
-At a high level, the TUI only has one job, which is all about **mapping `make` targets onto `tmux` panes**.  Simple right?  But the interesting part is, [everything is a target]({{mkdocs.site_relative_url}}/language/#homoiconic), so it's very quick and easy to treat containers or existing automation as UI elements, and stick them together as an application.  A *looping group* of targets?  That's a target.  A containerized sub-UI?  That's a target.  A console-friendly selector widget?   Maybe even a whole x11 application or xsession??  Target, target, target.
-
-
+At a high level, the TUI only has one job, which is all about **mapping `make` targets onto `tmux` panes**.  Simple right?  But the interesting part is, [everything is a target]({{_}}/cmk/paradigm/#homoiconic), so it's very quick and easy to treat containers or existing automation as UI elements, and stick them together as an application.  A *looping group* of targets?  That's a target.  A containerized sub-UI?  That's a target.  A console-friendly selector widget?   Maybe even a whole x11 application or xsession??  Target, target, target.
 
 ### TUI Gallery
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 For the impatient, here's a small gallery that show-cases the type of stuff you can do.
 {# with the TUI capabilities that `compose.mk` offers.  #}
 
 *( Click any image to make it bigger. )*
 
-<table align=center width=95%>
+<table id="tui-gallery-table" align=center width=95%>
     <tr>
         <td>{{macros.img_link("loadf-1.gif", mkdocs, "200px")}}</td>
         <td>{{macros.img_link("tui-extension-2.png", mkdocs, "220px")}}</td>
@@ -31,25 +29,28 @@ For the impatient, here's a small gallery that show-cases the type of stuff you 
         <td>{{macros.img_link("loadf-2.gif", mkdocs, "200px")}}</td>
         <td>{{macros.img_link("docker.commander.gif", mkdocs, "200px")}}</td>
     </tr>
+    <tr>
+        <td>{{macros.img_link("repl-debugger.gif", mkdocs, "200px")}}</td>
+    </tr>
 </table>
 
 For a quickstart, you might like to:
 
-1. Run a simple test to get a look at the TUI yourself. Try running `./compose.mk tux.demo`
+1. Run a simple test to start a TUI.  Try running `./compose.mk tux.demo`
 1. Skim at least the [layout basics on this page](#layout-basics)
-1. Jump to the [first TUI tutorial]({{mkdocs.site_relative_url}}/zero-config-tuis), then follow the sequence.
+1. Jump to the [first TUI tutorial]({{_}}/zero-config-tuis), then follow the sequence.
 
 Other resources:
 
-* For low-level API reference, see the [`tux.*` targets]({{mkdocs.site_relative_url}}/api/#api-tux).  
-* For TUI-related stand-alone tools, see [the loadf docs]({{mkdocs.site_relative_url}}/loadf) and the [tool wrappers docs]({{mkdocs.site_relative_url}}/tool-overview/#other-wrappers).
-* See also the [user input / interactivity]({{mkdocs.site_relative_url}}/standard-lib/#user-input-interactivity) section of the standard library.
+* For low-level API reference, see the [`tux.*` targets]({{_}}/api/#api-tux).  
+* For TUI-related stand-alone tools, see [the loadf docs]({{_}}/loadf) and the [tool wrappers docs]({{_}}/tool-overview/#other-wrappers).
+* See also the [user input / interactivity]({{_}}/standard-lib/#user-input-interactivity) section of the standard library.
 
 ### Batteries Included
 
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-Besides a dockerized `tmux`, the basic pre-configured components of the TUI are things like [tmuxp](https://github.com/tmux-python/tmuxp) for dynamic session management, and overridable defaults for [tmux themes](https://github.com/jimeh/tmux-themepack/), [tmux plugins](https://github.com/tmux-plugins/tpm), [keybindings](#tui-keybindings), etc.  
+Besides a dockerized `tmux`, the basic pre-configured components of the TUI are things like [tmuxp](https://github.com/tmux-python/tmuxp) for dynamic session management, and overridable defaults for [tmux themes](https://github.com/jimeh/tmux-themepack/), [tmux plugins](https://github.com/tmux-plugins/tpm), [keybindings](#default-keybindings), etc.
 
 These components are configurable, but not something that you necessarily have to think about.  Some notable effects of the "sane defaults" policy include:
 
@@ -61,38 +62,39 @@ These components are configurable, but not something that you necessarily have t
 These elements, plus access to other tools like [gum](https://github.com/charmbracelet/gum) and [chafa](https://hpjansson.org/chafa/), are all setup in the embedded `compose.mk:tux` container, which is built and used only on demand.
 
 #### Default Keybindings
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-4">
 
-The TUI ships with some default keybindings that are aimed at keeping things pretty user-friendly even for those who are not already familiar with tmux.  
+The TUI ships with some default keybindings that are aimed at keeping things pretty user-friendly even for those who are not already familiar with tmux.
 
-{#{bash("pattern='*Default TUI Shortcuts*' make mk.parse.block/compose.mk") }#}
-
-| Shortcut         | Purpose                                                |
-| ---------------- | ------------------------------------------------------ |
-| `Escape`           | *Exit TUI*                                           |
-| `Ctrl b |`         | *Split pane vertically*                              |
-| `Ctrl b -`         | *Split pane horizontally*                            |
-| `Alt t`            | *Shuffle pane layout*                                |
-| `Alt ^`            | *Grow pane up*                                       |
-| `Alt v`            | *Grow pane down*                                     |
-| `Alt <`            | *Grow pane left*                                     |
-| `Alt >`            | *Grow pane right*                                    |
-| `Alt <left>`       | *Grow pane left*                                     |
-| `Alt <right>`      | *Grow pane right*                                    |
-| `Alt <up>`         | *Grow pane up*                                       |
-| `Alt <down>`       | *Grow pane down*                                     |
-| `Alt-1`            | *Select pane 1*                                      |
-| `Alt-2`            | *Select pane 2*                                      |
-| ...                | *...*                                                |
-| `Alt-N`            | *Select pane N*                                      |
+<table class="docutils">
+<thead><tr><th>Shortcut</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><code>Escape</code></td><td><em>Exit TUI</em></td></tr>
+<tr><td><code>Ctrl b |</code></td><td><em>Split pane vertically</em></td></tr>
+<tr><td><code>Ctrl b -</code></td><td><em>Split pane horizontally</em></td></tr>
+<tr><td><code>Alt t</code></td><td><em>Shuffle pane layout</em></td></tr>
+<tr><td><code>Alt ^</code></td><td><em>Grow pane up</em></td></tr>
+<tr><td><code>Alt v</code></td><td><em>Grow pane down</em></td></tr>
+<tr><td><code>Alt &lt;</code></td><td><em>Grow pane left</em></td></tr>
+<tr><td><code>Alt &gt;</code></td><td><em>Grow pane right</em></td></tr>
+<tr><td><code>Alt &lt;left&gt;</code></td><td><em>Grow pane left</em></td></tr>
+<tr><td><code>Alt &lt;right&gt;</code></td><td><em>Grow pane right</em></td></tr>
+<tr><td><code>Alt &lt;up&gt;</code></td><td><em>Grow pane up</em></td></tr>
+<tr><td><code>Alt &lt;down&gt;</code></td><td><em>Grow pane down</em></td></tr>
+<tr><td><code>Alt-1</code></td><td><em>Select pane 1</em></td></tr>
+<tr><td><code>Alt-2</code></td><td><em>Select pane 2</em></td></tr>
+<tr><td>...</td><td><em>...</em></td></tr>
+<tr><td><code>Alt-N</code></td><td><em>Select pane N</em></td></tr>
+</tbody>
+</table>
 
 {#!!! warning "Limitations"#}
 Note that the usual limitations for shortcuts apply! There's no way to guarantee these defaults won't collide with whatever existing applications you're trying to stitch together, with your terminal or with your window-manager.
 
 ### Layout Basics
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-We'll start by showing **how to map targets onto a specific pane orientation**, using the [`tux.open`]({{mkdocs.site_relative_url}}/api/#tuxopenarg) target-family.  For mapped targets, we'll use `flux.ok`, which has no arguments and simply succeeds without doing anything.
+We'll start by showing **how to map targets onto a specific pane orientation**, using the [`tux.open`]({{_}}/api/#tuxopenarg) target-family.  For mapped targets, we'll use `flux.ok`, which has no arguments and simply succeeds without doing anything.
 
 ```bash {.cli_example}
 # Specify a horizontal layout and pass in 3 targets
@@ -112,7 +114,7 @@ $ layout=h ./compose.mk tux.open/flux.ok,flux.ok,flux.ok
 ```
 
 #### Vertical Orientation
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 For controlling the default orientation, `tux.open.vertical` of course works in a similar manner as you can see below.
 
@@ -127,23 +129,24 @@ $ layout=v ./compose.mk tux.open/flux.ok,flux.ok
 {{macros.img_link("tux.open-v.png", mkdocs, "400px",class="cli_output")}}
 
 #### Spiral Orientation
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 The main alternative to "horizontal" and "vertical" is called "spiral", and it looks like this:
 
 {{macros.img_link("tux.open-s.png", mkdocs, "400px")}}
 
-### Next Steps
-<hr style="width:100%;border-bottom:3px solid black;">
+{{ macros.section(3, "See Also", id="see-also") }}
 
-These 3 layouts are enough for most use-cases, but `compose.mk` actually supports whatever `tmux` does and also whatever [dwindle](https://github.com/sunaku/home/blob/master/bin/tmux-layout-dwindle) supports.
+These 3 layouts are enough for most use-cases, but `compose.mk` actually supports whatever `tmux` does and also whatever [dwindle](https://github.com/sunaku/home/blob/master/bin/tmux-layout-dwindle) supports.  Of course, `flux.ok` is not very interesting, but it is the *simplest* target; almost everything else we'll look at is some variation of the principles above.
 
-Of course, `flux.ok` is not very interesting, but it is the *simplest* target.  We'll move into more practical examples in the following sections, and almost everything else we'll look at is some variation of the principles above.
+* [Zero Config TUIs]({{_}}/zero-config-tuis): the first tutorial, with no project integration needed.
+* [Low Config TUIs]({{_}}/low-config-tuis): moving layouts into declarative code.
+* [Advanced TUIs]({{_}}/advanced-tuis): custom geometry, widgets, and scripting.
 
-{#
-### References 
-<hr style="width:100%;border-bottom:3px solid black;">
-#}
+### References
+<hr class="section-rule lvl-3">
+
+[^tmux]: {{ tufte.wiki('Tmux')|trim }}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
@@ -153,7 +156,8 @@ document.addEventListener('DOMContentLoaded', function() {setTimeout(function() 
         ['default keybindings','tui'],
         ['batteries included','tui'],
         ['layout basics','basics'],
-        ['next steps','next'],
+        ['related reading','next'],
+        ['references','list-details'],
     ], mkdocs)}}
 }, 100);});
 </script>

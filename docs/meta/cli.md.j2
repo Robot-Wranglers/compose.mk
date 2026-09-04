@@ -1,0 +1,72 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+### Inline Examples
+<hr class="section-rule lvl-3">
+
+Inline `code` spans inside prose:
+
+* Numero uno `echo key=val | ./compose.mk jb`
+* The second: `./compose.mk mk.def.read/lang.comp.dialect`
+* Random: `echo testing | random --stuff`
+
+### CLI Showcase
+<hr class="section-rule lvl-3">
+
+Pairing `bash  {.cli_example}` and `json {.cli_output}`:
+
+```bash {.cli_example}
+$ ./compose.mk mk.parse/compose.mk | jq '."mk.parse/%"'
+```
+```json {.language-json .cli_output}
+{{bash("./compose.mk mk.parse/compose.mk | jq '.\"mk.parse/%\"'")}}
+```
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Using `bash  {.cli_example} {.command-line}`:
+
+```bash  {.cli_example} {.command-line}
+# Output JSON using `jb`
+$ echo key=val | ./compose.mk jb
+{"key":"val"}
+
+# Parse JSON using `jq`
+$ echo key=val | ./compose.mk jb | ./compose.mk jq -r .key
+val
+
+# Alternate approach, outputting JSON without input-pipes.
+# Fine for simple stuff, not suitable for more complicated use cases.
+$ ./compose.mk jb key=val foo=bar
+{"key":"val"}
+```
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Using `bash  {.cli_example}`:
+
+```bash {.cli_example data-prompt="$"}
+$ ./compose.mk mk.def.read/lang.comp.dialect
+[
+  ["🡆", "${stream.stdin} | ${jq} -r"],
+  ["🡄", "${jb}"],
+  ["this.", "${make} "]
+  ...
+]
+```
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+Using `bash  {.cli_example}`:
+
+``` bash {.cli_example}
+# Opens 3 panes with container-shells
+$ ./compose.mk loadf ./demos/data/docker-compose.yml \
+    tux.open.service_shells/debian,alpine,debian
+
+# Equivalently, using lower-level generic targets
+$ ./compose.mk loadf ./demos/data/docker-compose.yml \
+    tux.open/debian.shell,alpine.shell,debian.shell
+
+# Opens 2 panes of bash-shells for the TUI container itself
+$ ./compose.mk loadf ./demos/data/docker-compose.yml tux.open/io.shell,io.shell
+```

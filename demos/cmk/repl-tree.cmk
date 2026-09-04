@@ -1,0 +1,85 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# repl-tree.cmk: 
+#   the raw tux.repl `minimap=` region -- an optional 4th
+#   region (a small RHS pane) whose feeder the Go wrapper auto-detects: print
+#   one JSON object per line (label, active, children), rendering a live
+#   lipgloss tree (latest object replaces the pane), the `active` node bright
+#   + its ancestors on-path; a non-JSON feeder instead scrolls as text (the
+#   region's other auto-detect mode) [1].
+#
+# CMK_PRAGMA ::: { 
+#   "repl": { 
+#      "print": "tree.demo", 
+#      "minimap": "tree.view",
+#      "eval": "tux.repl.kernel" }, 
+#   "vm_trace": true } :::
+#
+# Contrast debugger-example.cmk, which draws its tree through the unified
+# `read` metadata channel (mm_tree); this demo is the standalone `minimap=`
+# region + its JSON auto-detect.  The call graph is a __vm__ goto loop over
+# demo, compile, link, then w1/w2/w3 via flux.pipeline; the `vm_trace`
+# pragma injects __vm__.frame.enter, so the live frames give both the
+# active IP (deepest frame) the feeder highlights and the monotonic step
+# counter the loop is bounded by -- no hop/max bookkeeping files.
+#
+#   print   = tree.demo  -- the goto-looped call graph
+#                           (vm_trace gives real frames + a step counter)
+#   minimap = tree.view  -- loops printing the call graph as one JSON
+#                           tree/line, the live IP marked active
+#   eval    = tux.repl.kernel
+#
+#   USAGE:  ./demos/cmk/repl-tree.cmk
+#               # the REPL + tree pane (needs a tty)
+#           ./demos/cmk/repl-tree.cmk tree.demo
+#               # run the call-graph loop inline (no REPL)
+#   Bounded by CMK_TREE_MAX vs the engine step counter (the goto
+#   re-dispatches each cycle).
+#
+# REFS:
+#   [1]: https://robot-wranglers.github.io/compose.mk/modules/virtual-machine
+
+import log
+from virtual-machine import vm.goto, __vm__
+
+tree.demo:
+  @# ── print region: a recursive call graph looped via __vm__ goto
+  @# (frame.enter injected by vm_trace) ── Recipe lines join implicitly
+  @# (joinbody `&&`); target runs use `this.<t>`.
+  log([demo] cycle)
+  this.tree.compile
+  step=$$(cat .tmp.cmk.vmstep.* 2>/dev/null | sort -n | tail -1 || echo 0)
+  if [ "$${step:-0}" -ge "$${CMK_TREE_MAX:-100000}" ]; then log([demo] step $$step '>=' bound -- halt) ; else sleep $${CMK_TREE_WAIT:-1} ; cmk.vm.goto(tree.demo) ; fi
+
+tree.compile:
+  log([compile] -> link)
+  this.tree.link
+
+tree.link:
+  log([link] flux.pipeline -> w1,w2,w3)
+  this.flux.pipeline(tree.w1,tree.w2,tree.w3)
+
+tree.w1:
+  log([worker] w1)
+  sleep $${CMK_TREE_WAIT:-1}
+tree.w2:
+  log([worker] w2)
+  sleep $${CMK_TREE_WAIT:-1}
+tree.w3:
+  log([worker] w3)
+  sleep $${CMK_TREE_WAIT:-1}
+
+# minimap region: print the call graph as one JSON tree/line, the live
+# IP (deepest __vm__ frame) active The Go side auto-detects the JSON
+# object and draws a highlighted tree.  This is the observer, so vm_trace
+# skips it (its body reads __vm__.frames).  (No `#` in the jq value -- make
+# would treat it as a comment.)
+tree.view.jq={ label: "vm", children: [ { label: "tree.demo", active: ($$ip == "tree.demo"), children: [ { label: "tree.compile", active: ($$ip == "tree.compile"), children: [ { label: "tree.link", active: ($$ip == "tree.link"), children: [ { label: "tree.w1", active: ($$ip == "tree.w1") }, { label: "tree.w2", active: ($$ip == "tree.w2") }, { label: "tree.w3", active: ($$ip == "tree.w3") } ] } ] } ] } ] }
+tree.view:
+  while true; do \
+     ip=$$(this.__vm__.frames 2>/dev/null </dev/null | ${jq.run} -r '.frames[-1].goal // ""' 2>/dev/null) ; \
+     ${jq.run} -nc --arg ip "$$ip" '${tree.view.jq}' 2>/dev/null ; \
+     sleep $${CMK_TREE_WAIT:-1} ; \
+   done
+
+__main__: tree.demo

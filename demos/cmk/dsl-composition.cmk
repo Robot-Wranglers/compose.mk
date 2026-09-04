@@ -1,0 +1,32 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+# dsl-composition.cmk: overriding composition (+) on a dsl.
+
+'''
+Fragments compose with + (which dispatches __add__).  A kind overrides it by
+chaining to the base __concat__ primitive -- no raw lang.banana.* leaks; a body
+classvar baked into .shape is carried across the composition.
+'''
+
+import log
+from cmk import dsl
+
+# section: a body classvar (kind) is baked into .shape.
+dsl section(|
+  kind = note
+  self.shape := $(if $(filter ==,$(firstword $(value ${self}))),,== $(${self}.kind) ==$(nl))$(value ${self})
+  self.__add__ = $(call ${self}.__concat__,${__args__})
+|)
+
+section intro(| greeting = 1 |)
+section outro(| farewell = 2 |)
+
+# compose the two sections; <- binds the result
+&document <- intro+outro
+
+demo.compose:
+  ''' intro+outro joins both sections; each keeps its header '''
+  log(intro ${sep} $(subst $(nl), // ,$(intro.shape)))
+  log(document ${sep} $(subst $(nl), // ,$(document.shape)))
+
+__main__: demo.compose

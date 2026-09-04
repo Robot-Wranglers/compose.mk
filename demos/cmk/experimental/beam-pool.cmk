@@ -1,0 +1,27 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# beam-pool.cmk: bounded BEAM worker pool; roughly flux.pool.
+
+'''
+BEAM worker pool: run goals across <size> peer nodes, one packet per node
+round-robin, fail-fast on the first nonzero. The BEAM analog of flux.pool
+(xargs -P). Leaves are cmk; coordination is BEAM. Each packet's log is tagged
+with the node that ran it (CMK_LOG_PRE), so you see the work fan across nodes.
+'''
+
+# USAGE: ./demos/cmk/beam-pool.cmk  (or beam.pool/<n>,g1,g2)
+
+from platform.beam import beam.pool
+
+work/%:
+  '''One unit of pool work: announce it and do a little.'''
+  cmk.log(pool work ${sep} ${*})
+  sleep 0.2
+
+boom:
+  '''A failing unit -- exits nonzero to demonstrate fail-fast.'''
+  cmk.log(pool work ${sep} boom -- failing)
+  exit 1
+
+__main__:
+  cmk.log(${bold}beam pool ${sep} ${dim}4 work units across 2 nodes)
+  ${make} beam.pool/2,work/a,work/b,work/c,work/d

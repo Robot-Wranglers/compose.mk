@@ -1,0 +1,10 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# example.cmk:
+#   The smallest useful CMK program: an entrypoint and a log line.
+#
+# USAGE: ./demos/cmk/example.cmk
+
+import log
+
+__main__:; log(hello world)

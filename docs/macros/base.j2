@@ -1,13 +1,21 @@
 {% macro normalize_fname(fname)-%}{{fname.replace('-','_').replace('.','_').replace('/','_')}}{%- endmacro -%}
 
+{# demo_label: the source-link filename shown in an embed's tab bar.  Origins are kept
+   DISTINCT so a demo can't be mistaken for a plugin and vice-versa -- neither reads as a
+   bare `cmk/…`:
+     * `.cmk/…` plugin (the `.cmk` submodule) -> keep the full `.cmk/…` path, so it reads as
+       the plugin it is (without this a plugin collapsed to a bare basename and lost origin).
+     * `demos/cmk/…` cmk-twin demo -> drop the whole `demos/cmk/` prefix (the `.cmk`
+       *extension* already marks it as cmk-lang, so a `cmk/` prefix is both redundant and
+       collides with the `.cmk` plugin namespace).  So `demos/cmk/foo.cmk` -> `foo.cmk`.
+     * other `demos/…` -> the demos-relative path (so deep demos read as e.g.
+       `tui/extension-1.mk` rather than a bare `extension-1.mk`).
+     * anything else -> the basename. #}
+{% macro demo_label(fname)-%}{{ fname if fname.startswith('.cmk/') else (fname[10:] if fname.startswith('demos/cmk/') else (fname[6:] if fname.startswith('demos/') else fname.split('/')|last)) }}{%- endmacro -%}
+
 {% set img_base =  img_base | default('img') %}
-{% macro svg(name, mkdocs={}, style="width:1.3em;") -%}<img src="{{mkdocs.site_relative_url}}/img/{{name}}.svg">{%- endmacro -%}
-{% macro svg_boom(mkdocs={}, style="width:1.3em;") -%}{{svg("bulb", mkdocs=mkdocs, style=style)}}{%- endmacro -%}
-{% macro svg_arrow(mkdocs={}, style="width:1.3em;") -%}{{svg("arrow-right-dashed", mkdocs=mkdocs, style=style)}}{%- endmacro -%}
 
-{% macro badge_from_var(var, label) %}{% set val=get_env_var(var) %}{{badge_from_val(val,label)}}{%- endmacro -%}
 
-{%macro badge_from_val(val, label)%}<a href="env-vars.md"><img alt="{{label}}:{{val}}" src="https://img.shields.io/badge/{{url_quote((label and (label + ':')) + val)}}-blue"></a>{%- endmacro -%}
 
 {% macro img_link(fname, mkdocs, width="90%", align="center",link='',class="img_container ") -%}
 {%set default_link=mkdocs.site_relative_url+"/"+img_base+"/"+fname%}
@@ -59,7 +67,47 @@
 
 {% macro commentary(content="", title='Commentary')-%}{{admonition("commentary", title, content)}}{%- endmacro -%}
 
-{% macro gotcha(content="", title='Gotcha')-%}{{admonition("gotcha", title, content)}}{%- endmacro -%}
+{# terminology: a glossary callout (green trim, open-book icon) for spelling out what a term
+   means; distinct from `commentary` (a grey aside).  Mirrors the commentary signature:
+   (content, title). #}
+{% macro terminology(content="", title='Terminology')-%}{{admonition("terminology", title, content)}}{%- endmacro -%}
+
+{# protocol: a tight, focused callout describing ONE cmk protocol.  `name` is the carrier (a
+   `__dunder__` registry, or an interface name); `summary` is a one-line role; `surface` (optional)
+   names how it is queried / conformed to.  Reused across concept pages so every protocol reads the
+   same way; built on the `terminology` admonition, keep `summary` / `surface` to a single line each
+   (the admonition body is not re-indented, so use `<br>` / inline markup, not paragraph breaks). #}
+{# protocol(...): a callout describing ONE cmk protocol.  `name` (a `__dunder__`) rides the
+   TITLE bar as `<glyph> Protocol: <name>`, with a black RHS link to the canonical Protocols
+   concept when `mkdocs` is passed -- so the body carries only the summary, no name preamble.
+   Pass `mkdocs` at every call site. #}
+{# protocol: a STRUCTURED card for one `cmk.protocol`, shaped like the algebra cards -- fixed
+   labeled fields (Capability / Requires / Tier / Surface / Notes).  Each field renders as a
+   bold label paragraph followed by an indented body paragraph (the algebra `_section` shape;
+   the `.protocol` section CSS keys on the `strong:only-child` label).  Terse, capitalized, no
+   em-dashes. #}
+{% macro protocol(name, capability='', requires='', tier='', surface='', notes='', mkdocs={}, open=false)-%}
+<a name="{{ (name|lower|replace('_','')|replace('.','')|replace(' ','-')) }}-protocols"></a>
+
+{{ '???+' if open else '???' }} protocol "`{{ name }}`{% if mkdocs %}<a class='protocol-doclink' href='{{ mkdocs.site_relative_url }}/cmk/concepts/#protocols'>Protocol</a>{% endif %}"
+{% for row in [['Capability', capability], ['Requires', requires], ['Tier', tier], ['Surface', surface], ['Notes', notes]] if row[1] %}
+    **{{ row[0] }}:**
+
+    {{ row[1] }}
+{% endfor %}
+{%- endmacro -%}
+
+{# non_core: the standardized "this is an opt-in, non-core plugin/module" banner for a
+   feature's own page.  Consolidates the divergent Non-core / "Opt-in plugin" banners onto one
+   title + type + boilerplate.  `name` = the file (e.g. `tux.repl.cmk`); `kind` = 'plugin' |
+   'module'; `detail` = an optional trailing clause (extra requirements / behavior); `@/` in
+   `detail` expands to a site-relative link.  Cross-references FROM core pages keep their own
+   phrasing; this is for a feature describing itself. #}
+{% macro non_core(name, kind='plugin', detail='', mkdocs={}) -%}
+{%- set _d = ('  ' ~ detail.replace('@/', mkdocs.site_relative_url ~ '/')) if detail else '' -%}
+{{ admonition("warning", "Optional Plugin / Module", "This is the non-core `" ~ name ~ "` " ~ kind ~ ", not part of always-loaded `compose.mk`; load it via the [plugin system](" ~ mkdocs.site_relative_url ~ "/plugins/overview)." ~ _d) }}
+{%- endmacro -%}
+
 
 {% macro closer_look(content="", title='Closer Look')-%}
 {{admonition("closer_look", title, content)}}
@@ -70,8 +118,8 @@
 {{admonition("warning", title, content)}}
 {%- endmacro -%}
 
-{% macro admonition(type,title,content) -%}
-!!! {{type}} "{{title}}"
+{% macro admonition(type,title,content,marker='!!!') -%}
+{{marker}} {{type}} "{{title}}"
     {{content}}
 {%- endmacro -%}
 
@@ -85,6 +133,53 @@
     {{content}}
 {%- endmacro -%}
 
+{#- ─── Link-list admonitions ──────────────────────────────────────────────────
+    Two normalized "connections to other pages" callouts:
+      * road_map(...)      -- a TOP-of-page "Road Map" escape hatch (road_map
+                              admonition + road-map icon), for readers who may
+                              have landed in the wrong place.
+      * related_links(...) -- a BOTTOM-of-page "Where to from here?" sweep-up of
+                              onward connections (related_links admonition).
+    Both take the same arguments:
+      items    -- a list; each entry is either a full-sentence string (rendered
+                  verbatim as one bullet) or a `[label, link]` / `[label, link,
+                  note]` pair/triple (rendered as `[label](link): note`).
+      mkdocs   -- the mkdocs context (needed for `@/` expansion).
+      preamble -- optional lead line shown above the list.
+      title    -- overrides the default header ("Road Map" / "Where to from here?").
+    In ANY string (a sentence, a link, a note, the preamble), `@/foo` expands to
+    the site-relative `{{mkdocs.site_relative_url}}/foo`.  Absolute URLs (http, a
+    Jinja var, `#anchor`) are passed through untouched. ──────────────────────── #}
+{% macro _ll_expand(s, mkdocs) -%}{{ s.replace('@/', mkdocs.site_relative_url ~ '/') }}{%- endmacro -%}
+{% macro _ll_item(item, mkdocs) -%}
+{%- if item is string -%}{{ _ll_expand(item, mkdocs) }}{%- else -%}[{{ item[0] }}]({{ _ll_expand(item[1], mkdocs) }}){% if item|length > 2 %}: {{ _ll_expand(item[2], mkdocs) }}{% endif %}{%- endif -%}
+{%- endmacro -%}
+{% macro _link_admonition(kind, title, items, mkdocs, preamble='', marker='!!!') -%}
+{{ marker }} {{ kind }} "{{ title }}"
+{% if preamble %}    {{ _ll_expand(preamble, mkdocs) }}
+
+{% endif %}{% for item in items %}    * {{ _ll_item(item, mkdocs) }}
+{% endfor %}
+{%- endmacro -%}
+{% macro road_map(items, mkdocs, preamble='', title='Road Map') -%}
+{{ _link_admonition('road_map', title, items, mkdocs, preamble=preamble) }}
+{%- endmacro -%}
+{#- escape_hatch renders as a collapsible details: the summary toggles on any header click, and the
+    permalink/toast handler skips <summary> titles so it stays a plain open/close.  `open=false`
+    (default) starts it collapsed (`???`); `open=true` starts it expanded (`???+`). #}
+{% macro escape_hatch(items, mkdocs, preamble='', title='Escape Hatch', open=false) -%}
+{{ _link_admonition('escape_hatch', title, items, mkdocs, preamble=preamble, marker=('???+' if open else '???')) }}
+{%- endmacro -%}
+{% macro related_links(items, mkdocs, preamble='', title='Where to from here?') -%}
+{{ _link_admonition('related_links', title, items, mkdocs, preamble=preamble) }}
+{%- endmacro -%}
+{#- see_also(...): a subtle, NEUTRAL-toned cousin of related_links; for the inline
+    "See also" cross-reference callouts that punctuate a section (vs the page-bottom
+    onward sweep).  Same item format (`@/` links, `[label, link, note]` triples). #}
+{% macro see_also(items, mkdocs, preamble='', title='See also') -%}
+{{ _link_admonition('see_also', title, items, mkdocs, preamble=preamble) }}
+{%- endmacro -%}
+
 {% macro very_optional(content="This is an advanced topic and safe for new users to ignore!", title='Very Optional') -%}
 {{admonition("warning", title, content)}}
 {%- endmacro -%}
@@ -92,7 +187,6 @@
 
 {% macro commentary(content="", title='Commentary')-%}{{admonition("commentary", title, content)}}{%- endmacro -%}
 
-{% macro gotcha(content="", title='Gotcha')-%}{{admonition("gotcha", title, content)}}{%- endmacro -%}
 
 !!! closer_look Closer Look 
 {% macro advanced_topic(content="This is an advanced topic and safe for new users to ignore!", title='Advanced Topic') -%}
@@ -101,25 +195,32 @@
 
 ## Components
 {#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
-{% macro small_bullseye(size="16")-%}<svg class="small_bullseye" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="{{size}}" height="{{size}}"><path d="M20.172 6.75h-1.861l-4.566 4.564a1.874 1.874 0 1 1-1.06-1.06l4.565-4.565V3.828a.94.94 0 0 1 .275-.664l1.73-1.73a.249.249 0 0 1 .25-.063c.089.026.155.1.173.191l.46 2.301 2.3.46c.09.018.164.084.19.173a.25.25 0 0 1-.062.249l-1.731 1.73a.937.937 0 0 1-.663.275Z"></path><path d="M2.625 12A9.375 9.375 0 0 0 12 21.375 9.375 9.375 0 0 0 21.375 12c0-.898-.126-1.766-.361-2.587A.75.75 0 0 1 22.455 9c.274.954.42 1.96.42 3 0 6.006-4.869 10.875-10.875 10.875S1.125 18.006 1.125 12 5.994 1.125 12 1.125c1.015-.001 2.024.14 3 .419a.75.75 0 1 1-.413 1.442A9.39 9.39 0 0 0 12 2.625 9.375 9.375 0 0 0 2.625 12Z"></path><path d="M7.125 12a4.874 4.874 0 1 0 9.717-.569.748.748 0 0 1 1.047-.798c.251.112.42.351.442.625a6.373 6.373 0 0 1-10.836 5.253 6.376 6.376 0 0 1 5.236-10.844.75.75 0 1 1-.17 1.49A4.876 4.876 0 0 0 7.125 12Z"> &nbsp;{%- endmacro -%}
 
-{% macro code_table(fname, 
-    style="", github={}, link_prefix='', 
+{% macro code_table(fname,
+    style="", github={}, link_prefix='',
     code_table_1="", code_table_2="", code_table_3="",
-    class="", type='', title='', top='',bottom='')-%}<a id="{{link_prefix}}_top"></a><div role=navigation class="code_table_top {{class}}"><span class=code_table_1>&nbsp;{%if code_table_1%}{{code_table_1}}{%else%}<a style="margin-right:3px;margin-left:5px;font-size:larger;font-weight:900;margin-left:3px;margin-right:5px;" href="#" onclick="toggle_id('{{link_prefix}}_details', this);return false;">⮝</a>{%endif%}&nbsp;<span style="font-size:larger;font-weight:900;">&nbsp;{%if fname.endswith('.cmk')%}CMK-lang{%else%}{{type|default('notype')}}{%endif%}</span>⠀</span><span class=code_table_2>⠀{%if code_table_2 %}&nbsp;{{code_table_2}}{% else %}{{title}}{%endif%}⠀</span><span class=code_table_3>⠀{%if code_table_3%}{{code_table_3}}{%else%}{{repo_link(fname, name=(title or fname)+'⠀<svg xmlns="http://www.w3.org/2000/svg" class="github_svg" viewBox="0 0 16 16" width="16" height="16"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path></svg>', github=github)}}{%endif%}⠀</span></div>{%- endmacro -%}
+    class="", type='', title='', top='',bottom='', mirror_tab='')-%}<a id="{{link_prefix}}_top"></a><div role=navigation class="code_table_top mirror_tabs {{class}}"><span class=code_table_1>{%if code_table_1%}&nbsp;{{code_table_1}}&nbsp;{%endif%}<span class="mirror_tab">{%if mirror_tab%}{{mirror_tab}}{%elif fname.endswith('.cmk')%}cmk-lang{%else%}{{type|default('notype')}}{%endif%}</span>⠀</span><span class=code_table_2>⠀{%if code_table_2 %}&nbsp;{{code_table_2}}{% else %}{{title}}{%endif%}⠀</span><span class=code_table_3>⠀{%if code_table_3%}{{code_table_3}}{%else%}<a class="mirror_src" href="{{repo_url(fname, github=github)}}" title="Project Source: {{fname}}" target="_blank" rel="noopener"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" /></svg><span class="mirror_src_name">{{fname.split('/')|last}}</span></a>{%endif%}⠀</span></div>{%- endmacro -%}
 {% macro code_table_bottom(fname, 
     bottom='', bottom_middle='', bottom_right='', 
     github={}, style="", link_prefix='', class="", 
-    type='', title='', code_table_2='',top='')-%}<div style="{{style}}" role=navigation class="code_table_bottom {{class}}"><span class=code_table_1>⠀<a href=#{{link_prefix}}_top>Back to top</a></span><span class=code_table_2>{%if bottom_middle%}{{bottom_middle}}{%endif%}</span><span class=code_table_3>{%if bottom_right%}{{bottom_right}}{%endif%}⠀</span></div>{%- endmacro -%}
+    type='', title='', code_table_2='', extra_label='', top='')-%}<div style="{{style}}" role=navigation class="code_table_bottom {{class}}"><span class=code_table_1>⠀<a href=#{{link_prefix}}_top>Back to top</a>{% if extra_label %} <span class=stacked_sep>|</span> {{extra_label}}{% endif %}</span><span class=code_table_2>{%if bottom_middle%}{{bottom_middle}}{%endif%}</span><span class=code_table_3>{%if bottom_right%}{{bottom_right}}{%endif%}⠀</span></div>{%- endmacro -%}
 {#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
 {% macro header_images(lst, mkdocs, style="") -%}
 {%for hdr,icon in lst%}{%set icon=icon+'.svg' if not icon.endswith('.svg') else icon%}
 addImageToHeader('{{hdr.replace(' ','-')}}','/{{mkdocs.config.site_name}}/img/{{icon}}')
 {%endfor%}
 {%- endmacro -%}
+{# prompt_badges: attach a floated far-right 'prompt' pill to each header-id in `lst`,
+   client-side (see addPromptBadge in theme_base.js).  Injected post-render, so the badge
+   text never leaks into the header slug/#anchor or the ToC.  All badges share one tooltip. #}
+{% macro prompt_badges(lst, label='prompt', tooltip='promptX') -%}
+{%for hdr in lst%}
+addPromptBadge('{{hdr.replace(' ','-')}}','{{label}}','{{tooltip}}')
+{%endfor%}
+{%- endmacro -%}
 
-{% macro repo_link(fpath, name='', github={}, branch='master') -%}<a href="{{repo_url(fpath,github=github,branch=branch)}}" style="text-decoration-line:none;">{{name or fpath}}</a>{%- endmacro -%}
-{% macro repo_url(fpath, github={}, branch='master') -%}{{github.repo_url|default('#')}}/tree/{{branch}}/{{fpath}}{%- endmacro -%}
+{% macro repo_link(fpath, name='', github={}, branch='main') -%}<a href="{{repo_url(fpath,github=github,branch=branch)}}" style="text-decoration-line:none;">{{name or fpath}}</a>{%- endmacro -%}
+{% macro repo_url(fpath, github={}, branch='main') -%}{{github.repo_url|default('#')}}/tree/{{branch}}/{{fpath}}{%- endmacro -%}
 {#░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░#}
 
 {% macro subheader(label, mkdocs={},id='',onclick="") -%}
@@ -129,6 +230,17 @@ addImageToHeader('{{hdr.replace(' ','-')}}','/{{mkdocs.config.site_name}}/img/{{
 
 {% macro _subheader(label, mkdocs={},id='') -%}{%set norm=label.lower().replace(',','').replace('.','').replace('"','').replace("'",'').replace('?','').replace(' ','-').replace('&','').replace('--','-')%}
 <a class=subheader id="{{id or norm}}"></a><h7 class=subheader id="{{id or norm}}"><span class=subheader>{{label}}</span></h7>
+{%- endmacro -%}
+
+{# section(level, title, id): a header whose ANCHOR is pinned from the human
+   label alone, so links stay clean and survive relabeling.  `id` pins the
+   anchor (defaults to a slug of `title`).  Uses the attr_list `{: #id}` form,
+   which is Jinja-safe (unlike `{#id}`, which collides with the Jinja comment
+   open). #}
+{% macro section(level, title, id='', protocols=[], kind='') -%}
+{%- set _slug = title.lower().replace(',','').replace('.','').replace('"','').replace("'",'').replace('?','').replace(' ','-').replace('&','').replace('--','-') -%}
+{{ '#' * level }} {{ title }}{% if kind %} <span class="section-kind"><span class="section-kind-label">Kind:</span><a class="section-kind-badge" href="#{{ kind|lower }}s">{{ kind }}</a></span>{% endif %}{% if protocols %} <span class="section-protocols"><span class="section-protocols-label">Protocols:</span>{% for p in protocols %}{% if p is string %}<a class="section-protocol-badge" href="#{{ (p|lower|replace('_','')|replace('.','')|replace(' ','-')) }}-protocols">{{ p }}</a>{% else %}<a class="section-protocol-badge" href="{{ p[1] }}">{{ p[0] }}</a>{% endif %}{% endfor %}</span>{% endif %} {: #{{ id or _slug }}{% if protocols or kind %} data-toc-label="{{ title }}"{% endif %}}
+<hr class="section-rule lvl-{{ level }}">
 {%- endmacro -%}
 
 {# EXPERIMENTAL

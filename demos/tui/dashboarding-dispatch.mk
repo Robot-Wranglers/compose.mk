@@ -1,8 +1,8 @@
 #!/usr/bin/env -S make -f
 # demos/tui/dashboarding-dispatch.mk: 
 #   Expanding the dashboarding.mk TUI demo to include container dispatch.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# USAGE: ./demos/tui/dashboarding-widgets.mk demo.ui
+#
+# USAGE: ./demos/tui/dashboarding-dispatch.mk demo.ui
 
 include compose.mk 
 

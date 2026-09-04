@@ -1,0 +1,72 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+# ambient-siblings.cmk: unmediated sibling messaging, box to box over a named channel.
+
+'''
+Two sibling containers exchange a message without the parent routing the
+payload: alice emits into a named channel from inside her box, and bob
+filters the same channel from inside his.  The channel's backing stack
+lives in the shared workspace and its name rides the standard env
+crossing, so the two boxes converge on the same mailbox with no extra
+wiring.  The parent only schedules the two dispatches; it never touches
+the message.
+
+In calculus terms this is the sibling exchange the boxed discipline
+lacks and the bigraph link layer sanctions: connectivity orthogonal to
+containment.  Contrast matrioshka.cmk, where boxes report upward to a
+stage that the host reads.
+
+Both boxes build from one inlined Dockerfile.  The base needs make and
+bash to re-run the interpreter (the stock busybox awk is enough, the
+compiler is dialect-agnostic), plus jq for the channel filters; the
+workspace, the interpreter, and the socket are mounted by the standard
+container run.
+
+Usage: ./demos/cmk/ambient-siblings.cmk   (needs docker)
+'''
+
+import log, stream
+from cmk import container, Dockerfile
+
+Dockerfile base(|
+  FROM docker:dind
+  RUN apk add -q --update --no-cache coreutils bash make jq
+|)
+
+container alice(img=${base.img} entrypoint=bash)(| |)
+container bob(img=${base.img} entrypoint=bash)(| |)
+
+# Pin the mailbox's backing file: the default name is run-id-keyed per interpreter, and the id never crosses the box boundary, so siblings would each derive their own.  Pinning it in the source makes every interpreter that parses this file agree.
+export events__mailbox := .tmp.events__mailbox.siblings
+
+channel mailbox(match='key=type value=ping')(|
+  []
+|)
+
+__main__: mailbox.initialize demo.emit demo.receive
+
+demo.emit:
+  '''
+  alice emits: ( the message enters the channel from inside her box )
+    The hop boots unsupervised: a supervised boot binds the channel's purge
+    to its own exit, and the mailbox must outlive alice for bob to hear her.
+  '''
+  log()
+  (| CMK_SUPERVISOR=0 ${__cmk__} hop.emit |) in alice
+
+hop.emit:
+  mailbox.emit["""type=ping from=$${__ambient__} sent_from=`hostname`"""]
+
+demo.receive:
+  '''
+  bob receives: ( the filter runs inside his box, against the same channel )
+  '''
+  log()
+  (| CMK_SUPERVISOR=0 ${__cmk__} hop.recv |) in bob
+
+hop.recv:
+  log(heard in [$${__ambient__}]:)
+  ${make} mailbox.match
+
+mailbox.match/ping:
+  stream.as.log[${stream.stdin}]

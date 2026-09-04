@@ -1,0 +1,19 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# nerd-snipe.cmk:
+#   The metacircular side of cmk-lang: a program that reads and quotes
+#   itself, printing its own source and its own docstring.
+#
+# USAGE: ./demos/cmk/nerd-snipe.cmk
+
+''' It cats its own source and echoes this very docstring. '''
+
+quine:
+    ''' Print this program's own source. '''
+    cat ${__file__}
+
+meta: quine
+    ''' Reflect on the program's own docstring. '''
+    echo "...and its docstring says: ${__doc__}"
+
+__main__: meta

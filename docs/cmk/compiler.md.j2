@@ -1,0 +1,636 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}{% import 'macros/cmk_math.j2' as cmkmath -%}
+
+## CMK Language & Compiler
+<hr class="section-rule lvl-2">
+
+{{ macros.escape_hatch([
+    'The [language overview](@/cmk/paradigm) covers *what CMK is* and the [compiler-vs-transpiler question](@/cmk/paradigm/#interpreters-transpilation).',
+    ['CMK Quick Reference', '@/cmk/quickref', 'a syntax cheat-sheet'],
+    ['CMK Demo Index', '@/cmk/demos', 'every featured demo, cross-referenced to its plain-Makefile twin'],
+    'Only want a Makefile library?  See the [tools](@/tool-overview) and [standard library](@/standard-lib).',
+], mkdocs) }}
+
+A hands-on tutorial for the **CMK language** and its compiler: the concrete syntax, and how each construct *lowers* to Makefile.  CMK adds no new capability over plain `compose.mk`; it elevates existing idioms to native syntax.  That matters a *lot*, because notation is part of how we think.[^1]
+
+{{ macros.img_link("compiler-seed-hosted.png", mkdocs, "95%", class=" ") }}
+
+Under the hood the compiler is a two-layer program: a hand-written **seed** (the make/awk core, parsed first) and a growing **[`__hosted__`](#hosted-partition)** partition authored in CMK and lowered by compose.mk's own compiler.  The boundary is the seed's kind-system API, which every hosted kind is authored with; see the [Hosted Partition](#hosted-partition) and [Multistage](#multistage) appendices for how that second stage is bound.
+
+{{ macros.section(3, "Learn by Example", id="learn-by-example") }}
+
+#### Running Demos
+<hr class="section-rule lvl-4">
+
+The `cmk` subcommand is the public interface for CMK programs (`run` | `compile` | `build` | `doc`):
+
+```bash {.cli_example}
+# Run a demo directly, via its shebang (`#!/usr/bin/env -S ./compose.mk cmk run`)
+$ ./demos/cmk/example.cmk
+
+# Run a demo explicitly (`cmk <file>` is shorthand for `cmk run <file>`)
+$ ./compose.mk cmk run ./demos/cmk/example.cmk
+
+# Compile only, without running (highlighted preview to a terminal)
+$ ./compose.mk cmk compile ./demos/cmk/example.cmk
+```
+That preview still requires an external `compose.mk` to access library functions.  But a stand-alone version with an *embedded* standard library is one step away: pass an output path, and `cmk compile` emits a self-contained, directly-runnable program:
+
+```bash {.cli_example}
+$ ./compose.mk cmk compile ./demos/cmk/example.cmk example
+$ chmod +x ./example && ./example
+```
+
+#### Basic Example
+<hr class="section-rule lvl-4">
+
+Let's revisit the JSON emit/consume example that's part of the [structured IO docs]({{_}}/standard-lib/#structured-io-basics).  The original code was simple, but rewriting this in CMK is much more pretty:
+
+{{site.embed_twin('demos/structured-io.mk', 'demos/cmk/structured-io.cmk', github=github, default='cmk', see_also=_+'/standard-lib/#structured-io', see_also_text='Standard Library: Structured IO')}}
+
+We'll get to the odd arrow syntax at the end of this section, but start with most basic stuff first. 
+
+**Running CMK programs:**
+:  This example runs via the **`cmk` subcommand** (its shebang is `#!/usr/bin/env -S ./compose.mk cmk run`).  `cmk run` compiles CMK -> Makefile and then executes the result, which is what lets us extend the base syntax and use the more exotic stuff you see in the rest of the file.  As with other demos, this one is executable directly.  Unlike a plain-Makefile demo, it *can't* be run with `make -f ..`.
+
+**Implied Include + Standard Library:**
+:  When using the interpreter, a line like `include compose.mk` is always implied, and this brings with it full access to the [standard library]({{_}}/standard-lib).
+
+**Function Calls Rewritten:**
+:  Awkward raw macro invocations are rewritten as ordinary function calls instead.  Similarly, you get cleaner versions of [compose.import statements]({{_}}/bridge/#other-import-statements), or any of the other [macros]({{_}}/macros).
+
+**Recursive Calls Rewritten:**
+:  Recursive self-invocation, normally spelled as a recursive `make`, becomes a target-anchored `this` call instead.  Reinvoking the current context is common, and absolutely critical for code-reuse.[^3]  The choice of `this` for a new keyword is actually configurable too.. see [user-defined dialects]({{_}}/cmk/metaprogramming/#user-defined-extensions).
+
+Finally, **about that arrow syntax?**  These operators help to make [structured IO]({{_}}/standard-lib/#structured-io) feel more native, and are sugar to safely use `jq` and `jb` for parsing and pushing JSON, respectively, *regardless* of whether those tools are available on the host.  (A hint about what's happening here: glancing at the [original code]({{_}}/standard-lib/#structured-io-basics) that's "ported" to cmk-lang here, you'll notice the only "code transformation" we really need to get from **CMK -> Makefile** in this case involves very simple string substitutions.)
+
+#### Compose File Example
+<hr class="section-rule lvl-4">
+
+Revisiting the code from the [inlined compose-file demo]({{_}}/demos/matrioshka/#inlined-compose-files), let's look at a CMK version.  
+
+Like the original demo, this embeds a compose file, creates target-scaffolding for the containers involved, and demonstrates task-dispatch for them.  But this time we introduce the **`compose.import.string name(| ..body.. |)`** callform for compose files.
+
+{{site.embed_twin('demos/inlined-composefile.mk', 'demos/cmk/inlined-composefile.cmk', github=github, default='cmk', see_also=_+'/demos/matrioshka', see_also_text='Matrioshka: inlined compose files')}}
+
+Most of the differences with the original demo are pretty obvious, and alternate equivalents are shown to make what's happening more clear, but let's walk through it.
+
+!!! checklist "<strong>Walk-through</strong>"
+	1. As in the [basic example](#basic-example), `include compose.mk` is implied.
+	1. [Target scaffolding for services]({{_}}/bridge) is automatic, or in other words
+	1. [`compose.import.string(..)`]({{_}}/bridge/#other-import-statements)) is written directly as the `compose.import.string name(| .. |)` callform, and
+	1. After declaration of services with `compose.import.string name(| ..body.. |)` target handles are available immediately.  (This form defaults `import_to_root=TRUE`, so the service targets land at root and are callable bare.)
+	1. We replaced a more naive *"echo ..."* command with a call to `cmk.log` that's using colors and stderr.
+
+Most interestingly though, `<container_name>.dispatch(<target_name>)` now looks like a normal function invocation.  Also notice that the different equivalent styles work with or without line-breaks or line-feeds; this demonstrates that *double-rewrite rules* for transpiler substitution works the way you'd expect.
+
+##### Compose-Context & Bind-Script
+<hr class="section-rule lvl-5">
+<a name=compose-context></a>
+<a name=bind-script></a>
+
+The last example inlines a compose file, and then dispatches targets.  How about using an external compose file, then running script-dispatch with a tool-container?  This example introduces two new idioms that can help.
+
+Below, examples for `script1.sh` and `script2.sh` are equivalent, but use two different idioms:
+
+{{site.embed_twin('demos/bind-script.mk', 'demos/cmk/bind-script.cmk', github=github, default='cmk', see_also=_+'/container-dispatch/#container-agnostic-dispatch', see_also_text='Container Dispatch: agnostic dispatch')}}
+
+So why have two idioms if they are equivalent?  Well, both of these turn out to be pretty generic.  Since we'll encounter other variants later, it makes sense to introduce them side by side for some compare and contrast.
+
+* **The decorator-style idiom** with `compose.bind.script` is most explicit, and one of several possible [bind declarations](#bind-declarations) that CMK supports.  This actually looks like a traditional Makefile target, but also adds a piece that looks like a python decorator.
+
+* **The `in` machine-algebra** is a more generic form: a recipe body `(| .. |) in <service>` dispatches the block into a compose service.  The same `in` will come up again, because depending on what sits to its right, it can dispatch into a named `container` / `Dockerfile` instance or an anonymous `container(| img=.. entrypoint=.. |)`; so it works with any script, any interpreter, and containers that aren't managed by docker compose.
+
+Although we've switched to an external compose file rather than embedded one, both forms work with [inlined services](#compose-file-example) too.
+
+**Choosing between *bind-declarations* vs the `in` *machine-algebra*** is sometimes just a matter of taste, but there are some practical considerations too.  One advantage of using bind-declarations is that [they can be stacked](#bind-declarations).  Meanwhile, the `in`-form is easier to refactor later, for example if you're moving from compose-backed containers in external files to [inlined-Dockerfiles](#local-context-embedded-containers), etc.
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+**Supported arguments** are the same for both the decorator style and the `in`-form.  Both forms optionally support forwarding environment variables, sending output to stderr instead of stdout, etc.  See here [^5] for additional explanation re: `env` and `quiet`.
+
+{% include "includes/args/compose.bind.script.md" %}
+
+See [this demo]({{_}}/demos/ai/#dueling-philosophers) for a concrete example using multiple arguments.
+
+##### Compose-Context & Bind-Target
+<hr class="section-rule lvl-5">
+<a name=bind-target></a>
+
+Quick-and-dirty scripting is often convenient, but working with targets makes it much easier to leverage composition.  For this you can use `compose.bind.target`.  
+
+This idiom binds together a given container, a "public" target and a "private" target.  The public-target is the main interface; the "private" target has the same name but uses a "self." prefix and always runs inside the named container.
+
+{{site.embed_twin('demos/bind-target.mk', 'demos/cmk/bind-target.cmk', github=github, default='cmk', see_also=_+'/container-dispatch/#container-agnostic-dispatch', see_also_text='Container Dispatch: agnostic dispatch')}}
+
+Again we import services here instead of inlining them, but `compose.bind.target` works in either case.
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+**Supported arguments** for `compose.bind.target` include the ability to optionally forward environment variables, sending output to stderr instead of stdout, etc.  See here [^5] for additional explanation re: `env` and `quiet`.
+
+{% include "includes/args/compose.bind.target.md" %}
+
+The `(| .. |)` blocks and the `in` machine-algebra above are powered by *sugar*, a block-structured cousin of dialects that lowers source into Makefile define-blocks while giving them extra semantics.  The mechanics (and how to redefine them) live on the [Dialects &amp; Sugar]({{_}}/cmk/metaprogramming/#about-sugar) page.
+
+#### Polyglot Examples
+<hr class="section-rule lvl-4">
+
+CMK particularly shines at cleaning up the idioms you can see in the [polyglot index]({{_}}), and almost every example is more clear and concise.  
+
+##### Foreign Code Objects
+<hr class="section-rule lvl-5">
+
+The example below introduces the difference between bound vs unbound code, i.e. whether or not an interpreter has been declared.
+
+Bound code (an interpreter *is* declared) is written with the first-class [`polyglot`]({{_}}/demos/polyglots) keyword, which carries the image and entrypoint arguments alongside its body, or it is bound to a specific `container` / `machine` instance via that instance's `.polyglot`.  Unbound code (no interpreter declared: a "trivial" code-object with only `.preview`/`.to.file`) is created with the `code.unbound` keyword, independent of any machine.
+
+An anonymous inline `container` (used with `in`) takes its keyword arguments in the banana body; a named `container` or `Dockerfile` instance carries them in a leading paren instead, where a quoted value may span multiple words, and the `in` dispatch then just names it.
+
+The `in` clause need not sit on the same line as the closing `|)`.  It may stay inline, or use a trailing `\` for a Makefile-style continuation that carries the dispatch onto the following line(s):
+
+{# ```Makefile
+# inline
+(| .. |) in container(| img=alpine entrypoint=bash |)
+
+# backslash-continued
+(| .. |) \
+    in container(| img=alpine entrypoint=bash |)
+``` #}
+
+{{site.embed_twin('demos/code-objects.mk', 'demos/cmk/code-objects.cmk', github=github, default='cmk')}}
+
+Since the `in` machine-algebra is generic enough to already handle the polyglot use-case by naming a container carrying its own image and entrypoint, why add another syntax?
+
+There are some differences, including the scaffolded `preview` target.  But the main difference is that this approach to polyglots is *intentionally* pretty minimal.
+
+* Creating a code-object off a plain target tends to result in designs that *could* use a container, but doesn't strictly require one, and usually makes things more friendly for composition.  That allows you to use host tools if available and fall-back to containers, or make dynamic decisions about the image to use.
+
+* Dispatching a body straight into a container only supports container/interpreter arguments.  That makes environment-variable passthrough more awkward, and therefore encourages only pipe-based I/O if any is required.
+
+##### Files as Targets (file-sourced code-objects)
+<hr class="section-rule lvl-5">
+<a name=files-as-targets></a>
+
+For larger scripts, you'll want to use external files.  A code-object can source its body from a `file=` instead of an inline `(| .. |)` block; binding a file, container, and interpreter is a typical use-case.
+
+{{site.embed_twin('demos/bind-file.mk', 'demos/cmk/bind-file.cmk', github=github, default='cmk')}}
+
+-----------------------
+
+The same pattern works from raw make by calling the `code` macro with `def=NAME` and `file=..` arguments.  This example also demonstrates passing a few more of the supported arguments:
+
+{{site.embed_twin('demos/import-file.mk', 'demos/cmk/import-file.cmk', github=github, default='cmk')}}
+
+-----------------------
+
+**Supported arguments** are the same in both forms above.  The name of the target that gets created comes from the code-object name (`code NAME(..)` in CMK-lang, or `def=NAME` in raw make); `file=` supplies the body in place of an inline block.
+
+{% include "includes/args/code.file.md" %}
+
+##### Host-context Scripts
+<hr class="section-rule lvl-5">
+
+The [approach for running a shell script on the host]({{_}}/demos/polyglots#special-guests) is slightly different: bind the block to the core `host.native.bash` machine -- `host.native.bash.polyglot` in CMK-lang, `code.import bind=host.native.bash` in raw make:
+
+{{site.embed_twin('demos/host-native-bash.mk', 'demos/cmk/host-native-bash.cmk', github=github, default='cmk')}}
+
+Host scripts inherit the parent environment automatically.  This includes any variables passed or exported from the command line, as well as any variables exported globally in the main script.
+
+
+#### Dockerfile Example
+<hr class="section-rule lvl-4">
+
+Let's revisit the code from the [inlined Dockerfile demo]({{_}}/demos/matrioshka/#inlined-dockerfile), and port it to CMK.  An inline Dockerfile is declared with the first-class `Dockerfile` constructor: {{ cmkmath.imath("#Dockerfile @NAME (|..body..|)") }}.
+
+{{site.embed_twin('demos/inlined-dockerfile.mk', 'demos/cmk/inlined-dockerfile.cmk', github=github, default='cmk', see_also=_+'/raw-docker', see_also_text='Raw Docker')}}
+
+It's much cleaner than the plain Makefile now. Helper targets for dispatch and build are created automatically, and data like `my_container.img` is also scaffolded.
+
+!!! tip "Tip"
+    The instance is referenced by its bare `NAME` (e.g. `my_container.build` / `my_container.img` / `my_container.dispatch/<target>`): with no `Dockerfile` prefix.
+
+##### Local-Context & Embedded Containers
+<hr class="section-rule lvl-5">
+
+The last example uses some raw docker commands just to show it's possible, but in most cases you'll want tighter integration that feels more "native".  For this we can leverage the `in` machine-algebra again, this time dispatching into a locally-built image.  Declare it with a `Dockerfile box(entrypoint=..)(| FROM .. |)` instance, then run a body with `(| .. |) in box`.
+
+Here's two examples, showing minimal usage first, then demonstrating passing some extra arguments.  The `env` and `quiet` controls ride either the instance declaration or the `{..}` channel on the dispatch.
+
+{{site.embed_twin('demos/script-dispatch-custom.mk', 'demos/cmk/script-dispatch-custom.cmk', github=github, default='cmk', see_also=_+'/raw-docker#inlined-dockerfiles', see_also_text='Raw Docker: inlined Dockerfiles')}}
+
+-----------------------
+
+**Supported arguments** carried on the instance and the `{..}` callform-channel are described below.  See here [^5] for additional explanation re: `env` and `quiet`.
+
+{% include "includes/args/docker.bind.script.md" %}
+
+##### Docker-Context & Stock Containers
+<hr class="section-rule lvl-5">
+
+Using stock images instead of inlined ones is similar to the last section, except that the body dispatches into an anonymous `container(| img=.. entrypoint=.. |)` rather than a named `Dockerfile` instance.
+
+{{site.embed_twin('demos/script-dispatch-stock.mk', 'demos/cmk/script-dispatch-stock.cmk', github=github, default='cmk', see_also=_+'/raw-docker#dispatch-scripts-in-containers', see_also_text='Raw Docker: dispatch scripts in containers')}}
+
+-----------------------
+
+**Supported arguments** for the anonymous `container(| .. |)` are exactly the same as the ones we saw earlier for the embedded-container form in [Local-Context & Embedded Containers](#local-context-embedded-containers).
+
+{{ macros.section(3, "Syntax &amp; Grammar", id="syntax-grammar") }}
+
+{{ macros.section(4, "Bind Declarations", id="bind-declarations") }}
+<a name=bind-declarations></a>
+
+Bind-declarations were introduced in [the compose file example](#compose-file-example), but they show up in a few places.  You can think of them as a type of "target decorator", similar to function-decorators in python.  Bind declarations in CMK-Lang use `@` at column 0, exactly like a python decorator.  Because make's `@` is a recipe-only prefix (tab-indented), a `@` at the left margin never collides; so the compiler tells them apart by position.  As with a python decorator, the `@` line (or lines, when [stacked](#stacking-bind-declarations)) goes immediately *above* the target it applies to, with no blank line in between.
+
+One use-case of bind-declarations is to bind variables to values, basically providing support for keyword-arguments, [as seen elsewhere]({{_}}/standard-lib/#argument-parsing).  
+
+The equivalent idiom is much more readable in cmk-lang:
+
+{{site.embed_twin('demos/kwarg-parsing.mk', 'demos/cmk/kwarg-parsing.cmk', github=github, default='cmk', see_also=_+'/standard-lib/#argument-parsing', see_also_text='Argument Parsing')}}
+
+##### Stacking Bind Declarations
+<hr class="section-rule lvl-5">
+
+Bind-declarations can be stacked. For example, loading some variables from JSON and some from the environment looks like this:
+
+{{site.embed_twin('demos/kwarg-parsing-2.mk', 'demos/cmk/kwarg-parsing-2.cmk', github=github, default='cmk', see_also=_+'/standard-lib/#argument-parsing', see_also_text='Argument Parsing')}}
+
+{{ macros.section(4, "Capture Operator", id="capture-operator") }}
+<a name=capture-operator></a>
+
+The `<-` operator *captures* a command's output.  In a **recipe** (tab-indented) it binds a shell variable: the ubiquitous backtick-assignment idiom without the backtick noise; at **module** scope (column 0) it captures at parse time into a make variable via a shell-expansion assignment.  The arrow is *adjacent* (a spaced `< -` stays a shell redirect) and spacing around it is free (`x<-y` == `x <- y`).  The useful part is that the right-hand side runs through the dialect first.  So for example:
+
+```Makefile {.snippet .language-makefile}
+
+# CMK Capture:
+x <- this.t  
+
+# Lowered to Makefile:
+x=`${make} t`
+```
+
+The whole RHS is captured up to the next shell separator (one of `;`, `&&`, `||`), a trailing line-continuation, or end-of-line.[^defskip]
+
+Because the RHS is lowered first, it can be any [call-form](#call-forms) or `cmk.<macro>(...)` macro-callform, not just a bare command.  For example, the RHS can be a receiver query, or `cmk.__locals__()` to capture this recipe's locals as JSON.  That second case is the natural pairing: since `<-` produces ordinary (non-exported) shell variables, those captures are exactly what `__locals__()` reflects (see the **Target Locals** entry in the [Quick Reference]({{_}}/cmk/quickref)).
+
+{{ macros.section(4, "Triple-Quoted Forms", id="triple-quote-literals") }}
+<a name=triple-quote-literals></a>
+
+CMK has 3 triple-quoted literal forms.  Each emits its own body as text (handy for feeding a snippet or whole program into a pipeline without the usual quoting/escaping hassle), and each supports multi-line content.[^defskip]
+
+They differ only in *what gets interpolated*.  One caveat applies to all three: the body can't contain an internal run of three-or-more of its own delimiter character.
+
+##### Triple-Quote (Singles)
+<hr class="section-rule lvl-5">
+
+The form for `'''…'''` is literal (to the shell).  Internal quotes and `%` are taken literally.  However the usual two-layer expansion applies:
+
+* **Make** variables and functions DO expand (variable reads and macro calls alike)
+* **Shell** constructs do NOT expand: a shell variable, a command-substitution, and an arithmetic/subshell form are all passed through verbatim (the single quotes protect them).
+
+```Makefile {.snippet .language-makefile}
+X := MAKE_VALUE
+demo:
+  @echo start
+  '''mk=${X} sh=$${USER}'''
+  @# printed: mk=MAKE_VALUE sh=${USER}  (the shell var stays literal)
+```
+
+**Lowering:** The compiler lowers this form as a **single-quoted** `printf '%s' '…'`.
+
+!!! note "Reserved positions: `'''…'''` as a docstring"
+    Three positions give `'''…'''` a *different*, now-standard meaning, so it is **not** printed there:
+
+    * as the **first line of a recipe** it is a **target docstring**, lowered to a doc-comment and surfaced through the `__target__.__doc__` reader and in [generated help]({{_}}/cli-help/#docstring-style);
+    * at **column&nbsp;0** (bare, module level) it is a **module docstring**, lowered to a `__doc__` block and surfaced through the module's `__name__.__doc__` reader;
+    * as the **first line of a banana body** (a class, `dsl`, module, or namespace declaration) it is that instance's docstring, lifted out to a sibling `<name>.__doc__` and qualified for a nested member.  This is uniform across cooked and raw bodies, so a raw `jqlang q(| '''…''' … |)` and a cooked `cmk.class Foo[| '''…''' … |]` both surface a `q.__doc__` / `Foo.__doc__` reader.
+
+    The literal-string form above is therefore any `'''…'''` that is **not** in one of those three positions (e.g. a later recipe line, or an argument to a call-form).  That is why the example puts a recipe line ahead of it.
+
+##### Triple-Quote (Backticks & Doubles)
+<hr class="section-rule lvl-5">
+
+The forms for `"""…"""` and ` ```…``` ` are both interpolating.  These two are **equivalent**; just use whichever form doesn't clash with the body.  On top of the make expansion above, the **shell** layer now interpolates as well: a shell variable, a command-substitution, and an arithmetic/subshell form all expand at runtime.  (Single quote = literal, double quote = interpolating, just like in shell.)
+
+```Makefile {.snippet .language-makefile}
+X := MAKE_VALUE
+demo:
+  """mk=${X} sh=$${USER}"""
+  @# output is mk=MAKE_VALUE sh=<value of $USER>
+```
+
+**Lowering:**  Both of these triple-quote forms lower to a **double-quoted** `printf '%s' "…"`.  
+
+{{ macros.section(4, "Grammar", id="grammar") }}
+
+cmk-lang's surface grammar is small: a few call-**anchors**, their {{ cmkmath.imath("(@a,@b)") }} / {{ cmkmath.imath("[@S]") }} / {{ cmkmath.imath("{env}") }} channels, the {{ cmkmath.imath("(|..|)") }} block, and a handful of literal forms; all of which lower to Makefile.  This section is a structured *index* into that grammar; each construct is covered in depth in the sections that follow, and the authoritative one-page token/lowering tables live on the [Quick Reference]({{_}}/cmk/quickref).
+
+!!! wip "Skeleton"
+    The stubs below currently just cross-reference.  Prose will be filled in incrementally, and the grammar **tables stay on the [Quick Reference]({{_}}/cmk/quickref)** (single source of truth) rather than being duplicated here.
+
+{{ macros.section(5, "Anchors &amp; call-forms", id="grammar-callforms") }}
+
+{{ cmkmath.imath("`this.`") }} (target), {{ cmkmath.imath("`cmk.`") }} (macro), and the anchorless receiver, each with {{ cmkmath.imath("(@a,@b)") }} and {{ cmkmath.imath("[@S]") }} flavors.  Grammar table: [Quick Reference &rarr; Call Forms]({{_}}/cmk/quickref/#call-forms).  In depth: [Call Forms](#call-forms), [Receiver Form](#receiver-form).
+
+{{ macros.section(5, "Blocks &amp; trailers", id="grammar-blocks") }}
+
+The banana block in its three brackets: {{ cmkmath.imath("@NAME(|..|)") }} (raw), {{ cmkmath.imath("@NAME[|..|]") }} (cooked), {{ cmkmath.imath("@NAME{|..|}") }} (pragma-assigned).  Plus its stream / args / env channels {{ cmkmath.imath("[@S]") }} / {{ cmkmath.imath("(@a,@b)") }} / {{ cmkmath.imath("{env}") }}.  Grammar table: [Quick Reference &rarr; Banana Forms]({{_}}/cmk/quickref/#banana-forms).  In depth: [Banana Forms](#banana-forms) (full family on the [Banana Blocks]({{_}}/cmk/banana) page).
+
+{{ macros.section(5, "Literals", id="grammar-literals") }}
+
+Triple-quoted strings and block-references.  In depth: [Triple-Quoted Forms](#triple-quote-literals), [Block References](#block-references).
+
+{{ macros.section(5, "Operators &amp; sugar", id="grammar-operators") }}
+
+The capture operator, dialect tokens, and sugar markers.  In depth: [Capture Operator](#capture-operator), and the [Metaprogramming]({{_}}/cmk/metaprogramming) page.
+
+{{ macros.section(4, "Call Forms", id="call-forms") }}
+<a name=callable-targets></a> <a name=call-form></a>
+
+The call-form grammar, the target and macro anchors, the anchorless receiver, and the `(args)` / `[stream]` / `{env}` channels that compose over any of them, is documented on the [Callforms]({{_}}/cmk/concepts/#callforms) concept page.  The [Receiver Form](#receiver-form) below covers the anchorless variant in depth: the declaration-forms grammar it is discovered from.
+
+#### Receiver Form
+<hr class="section-rule lvl-4">
+<a name=receiver-form></a>
+<a name=receivers></a>
+
+The primary [call-form](#call-form) anchors are explicit.  A **receiver** is a more implicit third option: a name brought into scope by a [declaration]({{_}}/macros/#declare-namespace).
+
+This form covers various first-class constructs like a [channel]({{_}}/macros/#declare-namespace), a [module]({{_}}/cmk/modules), a [polyglot]({{_}}/demos/polyglots), or a [container]({{_}}/demos/matrioshka).   After declaration, the name is implied, but otherwise the standard call-form grammar applies.
+
+##### Lowering & Quick Example
+<hr class="section-rule lvl-5">
+
+```Makefile {.snippet .language-makefile}
+# declares a channel named `inbox`, registering it as a receiver
+channel inbox(| [] |)
+
+# -> printf '%s' "type=login user=alice" | $(if $(filter file override,$(origin inbox.emit)),$(call inbox.emit),${make} inbox.emit)
+inbox.emit["""type=login user=alice"""]
+
+# logins=`${make} inbox.filter.field_equal/type,login`
+logins <- inbox.filter.field_equal/type,login
+```
+
+Since the declaration builds targets dynamically, the 2nd form above is just a small change over the target-calling form we've already met: the same send written with an explicit target anchor on `inbox.emit`.
+
+!!! tip "OOP?"
+    This resembles message-passing OOP since the *receiver* is the "object" a message is sent to and `receiver.method[...]` deliberately reads that way.  But it's simpler than that.  There are no instances, no inheritance, and no `self`.  
+    
+    A receiver is a compile-time **namespace**, not a runtime object, and the send is resolved by static name-rewriting rather than dynamic dispatch.  Any state involved lives *outside* the "object" (in this case a channel's queue is a stack-file, not a field of `inbox`).  Think *namespaced message-send syntax* rather than classes.. this gives the first-class look-and-feel without a real object model.
+
+A receiver-send fires **only** when all three hold, which is what keeps it from meddling with ordinary names:
+
+* The name was **declared** (an undeclared `foo.bar[...]` is left untouched),
+* It sits at a **word boundary** (the start of a recipe word, not mid-token), and
+* It is followed by a **call-suffix**: `(`*args*`)`, `[`*stream*`]`, `/`*arg*, or an adjacent triple-quote.
+
+So a target *definition* (`inbox.seed:`), a parametric def (`inbox.scan/%:`), a bare prerequisite
+(`__main__: inbox.seed`), and anything inside a `define`-block are all left as-is. A legacy
+send written with an explicit target anchor on `inbox.emit` still works and is never double-anchored.
+
+Receiver names are discovered from the file's own declarations at compile time, by naming convention.  Every form that **introduces a bindable name** is enumerated in one place (the compiler's receiver pre-scan), which doubles as the de-facto grammar of cmk-lang *declaration forms*:
+
+| form | introduces | example |
+|---|---|---|
+| `[ctor] NAME(\| … \|)`, `NAME[\| … \|]`, `NAME{\| … \|}` | a [banana block](#banana-forms) name (raw / deep-cooked / pragma family); a leading constructor word (`channel`, `agent`, `container`, …) creates that kind | `channel inbox(\| … \|)` |
+| `namespace=NAME` | a renamed [module]({{_}}/cmk/modules) import (the member prefix) | `import.module(def=lib namespace=fs)` |
+| `… def=NAME` | a [polyglot]({{_}}/demos/polyglots) or single-image [container]({{_}}/demos/matrioshka) block name | `code(def=parse)` |
+| `import … as NAME[, …]` | an aliased [import]({{_}}/cmk/modules) | `import x/y as fs` |
+| `open NAME[, …]`, `import NAME[, …]` | an open / import module list | `open a, b` |
+
+Because this pre-scan is the single place the whole set lives (the parser stages each handle their own form, and the highlighter grammars mirror it), adding a declaration form means updating it too.  Multi-service compose files are the exception: their service names are only known at runtime, so they keep the explicit `<svc> ᐉ <target>` dispatch.
+
+{{site.embed_demo('demos/cmk/channel.cmk', github=github)}}
+
+{{ macros.section(3, "Blocks, Layout &amp; Config", id="blocks-layout-config") }}
+
+{{ macros.section(4, "Block References", id="block-references") }}
+<a name=block-references></a>
+<a name=block-refs></a><a name=block-ref></a>
+<a name=blockrefs></a> <a name=blockref></a>
+
+A `define`-block keeps a snippet (a script, a program, a query) in one named place; a
+**block-ref glyph** then feeds that block straight into a command, with no temp-file dance.
+
+{% include "includes/blockref-algebra.md" %}
+
+{{site.embed_twin('demos/blockrefs.mk', 'demos/cmk/blockrefs.cmk', github=github, default='cmk')}}
+
+!!! info "Tempfile Lifecycles"
+    The two glyphs have very different lifecycles.  The `⬦` form lowers to a process-substitution (`<(…)`): the shell owns the transient FD and tears it down automatically when the command exits, so there's nothing on disk to manage.  The `⬥` form lowers to a command-substitution that runs `mktemp` *every time the recipe line executes*, writes the block to that file, and substitutes the path into your command.  A new file is created per evaluation (so re-running a target, or referencing the same block twice, yields distinct paths).  These files land in a run-scoped scratch location (a `.tmp.cmk.brf.*` name keyed on the run id) and are **auto-removed at the end of the run** by the supervisor, so you don't have to manage them.  The manual `mk.clean` target is available as a backstop if a run is hard-killed before teardown.
+
+{{ macros.section(4, "Banana Forms", id="banana-forms") }}
+
+A **banana block** `NAME(| body |)` is a native, generic *declare*: the body lowers to `define NAME .. endef`, then a constructor (a trailing `as C`, or a leading dotpath) is applied.  It is the block-structured sibling of the [triple-quoted forms](#triple-quote-literals) and [block-references](#block-references), and it composes with the [call-form channels](#call-forms) you just met (`[stream]`, `(args)`, `{env}`).
+
+{{ site.embed_demo('demos/cmk/banana-blocks.cmk', github=github) }}
+
+The block is only the atom of a larger family: multi-body currying, anonymous lambda-lift, cooked (compile-twice) blocks, and user-defined `declare.*` constructors.  The full reference, with a demo per idiom, is on the [Banana Forms]({{_}}/cmk/banana) page.
+
+{{ macros.section(4, "Recipe-Body Joining", id="recipe-body-joining") }}
+<a name=recipe-body-joining></a>
+
+The newline-separated lines of a recipe body are joined into a single shell with ` && ` connectors *by default*.  A body written one-statement-per-line therefore shares state (variables, `cd`) across its lines and stops on the first failure. The joining is conservative and should not surprise recipes that already manage their own control-flow: a line that already ends in a connector (`&&`, `||`, `|`) just continues to the next, a line you split yourself with a trailing `\` stays one command, and `-`- or `+`-prefixed lines stand alone.
+
+The ` && ` default is a *policy*, not a law: it is overridable per-file with the [`recipe_join` compiler pragma]({{_}}/cmk/pragmas/#pragma-recipe_join).
+
+{{ macros.section(4, "Compiler Pragmas", id="compiler-pragmas") }}
+<a name=compiler-pragmas></a>
+
+[Dialects]({{_}}/cmk/metaprogramming/#about-dialects) and [sugar]({{_}}/cmk/metaprogramming/#about-sugar) let a file extend the *syntax* it's written in.  A **pragma** is the third member of that family: a leading-comment `cmk_pragma :::` JSON hint that sets *per-program settings* in-source, in lieu of piling environment variables onto the shebang: the [`recipe_join`]({{_}}/cmk/pragmas/#pragma-recipe_join) connector, extra [compiler stages]({{_}}/cmk/pragmas/#pragma-compiler_pre_post), [REPL mode]({{_}}/cmk/pragmas/#pragma-repl), the [boot lifecycle]({{_}}/runtime/#lifecycle-boot-settings), and more.
+
+The full catalog lives on its own page, **[Compiler Pragmas]({{_}}/cmk/pragmas)**: the `cmk_pragma` marker and resolution rules, the [`__pragma__` protocol]({{_}}/cmk/pragmas/#pragma-protocol), a summary table, and a card per pragma.
+
+#### Indentation
+<hr class="section-rule lvl-4">
+<a name=indentation></a>
+
+Plain Makefiles require recipe lines to begin with a literal **tab**.  CMK relaxes this to **python-style indentation**: a target body may be indented with **tabs or spaces**, and the compiler normalizes a consistently space-indented body to the tab Make needs.  The rules, like Python's, are about *consistency*:
+
+{{ site.contract_card([
+  ['tabs', 'Passed through unchanged (you keep Make&rsquo;s &ldquo;extra tab = literal command content&rdquo; behaviour).'],
+  ['spaces', 'Must use the <i>same</i> indent on every line; rewritten to a single leading tab.'],
+  ['mixed / mismatched', 'Mixing tabs and spaces <i>within one indent</i> (&ldquo;mixed&rdquo;), or inconsistent amounts of space-indentation in one body (&ldquo;mismatched&rdquo;), is an <b>error</b>: the compiler stops with a clear message, much like Python&rsquo;s <code>TabError</code> / <code>IndentationError</code>.'],
+], title='Consistency rules') }}
+
+Indentation is normalized as the **last** preprocessing step, after [sugar
+blocks]({{_}}/cmk/metaprogramming/#about-sugar) have been lowered.  See the {{macros.repo_link('demos/cmk/space-indented.cmk', name='space-indented demo', github=github)}}.
+
+#### The `cmk` prelude (declaration keywords)
+
+The declaration keywords (`class`, `constructor`, `container`, `machine`, `dsl`, `namespace`) are **not** bare top-level names.  They live in a small built-in module, `cmk`, qualified as `cmk.class`, `cmk.container`, and so on.  The qualified forms are **always available**:
+
+```make
+cmk.class Box[| ${self}.x = 1 |]
+```
+
+The bare spelling is *opt-in*: a program pulls the keywords in with an ordinary import statement (`from cmk import *`), exactly like Python.  Until it does, `class`/`container`/… stay free for the program's own grammar, and reaching a bare keyword without pulling it in is an error.  The star form, its `except`/selective variants, and the older `open cmk` alias are the same forms every module supports, core or disk; see the [from-imports]({{_}}/cmk/modules/#from-imports) reference for the full grammar and binding rules.
+
+The one compiler-specific mechanic: a qualified `cmk` keyword survives compilation as a **literal ctor** because the macro anchor (the calling convention behind a macro-callform like `cmk.log(..)`) is a structural, *banana-aware* stage (`cmkanchor`, run right after `dialect`): a qualified `cmk` name in the ctor position of a banana head is left intact for the sugar stage, while every other macro-anchored name still lowers to a macro call.  The list/callform spelling still means "call `class`" and needs a prior `from cmk import *`; the always-on qualified form is the banana spelling shown above.
+
+{#
+and [Contributing]({{_}}/contributing).
+
+#### Implementation Details
+<hr class="section-rule lvl-4">
+
+Luckily, the target-language *(i.e. Makefile)* has almost no syntax itself and is ridiculously easy to generate.  This isn't that ambitious of a goal anyway!  The hard work for backend-idioms and other support is already done, and those are all Makefile-compatible.. thus transpiling is mostly just matching and rewriting some strings. [^2]
+
+{{macros.terminology("*Ackshually* the compilation process is transpilation, not compilation, since this is source-to-source, and usually the resulting artifact is executed directly rather than saved, so you might also call it interpreted.  Since the entire process is *extremely simple*, you may also prefer to think of it as more like **preprocessing that supports user-defined configuration**.  Still.. the fact remains that CMK code is **not necessarily** legal Makefile without this step in the middle.",title="**Terminology:**")}}
+
+**For the actual code-generation,** it's tempting to reach for any number of cool parser libraries, but you can probably tell based on the dialect/sugar specifications that what we need is very simple and closer to a regex.  We also want to avoid fancy tools that might require a dockerized toolchain, and even though it's just glorified string manipulation, `make` itself is not really up to the challenge.  The only tool for the job that's as fast and ubiquitous as `make` is `awk`, but this is still pretty daunting!
+
+In an ironic twist, the requirement that [dialects]({{_}}/cmk/metaprogramming/#about-dialects) and [sugar]({{_}}/cmk/metaprogramming/#about-sugar) should be extensible actually makes it easier to see a solution.  The compilation pipeline basically works as follows:
+
+1. One static `awk` script for dialects, accepting a single pair as arguments
+1. One static `awk` script for sugar, accepting a single triplet as arguments 
+1. Use `jq` to parse arrays, unpacking pairs/triples, rendering 1 awk CLI command for each
+1. Use `bash` to run the script generated by `jq`.
+
+Crazy?  Sure!  But also very clean in a specific way: *hopefully* the gnarly awk is a forgettable and super low-maintenance abstraction that no one ever thinks about again.  This isn't the full picture and leaves out a few special cases, like rewriting `$(call fun, args)` to `cmk.fun(args)` but again it's pretty stable with no maintenance required.  The only thing that `awk` really needs to know about Makefile syntax is.. *don't mess with content inside of define-blocks and comments*.
+#}
+
+{{ macros.section(3, "How It Works", id="how-it-works") }}
+
+#### Related Reading
+<hr class="section-rule lvl-4">
+
+Other related documentation includes: The [more basic interpreter usage]({{_}}/signals/#inheritance-interpreters), which allows for inheritance of the entire `compose.mk` standard library and signals, but skips compilation and does **not** allow syntactic extensions.  The [packaging support]({{_}}/demos/packaging) generates executables, but *isn't* compilation.  And there's also [a few thoughts about style]({{_}}/style).
+
+!!! terminology "In compiler terms"
+    CMK is a **reflective, self-extending, partially self-hosting transpiler with a near-meta-circular runtime VM**:
+
+    - **reflective**: a program reads its own compile-time manifest and runtime machine as first-class self-models ([`__pragma__` / `__plugins__` / `__modules__`]({{_}}/plugins/overview#program-self-models), [`__vm__`]({{_}}/modules/virtual-machine#self-model-steering)).
+    - **self-extending**: a program (or an imported plugin) adds compiler stages from inside its own source, and the compiler invokes itself to discover them ([`compiler_pre`/`compiler_post` stage chain]({{_}}/cmk/pragmas/#pragma-compiler_pre_post), [two-pass pragma stacking]({{_}}/cmk/pragmas/#pragma-plugin_pragma_allowed)).
+    - **self-hosting (partial)**: a growing region of compose.mk's own standard library (the [`__hosted__` partition](#hosted-partition)) is authored in cmk-lang and lowered by compose.mk's *own* compiler at include-time, so the program now compiles a slice of itself.
+    - **near-meta-circular runtime**: the [`__vm__` CEK machine]({{_}}/modules/virtual-machine) interprets a goal-stream using the host `make`'s own dispatch, rather than building a separate evaluator.
+
+    Caveat: this is a *partial* bootstrap, and still a transpiler rather than a meta-circular *evaluator*. The core compiler (and the Makefile-subset seed it rides in) never compiles itself; but the [`__hosted__` partition](#hosted-partition) (a growing slice of the stdlib) **is** authored in CMK and compiled by compose.mk itself.
+
+The live default dialect and sugar are dumped from source on the [Dialects &amp; Sugar appendix]({{_}}/cmk/metaprogramming/#appendix).
+
+#### Compile or Transpile?
+<hr class="section-rule lvl-4">
+<a name=compilation-vs-transpilation></a>
+
+For all the nerds out there, the honest answer has three parts:
+
+1. **Not just a transpiler.**  The CMK -> Makefile *backend* is source-to-source, so **that step** looks like transpiling.  But a transpiler is a syntactic skin whose semantics are just the target's, whereas the CMK front-end *lowers*: an ordered, [extensible stage-pipeline]({{_}}/cmk/pragmas/#pragma-compiler_pre_post) realizing semantics `make` has no concept of ([receiver dispatch](#receiver-form), [block-ref lifecycles](#block-references), [recipe-join policy](#recipe-body-joining), [python-style indentation](#indentation), the [`<-` operator](#capture-operator), pragma-driven config).  And since [dialects &amp; sugar]({{_}}/cmk/metaprogramming) can redefine that syntax in-source, `make` no longer *defines* CMK; it's the compile target and runtime substrate.  So the honest label is **a compiler whose backend emits Makefile** (much as ClojureScript's backend emits JavaScript), not a Makefile pretty-printer.
+2. **Interpretation is compilation *plus* execution.**  `cmk run` is that same compilation **plus supervised execution**, a runtime that owns an eval loop and a control model `make` doesn't provide: the [trampoline dispatch loop]({{_}}/runtime/#flat-dispatch), first-class [continuations]({{_}}/runtime/#continuations), and the optional [CEK virtual machine]({{_}}/runtime/#virtual-machine).  See the [Runtime]({{_}}/runtime) page for that layer.
+3. **Compilation is not packaging.**  If you were expecting "compilation" to create an executable artifact, that's more like [packaging]({{_}}/demos/packaging): see [self-extracting executables]({{_}}/demos/packaging/#makeself-reference) and [guests &amp; forks]({{_}}/standard-lib/#forks-guests-and-payloads).
+
+#### Templating Engine
+<hr class="section-rule lvl-4">
+<a name=templating-engine></a>
+
+Underneath the seed's kind-system sits a small **string-templating macro engine**, `m5`: essentially an [m4][^m4] macro processor rebuilt in `make`.  Every higher layer (the seed itself, banana-block lowering, `self`-attribute desugaring, the [hosted partition](#hosted-partition)) is written in its vocabulary, so it's the substrate the whole compiler rides on.
+
+Its guiding idea is that **notation simulates a type system**.  A handful of sigils name what an operation *does*, so a glance at a name tells you its pole, and whole classes of `make` mistakes (reading an undefined variable, or evaluating text that was meant as data) become visible right at the call site.
+
+{{ site.contract_card([
+  ['?', '<b>read</b>: a variable&rsquo;s raw value (<code>m5?</code>, <code>m5.defined?</code>).'],
+  ['!', '<b>force / eval</b>: evaluate text as Makefile (<code>m5!</code>, <code>m5.def!</code>).'],
+  ['%', '<b>fill</b>: substitute one hole in a template.'],
+  ['/', '<b>fold</b>: map a fill over a context.'],
+  ['[..]', '<b>index</b>: positional / keyword argument access (<code>m5[1]</code>, <code>m5[def]</code>).'],
+], title='Sigil vocabulary') }}
+
+Two interpolation domains are kept deliberately separate (m4's `changequote`): the Make layer, and an awk-side `@@…@@` layer used while the engine generates the compiler's awk.  The everyday face of all this is the `m5|` read-or-default primitive (an `ifdef`-with-fallback read); the `m5` block in `compose.mk` is the authoritative catalog of the rest.
+
+#### IR Details
+<hr class="section-rule lvl-4">
+<a name=ir-details></a>
+
+Between passes the compiler threads a few **internal sentinels** as a lightweight IR: invisible glyphs a user never types, emitted by one stage and resolved by a later one:
+
+* macro-callforms normalize to a sentinel-prefixed form `؆X(...)` so later regex passes don't trip on a literal macro anchor; the late `call` stage turns that sentinel form into an ordinary macro call, and the trailing `unsentinel` stage restores any surviving `؆` back to the macro anchor.
+* `@name` decorators normalize to a plain macro callform (there is no reserved namespace; a decorator is just a macro applied above a target), which then rides the same `؆` callform pipeline as the bullet above down to an ordinary macro call.
+* The [block-ref](#block-references) glyphs `⬦`/`⬥` double as sentinels: a `(| .. |)[stream]` trailer *emits* `⬥` for the block-ref pass to materialize.
+
+And one invariant every pass obeys: it is **inert inside `define`-blocks and comments**.  So embedded foreign source (a python `'''docstring'''` or `@decorator`, a shell `x <- y`) is copied through verbatim, never rewritten.
+
+#### Multistage
+<hr class="section-rule lvl-4">
+<a name=multistage></a>
+
+CMK is a **staged**[^msp] language: source lowers to Makefile, and that lowered program can lower *more* CMK at run time.  A `(| .. |)` banana (or any `define`) is source-as-data, a **quasiquote**[^qq], and running a second lowering pass over it (lower a `define`, then run it) is the **cooking** idiom; the [Banana Forms]({{_}}/cmk/banana/#banana-cooked) page is the worked example.
+
+That second stage never happens implicitly: the main compile (`cmk run` / `cmk compile`) is exactly ONE pass, inert inside `define`-blocks (see [IR Details](#ir-details)), so a banana stays *data* until you opt in through one of these interfaces:
+
+!!! tip "<strong>Opt-in interfaces</strong>"
+	* **`lang.transpile`** -- the primitive: CMK on stdin, an includable Makefile fragment out.  Everything below builds on it.
+	* **`native_target`** / **`cmk.cook`** -- JIT-compile a `define` on first build, then content-cache it; callable from a vanilla `include compose.mk`.
+	* **`import.module`** -- import a `NAME[\| .. \|]` banana as a namespaced module, lowered by default.
+	* **[`define __hosted__`](#hosted-partition)** -- compose.mk's own CMK partition, lowered and cached: the self-hosting[^sh] slice (its own [appendix](#hosted-partition)).
+
+`lang.transpile` is the one to reach for directly, and the clearest way to watch a construct *lower*: pipe CMK in, read the Makefile fragment back.  A `<-` capture becomes a shell assignment, and a macro-callform becomes an ordinary macro call:
+
+```bash {.cli_example}
+# lang.transpile: CMK on stdin, an includable Makefile fragment out
+$ cat <<'CMK' | ./compose.mk lang.transpile
+build:
+	user <- whoami
+	cmk.log.io(built by $${user})
+CMK
+```
+```bash {.cli_output}
+build:
+	user=`whoami` && \
+	$(call log.io,built by $${user})
+```
+
+So multistage is **opt-in, per-site, and cached**: you decide exactly where a second stage runs, and (for `native_*`) it compiles once and reuses forever.
+
+#### Hosted Partition
+<hr class="section-rule lvl-4">
+<a name=hosted-partition></a>
+
+The **`__hosted__` partition** is where compose.mk compiles a slice of *itself*.  The [seed](#implementation-details) (the make/awk core, parsed first) is hand-written Makefile, but a growing region of the standard library is authored in CMK-Lang inside a single `define __hosted__ ... endef` and lowered by compose.mk's *own* compiler.  It is the concrete form of the "partially self-hosting" claim above: the same [`lang.transpile`](#multistage) pass that lowers your code lowers the stdlib's hosted kinds too.
+
+Compilation happens at include-time, wired through `make`'s makefile-remaking:
+
+!!! terminology "<strong>Cold, warm, cached</strong>"
+	1. A **cold** parse lowers `__hosted__` once, writes the result to a content-addressed cache (keyed on the partition's source hash), and restarts `make` a single time to pick it up.
+	1. A **warm** parse is just a hash check plus an `-include` of that cache, so nothing recompiles.
+	1. The cache is regenerable and remade **only** when the source hash changes: editing hosted code triggers exactly one cold rebuild, while unrelated runs stay warm.
+
+Because the boundary is the seed's kind-system API (`lang.ctor!` + `cmk.class`), a hosted kind is authored exactly like any user kind; the partition is not privileged syntax, only the largest in-tree consumer of the [multistage](#multistage) interfaces.
+
+### See Also
+<hr class="section-rule lvl-3">
+
+* [Quick Reference]({{_}}/cmk/quickref): the one-page syntax cheat-sheet.
+* [Banana Blocks]({{_}}/cmk/banana): the `(| .. |)` block family.
+* [Metaprogramming]({{_}}/cmk/metaprogramming): dialects, sugar, and pragmas.
+* [Modules]({{_}}/cmk/modules): `import.module` namespacing and imports.
+* [Status, Limits, & Advice]({{_}}/cmk/advice): how much to trust the compiler, what's frozen, and reporting bugs.
+
+### References
+<hr class="section-rule lvl-3">
+
+[^1]: [Notation is part of how we think](https://dl.acm.org/doi/pdf/10.1145/1283920.1283935)
+[^2]: Note that during compilation for CMK code, this isn't just a naive a find/replace, because we do have to leave define-blocks alone
+[^3]: Actually `compose.mk` takes recursive invocation so seriously that a significant effort is invested in fixing problems with make's own recursion variable. This results in the less shouty recursion helper, which is also more robust, reliable, and predictable.  In `compose.mk` source code, there are more than 250 usages of that recursion helper, but extensions can avoid the pain.  Literally if the bare `self` and `this` anchors each had to be spelled as a full make-variable read everywhere, then the resulting RSI would be a public health crisis!
+[^4]: Line-feeds are allowed.
+[^5]:  For multiple values with `env`, items must be single-quoted and space-delimited.  As for `quiet`, pass 1 or 0 to control whether the target will run silently or announce context (like the compose filename/service, or the docker image being used).
+[^defskip]: Like every compiler pass, this construct is inert inside `define`-blocks and comments, so embedded foreign source is copied through verbatim.  See the [IR Details]({{_}}/cmk/compiler/#ir-details) appendix.
+[^m4]: {{ tufte.wiki('M4_(computer_language)')|trim }}
+[^msp]: {{ tufte.wiki('Multi-stage_programming')|trim }}
+[^qq]: {{ tufte.wiki('Quasi-quotation')|trim }}
+[^sh]: {{ tufte.wiki('Self-hosting_(compilers)')|trim }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+{{macros.header_images([
+      ['how-it-works','implementation'],
+      ['bind declarations','bind'],
+      ['basic example','basics'],
+      ['compose file example','basics'],
+      ['polyglot example','basics'],
+      ['dockerfile example','basics'],
+      ['references','list-details'],
+    ], mkdocs)}}
+}, 100);});
+</script>
+{#['implementation details','implementation'],#}

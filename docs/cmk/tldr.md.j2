@@ -1,0 +1,12 @@
+!!! tip "Quick Version"
+    1. The `compose.mk` language is called **CMK**, a.k.a **cmk-lang**, or simply 'cmk'.
+    1. Files use the `.cmk` extension by convention.
+    1. CMK is high-level, with several fist-class abstractions that are quite unique. BUT
+        1. CMK is *also* a superset of Makefile, and compiles into legal classic Makefile.
+        1. Makefile is always valid CMK; the reverse might not be true.
+    1. The compiler is contained inside `compose.mk`, and there are no other tools.
+    1. The compiler is extensible, enabling new dialects with user-defined config.
+
+    Even quicker:
+
+    > **CMK = Makefile + compose.mk standard library + optional extra syntax**

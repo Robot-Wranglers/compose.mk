@@ -1,0 +1,16 @@
+# hello.cmk
+#
+#  A cmk-lang PLUGIN (top-level CMK, no module markers) Because its name
+#  ends in `.cmk`, `include.plugin` lowers it via mk.compile,
+#
+# It's easy to miss just how weird this is:
+# 
+#   VANILLA MAKEFILES CAN IMPORT CMK-LANG, WITH JUST-IN-TIME COMPILATION.
+#
+# Contrast with ./plain.mk plugin, which skips compilation, 
+# and is then `include`d verbatim on the more direct path.
+#
+plugin.hello:
+	@# The heredoc + `this.stream.preview` are CMK-Lang, lowered when this
+	@# plugin is included (its extension is `.cmk`).
+	cmk.log(hello from a compiled cmk plugin)

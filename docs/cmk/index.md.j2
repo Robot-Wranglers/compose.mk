@@ -1,0 +1,72 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+{{ macros.section(2, "The CMK Language", id="cmk-language") }}
+
+{{ macros.escape_hatch([
+    'Landed in the wrong place, or just want the map?  Jump straight out:',
+    ['Introduction &amp; Classification', '@/cmk/intro', 'what CMK is and where it sits'],
+    ['Paradigm / Lineage', '@/cmk/paradigm', 'the multi-paradigm classification, in full'],
+    ['Compiler Tutorial', '@/cmk/compiler', 'the concrete syntax, hands-on'],
+    ['Quick Reference', '@/cmk/quickref', 'a one-page syntax cheat-sheet'],
+    ['All Demos (Index)', '@/cmk/demos', 'every featured demo, next to its plain-Makefile twin'],
+    ['Banana Blocks', '@/cmk/banana', 'the `(| .. |)` block family'],
+    ['Metaprogramming', '@/cmk/metaprogramming', 'dialects, sugar, and compiler pragmas'],
+    ['Modules', '@/cmk/modules', '`import.module` namespacing and imports'],
+    ['Matrioshka Automata', '@/matrioshka', 'packing programs inside programs'],
+    ['Tool Overview', '@/tool-overview', '`compose.mk` as a tool, aside from the language'],
+    ['CLI Overview', '@/cli-overview', 'the command-line surface'],
+    ['Plugin Overview', '@/plugins/overview', 'extending `compose.mk` with plugins'],
+], mkdocs) }}
+
+{# {% call tufte.two_col('32%', side='right') %}{% include "includes/cek-anim.md" %}{% endcall %} #}
+
+The `compose.mk` language is called **CMK**, a.k.a **cmk-lang**, or simply **cmk**.  Before the elevator pitch; first the superlatives.  Things about CMK that are, as far as I know, completely unique:
+
+> **First and only actually useful [matrioshka language]({{_}}/matrioshka),** with everything that implies, including native support for polyglots, containers, and VMs.  A downstream consequence:  CMK is a truly high-level language, and yet it doesn't even directly support things like numbers.  It doesn't need to!
+
+> The only non-research language built on [mobile ambients]({{_}}/cmk/banana#banana-ambient).
+
+> The one and only language that is implemented on top of `make`, compiles to `Makefile`, and hijacks `make` as a gadget[^weird-machine].
+
+We've got a great deal going on elevator pitches, 3 for the price of 1:  
+
+* Tier 1: [Pragmatic Roots](#tier-1)
+* Tier 2: [A High-level Language](#tier-2)
+* Tier 3: [Nerd-Sniping the Big Brains](#tier-3)
+
+{{ tufte.two_col_clear() }}
+
+> **Tier-1: The Pragmatic Roots.**  CMK is a *strict superset* of Makefile[^cmk-make], which is itself basically a superset of bash.  It's rough and ready for the everyday dirty work of adhoc-automation, with zero friction in the middle.  DAGs and goals, plain and foundational, but you can start structured and stay structured by "promoting" shell gradually toward RealCode(tm) in a way that helps to manage complexity.  Pragmatic doesn't mean dumb though, and simple doesn't mean boring.  Everything in the [standard lib]({{_}}/standard-lib) becomes first-class, from the functional-leaning flux[^flux] to the container support and polyglots[^polyglots], all with improved syntax and better reflection.
+> {: #tier-1 .cmk-card .cmk-overview }
+>
+{{ ('> ' ~ site.embed_demo('demos/cmk/tier-1.cmk', github=github, collapsed=True)) | replace('\n', '\n> ') }}
+
+<!-- card-break: prevents python-markdown from merging adjacent blockquotes -->
+
+> **Tier-2: A High-level Language & Other Crowd Pleasers.** As a high-level language, CMK is *almost* a python[^python] in many ways and is *definitely* a lisp[^lisp].  What does that mean?  Well, you probably **already speak cmk-lang** per the last section, but it's also **much bigger** than you think.  
+> <br/>
+> Freely mix in things like docstrings, [callforms]({{_}}/cmk/concepts/#callforms) and namespacing if you want it, but when you outgrow "organized scripting", you can reach for more structured programming, including things like *classes, metaclasses, and actors*.  The result: less technical friction crossing data/runtime boundaries, *and* less cognitive friction crossing task-complexity boundaries.  Slightly further downstream: a practical work bench for tool-wrappers and first-class DSLs.
+> {: #tier-2 .cmk-card .cmk-overview }
+>
+{{ ('> ' ~ site.embed_demo('demos/cmk/tier-2.cmk', github=github, collapsed=True)) | replace('\n', '\n> ') }}
+
+<!-- card-break: prevents python-markdown from merging adjacent blockquotes -->
+
+> **Tier-3: Nerd-Sniping the Big-Brains.**  It's not about first-class support for polyglots[^polyglots] (which are actually practical), or about fun with theorems[^theorems] and quines.[^quines]  CMK's internals are a confluence of several powerful *algebras* that you might be interested in.  Those algebras operate over language primitives like targets, ambients, callform-channels, and banana-brackets.  CMK is practical.. but also the **weirdest thing you'll see today**, and there's a certain fractal quality to that.  There's [a diverse pedigree]({{_}}/cmk/paradigm) of influences, and richly expressive [technical foundations]({{_}}/cmk/paradigm#language-properties) that are carefully designed.  
+> <br/>
+> Some aspects of the compiler, runtime, and concurrency story might seem [barking mad]({{_}}/runtime).  Nevertheless, CMK is bootstrapped, self-hosted, and even self-modifying in most of the ways you can probably think of, and *it's got all that metacircular goodness that you crave!*  Including a multistage compiler, an interpreter, a repl and frame-level debugger, and a very strange VM.  Besides bringing support for things like coroutines and swarms, there are weirder consequences.  Goal-resolution itself becomes *just another protocol* which extensions can modify, and since this first-classes the DAG flow, it enables things like backtracking.
+> {: #tier-3 .cmk-card .cmk-overview }
+>
+{{ ('> ' ~ site.embed_demo('demos/cmk/goals-reverse.cmk', github=github, collapsed=True)) | replace('\n', '\n> ') }}
+
+
+{{ macros.section(3, "References", id="references") }}
+
+[^cmk-make]: {{ tufte.wiki('GNU_Make')|trim }}
+[^weird-machine]: {{ tufte.wiki('Weird_machine')|trim }}
+[^flux]: The functional-leaning [flux library]({{_}}/functional): pipelines, stages, and control-flow combinators.
+[^polyglots]: [Polyglot Index]({{_}}/demos/polyglots): running foreign interpreters and containers inline.
+[^python]: Python-flavored ergonomics: docstrings, indentation-sensitivity, and namespacing; see [Paradigm / Lineage]({{_}}/cmk/paradigm).
+[^lisp]: Lisp-flavored homoiconicity: quasiquotation and compile-twice "cooking" via [banana blocks]({{_}}/cmk/banana).
+[^theorems]: [Theorem proving]({{_}}/demos/lean): running a proof assistant inline.
+[^quines]: [Quines and esolangs]({{_}}/demos/underload): self-reproducing programs and tiny esoteric languages.

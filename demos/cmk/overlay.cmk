@@ -1,0 +1,57 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# overlay.cmk:
+#   The __vm__ control-stack overlay, via REPL-as-execution-mode (the
+#   object `repl` pragma).
+#
+# cmk_pragma ::: { "repl": { "eval": "overlay.eval", "print":
+# "overlay.print", "exit_after": 1 } } :::
+#
+# The pragma above selects the 3-region tux.repl harness and wires its
+# regions to this file's targets:
+#   * print = overlay.print (= coroutines.demo) -- the reflective __vm__
+#     coroutine, streamed up top.
+#   * read  = (defaulted) the core `tux.repl.modeline` -- the diagnostic
+#     + __vm__ stack-summary mode-line.
+#   * eval  = overlay.eval -- reads target-names typed into the REPL and
+#     dispatches each; output streams back into the panel.  exit_after=1
+#     shuts the overlay down once coroutines.demo (the print stream)
+#     finishes.
+#
+# The runtime owns the harness; this file owns only its targets.  `cmk run`
+# with no target launches the overlay; an explicit target (e.g.
+# `overlay.cmk coroutines.demo`) bypasses the mode and just runs it.  The
+# coroutine lives in the `vm-coroutines.cmk` demo; this overlay imports it
+# and sets the pacing knob (`coroutines.wait := 1`) so each phase lingers
+# for the live overlay.
+#
+# USAGE:
+#   ./demos/cmk/overlay.cmk
+#     -> the REPL overlay (needs a tty; auto-builds the wrapper once)
+#   ./demos/cmk/overlay.cmk coroutines.demo
+#     -> just runs the coroutine inline (no TUI)
+
+# The shared coroutine (which transitively imports virtual-machine.cmk +
+# declares the reflective env), available to both host and the harness
+# children.  `coroutines.wait := 1` paces each phase for the live overlay;
+# `coroutines.dump_env :=` clears vm-coroutines' own demo default so the
+# overlay panel is not polluted by the persisted-env dump.
+import demos/cmk/vm-coroutines.cmk as coroutines, flat=1
+coroutines.wait := 1
+coroutines.dump_env :=
+
+__main__: coroutines.demo
+
+# the three tux.repl region targets
+# print: the program whose
+# stdout/stderr fill the scrolling panel.
+overlay.print: coroutines.demo
+
+# eval: a stdin sink; each line (one word = a target name) is dispatched as
+# a fresh supervised run of this file (${__interpreting__}), so its output
+# streams back to the panel.  Fresh process per word avoids the
+# nested-cmk-run deadlock.  `trap : INT` keeps the read-loop alive when the
+# wrapper sends ctrl-c (SIGINT) to this process group: the current dispatch
+# dies, the loop reads the next.
+overlay.eval:
+    trap ':' INT ; while IFS= read -r w; do [ -z "$$w" ] && continue ; ${__interpreting__} "$$w" 2>&1 | grep -avE '✱|flux[.]timer|cmk run|deduplicated|__main__' || true ; printf '\036\n' ; done

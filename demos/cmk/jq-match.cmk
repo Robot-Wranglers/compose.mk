@@ -1,0 +1,56 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# jq-match.cmk:
+#   Pattern matching with an inlined jq program held in a banana block,
+#   over a stream of JSON events.  Three styles:
+#     1. shape  -- if/elif on a tag, then destructure (`. as {$w,$h}`)
+#     2. native -- jq's `?//` alternatives (array vs object vs scalar)
+#     3. route  -- jq extracts a tag, dispatch to `on/<tag>` targets (the
+#                  zahn idiom: clauses are targets, `on/%` is the fallback)
+#
+#   The banana body is the matcher; `mk.def.read` streams it into
+#   `jq -f <(..)`, so the program is a first-class artifact.  Needs jq.
+#
+# USAGE: ./demos/cmk/jq-match.cmk
+
+import log
+from cmk import dsl, class
+
+# jqmatch: a dsl.jqlang subkind; its call adds -r (raw output).
+
+# A call streams JSON stdin doc-by-doc, one clause per event.
+class jqmatch(bases=dsl.jqlang)[|
+  ${self} = ${jq} -r ${__args__} -f ${self}.fd()
+|]
+
+# --- 1) tag dispatch + payload destructure (Elixir tagged tuples) ---
+jqmatch shape(|
+    . as {$type} |
+    if   $type=="circle" then . as {$r}    | "circle(r=\($r)) => area \($r*$r*314/100)"
+    elif $type=="rect"   then . as {$w,$h} | "rect(\($w)x\($h)) => area \($w*$h)"
+    elif $type=="ok"     then "{:ok, \(.value)}"
+    elif $type=="error"  then "{:error, \(.reason)}"
+    else "no match: \(.)" end
+|)
+
+# --- 2) jq's native `?//` alternatives (array vs object vs scalar) ---
+jqmatch native(|
+    . as [$a,$b] ?// {$a,$b} ?// $s
+    | if $s != null then "scalar: \($s)" else "pair: \($a), \($b)" end
+|)
+
+# --- 3) jq -> target dispatch (zahn: clauses = targets, % = fallback) ---
+route:; jq -r '.type' | while read t; do ${make} on/$$t; done
+on/circle:; log(handling a circle)
+on/ok:;     log(ok acknowledged)
+on/%:;      log(no handler for: ${*})
+
+__main__:
+  log(cmk.bold()-- 1. shape: tag + destructure --)
+  printf '%s\n' '{"type":"circle","r":5}' '{"type":"rect","w":3,"h":4}' \
+    '{"type":"ok","value":"done"}' '{"type":"error","reason":"nope"}' \
+    '{"type":"tri"}' | shape()
+  log(cmk.bold()-- 2. native: jq ?// alternatives --)
+  printf '%s\n' '[3,4]' '{"a":9,"b":8}' '42' '"hi"' | native()
+  log(cmk.bold()-- 3. route: jq -> target dispatch --)
+  printf '%s\n' '{"type":"circle"}' '{"type":"ok"}' '{"type":"weird"}' | ${make} route

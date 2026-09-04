@@ -1,9 +1,9 @@
 #!/usr/bin/env -S make -f
-# demos/container-dispatch-3.mk: 
-#   Demonstrates the container dispatch idiom using "namespace" style invocation.
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 #
-#   USAGE: ./demos/container-dispatch-3.mk
+# container-dispatch-3.mk:
+#   The container dispatch idiom using "namespace" style invocation.
+#
+# USAGE: ./demos/container-dispatch-3.mk
 
 include compose.mk
 
@@ -16,9 +16,9 @@ __main__: build docs
 
 build: ▰/golang/self.code.gen
 self.code.gen:
-	echo "pretending to do stuff with golang"
+	echo "pretending to use golang"
 
 docs: 🜹/latex/self.docs.gen
 self.docs.gen:
-	echo "pretending to do stuff with LaTeX"
+	echo "pretending to use LaTeX"
 

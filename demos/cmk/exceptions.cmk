@@ -1,0 +1,95 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# exceptions.cmk: typed exceptions on the Events stdlib, dispatched at-exit.
+#
+# USAGE:
+#   ./demos/cmk/exceptions.cmk            # tour: dispatched at exit
+#   ./demos/cmk/exceptions.cmk demo.boom  # one uncaught -> nonzero exit
+
+'''
+Typed exceptions built from scratch on compose.mk's event system: an exception is just an
+event on a fault channel (the channel KIND), with three twists -- emit also fails the caller
+(exit 1), dispatch is deferred to an at-exit drain, and each event carries an FTA-kind glyph.
+`cmk.fault.throw(<Type>[, k=v])` raises; at end of run `fault.dispatch.by_type` routes each
+in-flight event to `fault/<Type>:` (or the `fault/%` fallback) by make's rule precedence.
+The shipped, reusable version -- plus the FTA-kind taxonomy -- lives in the fault.cmk plugin.
+'''
+
+import log
+
+# at_exit=dispatch.by_type opts the channel into deferred (vs synchronous) dispatch -- what
+# makes fault an exception system.  the at_exit kwarg registers the drain before the auto
+# fault.purge, so the whole stack is routed before it is removed.
+channel fault(at_exit=dispatch.by_type)(| |)
+
+# fault.log: a red fault logger (vs log.io's green).
+fault.log=cmk.log(${yellow}${bold}¿${no_ansi}${red} $(1))
+
+# fault.throw(<type>[,<k=v meta>]): emit a typed fault (recording target + file), then exit 1.
+fault.throw=cmk.fault.emit(type=$(strip $(1)) target=$(@) file=${__file__} $(if $(filter-out undefined,$(origin 2)),$(strip $(2)))) && exit 1
+
+# fault.show: per-event presentation shared by every handler -- a trace line, then the FTA
+# glyph (from .kind) and the fault header.  ($CMK_EVENT is exported by the dispatcher.)
+fault.show=cmk.log.trace(${@}) ; case `echo "$${CMK_EVENT}" | ${jq.run} -r '.kind // "?"'` in basic) s=● ;; external) s=⌂ ;; undeveloped) s=◆ ;; conditioning) s=⬭ ;; *) s=• ;; esac ; cmk.fault.log($${s} Exception ${sep} ${bold}`echo "$${CMK_EVENT}" | ${jq.run} -r .type`)
+
+# fault.guarded: a postfix catch decorator.  Default mode || (runs only on failure); it captures
+# the failed subprocess's exit code and re-throws it as a typed SubprocessFault.
+# NB: keep the body a brace group -- && / || are equal-precedence, else the catch leaks onto success.
+fault.guarded.postfix_mode := ||
+fault.guarded={ rc=$$? ; log(${dim}${yellow} caught abnormal exit ${sep} ${dim}code=$${rc} ${sep} ${dim}throw=SubprocessFault) ; cmk.fault.throw(SubprocessFault,kind=external code=$${rc}) ; }
+
+# handlers: fault/<Type>:, routed by make precedence (explicit beats the fault/% fallback).
+
+fault/DivZero:
+    cmk.fault.show()
+    cmk.fault.log(${yellow}caught DivZero)
+
+fault/%:
+    '''Fallback: no handler for this type.  (No exit -- a supervisor-exit handler can't change the process code.)'''
+    cmk.fault.show()
+    cmk.fault.log(${bold}UNHANDLED EXCEPTION: ${*} ${sep} no handler registered)
+
+fault/Inner:
+    '''A handler may itself raise; the drain then dispatches that too.'''
+    cmk.fault.show()
+    cmk.fault.log(${yellow}caught Inner ${sep} rethrow=Wrapped)
+    cmk.fault.throw(Wrapped, kind=conditioning)
+
+fault/Wrapped:
+    cmk.fault.show()
+    cmk.fault.log(${yellow}caught Wrapped (re-thrown by a handler))
+
+fault/SubprocessFault:
+    cmk.fault.show()
+    log(${yellow}caught SubprocessFault ${sep}: unexpected tool exit)
+
+# demo throwers (demo.* = app code that raises).
+
+demo.div:
+    log(div -> raise DivZero)
+    cmk.fault.throw(DivZero, kind=conditioning)
+
+demo.nested:
+    log(raise Inner (its handler re-throws Wrapped))
+    cmk.fault.throw(Inner, kind=basic)
+
+demo.boom:
+    log(raise BOOM (no handler))
+    cmk.fault.throw(BOOM, kind=undeveloped)
+
+@fault.guarded
+demo.guarded:
+    '''A raw subprocess failure bridged to a typed fault: @fault.guarded catches the body's
+    nonzero exit and re-throws SubprocessFault (the exact subprocess code survives).'''
+    log(simulating a command failure with a nonzero exit code)
+    sh -c 'exit 3'
+
+__main__:
+    '''Tour: raise several, swallowing each with a trailing `|| true` so every event stays in flight; the at-exit hook drains and dispatches them all.'''
+    log(${bold} typed exceptions via a global at-exit handler)
+    this.demo.div </dev/null || true
+    this.demo.nested </dev/null || true
+    this.demo.guarded </dev/null || true
+    this.demo.boom </dev/null || true
+
+testing: demo.boom

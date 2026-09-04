@@ -1,0 +1,118 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# unicon-queens.cmk:
+#   Goal-directed evaluation, Icon/Unicon style, on the compose.mk VM: backtracking
+#   n-queens whose alternation frontier is a first-class lifted goal.
+#
+# USAGE:
+#   ./demos/cmk/unicon-queens.cmk          # warm-up + first solution
+#   NQ=8 ./demos/cmk/unicon-queens.cmk queens
+#   ./demos/cmk/unicon-queens.cmk warmup   # just the alternation demo
+#
+# REFS:
+#   [1] The Icon programming language -- https://www2.cs.arizona.edu/icon/
+
+'''
+Icon's whole model is backtracking: an expression is a generator, alternation
+e1 | e2 offers choices, and expression failure resumes the most recent generator
+at its next result.  That maps one-to-one onto two VM verbs:
+
+  Icon                           compose.mk VM
+  e1 | e2 | e3  (alternation)    vm.choose  e1 e2 e3
+  fail          (resume)         vm.backtrack           -- explicit
+  any failure   (implicit)       trampoline safety-net  -- total
+  every E       (exhaust)        fail after each success
+  a bare generator               goal Q = q, a lifted-goal frontier
+
+vm.choose pushes the untried alternatives as a choice frame on the VM control
+stack (K) and runs the first; vm.backtrack pops to the nearest frame with an
+untried alt, restores its env (the trail), and resumes.  A raw recipe failure
+(an Icon expression failure) is caught by the supervisor trampoline itself, so
+backtracking is total, not opt-in per recipe.
+
+n-queens is the canonical Icon program: place one queen per row, the safe
+columns are the alternation, a row with none is failure.
+'''
+
+import virtual-machine.cmk as vm, flat=1
+import log
+open q
+
+# Q lifts the row-goal q as a first-class value (Icon: a bare generator).  The frontier below
+# is built from Q: $(Q)/<cols> reifies to q/<cols> (compile(lift)==id), so the search is
+# unchanged, but the choice frame's alts are lifted goals (inspect via ${make} __vm__.frontier).
+goal Q = q
+
+# board size, kept small for the tour: every hop re-dispatches flat, so cost is ~ nodes
+# visited.  Bump NQ on the CLI for bigger boards.
+NQ ?= 6
+
+# per-step delay (seconds): each placement pauses this long so a REPL minimap tracking the
+# vm frames has time to sample distinct search states.  Zero by default (full speed); set
+# QUEENS_DELAY=0.3 under `cmk repl` (with CMK_REPL_MINIMAP=__vm__.minimap) to watch the search.
+QUEENS_DELAY ?= 0
+
+warmup:
+  '''
+  Icon every (one | two | three) -- alternation + fail.  Each branch prints then fails
+  (vm.backtrack), so the generator is resumed and all three results are produced, like Icon's
+  every.  On exhaustion, control continues to whatever follows on the continuation (here
+  queens) -- a bounded generator handing off to the next expression.
+  '''
+  log(${bold}alternation ${sep} ${dim}every (one|two|three))
+  vm.choose(w/one w/two w/three)
+
+# one alternation branch -- print, then fail (vm.backtrack) to resume the next.  Kept inline:
+# the trampoline is sensitive to this recipe's shape, so it can't take a multi-line docstring.
+w/%:;    sleep ${QUEENS_DELAY}; printf '  produced: %s\n' "${*}"; vm.backtrack()
+
+queens:
+  '''
+  n-queens -- place one queen per row; the safe columns are the alternation.  Kick off row 0:
+  an empty board makes every column safe, so the whole row is one alternation.
+  '''
+  log(${bold}${NQ}-queens ${sep} ${dim}goal-directed search)
+  alts=""; for c in `seq 0 $$((${NQ}-1))`; do alts="$$alts $(Q)/$$c"; done; \
+  vm.choose($$alts)
+
+q/%:
+  '''
+  q/<placed> -- recurse one row; a full board is a solution, a dead end backtracks.  <placed>
+  is the dot-joined columns chosen so far, one per row in order: q/2.0.3 = (row0,col2)
+  (row1,col0)(row2,col3), and row = the count of placed columns.  The safe columns for this
+  row are the alternation; no safe column is a failure that unwinds to the previous row's next
+  choice.
+  '''
+  sleep ${QUEENS_DELAY}; placed="${*}"; \
+  row=`printf '%s' "$$placed" | awk -F. '{print NF}'`; \
+  if [ "$$row" -ge "${NQ}" ]; then \
+    log(${green}${bold}solution ${sep} ${no_ansi}$$placed); \
+    q.render/$$placed; \
+  else \
+    safe=""; \
+    for c in `seq 0 $$((${NQ}-1))`; do \
+      ok=`printf '%s' "$$placed" | awk -F. -v c=$$c -v r=$$row \
+        'BEGIN{ok=1}{for(i=1;i<=NF;i++){col=$$i;d=r-(i-1); \
+         if(col==c||col-c==d||c-col==d)ok=0}}END{print ok}'`; \
+      [ "$$ok" = 1 ] && safe="$$safe $(Q)/$$placed.$$c"; \
+    done; \
+    if [ -z "$$safe" ]; then vm.backtrack(); \
+    else vm.choose($$safe); fi; \
+  fi
+
+q.render/%:
+  ''' Render a placement as an ASCII board. '''
+  printf '%s\n' "${*}" | tr . '\n' | while read col; do \
+    line=""; for c in `seq 0 $$((${NQ}-1))`; do \
+      [ "$$c" = "$$col" ] && line="$$line Q" || line="$$line ."; done; \
+    printf '   %s\n' "$$line"; \
+  done
+
+__main__:
+  '''
+  The whole tour is one continuation, warmup then queens: VM transfers are flat, so a recipe
+  cannot run two searches as this.a; this.b (the first transfer escapes) -- instead we schedule
+  both goals and let warmup's exhaustion fall through to queens.
+  '''
+  log(${bold}Icon on the VM ${sep} alternation, then ${NQ}-queens)
+  vm.replace(warmup queens)

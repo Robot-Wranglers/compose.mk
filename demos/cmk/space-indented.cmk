@@ -1,0 +1,13 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# space-indented.cmk:
+#   CMK target bodies may use python-style space indentation, not just
+#   tabs.  The compiler normalizes a consistently space-indented body to
+#   the leading tab Make needs (and errors on mixed tabs+spaces or
+#   mismatched indentation).
+#
+# USAGE: ./demos/cmk/space-indented.cmk
+
+__main__:
+    printf 'space line one\n'
+    printf 'space line two\n'

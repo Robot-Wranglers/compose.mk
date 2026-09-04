@@ -1,0 +1,13 @@
+# Sample process-compose stack — 4 long-running sleeps.
+# Drop a copy of this in a variant's `cwd` (as process-compose.yaml or .yml) and the
+# `automation`-tab convention will `process-compose down; up` it on launch.
+# Run manually with: process-compose up   (Ctrl-C / F10 to quit; foreground, no daemon)
+version: "0.5"
+
+processes:
+  serve:
+    command: >-
+      bash -x -c 'make serve'
+    availability:
+      restart: no
+

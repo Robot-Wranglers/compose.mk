@@ -1,0 +1,58 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# pragma-boot.cmk:
+#   A program's pre/post lifecycle, declared in-source via the compiler
+#   pragma.
+#
+# CMK_PRAGMA ::: {
+#   "bootloaders": ["sh.bootloader.example"],
+#   "cmk_pre":     ["__setup__"],
+#   "cmk_post":    ["__teardown__"] } :::
+#
+# Three lifecycle surfaces, running before, during, and after main:
+#
+# For `bootloaders`,
+#   use a list of define-blocks like `[<def1>, <def2>, ..]`. Runs *before*
+#   runtime, inside supervisor via `source`, before make entry.  These are
+#   pure *bash* (single `$`, no make expansion); good for early state or an
+#   EXIT trap.
+#
+# For `cmk_pre` (the boot-stage handler list; env CMK_PRE / handle
+# __cmk_pre__),
+#   use a list of target-names like `[<t1>,<t2>,..<tn>]`. Each substage is
+#   a *make target*, run *before* main runtime during the bootloader stage.
+#   A failing pre-target aborts before main (cmk_post still runs).
+#
+# For `cmk_post` (the at-exit handler list; env CMK_POST / handle
+# __cmk_post__),
+#   use a list of target-names like `[<t1>,<t2>,..<tn>]`. Each substage is
+#   a *make target*, run *after* main runtime; appends to any existing
+#   targets.
+#
+# REFS:
+#   [0]: [Runtime details](https://robot-wranglers.github.io/compose.mk/runtime)
+#   [1]: [Supervisor details](https://robot-wranglers.github.io/compose.mk/signals)
+#
+
+import log
+
+# Look, it's a simple shell-script bootloader,
+# which is referenced from pragma, used at bootstrap. This script
+# runs early and directly: expect no make expansion, use `$` as usual.
+sh.bootloader.example(|
+  _cmk_bootloader_log "[boot] setup -- early, in the supervisor's bash, before make parses anything"
+  trap '_cmk_bootloader_log "[boot] EXIT trap fired (registered pre-make)"' EXIT
+|)
+
+__setup__:
+  @# Look, it's a *hosted* bootloader, referenced from pragma, 
+  @# and used at bootstrap. Bootstrap[0] happens in the supervisor[1],
+  @# comes *after* the compilation but before the parse time.
+  log.warn([boot] cmk_pre make-target.. declaratively from pragma)
+
+__main__:
+  log([main] the program runs (in make))
+
+__teardown__:
+  @# Look, it's a *hosted* teardown, a normal make target, run at exit.
+  log.warn([exit] teardown -- a make target, run at exit)

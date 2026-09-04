@@ -1,0 +1,62 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-assign.cmk: bind a bare anonymous block with an assignment operator.
+#
+# USAGE: ./demos/cmk/banana-assign.cmk
+
+'''
+An assignment binds a bare anonymous block (| .. |); the left side names it and
+the operator picks the treatment, a choice made at compile time.
+
+  1. NAME  = (| .. |)  raw: a verbatim define NAME, for foreign code,
+  2. NAME := (| .. |)  cooked: the interior is lowered through the compiler,
+  3. NAME <- (| .. |)  run: run the block, capture stdout into NAME.
+
+Distinct from NAME(| .. |), which is a named block, and from the (| .. |){..}
+lambda.
+'''
+
+# raw assignment: ( a verbatim block bound to a name )
+#   The equals operator keeps the interior as-is, so it can hold foreign code
+#   or plain text that the compiler never looks at.
+
+verbatim = (|
+    not real code, just some text!!!
+|)
+
+# cooked assignment: ( a squashed block lowered through the compiler )
+#   The := operator cooks the interior; the result is lowered and compiled, but
+#   it is still not eval'd into live targets.
+
+squashed := (|
+    mytarget:; cmk.log(this will be compiled!)
+|)
+
+demo.contrast: \
+    io.print.banner/verbatim mk.def.read/verbatim \
+    io.print.banner/squashed mk.def.read/squashed
+
+# cooked targets run: ( splice a cooked block in as real targets )
+#   A cooked := block full of callforms; the eval-of-value splices its already
+#   lowered body in as real targets, then we dispatch them.
+
+pong:; cmk.log(pong)
+sink := (|
+    greet:;    cmk.log(hi from a cooked := block)
+    delegate:; this.pong
+|)
+$(eval $(value sink))
+
+demo.run:
+    this.greet
+    this.delegate
+
+# run and capture: ( a computed constant, fixed at parse )
+#   The arrow operator runs the block once and captures its stdout into the
+#   name, so the result is a constant settled at parse time.
+
+host <- (| uname -s | tr A-Z a-z |)
+
+demo.capture:; cmk.log(kernel (captured at load) ${sep} ${host})
+
+__main__: demo.contrast demo.run demo.capture

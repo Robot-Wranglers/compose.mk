@@ -1,0 +1,100 @@
+{% import 'macros/tufte.j2' as tufte -%}
+
+## Developer Notes
+<hr class="section-rule lvl-2">
+
+Notes for people hacking on `compose.mk` itself (as opposed to *using* it; for that see
+[Contributing]({{_}}/contributing)).
+
+### Editor support (VSCode extension)
+<hr class="section-rule lvl-3">
+
+A VSCode extension for **cmk-lang** (`.cmk`) and **enhanced Makefile** highlighting lives in
+the repo at [`via/vscode/`](https://github.com/Robot-Wranglers/compose.mk/tree/main/via/vscode).
+It ships no colors of its own; it only assigns standard TextMate **scopes**, so whatever
+editor theme you use colors them. It provides two things:
+
+1. A full `source.cmk` grammar for `.cmk` files.
+2. An **injection** into VSCode's built-in makefile grammar, so plain `.mk` / `Makefile` files pick up the cmk extras (`# cmk_pragma` manifests, `##` doc-comments, `@#` recipe docstrings, `import`/`declare` callforms, `__dunders__`, flow glyphs) *on top of* the base highlighting.
+
+**Install in dev mode** (symlink the working tree into your extensions dir, so there's nothing
+to reinstall as you edit): from the repo root:
+
+```bash
+ln -sfn "$PWD/via/vscode" ~/.vscode/extensions/cmk-lang
+```
+
+Then **Developer: Reload Window** in VSCode. (Variants: VSCodium `~/.vscode-oss/extensions`,
+Insiders `~/.vscode-insiders/extensions`.)
+
+!!! warning "TextMate grammars are not hot-reloaded"
+    After editing `via/vscode/syntaxes/*.json` you must run **Developer: Reload Window** (or
+    **Restart Extension Host**) to see the change; the symlink just means you never
+    re-package or re-copy.  To iterate on scopes, open a `.cmk`/`.mk` file and run
+    **Developer: Inspect Editor Tokens and Scopes**: it shows the exact scope under the
+    cursor.
+
+To package a `.vsix` for distribution, globally install `@vscode/vsce` with npm, then run `vsce package` from inside the `via/vscode` directory.
+
+### One taxonomy, two grammars
+<hr class="section-rule lvl-3">
+
+The docs' in-browser highlighter (Prism) and the VSCode extension (TextMate[^1]) are **two
+renderings of a single token &rarr; scope table**: the `CMK TOKEN TAXONOMY` block at the top
+of `docs/theme/js/prism-cmk.js`. That file is the source of truth: it maps every token to a
+STANDARD Prism alias *and* the matching TextMate scope (e.g. `entity.name.function.target.cmk`,
+`variable.other.shell.cmk`, `meta.preprocessor.pragma.cmk`).
+
+When you add or change a token:
+
+* update the taxonomy table + the Prism grammar in `docs/theme/js/prism-cmk.js`;
+* mirror the scope into `via/vscode/syntaxes/cmk.tmLanguage.json` (and the injection grammar if it's a plain-Makefile-relevant construct);
+* colors are never hardcoded in the grammar; the docs get them from the swappable `prism-cmk.<scheme>.theme.css` files, and editors get them from the active editor theme.
+
+### Plugin docs (submodule-hosted)
+<hr class="section-rule lvl-3">
+
+A plugin can ship its own reference doc as plain markdown at `.cmk/docs/<name>.md`, right next to
+`.cmk/<name>.cmk`, so the doc travels with the plugin to any consumer.  Those docs are surfaced
+into this site automatically: `make docs.plugins.sync` scans `.cmk/docs/` and generates a thin
+`docs/plugins/<name>.md.j2` wrapper for each (over the `submodule_doc` macro in
+`docs/macros/plugins.j2`), which injects the submodule markdown verbatim and adds a provenance
+note.  Adding the generated page to the site nav is a separate step.
+
+Because these docs are authored *outside* `docs/`, they must keep links either self-relative (to a
+sibling `.cmk/docs/*.md`, also surfaced under `plugins/`) or absolute URLs; they cannot assume a
+main-site-relative path.
+
+### Demo style linters
+<hr class="section-rule lvl-3">
+
+Two style linters for the demo sources (`demos/cmk/*.cmk` and `demos/*.mk`) ship in
+`.automation.cmk` (the root `Makefile` already imports it):
+
+* `make lint.demos`: comment/docstring house style, covering line width, two-column padded
+  label lists, comment blocks that should be target docstrings, docstring `'''` placement,
+  `cmk_dialect` header placement, and module-docstring placement (directly below the header).
+* `make lint.demos/<path>`: the same checks over a single file (`lint.demo/<path>` also works).
+* `make lint.callforms`: legacy explicit macro-call syntax that a `cmk.name(..)` callform replaces.
+
+Each prints `file:line: severity: issue` and exits nonzero on any `error` (a `warning` does
+not fail).  Add `fix=1` to mechanically fix the *first* offender instead of reporting it:
+one per run, with a before/after; re-run to fix the next:
+
+```bash
+make lint.demos fix=1                          # first offender, whole tree
+make lint.demos/demos/cmk/ambients.cmk fix=1   # first offender in one file
+make lint.callforms fix=1                      # first legacy call -> callform
+```
+
+### See Also
+<hr class="section-rule lvl-3">
+
+* [Contributing]({{_}}/contributing): the counterpart for feature requests and pull requests.
+* [Style & Idioms]({{_}}/style): conventions these grammars encode.
+* [Compiler & Dialects]({{_}}/cmk/compiler): the cmk-lang the grammar highlights.
+
+### References
+<hr class="section-rule lvl-3">
+
+[^1]: {{ tufte.wiki('TextMate')|trim }}

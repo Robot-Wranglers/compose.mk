@@ -1,8 +1,18 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
-# CMK-lang translation of demos/inlined-composefile.mk
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# inlined-composefile.cmk:
+#   Embed a compose file inline; its services scaffold dispatch targets.
+#
 # USAGE: ./demos/cmk/inlined-composefile.cmk
 
-⋘ inlined.services
+'''
+Embed a docker-compose file inline as a string module.  Each declared
+service scaffolds dispatch targets automatically, so a private target can
+be run inside any service by name.  The styles below show the equivalent
+prereq and target-body forms.  Ported from demos/inlined-composefile.mk.
+'''
+
+compose.import.string inlined.services(|
 services:
   alice: &base
     hostname: alice
@@ -10,7 +20,7 @@ services:
       context: .
       dockerfile_inline: |
         FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
-        RUN apt-get update -qq && apt-get install -qq -y make procps
+        RUN apt-get update -qq && apt-get install -qq -y make
     entrypoint: bash
     working_dir: /workspace
     volumes:
@@ -24,30 +34,39 @@ services:
       dockerfile_inline: |
         FROM ${IMG_ALPINE_BASE:-alpine:3.21.2}
         RUN apk add -q --update --no-cache \
-          coreutils build-base bash procps-ng
-⋙
+          coreutils build-base bash
+|)
 
-# A private target, intended to run inside containers 
-self.internal_task:; cmk.log(Running inside ${red}`hostname`)
+self.internal_task:
+    ''' A private target, intended to run inside containers. '''
+    cmk.log(Running inside ${red}`hostname`)
 
-# Dispatch demo:
-# Runs the private target inside containers, 
-# using syntax that looks like function-invocation.
-__main__: alice.dispatch(self.internal_task) bob.dispatch(self.internal_task)
+__main__: alice.dispatch(self.internal_task) \
+  bob.dispatch(self.internal_task)
+    '''
+    Dispatch demo: run the private target inside each service, using
+    call-form syntax that looks like function-invocation.
+    '''
 
 alternate_style1:
-	@# Equivalent to above, using target-body instead of prereqs.
-	@# Inside the body, using the `this.` prefix is required.
-	this.alice.dispatch(self.internal_task) 
-	this.bob.dispatch(self.internal_task)
+    '''
+    Equivalent to __main__, using a target body instead of prereqs.
+    Inside the body, the `this.` prefix is required.
+    '''
+    this.alice.dispatch(self.internal_task)
+    this.bob.dispatch(self.internal_task)
 
-# More "classic" style in pure Makefile. 
-# Equivalent to __main__, no target body required.
-alternate_style2: alice.dispatch/self.internal_task bob.dispatch/self.internal_task
+alternate_style2: alice.dispatch/self.internal_task \
+  bob.dispatch/self.internal_task
+    '''
+    More "classic" style in pure Makefile; equivalent to __main__, with
+    the prereqs doing the work (no imperative recipe).
+    '''
 
-# More "classic" style in pure Makefile. 
-# Equivalent to alternate_style1, using target body.
 alternate_style3:
-	@# Equivalent to style1, just trading `this` for explicit `${make}`.
-	${make} alice.dispatch/self.internal_task 
-	${make} bob.dispatch/self.internal_task
+    '''
+    Equivalent to alternate_style1, using a target body; just trading
+    the `this.` prefix for an explicit make invocation.
+    '''
+    ${make} alice.dispatch/self.internal_task
+    ${make} bob.dispatch/self.internal_task

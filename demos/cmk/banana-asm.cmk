@@ -1,0 +1,53 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+'''
+banana-asm.cmk: a small lang.tree (root + two nodes) with docstrings and
+per-node properties.  Shows docstrings lift + qualify, __children__ in source
+order, and shared vs distinct properties.  USAGE: ./demos/cmk/banana-asm.cmk
+'''
+
+import log
+from cmk import class, module
+
+__main__: demo.docs demo.children demo.props demo.bfs
+
+cmk.class lang.tree(bases=module)[|
+  '''a namespace tree with a breadth-first self.bfs/<target> walker'''
+  ${self}.bfs.order = $(strip $(if $(strip ${__args__}),${__args__} $(call ${self}.bfs.order,$(foreach _n,${__args__},$(addprefix $(_n).,$($(_n).__children__))))))
+  self.bfs/%:
+    ${make} $(foreach _n,$(call ${self}.bfs.order,self.__name__),$*/$(_n))
+|]
+
+# a small tree: root + two nodes, some shared + some distinct props.
+lang.tree root[|
+  '''the root'''
+  lang.tree node1[|
+    '''first node'''
+    color = red
+    size = big
+  |]
+  lang.tree node2[|
+    '''second node'''
+    color = blue
+    weight = heavy
+  |]
+|]
+
+demo.docs:
+  ''' the tree's own docstring lifts; nested docstrings qualify. '''
+  log(root: ${root.__doc__})
+  log(root.node1: ${root.node1.__doc__})
+  log(root.node2: ${root.node2.__doc__})
+
+demo.children:
+  ''' __children__ lists direct members in source order (node1 node2). '''
+  log(root.__children__ = ${root.__children__})
+
+demo.props:
+  ''' each node carries its own properties -- some shared, some distinct. '''
+  log(node1 ${sep} color=${root.node1.color} size=${root.node1.size})
+  log(node2 ${sep} color=${root.node2.color} weight=${root.node2.weight})
+
+demo.bfs:
+  ''' the embedded walker echoes every node's dotpath, breadth-first. '''
+  ${make} root.bfs/flux.echo

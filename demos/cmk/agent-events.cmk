@@ -1,0 +1,55 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# agent-events.cmk: an event-log agent built on the agents module.
+#
+# USAGE:
+#   ./demos/cmk/agent-events.cmk
+
+'''
+An agent is a transport-Actor with a mailbox folded in.  Its mailbox is
+constructed with the agent and torn down at exit (stop is also callable
+mid-run); the mailbox itself answers count and dump.  A flat import of the
+agent module brings its classes into scope, so an agent is created here:
+synchronous and socket-free, yet answering the callforms of a socketed
+one.  Events ride a dual-plane envelope.  The data plane appends an inert
+JSON record (a login or logout).  The control plane delivers a native cmk
+target that runs receiver-side with the event as CMK_EVENT; the login and
+logout handlers below are where each event lands when the dispatch step
+drains the log.
+'''
+
+import log
+from agents import Agent
+
+# auth: the login/logout event log, an inproc agent; its handlers run receiver-side as the control plane drains.
+auth <- Agent.new()
+
+login:
+  log(${green}login  ${sep} `printf '%s' "$${CMK_EVENT}" | ${jq.run} -r .user`)
+logout:
+  log(${dim}logout ${sep} `printf '%s' "$${CMK_EVENT}" | ${jq.run} -r .user`)
+
+demo.log:
+  '''data plane: seed events, then read the log size and contents.'''
+  auth.cast["""user=carol action=login"""]
+  auth.cast["""user=bob action=logout"""]
+  auth.cast["""user=alice action=login"""]
+  n <- auth.mbox.count()
+  auth.log(${bold}holds $${n} events (inproc))
+  auth.mbox.dump()
+
+demo.query:
+  '''a read-only jq fold over the mailbox: the users who logged in.'''
+  u <- auth.mbox.filter["""map(select(.action=="login").user)"""]
+  auth.log(kept-logins ${sep} $$u)
+
+demo.dispatch:
+  '''control plane: route each event to <action>, as CMK_EVENT.'''
+  auth.mbox.dump() \
+  | while IFS= read -r ev; do \
+      a=`printf '%s' "$$ev" | ${jq.run} -r .action`; \
+      printf '%s\n' "$$a" | this.mk.kernel.each{CMK_EVENT=$$ev}; \
+    done
+  auth.stop()
+
+__main__: demo.log demo.query demo.dispatch

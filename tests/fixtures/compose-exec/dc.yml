@@ -1,0 +1,8 @@
+services:
+  testsvc:
+    image: debian/buildd:bookworm
+    command: ["sleep", "300"]
+    working_dir: /workspace
+    volumes:
+      # Mounted so the exec'd `make` finds the Makefile and the host sees the sentinel.
+      - ${DOCKER_HOST_WORKSPACE:-${PWD}}:/workspace

@@ -1,0 +1,62 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# ansible-adhoc.cmk: a custom automation API wrapping containerized ansible.
+#
+# USAGE: ./demos/cmk/ansible-adhoc.cmk
+
+'''
+Wraps a containerized ansible behind a
+new, opinionated interface -- versioned, slim, stateless, and JSON IO by default.
+An inlined Dockerfile provides ansible (plus docker support); ansible modules map
+directly onto make-targets, and a small pipe threads module arguments through.
+'''
+
+export ANSIBLE_LOAD_CALLBACK_PLUGINS=true
+export ANSIBLE_STDOUT_CALLBACK=json
+
+# A container that has ansible, and ansible has support for docker.  This could
+# be an external Dockerfile or docker-compose file, but for simplicity it is inlined.
+import io
+from cmk import Dockerfile
+Dockerfile Ansible(|
+    FROM ${IMG_DEBIAN_BASE:-debian:bookworm-slim}
+    RUN apt-get update -qq && apt-get install -qq -y jq make bash
+    RUN apt-get install -qq -y ansible python3-pip
+    RUN pip3 install -q docker --break-system-packages
+|)
+
+ansible.adhoc/%:
+    '''
+    A bridge exposing adhoc ansible: takes one parameter, the ansible module name.
+    This runs on the host (no ansible here), so it dispatches into the container
+    at self.ansible.adhoc/<module>.
+    https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html
+    '''
+    img=compose.mk:Ansible this.docker.dispatch/self.ansible.adhoc/${*}
+
+self.ansible.adhoc/%:
+    '''
+    Runs inside the ansible container: calls ansible with JSON output (optional
+    extra ansible in the ansible_args env var), then unpacks the interesting part
+    of the JSON before returning it.
+    '''
+    ansible all -m${*} -i localhost, -c local $${ansible_args:-} | ${jq} .plays[0].tasks[0].hosts.localhost
+
+ansible.adhoc.pipe/%:
+    '''
+    Pass module arguments in.  Ansible accepts JSON or key=val data via --args, so
+    read that off stdin into the ansible_args env var (which docker passes through)
+    and forward to ansible.adhoc.
+    '''
+    export ansible_args="--args `${stream.stdin}`" && env=ansible_args this.ansible.adhoc/${*}
+
+list_images:
+    '''
+    A new verb built on the above: list available docker images via ansible's
+    docker_image_info module, called with timeout=60.
+    https://docs.ansible.com/ansible/2.8/modules/docker_image_info_module.html
+    '''
+    io.json_builder(timeout=60) | this.ansible.adhoc.pipe/docker_image_info | ${jq} -r '.images[].RepoTags[0]'
+
+# Main entrypoint.  Exercise a few possibilities for our new custom automation API.
+__main__: Ansible.build ansible.adhoc/ping list_images

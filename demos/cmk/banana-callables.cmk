@@ -1,0 +1,80 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-callables.cmk: define your own declaration constructor, then
+# drive it with banana blocks so each block becomes a callable target.
+#
+# USAGE: ./demos/cmk/banana-callables.cmk
+
+'''
+A constructor is a factory KIND: constructor foo[| mixin |] creates foo, and
+each foo bar(| body |) runs the mixin over the new instance bar.  The mixin
+here scaffolds a target, so every instance is directly runnable.
+
+Naming conventions keep the three kinds of name legible.  A KIND is the
+factory, lowercase and dotted (shell.runner).  An instance is an object it
+creates, lowercase snake (greet).  A target is what you run, and here that is
+just the instance name (a bare greet on the make command line).
+
+Inside a mixin body the self-name is the instance and the first argument is
+the raw call kwargs (read one with mk.kwargs.get); every other dollar is
+ordinary make, so the body reads like a plain recipe with no eval/define
+bookkeeping.
+
+The docker.runner section needs docker; the shell.runner section does not.
+'''
+
+import log
+from cmk import constructor
+
+# shell.runner: ( a KIND whose instances are runnable shell scripts )
+#   The mixin scaffolds a target named for the instance, one that pipes
+#   the instance's banana body into a shell.  A shell= kwarg on the
+#   instance picks the interpreter, defaulting to sh.  The banana body
+#   lands in a define named for the instance, read straight back by name.
+
+constructor shell.runner[|
+  ${self}.shell ?= $(or $(call mk.kwargs.get,${1},shell),sh)
+  ${self}:
+    ${self}.shell() <(${make} mk.def.read/${self})
+|]
+
+shell.runner greet(|
+  echo "hello from a scaffolded target"
+|)
+
+shell.runner report(shell=bash)(|
+  echo "arch is $(uname -m), interpreter is $0"
+|)
+
+# docker.runner: ( the same pattern, over a Dockerfile body )
+#   Here the banana body is a Dockerfile and the scaffolded target builds
+#   and runs it through the stdlib docker.lambda.  A cmd= kwarg threads the
+#   command to run in the built image, defaulting to true.  The two
+#   instances share one KIND and differ only by body and cmd.
+
+constructor docker.runner[|
+  ${self}.cmd ?= $(or $(call mk.kwargs.get,${1},cmd),true)
+  ${self}:
+    cmd='${self}.cmd()' ${make} docker.lambda/${self}
+|]
+
+docker.runner show_pwd(cmd=pwd)(|
+  FROM alpine:3.21.2
+|)
+
+docker.runner show_arch(cmd=arch)(|
+  FROM alpine:3.21.2
+|)
+
+# reflection: ( a target that names each of the three, so they don't blur )
+#   The KIND reflects its metaclass; the instance carries the attribute the
+#   mixin threaded onto it; and running the instance name is running the
+#   target the mixin scaffolded.
+
+reflect:
+  log(KIND ${sep} shell.runner is a ${shell.runner.__metaclass__})
+  log(instance ${sep} greet.shell = ${greet.shell})
+  log(target ${sep} running greet now)
+  ${make} greet
+
+__main__: greet report show_pwd show_arch reflect

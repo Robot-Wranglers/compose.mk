@@ -1,16 +1,16 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 
 ### Zero Config TUIs
 
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-Zero-config TUIs are part of what makes `compose.mk` useful in [tool mode]({{mkdocs.site_relative_url}}), especially as a quick option for interacting with third-party projects that you can't control and don't want to edit.  
+Zero-config TUIs are part of what makes `compose.mk` useful in [tool mode]({{_}}/tool-overview), especially as a quick option for interacting with third-party projects that you can't control and don't want to edit.  
 
-Examples here all involve full-blown TUIs, i.e. multi-pane content with layouts that can be created with no code/config.  For something simpler that's still interactive, see also the [selector docs]({{mkdocs.site_relative_url}}/selector).
+Examples here all involve full-blown TUIs, i.e. multi-pane content with layouts that can be created with no code/config.  For something simpler that's still interactive, see also the [selector docs]({{_}}/selector).
 
 #### Basic Examples 
 
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-4">
 
 For a simple demo that's just exercising containerized `tmux`, geometry, and dispatching targets to panes.. try {{site.api_link('tux.demo',mkdocs)}}:
 
@@ -33,9 +33,9 @@ $ ./compose.mk docker.commander
 
 
 #### Working with Compose-Files
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-4">
 
-**If your project has a docker-compose file,** the [selector docs]({{mkdocs.site_relative_url}}/selector/#interactive-container-selection) describe how you can select a single container interactively and shell into it.  In a similar vein, you can also use the [`loadf` command]({{mkdocs.site_relative_url}}/loadf) to **open several container shells at once.**
+**If your project has a docker-compose file,** the [selector docs]({{_}}/selector/#interactive-container-selection) describe how you can select a single container interactively and shell into it.  In a similar vein, you can also use the [`loadf` command]({{_}}/loadf) to **open several container shells at once.**
 
 ```bash {.cli_example}
 # Opens 3 panes with container shells: 
@@ -44,7 +44,7 @@ $ ./compose.mk loadf demos/data/docker-compose.yml
 ```
 {{macros.img_link("loadf-1.png", mkdocs, "70%", class="cli_output")}}
 
-Implicitly `loadf` is dynamically creating make-targets corresponding to the compose-services.  We can get more explicit by using `tux.open` as seen in the [Layout Section]({{mkdocs.site_relative_url}}/embedded-tui/#layout-basics), and passing in services names or target names:
+Implicitly `loadf` is dynamically creating make-targets corresponding to the compose-services.  We can get more explicit by using `tux.open` as seen in the [Layout Section]({{_}}/embedded-tui/#layout-basics), and passing in services names or target names:
 
 ```bash {.cli_example}
 # Equivalent to above, but more explicit and less magical.
@@ -57,22 +57,22 @@ $ layout=spiral ./compose.mk loadf demos/data/docker-compose.yml \
 ```
 
 #### Working with Makefiles
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-4">
 
-**If your project has a Makefile,** the [selector docs]({{mkdocs.site_relative_url}}/selector/#interactive-target-selection) show how you can interactively select/run individual targets.  In a similar vein, **working with multiple targets and simple "dashboarding" across targets is also possible** with no special configuration.  This involves the {{site.api_link('mk.include', mkdocs)}} target, which effectively simulates a `include compose.mk` in your project Makefile *without actually adding one.*
+**If your project has a Makefile,** the [selector docs]({{_}}/selector/#interactive-target-selection) show how you can interactively select/run individual targets.  In a similar vein, **working with multiple targets and simple "dashboarding" across targets is also possible** with no special configuration.  This involves the {{site.api_link('include', mkdocs)}} target, which effectively simulates a `include compose.mk` in your project Makefile *without actually adding one.*
 
--------------------------------------
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 Consider the following vanilla Makefile, which does **not** include `compose.mk` itself, and simply defines fake `build`, `clean`, and `test` targets that do nothing.
 
 {{site.embed_demo('demos/no-include.mk', github=github)}}
 
-Using `mk.include` by itself works in the way that you'd probably expect, but does nothing very interesting:
+Using `include` by itself works in the way that you'd probably expect, but does nothing very interesting:
 
 ```bash {.cli_example}
 # Roughly equivalent to `make -f demos/no-include.mk`
 $ ./compose.mk \
-    mk.include/demos/no-include.mk 
+    include/demos/no-include.mk 
 ```
 ```bash {.cli_output}
 cleaning
@@ -80,11 +80,11 @@ building
 testing
 ```
 
-The interesting part is that using {{site.api_link('tux.open',mkdocs,arg='target_list')}} in the way that [we've already seen]({{mkdocs.site_relative_url}}/embedded-tui/#layout-basics) *also* works how you'd expect here.  Thus you can use the command below to open each target in a separate pane:
+The interesting part is that using {{site.api_link('tux.open',mkdocs,arg='target_list')}} in the way that [we've already seen]({{_}}/embedded-tui/#layout-basics) *also* works how you'd expect here.  Thus you can use the command below to open each target in a separate pane:
 
 ```bash {.cli_example}
 $ ./compose.mk \
-        mk.include/demos/no-include.mk \
+        include/demos/no-include.mk \
         tux.open/clean,build,test
 ```
 
@@ -92,13 +92,13 @@ $ ./compose.mk \
 
 This is neat so far.. but it's not that useful to run *clean/build/test* in parallel.
 
-How about something more practical, like starting a TUI that runs the *clean/build* targets back-to-back, plus a separate pane that's running *test* in a loop?  This is actually doable.  For it to happen, we can leverage the workflow helpers in the [`flux.*`]({{mkdocs.site_relative_url}}/api#api-flux) target namespace.  The command line for this starts to get complicated, so let's build it up one piece at a time. 
+How about something more practical, like starting a TUI that runs the *clean/build* targets back-to-back, plus a separate pane that's running *test* in a loop?  That's doable with the workflow helpers in the [`flux.*`]({{_}}/api#api-flux) target namespace.  The command line for this starts to get complicated, so let's build it up one piece at a time. 
 
 Running `clean` and `build` in one step:
 
 ```bash {.cli_example}
 $ ./compose.mk \
-        mk.include/demos/no-include.mk \
+        include/demos/no-include.mk \
         flux.wrap/clean:build
 ```
 ```bash {.cli_output}
@@ -110,7 +110,7 @@ Looping the test-target forever:
 
 ```bash {.cli_example}
 $ ./compose.mk \
-        mk.include/demos/no-include.mk \
+        include/demos/no-include.mk \
         flux.loopf/test
 ```
 ```bash {.cli_output}
@@ -125,28 +125,64 @@ Putting it all together:
 ```bash {.cli_example}
 $ layout=horizontal \
     ./compose.mk \
-        mk.include/demos/no-include.mk \
+        include/demos/no-include.mk \
         tux.open/flux.loopf/test,flux.wrap/clean:build
 ```
 {{macros.img_link("zero-config-tui.gif", mkdocs, "90%", class="cli_output")}}
 
+#### Progress Bars
+<hr class="section-rule lvl-4">
+
+Long-running fan-outs get a progress bar for free: any target built from the `@io.dirhandler` decorator (or `flux.each.dir`) streams one automatically.  Under the hood this is [`tux.progress`](https://github.com/mattvonrocketstein/tux.progress), a tiny static-binary renderer driven by newline-delimited JSON (`{index, total, output}`) on stdin.  It draws a charm-style bar on **stderr** while passing the stream through unchanged on **stdout**, runs from a `scratch` container (nothing lands on your host), and disables itself outside a TTY or in CI.
+
+Anything emitting that contract can drive it directly:
+
+```bash {.cli_example}
+$ <producer emitting {index,total,output} JSON> | ./compose.mk tux.progress
+```
+
+#### Interactive REPL
+<hr class="section-rule lvl-4">
+
+!!! warning "Non-core"
+    REPL support is **not** part of core `compose.mk`; it requires the non-core `repl` plugin (`tux.repl`), built on first-use.  See it in the [plugin index]({{_}}/plugins/overview/#plugin-index), and the [plugin overview]({{_}}/plugins/overview) for how plugins load.
+
+Beyond dashboards, you can drop into an interactive **REPL**[^repl] over a project's targets with no setup.  With a file, it opens a shell over *that program's* target namespace; with no file, it's a plain shell over the core namespace:
+
+```bash {.cli_example}
+$ ./compose.mk cmk repl                         # a shell over the core namespace
+$ ./compose.mk cmk repl demos/cmk/overlay.cmk   # a shell over a program's targets
+```
+
+A program can also *default* to the REPL (so a bare `cmk run <file>` launches it) via the `repl` pragma; see the [compiler docs]({{_}}/cmk/compiler) for that and the underlying `tux.repl` harness.
+
 #### Next Steps
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-4">
 
 Expanding on this.. you could add the {{site.api_link('io.shell',mkdocs)}} target to the comma-separated list of `tux.open` arguments for an additional pane featuring an interactive shell.  Or you could add the {{site.api_link('io.env',mkdocs,arg='var_prefix')}} target to dump a list of relevant environment variables for this project.  You get the idea.
 
 This is pretty useful, but the command-line is unwieldy, and a swiss-army knife CLI will only take you so far.  The next section looks at how we can achieve the same thing by editing files and avoiding one-liners.
 
-<hr style="width:100%;border-bottom:3px solid black;">
+{{ macros.section(4, "See Also", id="see-also") }}
+
+* [Low Config TUIs]({{_}}/low-config-tuis): the same dashboards, moved into declarative code.
+* [Embedded TUI]({{_}}/embedded-tui): the layout basics behind `tux.open`.
+* [Selector]({{_}}/selector): simpler single-choice interactivity.
+
+{{ macros.section(4, "References", id="references") }}
+
+[^repl]: {{ tufte.wiki('Read%E2%80%93eval%E2%80%93print_loop')|trim }}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
 	addImageToHeader('working-with-compose-files','/{{mkdocs.config.site_name}}/img/compose.png',style="margin-top:-10px;height:2.2em;")
 	addImageToHeader('working-with-makefiles','/{{mkdocs.config.site_name}}/img/makefile.png',style="margin-top:-10px;height:2.2em;")
 	{{macros.header_images([
-		['basic-examples','basics'], 
+		['basic-examples','basics'],
 		['zero config tuis','tui'],
 		['next steps','next'],
+		['related reading','next'],
+		['references','list-details'],
 	], mkdocs)}}
 }, 100);});
 </script>

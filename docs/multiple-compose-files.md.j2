@@ -1,8 +1,9 @@
+{% import 'macros/tufte.j2' as tufte -%}
 ## Multiple Compose Files
 
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-2">
 
-Using [`compose.import`]({{mkdocs.site_relative_url}}/bridge) can be easily adapted for working with *multiple* compose files, but you'll have to think about service-name collisions between those files.  If you have two compose files with the same service name, you can use multiple target-namespaces like this:
+Using [`compose.import`]({{_}}/bridge) can be easily adapted for working with *multiple* compose files, but you'll have to think about service-name collisions between those files.  If you have two compose files with the same service name, you can use multiple target-namespaces[^namespace] like this:
 
 ```Makefile
 
@@ -25,6 +26,19 @@ build.code:
 
 There's lots of ways to use this.  And if your service names across 2 files do not collide, you are free to put everything under exactly the same namespace.  It's only syntax, but if you choose the conventions wisely then it will probably help you to think and to read whatever you're writing.
 
-Confused about what targets are available after using `compose.import`?  
+Confused about what targets are available after using `compose.import`?
 
-See the [`<compose_stem>.services`]({{mkdocs.site_relative_url}}/bridge/#compose_stemcmd) for list services, and check out the `make help` output.
+See the [`<compose_stem>.services`]({{_}}/bridge/#compose_stemcmd) for list services, and check out the `make help` output.
+
+### See Also
+<hr class="section-rule lvl-3">
+
+Namespaces are mostly about keeping many toolboxes and their dispatch idioms tidy.
+
+* [Import Services from Compose]({{_}}/bridge): the full `compose.import` reference.
+* [Container Dispatch]({{_}}/container-dispatch): namespace-style dispatch across toolboxes.
+
+### References
+<hr class="section-rule lvl-3">
+
+[^namespace]: {{ tufte.wiki('Namespace')|trim }}

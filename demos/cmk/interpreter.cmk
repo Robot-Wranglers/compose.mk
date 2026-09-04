@@ -1,0 +1,31 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# interpreter.cmk: compose.mk as an alternate make interpreter (inherits signals/supervisors).
+#
+# USAGE:
+#   ./demos/cmk/interpreter.cmk
+
+'''
+compose.mk as an alternate interpreter for make,
+mostly useful for extensions that want to inherit signals/supervisors.
+
+  The `ls` target uses mk.yield to hand the rest of the command line to the system `ls`,
+  replacing the process, so any recipe lines after a yield never run.
+
+Main docs: https://robot-wranglers.github.io/compose.mk/signals/
+'''
+
+ls:
+    '''
+    Yields the tail of the command line to the system `ls`;
+    mk.yield replaces the process, so the recipe exits here.
+    '''
+    cmk.mk.yield(ls $${MAKE_CLI#* ls})
+
+__main__:
+    '''
+    The first line yields to `ls` and exits,
+    so the second line never runs.
+    '''
+    ${make} ls /var
+    this second line never runs!

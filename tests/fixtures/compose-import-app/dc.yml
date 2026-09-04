@@ -1,0 +1,7 @@
+services:
+  appsvc:
+    build: .
+    command: ["sleep", "300"]
+    working_dir: /workspace
+    volumes:
+      - ${DOCKER_HOST_WORKSPACE:-${PWD}}:/workspace

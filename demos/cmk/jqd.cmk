@@ -1,0 +1,66 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# jqd.cmk: the worked example for the agent module in .cmk/agents.cmk.
+#
+# cmk_pragma ::: { "target_locals": true } :::
+#
+# USAGE:
+#   ./demos/cmk/jqd.cmk
+#   POOL=8 CMK_ACTOR_TTL=5 ./demos/cmk/jqd.cmk
+
+'''
+Location transparency over the agent stack in .cmk/agents.cmk: alice is an
+inproc Agent, events is a jqd (the same agent behind a unix socket with a
+per-message jq fold), and both answer the same verbs.  The classes live in
+the module; this file is the two instances and their exercise.
+'''
+import log
+import jb, flux
+from agents import Agent, jqd
+
+POOL      ?= 4
+
+
+# events: a socketed agent via jqd; the jq body is its per-message
+# transform (uppercase the producer, keep name/timestamp/seq), not a
+# fixed sink.  A jqd instance body is the jq payload, so no docstring.
+jqd events(|
+    {who: (.name | ascii_upcase), at: .timestamp, seq}
+|)
+
+
+alice <- Agent.new()
+
+demo.simple:
+  '''
+  Location-transparent callforms over the inproc transport.  The last cast
+  is a control-plane message: a native cmk target rides as the message and
+  mk.kernel.each runs it receiver-side (ping dodges a receiver-name clash).
+  '''
+  alice.cast["""user=carol action=login"""]
+  alice.cast["""user=dave action=logout"""]{src=demo}
+  n <- alice.mbox.count()
+  alice.log(holds $${n} events (inproc${comma} synchronous call))
+  alice.mbox.dump()
+  alice.send["""ping"""]
+
+ping:
+  log(${green}ping ${sep} ${dim}a target delivered as a message${no_ansi})
+
+push/%:
+  jb(name=${*} timestamp=`date +%T.%N`) | events.cast()
+
+demo.socket: assert.tool.required/socat
+  '''
+  events: the same agent as alice, but its mailbox lives out-of-process
+  behind a unix socket.  Several casters push concurrently over the one
+  socket; the single serve loop consumes them in arrival order.  Stopping
+  serve drains whatever is still queued, so the mailbox reads back whole.
+  '''
+  events.log(${POOL} casters over one unix socket)
+  events.serve(); \
+  flux.pool(${POOL},push/alice,push/bob,push/carol,push/dave,push/eve,push/frank,push/grace,push/heidi); \
+  events.serve.stop(); \
+  events.mbox.dump()
+
+__main__: demo.simple demo.socket

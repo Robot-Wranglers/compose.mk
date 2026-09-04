@@ -1,0 +1,312 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/cmk_math.j2' as cmkmath -%}{% import 'macros/tufte.j2' as tufte -%}
+
+{{ macros.section(2, "Modules", id="modules", protocols=[
+    ['Ambient', _ ~ '/cmk/concepts/#ambient-protocols'],
+    ['Openable', _ ~ '/cmk/concepts/#openable-protocols'],
+    ['Runnable', _ ~ '/cmk/concepts/#runnable-protocols'],
+  ]) }}
+
+{{ macros.terminology("A **module** is a named, namespaced bundle of variables and targets, brought into scope from an inline block or a file with a single declaration.  The source is never mutated: a prefixed, optionally-compiled *copy* is staged and included, so imports never collide and one body can be brought in several ways.", title="**Terminology: Module**") }}
+
+A **module**[^module] is a named bundle of variables and targets brought into scope with a single declaration.  Modules give you three things at once:
+
+* **Namespacing:** every variable and target is prefixed with the module's name, so modules never collide.
+* **Non-destructive import:** the source (an inline block or a file) is never mutated; a namespaced, optionally-compiled *copy* is staged and included.
+* **An optional compile step:** the body is run through a pipeline (default: the [CMK compiler]({{_}}/cmk/compiler)) before it is brought into scope.
+
+{% include "includes/module-algebra.md" %}
+
+### From Code {% raw %}{#declaring-a-module}{% endraw %}
+<hr class="section-rule lvl-3">
+
+A module is written in two parts: a named [banana block]({{_}}/cmk/banana) captures the body, then a single call stages and imports it.
+
+```cmk {.snippet .language-cmk}
+MyModule[|
+  var1 := val1
+  greet:; @echo hello from ${CMK_MODULE}
+|]
+
+cmk.import.module(def=MyModule)
+```
+
+This stages the module and exposes its members under the module's name (`MyModule.var1`, `MyModule.greet`, and so on).  Nothing is imported until that call, so one body can be brought in several ways: the [Module Algebra](#module-algebra) card at the top of the page lists the declaration and every import variation at a glance.
+
+The import call takes a few keywords, each also in that card:
+
+* **namespace** renames the module on import (the member prefix only; a recipe's own identity always stays its source name).  Omitted, it defaults to the module's own name.
+* **preprocs** picks the [import hooks](#import-hooks).  Omitted, it defaults to the CMK compiler.
+* A docstring on the first line of the body becomes the module's documentation on import.
+
+The demo defines a module with a couple of targets, then runs them by their namespaced names:
+
+{{site.embed_mirror('demos/module-system.mk', 'demos/cmk/module-system.cmk',
+    github=github, default='cmk')}}
+
+### Instance-method form {% raw %}{#module-import-instance-method}{% endraw %}
+<hr class="section-rule lvl-3">
+
+A `module NAME[| .. |]` declaration is a `cmk.module` instance, and every instance carries an `.import` bound-method: a partial over `import.module` that fills in its own `def=`.  So the whole-module import has an instance spelling, bound to the module's own name.  The keywords (`namespace=`, `targets=`/`defs=`, `flat=`, `preprocs=`) ride along exactly as on the call form:
+
+```cmk {.snippet .language-cmk}
+module Kit[|
+  ping:; cmk.log(pong)
+|]
+
+Kit.import(namespace=Copied)     # == cmk.import.module(def=Kit namespace=Copied)
+```
+
+Only the `module`-keyword form is an instance; a bare `NAME[| .. |]` is a plain define, imported with the static `import.module(def=NAME)` above.
+
+### Directives {% raw %}{#open-and-import-directives}{% endraw %}
+<hr class="section-rule lvl-3">
+
+In CMK-Lang the load is usually a **directive** rather than a raw `import.module` call, split by intent: `import` to *use* a module's members unqualified, `import ... as` to mount them under a prefix, and `open` to *contribute* members from the current file.  A bare macro imports the same way, then calls bare.  A soft compile-time lint (`CMK_NS_LINT=0` to silence) flags a mismatched intent, like an `import` you then define into, or an `open` that contributes nothing.
+
+{{ site.embed_demo('demos/cmk/module-import-open.cmk', github=github) }}
+
+#### From-imports {% raw %}{#from-imports}{% endraw %}
+<hr class="section-rule lvl-4">
+
+The fourth directive is `from <mod> import <name>, ..`, and it means what it does in Python: each listed name becomes usable **bare**.  The source module can be core (`cmk`, `host.native`) or a disk plugin on `CMK_PLUGINS_DIR`, and the whole module still loads either way, because member bodies are not rewritten and need their siblings.  The name list is the binding contract:
+
+* A member the module declares qualified (`agents.Agent`) binds to its bare name, carrying its whole dotted family with it, so `Agent.new()`, subclassing via `bases=Agent`, and constructor forms all work through the alias.
+* A member the module already declares bare passes through unchanged.
+* A name the module does not define at all faults at import time (`MODULE_MEMBER`); an unresolvable module faults as `MODULE_MISSING`.
+
+```cmk
+from agents import Agent, jqd
+
+jqd events(| {who: .name} |)
+alice <- Agent.new()
+```
+
+The star form (`from <mod> import *`, with an optional `except` list) is the same load without a name contract, and `open <mod>` is its older alias.  Listing a member by its qualified name (`from agents import agents.Agent`) is accepted for compatibility: it membership-checks but binds nothing new.
+
+### Namespacing
+<hr class="section-rule lvl-3">
+
+On import, every **module-level** assignment and target name is prefixed with the namespace (`var1` → `MyModule.var1`).  A recipe reads its own module identity at runtime via the injected `CMK_MODULE` variable:
+
+{% set ns_mk %}
+define Greeter
+greet:; $(call log, hi from $(CMK_MODULE))
+._impl:; @echo module-local helper
+endef
+$(call import.module, def=Greeter)
+#  greet   ->  Greeter.greet   (public: namespaced)
+#  ._impl  ->  ._impl          (private: kept verbatim)
+{% endset %}
+{% set ns_cmk %}
+Greeter[|
+  greet:; cmk.log(hi from ${CMK_MODULE})
+  ._impl:; @echo module-local helper
+|]
+cmk.import.module(def=Greeter)
+#  greet   ->  Greeter.greet   (public: namespaced)
+#  ._impl  ->  ._impl          (private: kept verbatim)
+{% endset %}
+{{site.inline_mirror('mirror_namespacing', ns_mk, ns_cmk, default='cmk')}}
+
+!!! warning "Two things stay un-namespaced"
+    * **Private members:** any name beginning with `.` or `_` (a `._impl` target, `.PHONY`) stays verbatim and module-local.
+    * **Nested `define … endef` bodies:** literal text, passed through untouched.
+
+Only the declared names are rewritten; dependencies, values, and recipe bodies are not.
+
+### Plain Makefiles {% raw %}{#embedding-cmk-in-plain-makefiles}{% endraw %}
+<hr class="section-rule lvl-3">
+
+Because the compile step runs at import time on a copy, a **vanilla Makefile** (stock `make -f`, no CMK shebang) can embed CMK-Lang in a `define` block and have just that block compiled on import.  The same module authored both ways -- a plain Makefile that embeds it in a `define`, and the CMK-Lang file where the body is native:
+
+{{site.embed_mirror('demos/inlined-cmk.mk', 'demos/cmk/inlined-cmk.cmk', github=github, default='mk')}}
+
+Only the `Report` body is compiled; the surrounding Makefile is left to stock `make`.
+
+### From a File {% raw %}{#importing-from-a-file}{% endraw %}
+<hr class="section-rule lvl-3">
+
+Instead of an inline `define`, a module can be an existing file:
+
+{% set fromfile_mk %}
+$(call import.module, file=path/to/module.mk namespace=mymod)
+{% endset %}
+{% set fromfile_cmk %}
+cmk.import.module(file=path/to/module.mk namespace=mymod)
+{% endset %}
+{{site.inline_mirror('mirror_import_from_file', fromfile_mk, fromfile_cmk, default='cmk')}}
+
+`def=` and `file=` are mutually exclusive (exactly one is required).  With `file=` and no `namespace=`, the module is named after the file's basename.
+
+### Partial Imports
+<hr class="section-rule lvl-3">
+
+By default the whole module is imported.  For only part of one, add a `targets=` or `defs=` selector (mutually exclusive); each is a name or a glob (`*`/`?`):
+
+{% set partial_mk %}
+# only the targets matching the glob (still namespaced + compiled)
+$(call import.module, def=MyModule targets='build.*')
+
+# only the named define blocks
+$(call import.module, file=lib.mk defs='helper_*')
+{% endset %}
+{% set partial_cmk %}
+# only the targets matching the glob (still namespaced + compiled)
+cmk.import.module(def=MyModule targets='build.*')
+
+# only the named define blocks
+cmk.import.module(file=lib.mk defs='helper_*')
+
+# the same selector rides along on the import directive, for a plugin or file
+# source (an inline def= block stays call-form, above):
+import mymod, targets='build.*'      # only build.* (namespaced mymod.*)
+import ./lib.mk, defs='helper_*'     # only the named defines
+{% endset %}
+{{site.inline_mirror('mirror_partial_imports', partial_mk, partial_cmk, default='cmk')}}
+
+The selector is the first pipeline stage (`select → namespace → header → compile`), so chosen members are namespaced and compiled exactly as in a full import.  Selection is **by name only**: a selected target whose prerequisite is an unselected sibling is the caller's responsibility.  The same selector rides on the [`import` directive](#open-and-import-directives) too, for a plugin or file source.
+
+### Flat Imports & Plugins {% raw %}{#flat-root-imports-and-the-plugin-connection}{% endraw %}
+<hr class="section-rule lvl-3">
+
+Each pipeline stage is independently optional, so `import.module` spans a full matrix.  `flat=1` omits the namespace and `CMK_MODULE`-header stages, so the body lands in the **global namespace** (un-prefixed):
+
+{% set flat_mk %}
+# compile an inline CMK-Lang block straight into root (no prefix)
+$(call import.module, def=MyBlock flat=1)
+
+# flat + verbatim FILE -- just a plain include
+$(call import.module, file=lib.mk flat=1 preprocs=stream.echo)
+{% endset %}
+{% set flat_cmk %}
+# compile an inline CMK-Lang block straight into root (no prefix)
+cmk.import.module(def=MyBlock flat=1)
+
+# flat + verbatim FILE -- just a plain include
+cmk.import.module(file=lib.mk flat=1 preprocs=stream.echo)
+{% endset %}
+{{site.inline_mirror('mirror_flat_imports', flat_mk, flat_cmk, default='cmk')}}
+
+That last case (flat, verbatim, a file) is the spine's **fast-path**: nothing to transform, so the file is bound by a direct, copy-free `include`.  It is exactly what the [`include.*`]({{_}}/macros) verbs resolve to.  In other words, **a plugin is just a module with an empty pipeline**, two ends of one mechanism:
+
+|                | verbatim (`preprocs=stream.echo`) | compiled (`preprocs=mk.compile`) |
+|----------------|-----------------------------------|----------------------------------|
+| **flat** (`flat=1`)   | a plain include / plugin          | compile a block into root        |
+| **namespaced** | a namespaced verbatim include     | a module (the default)           |
+
+#### cmk-lang plugins
+<hr class="section-rule lvl-4">
+
+The plugin verbs sit on the **flat** row and pick the *column by file extension*.  A plain `.mk` plugin takes the verbatim fast-path (a copy-free `include`); a `.cmk` plugin is **JIT-compiled** (lowered via `mk.compile`) and included at root; so a plugin can be written in CMK-Lang and is lowered at include time, whether you arrived via `make -f` or `cmk run`.  The same `include.plugins` call, from a plain `Makefile` and from its cmk-lang mirror:
+
+{{site.embed_mirror('demos/plugin-system.mk', 'demos/cmk/plugin-system.cmk', github=github, default='cmk')}}
+
+`strict=0` makes a missing plugin a no-op for both extensions.
+
+### Executable Modules {% raw %}{#executable-modules}{% endraw %}
+<hr class="section-rule lvl-3">
+
+A module or plugin can be **runnable and importable at once** (Pythonic, like `if __name__ == "__main__"`).  Give it a [`__main__:`]({{_}}/config#dunder-names-__name__) rule:
+
+```cmk {.snippet .language-cmk}
+#!/usr/bin/env -S ./compose.mk cmk run
+'''tools.cmk: a runnable, importable module'''
+__main__:; cmk.log(tools ${sep} try build or test)
+build:; @echo building
+test:;  @echo testing
+```
+
+* **Run it directly** (`./tools.cmk`, via the `cmk run` shebang) and `__main__` is the default goal.
+* **Import it** (`cmk.include.plugins(tools.cmk)`) and that `__main__` is **demoted** to a plain `<name>:` target (here, `tools`) so it never collides with the importer's own `__main__`; running the `tools` target then prints its overview.
+
+The demotion happens at import time, with nothing extra to declare.  The stdlib's `json.cmk` is written exactly this way; it and the rest of the shipped modules are catalogued in the [modules index]({{_}}/plugins/overview/#index-modules).
+
+### Declaration Family {% raw %}{#the-declaration-family}{% endraw %}
+<hr class="section-rule lvl-3">
+
+`import.module` is one member of a broader **declaration** namespace: parse-time verbs that bring definitions into scope before any recipe runs.  Its siblings bring other kinds of things into scope by the same convention: single defines, targets, plugins, compose files, and polyglots.  The `declare.*` namespace collects the parse-time registrars created by constructors.
+
+#### Reading a signature {% raw %}{#reading-a-signature}{% endraw %}
+<hr class="section-rule lvl-4">
+
+Each declaration member has a compact arglist/optlist **signature**.
+Each token has a fixed meaning:
+
+{{ site.signature_legend() }}
+
+> **Marquee signatures.**  The same styling, applied to a handful of real declaration members:
+> {: .cmk-card }
+>
+> <dl class="sig-list">
+>   <dt>import.module</dt>
+>   <dd>{{ site.signature('def=<name>|file=<path> [namespace=] [targets=/defs= for partial]') }}</dd>
+>   <dt>include.plugin</dt>
+>   <dd>{{ site.signature('<file..> from CMK_PLUGINS_DIR [strict=0 -> log+continue]') }}</dd>
+>   <dt>import.def</dt>
+>   <dd>{{ site.signature('file=<path> def=<name> [as=] [namespace=] (one define)') }}</dd>
+>   <dt>import.target</dt>
+>   <dd>{{ site.signature('file=<path> target=<name> [as=] [namespace=]') }}</dd>
+>   <dt>vm.reflect</dt>
+>   <dd>{{ site.signature('prefix=<p> | exclude=<prefixes>') }}</dd>
+> </dl>
+
+A **required key** (`def=`) must be supplied; a **placeholder** (`<name>`, or
+`<file..>` for a repeatable one) is where your value goes; anything in
+**`[ brackets ]`** is optional; `|` marks alternative forms; `->` reads as
+*"then does"*.
+
+{{ macros.related_links([
+    'The [Plugin System](@/plugins/overview) is built directly on modules: a plugin is just a module loaded from a file on the plugin search path ([`include.plugins`](@/macros)), so the namespacing / non-destructive-import / JIT-compile behavior here applies there too.',
+    ['Macros &amp; Functions', '@/macros', 'the full declaration reference'],
+    ['Compiler &amp; Dialects', '@/cmk/compiler', 'the `NAME[| … |]` banana form and receiver pre-scan'],
+], mkdocs) }}
+
+### Import Hooks {% raw %}{#import-hooks}{% endraw %}
+<hr class="section-rule lvl-3">
+
+The `preprocs=` argument names the **import hooks** the body is filtered through as it is staged: the default `mk.compile` compiles any body, `stream.echo` passes it through verbatim, and a colon-delimited list chains several left to right.
+
+{% set pipe_mk %}
+# default -- compile cmk-lang (safe for any body)
+$(call import.module, def=MyModule)
+
+# verbatim -- body needs no compilation
+$(call import.module, def=MyModule preprocs=stream.echo)
+
+# two stages, left to right
+$(call import.module, file=lib.mk preprocs=stream.echo:mk.compile)
+{% endset %}
+{% set pipe_cmk %}
+# default -- compile cmk-lang (safe for any body)
+cmk.import.module(def=MyModule)
+
+# verbatim -- body needs no compilation
+cmk.import.module(def=MyModule preprocs=stream.echo)
+
+# two stages, left to right
+cmk.import.module(file=lib.mk preprocs=stream.echo:mk.compile)
+{% endset %}
+{{site.inline_mirror('mirror_pipelines', pipe_mk, pipe_cmk, default='cmk')}}
+
+The hooks only ever read the source; the original `define`/file is left exactly as written.
+<hr style="width:100%;border-bottom:3px solid black;">
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Modules Index]({{_}}/plugins/overview/#index-modules): the catalog of modules that ship under `.cmk/`, generated from each one's header.
+* [Metaprogramming]({{_}}/cmk/metaprogramming): dialects, sugar, and pragmas.
+* [Compiler Tutorial]({{_}}/cmk/compiler): the concrete syntax and lowering.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^module]: {{ tufte.wiki('Modular_programming')|trim }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+	{{macros.header_images([
+        ['declaring-a-module','basics'],
+        ['namespacing','code-dots'],
+        ['the-declaration-family','list-details'],
+    ], mkdocs)}}
+}, 100);});
+</script>

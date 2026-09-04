@@ -1,29 +1,25 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 
 ## Platform Lifecycle Demo
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-2">
 
-This demo describes one way to express platform lifecycle automation using `compose.mk`, focusing on **data and control flows** without doing any real work.  If you want something that's more than a toy, see the WIP sibling project that's focused on kubernetes over at [k8s-tools]({{jinja.vars.k8stools_docs_url}}/demos/cluster-lifecycle).
+This demo describes one way to express platform lifecycle automation using `compose.mk`, focusing on **data and control flows** without doing any real work.
 
-!!! related_links "Related Links"
-    Some of the idioms used in this demo include:
-    
-    * [Container dispatch]({{mkdocs.site_relative_url}}/container-dispatch), including [namespace-style dispatch]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch) 
-    * [Structured IO]({{mkdocs.site_relative_url}}/standard-lib/#structured-io) with `jb`
-    * [Workflow helpers]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support)
+!!! tip "Idioms used here"
+    * [Container dispatch]({{_}}/container-dispatch): including [namespace-style dispatch]({{_}}/container-dispatch/#namespace-style-dispatch)
+    * [Structured IO]({{_}}/standard-lib/#structured-io): with `jb`
+    * [Workflow helpers]({{_}}/standard-lib/#workflow-support)
 
 ### Basic Platforming 
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 Consider the following Makefile:
 
-{{site.embed_demo(
-    'demos/platform.mk', github=github,
-    bottom_right=site.link_mirror('demos/cmk/platform-lme.cmk'), )}}
+{{site.embed_mirror('demos/platform.mk', 'demos/cmk/platform.cmk', github=github, default='left')}}
 
-Above we use [namespace-style syntax]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch) for the [container dispatch idiom]({{mkdocs.site_relative_url}}/container-dispatch) to call tasks in containers, and we use `jb` to emit JSON, pretending we are running `terraform output -json` or similar.  
+Above we use [namespace-style syntax]({{_}}/container-dispatch/#namespace-style-dispatch) for the [container dispatch idiom]({{_}}/container-dispatch) to call tasks in containers, and we use `jb` to emit JSON, pretending we are running `terraform output -json` or similar.  
 
-Also note the usage of `${jb}` instead of `jb`, which [is expanded]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) to use `jb` directly if available, or fall back to docker. (See the [structured IO docs]({{mkdocs.site_relative_url}}/standard-lib#structured-io))
+Also note the usage of the `jb` helper variable instead of a bare `jb`, which [is expanded]({{_}}/standard-lib/#structured-io-basics) to use `jb` directly if available, or fall back to docker. (See the [structured IO docs]({{_}}/standard-lib#structured-io))
 
 It's powerful, concise, expressive, and already orchestrating tasks across two containers defined in some external compose-file.  The syntax is configurable, and it's even starting to look object-oriented.  
 
@@ -31,62 +27,63 @@ Typically app-setup and infra-setup might further split into stages, but you get
 
 
 ### Extension with LME
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 Let's consider an extension of the platforming so far.  Suppose output from `platform.setup` needs to be used by the next phase of bootstrap.  For example, sending the platform output to different backends for `logging`, `metrics`, and `events`, respectively.  
 
-For this kind of thing it's most natural to think in terms of process algebra, and `compose.mk` makes it pretty elegant to express.  
+For this kind of thing it's most natural to think in terms of process algebra[^process-algebra], and `compose.mk` makes it pretty elegant to express.
 
-In the next example we'll use everything from the last exercise.  For the sake of variety, we'll introduce a few other new idioms like [logging]({{mkdocs.site_relative_url}}/standard-lib#logging-facilities) and some [workflow primitives]({{mkdocs.site_relative_url}}/demos/workflows)
+In the next example we'll use everything from the last exercise.  For the sake of variety, we'll introduce a few other new idioms like [logging]({{_}}/standard-lib#logging-facilities) and some [workflow primitives]({{_}}/demos/workflows)
 
-{{site.embed_demo('demos/platform-lme.mk', bottom_right=site.link_mirror('demos/cmk/platform-lme.cmk'), github=github)}}
+{{site.embed_mirror('demos/platform-lme.mk', 'demos/cmk/platform-lme.cmk', github=github, default='left')}}
 
-As in the previous example, this continues to use the [`${jq}` expansion]({{mkdocs.site_relative_url}}/standard-lib/#structured-io-basics) for safe access to JSON parsing, and introduces the `${stream.stdin}` macro as pretty way to write `cat /dev/stdin`
+As in the previous example, this continues to use the [`jq` helper expansion]({{_}}/standard-lib/#structured-io-basics) for safe access to JSON parsing, and introduces the `stream.stdin` macro as pretty way to write `cat /dev/stdin`
 
-The example above introduces the [flux.pipe.fork target]({{mkdocs.site_relative_url}}/api#fluxdmux) for flow-control, which is used to send platform-setup's output into the three backend handlers.
+The example above introduces the [flux.pipe.fork target]({{_}}/api#fluxdmux) for flow-control, which is used to send platform-setup's output into the three backend handlers.
 
 This is just syntactic sugar for a 1-to-many pipe (aka a demultiplexer, or "dmux").  Each handler pulls out the piece of the input that it cares about, simulating further setup using that info.
 
 {#
 The stripped-down and combined automation that achieves this workflow is included below. It feels pretty organized and maintainable and excluding the container-definitions, this weighs in at only ~20 lines.
 
-So that illustrates [container dispatch]({{mkdocs.site_relative_url}}/container-dispatch) combined with the [flux.pipe.fork target]({{mkdocs.site_relative_url}}/api#fluxdmux).  There are many other `flux.*` targets ([see the API docs]({{mkdocs.site_relative_url}}/api#api-flux)).. see also the [workflow demo]({{mkdocs.site_relative_url}}/demos/workflows) and [other workflow docs]({{mkdocs.site_relative_url}}/standard-lib/#workflow-support).
+So that illustrates [container dispatch]({{_}}/container-dispatch) combined with the [flux.pipe.fork target]({{_}}/api#fluxdmux).  There are many other `flux.*` targets ([see the API docs]({{_}}/api#api-flux)).. see also the [workflow demo]({{_}}/demos/workflows) and [other workflow docs]({{_}}/standard-lib/#workflow-support).
 
 #}
 
 
 ### Discussion 
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 This is actually a lot of control and data-flow that's been expressed.  Ignoring ordering, graphing it would look something like this:
 
 {{macros.img_link("mmd-platform-example-1.png", mkdocs, "90%",class=" ")}}
 
------------------------------
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 Not to belabor the point but we know what happens next is probably *more* platforms, more tools/containers, and more data flows.  Let's watch how it blows up with just one more platform:
 
 {{macros.img_link("mmd-platform-example-2.png", mkdocs, "90%",class=" ")}}
 
------------------------------
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 This tight expression of complex flow will already be familiar to lots of people: whether they are bash wizards, functional programming nerds, or Airflow/MLFlow/ArgoWF users.  Still, this example pipes data between 5 containers, with no dependencies, and in remarkably direct way that feels pretty seamless!*  It separates the automation itself from the context that it runs in, all with no platform lock-in.  Plus.. compared to the alternatives, doesn't it feel more like working with a programming language and less like jamming bash into yaml? 🤔  
 
-If it doesn't yet feel like a "real" programming language compared with vanilla `make`, here's a quick look at an equivalent version ported to [CMK-lang]({{mkdocs.site_relative_url}}/compiler):
-
-{{site.embed_demo(
-    'demos/cmk/platform-lme.cmk', 
-    bottom_right=site.link_mirror('demos/platform-lme.mk'), 
-    github=github)}}
-
-Feels like it's zeroing in a minimum-viable description length for the sort of problem it's tackling.  👍 
+If it doesn't yet feel like a "real" programming language compared with vanilla `make`, flip either example above to its [cmk-lang]({{_}}/cmk/compiler) tab.  That ported version feels like it's zeroing in on a minimum-viable description length for the sort of problem it's tackling.  👍
 
 It's a neat party trick that `compose.mk` has features that look like Luigi or Airflow if you squint, but of course it's not *really* made for ETLs.  In spirit, `flux.*` is more similar to things like [declarative pipelines in Jenkins](https://www.jenkins.io/doc/book/pipeline/syntax/#declarative-pipeline), and that's the way you'll probably want to use it.
 
-Again, for a full blown project, see a preview of the WIP sister project at [k8s-tools.git]({{jinja.vars.k8stools_docs_url}}/demos/cluster-lifecycle), which also breaks down automation into platforms, infrastructure, and app phases, but sets up and provisions a real cluster.
+### See Also
+<hr class="section-rule lvl-3">
 
-<hr style="width:100%;border-bottom:3px solid black;">
- 
+* [Workflows]({{_}}/demos/workflows): the `flux.*` pipeline primitives used here.
+* [Container Dispatch]({{_}}/container-dispatch): namespace-style dispatch of tasks into containers.
+* [Polyglots]({{_}}/demos/polyglots): mixing foreign languages across the same flows.
+
+### References
+<hr class="section-rule lvl-3">
+
+[^process-algebra]: {{ tufte.wiki('Process_calculus')|trim }}
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
 	addImageToHeader('discussion','/{{mkdocs.config.site_name}}/img/discussion.svg');

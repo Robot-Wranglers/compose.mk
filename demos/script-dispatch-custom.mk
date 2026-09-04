@@ -1,29 +1,29 @@
 #!/usr/bin/env -S make -f
-# Demonstrating idioms for container-agnostic script dispatch with stock images.
-# The target script always runs from the container, but does not care whether 
-# it's called from the host, or inside the container.
 #
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
-# See also: http://robot-wranglers.github.io/compose.mk/container-dispatch
+# script-dispatch-custom.mk:
+#   Container-agnostic script dispatch using a local, embedded Dockerfile.  The
+#   image is built from an inline `Dockerfile.<name>` define (via the
+#   `Dockerfile.build/<name>` prereq), then a code-object bound to that image
+#   runs the script inside it.
 #
 # USAGE: ./demos/script-dispatch-custom.mk
 
 include compose.mk
-__main__: my_script script_wrapper
 
-# Look, it's a container definition 
+# Look, it's a container definition.
 define Dockerfile.my_container
 FROM debian/buildd:bookworm
-# .. Other customization here .. 
+# .. Other customization here ..
 endef
 
-# Look, it's a script to run in the container 
+# Look, it's a script to run in the container.
 define my_script
 echo hello `hostname` at `uname -a`
 endef
 
-# Binds the given target to the given container + implied script
-my_script:; $(call mk.docker.bind.script, img=my_container)
+# Code-objects bound to the locally-built image.
+$(call code, def=my_script img=compose.mk:my_container entrypoint=bash)
+$(call code, def=my_script namespace=script_wrapper img=compose.mk:my_container entrypoint=bash)
 
-# If script and target names differ, provide `def` argument
-script_wrapper:; $(call mk.docker.bind.script, img=my_container def=my_script)
+# Build the image (prereq), then run the scripts in it.
+__main__: Dockerfile.build/my_container my_script script_wrapper

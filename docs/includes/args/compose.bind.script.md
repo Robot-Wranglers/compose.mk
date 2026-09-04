@@ -16,7 +16,7 @@
     </tr>
     <tr>
         <td><code>entrypoint</code></td>
-        <td>❌</td>
+        <td>—</td>
         <td class=wrap>
             Interpreter to use.
             <br/>Defaults to bash.
@@ -25,7 +25,7 @@
     </tr>
     <tr>
         <td><code>env</code></td>
-        <td>❌</td>
+        <td>—</td>
         <td class=wrap>
             Variables to pass through to container.
             <br/>Defaults to value from environment
@@ -34,7 +34,7 @@
     </tr>
     <tr>
         <td><code>quiet</code></td>
-        <td>❌</td>
+        <td>—</td>
         <td class=wrap>
             Whether to silence announcements re: compose-file and service name.
             <br/>Defaults to value from environment, or 0.

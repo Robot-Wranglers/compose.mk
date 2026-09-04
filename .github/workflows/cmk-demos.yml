@@ -1,0 +1,30 @@
+# See also: https://docs.github.com/en/actions
+#
+# On-demand full sweep of every CMK-lang demo (heavy/GUI/LLM demos included).
+# This is NOT a push/PR gate: the curated, asserted CMK-demo coverage runs on
+# push/PR via the pytest integration suite (integration-tests.yml ->
+# tests/test_integration_cmk.py).  Trigger this manually for the heavy/GUI/LLM
+# demos that pytest deliberately excludes.
+name: CMK Demos
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch: {}
+  workflow_call: {}
+permissions:
+  contents: read
+jobs:
+  test:
+    name: CMK Demos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install socat
+        # demos/cmk/jqd.cmk gates demo.socket behind assert.tool.required/socat.
+        run: sudo apt-get update && sudo apt-get install -y socat
+      - name: Initialize
+        run: make clean init
+      - name: Run CMK Demos
+        run: make actions.demos.cmk

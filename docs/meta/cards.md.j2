@@ -1,0 +1,68 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+
+### Prose Cards
+<hr class="section-rule lvl-3">
+
+The `.cmk-card` blockquote (see `docs/cmk/index`) turns any blockquote into a
+frosted editorial card: a Frost left-accent, an enlarged initial, a Frost-tinted
+bold lead-in as the title, and quiet italics.  It is opt-in, page-independent, and
+refinable; all in pure Markdown via `attr_list`, with no macro or page-class.
+
+#### Default Card
+<hr class="section-rule lvl-4">
+
+A blockquote whose lead paragraph is tagged `{: .cmk-card }`:
+
+```markdown
+> **Tier-1 Roots.**  CMK is a *strict superset* of Makefile, which is
+> itself basically a superset of bash.
+> {: .cmk-card }
+```
+
+> **Tier-1 Roots.**  CMK is a *strict superset* of Makefile, which is itself basically a superset of bash.  It's the ground floor for the everyday dirty work of adhoc-automation, with zero friction in the middle.  Foundational, no-ceremony stuff here, but you can start structured and stay structured with a clear promotion path.
+> {: .cmk-card }
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+A default card can also wrap a collapsed demo embed (as on the CMK landing page):
+
+> **With an Embedded Demo.**  The card's frosted panel wraps a nested collapsed demo, so prose and source read as one unit.
+> {: .cmk-card }
+>
+{{ ('> ' ~ site.embed_demo('demos/cmk/tier-1.cmk', github=github, collapsed=True)) | replace('\n', '\n> ') }}
+
+<!-- card-break: prevents python-markdown from merging adjacent blockquotes -->
+
+<hr style="width:95%;border-bottom:1px dashed black;">
+
+#### Refined Cards (Custom Class)
+<hr class="section-rule lvl-4">
+
+Refine a card by passing a second class alongside `.cmk-card`.  Each modifier keys
+off the lead paragraph's extra class, no macro, no page-class:
+
+```markdown
+> **Aurora Accent.**  prose ...
+> {: .cmk-card .card-aurora }
+```
+
+`.card-aurora`: swaps the Frost accent, initial, and title for an Aurora-red one:
+
+> **Aurora Accent.**  This card opts into the Aurora-red accent by passing `.card-aurora` as a custom class beside `.cmk-card`.  *The initial, border, and title-color all follow the accent.*
+> {: .cmk-card .card-aurora }
+
+<!-- card-break: prevents python-markdown from merging adjacent blockquotes -->
+
+`.card-tight`: trims the padding and margins for a denser card:
+
+> **Tight Card.**  This card passes `.card-tight` to compress its padding and margins, useful for a run of stacked cards.
+> {: .cmk-card .card-tight }
+
+<!-- card-break: prevents python-markdown from merging adjacent blockquotes -->
+
+`.card-plain`: drops the frosted panel, backdrop-blur, and shadow, keeping only the accent + editorial signature:
+
+> **Plain Card.**  This card passes `.card-plain` to shed the frosted panel and shadow, leaving just the Frost accent rule and the enlarged initial.
+> {: .cmk-card .card-plain }
+
+<!-- card-break: prevents python-markdown from merging adjacent blockquotes -->

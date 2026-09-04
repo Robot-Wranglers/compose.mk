@@ -1,0 +1,75 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# tier-2.cmk:
+#   Classes, subclasses, reflection, python-flavored ergonomics.
+#
+# USAGE: ./demos/cmk/tier-2.cmk
+
+'''
+Just another module doc 
+'''
+
+import log
+from cmk import class
+
+class Pet[|
+  ''' 
+  A base class for pets.
+  (Classes also support docstrings)
+  '''
+  
+  self.speak:
+    ''' 
+    A method with a docstring. 
+    Demonstrating built-in logger for classes too.
+    '''
+    ${self}.log(says hello)
+|]
+
+# Still mixing shell in whenever we want though.
+# This is the module-level "capture" operator
+this_directory <- pwd
+
+# Instatiation (re)uses the 'capture' operator.
+zebra <- Pet.new()
+
+# Instances get the class targets like you'd expect.
+# It's part of the CLI as soon as it's instantiated, 
+# but this shows how it also works as a preq.
+demo.one: zebra.speak
+
+# Back to OOP, here's a mixin, demonstrating terse-style
+Fetch := (| ${self}.fetch:; log(${self} fetches the ball) |)
+
+class Dog(bases=Pet,Fetch)(|
+  '''
+  Multiple inheritance, yay.
+  Also demonstrating the builtin class-based logger.
+  '''
+  self.speak:
+    ''' Standard nullary target. '''
+    ${self}.log(barking)
+  
+  self.eat/%:
+    ''' 
+    A parametric target.  And the first dunders. 
+    '''
+    ${self}.log(this target name: ${__target__})
+    ${self}.log(these parameters: ${__target__.args})
+|)
+
+rex <- Dog.new()
+
+demo.two: 
+  ''' 
+  We've seen `speak`` as a prereq, and mentioned that 
+  targets are available on the CLI, too.  It's also callable.
+  '''
+  rex.speak(); rex.fetch()
+  rex.eat(food)
+  rex.eat(food, shoes)
+  log(module doc is ${__doc__})
+  log(Dog bases are ${Dog.__bases__})
+  log(rex class is ${rex.__class__})
+
+__main__: demo.one demo.two 

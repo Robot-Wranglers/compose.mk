@@ -1,0 +1,81 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+{{ macros.section(2, "M5 Macro & Templating Engine", id="m5") }}
+
+`m5` is the string-templating macro engine at the bottom of `compose.mk`, essentially an m4[^m4] macro processor rebuilt in `make`.  Everything above it is written in its vocabulary: the [compiler]({{_}}/cmk/compiler) and its kind system, [banana block]({{_}}/cmk/banana) lowering, and the [hosted partition]({{_}}/cmk/compiler/#hosted-partition).
+
+Two things make it worth learning even if you never touch the compiler.
+
+**It is the ordinary way to write a macro.**  Vanilla `make` gives you raw positional reads that you must strip by hand, and that error out on a missing argument.  The `m5` accessors are strip-normalized, carry an optional form, and publish list operations on the argument itself:
+
+```Makefile {.snippet .language-makefile}
+# vanilla make
+greet = hello, $(strip $(1))
+
+# the same macro over m5: normalized arg-1, plus an optional arg-2
+greet = hello, $(m5[1])$(if $(m5[2]?), and $(m5[2]?),)
+
+# accessors work on the argument as a list
+head = $(m5[1].first)
+tail = $(m5[1].rest)
+```
+
+**Notation simulates a type system.**  A handful of sigils name what an operation *does*, so a glance at a name tells you its pole, and two classic `make` mistakes (reading a variable that was never set, evaluating text that was meant as data) become visible at the call site.
+
+The `m5` section of {{macros.repo_link('compose.mk', name='compose.mk', github=github)}} is the authoritative catalog.  This page is the guided tour.
+
+{{ macros.section(3, "Sigils", id="m5-sigils") }}
+
+The five-symbol vocabulary, and the two suffix conventions (optional read, dunder) layered on top of it.
+
+{{ macros.section(3, "Reading & Evaluating", id="m5-read-eval") }}
+
+The read pole, the eval pole, read-or-default, and the origin predicates.
+
+{{ macros.section(3, "Arguments", id="m5-arguments") }}
+
+Positional accessors, the optional form, list accessors and numeric subscripts, and the variadic views over a call or a target stem.
+
+{{ macros.section(3, "Templates & Holes", id="m5-templates") }}
+
+Filling one hole, folding a fill over a context, and the two interpolation domains kept deliberately separate.
+
+{{ macros.section(3, "Defines", id="m5-defines") }}
+
+The write poles: freezing a body into a named define, and the live variant that re-evaluates its template on each use.
+
+{{ macros.section(3, "Receivers & Attributes", id="m5-receivers") }}
+
+Establishing the receiver at a constructor head, and stamping attributes onto it.
+
+{{ macros.section(3, "Tables & Dispatch", id="m5-tables") }}
+
+Subscript tables, reverse lookup, jump-table dispatch, and folding a macro over every row.
+
+{{ macros.section(3, "Memoization", id="m5-memoization") }}
+
+Arming a variable to cache its own value, caching a function by argument, and the run-scoped once-guard.
+
+{{ macros.section(3, "Batch Declarations", id="m5-declare") }}
+
+Declaring many assignments in one call, with and without export.
+
+{{ macros.section(3, "The Lexer", id="m5-lex") }}
+
+The fork-free pure-make lexer that replaces awk and sed on the hot path, plus the character and mark tokens it works over.
+
+{{ macros.section(3, "Automata", id="m5-auto") }}
+
+The reusable machines that run over word-lists.
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Macros & Functions]({{_}}/macros): the library's macro half, of which this is the substrate.
+* [Compiler Tutorial]({{_}}/cmk/compiler/#templating-engine): where `m5` sits in the compiler.
+* [Banana Blocks]({{_}}/cmk/banana): the block family whose fill operator rides on this engine.
+* [Argument Parsing]({{_}}/argument-parsing): the target-facing side of argument handling.
+* [Style & Idioms]({{_}}/style): when to reach for a macro instead of a target.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^m4]: {{ tufte.wiki('M4_(computer_language)')|trim }}

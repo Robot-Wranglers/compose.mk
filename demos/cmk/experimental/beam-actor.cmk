@@ -1,0 +1,168 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+# beam-actor.cmk: the agents transport rehosted on a BEAM mailbox (needs docker + socat).
+
+'''
+BeamActor is-a Agent whose transport verbs land on a BEAM node: deliver sends
+the envelope over TCP, and serve runs a gen_tcp acceptor feeding one Elixir
+process whose mailbox serializes concurrent casters (standing in for the
+socat+fifo loop).  Messages still dispatch receiver-side through the stock
+Agent.recv, run as a cmk leaf inside the node; the channel file is env-frozen
+and workspace-mounted, so the host reads the mailbox back with stock verbs.
+'''
+import log
+import jb, flux
+from agents import Agent
+from platform.beam import beam.node.ensure
+
+POOL            ?= 4
+BEAM_ACTOR_PORT ?= 4455
+
+# the node program: TCP lines into one process mailbox, each dispatched via the leaf's recv.
+beam.actor.exs(|
+  defmodule BeamActorNode do
+    def main do
+      port = String.to_integer(System.get_env("CMK_ACTOR_PORT") || "4455")
+      src = System.get_env("CMK_ACTOR_LEAF") || "./compose.mk"
+      who = System.get_env("CMK_ACTOR_SELF") || "actor"
+      stack = System.get_env("CMK_ACTOR_STACK") || ""
+      over = if stack == "", do: "", else: " 'events__" <> who <> ".mbox=" <> stack <> "'"
+      leaf = compile(src) <> over
+      {:ok, lsock} = :gen_tcp.listen(port, [:binary, packet: :line, active: false, reuseaddr: true])
+      parent = self()
+      spawn_link(fn -> acceptor(lsock, parent) end)
+      File.write!(".tmp.beamactor." <> who <> ".up", "")
+      IO.puts("cmk-beam-actor up: " <> who <> " port " <> Integer.to_string(port))
+      consume(leaf, who)
+    end
+
+    # compile once; bare make on the twin is headless, so no per-message at-exit touches the mailbox.
+    defp compile(src) do
+      twin = "/tmp/beamactor.mk"
+      {out, rc} = System.cmd("sh", ["-c", "./compose.mk cmk compile " <> src <> " > " <> twin <> " < /dev/null"],
+        env: [{"NO_COLOR", "1"}, {"TERM", "dumb"}, {"CMK_COMPILER_VERBOSE", "0"}], stderr_to_stdout: true)
+      if rc != 0 do
+        IO.write(out)
+        IO.puts("cmk-beam-actor compile failed rc " <> Integer.to_string(rc))
+      end
+      "make -sS --no-print-directory -f " <> twin
+    end
+
+    defp acceptor(lsock, parent) do
+      {:ok, sock} = :gen_tcp.accept(lsock)
+      spawn_link(fn -> reader(sock, parent) end)
+      acceptor(lsock, parent)
+    end
+
+    defp reader(sock, parent) do
+      case :gen_tcp.recv(sock, 0) do
+        {:ok, line} ->
+          send(parent, {:msg, String.trim_trailing(line, "\n")})
+          reader(sock, parent)
+        {:error, _} ->
+          :ok
+      end
+    end
+
+    # the consumer mailbox is the queue; the stop sentinel lands after everything queued.
+    defp consume(leaf, who) do
+      receive do
+        {:msg, "@@stop"} ->
+          File.rm(".tmp.beamactor." <> who <> ".up")
+          IO.puts("cmk-beam-actor closed: " <> who)
+          System.halt(0)
+        {:msg, line} ->
+          dispatch(leaf, who, line)
+          consume(leaf, who)
+      end
+    end
+
+    # one receiver-side hop: pipe the envelope into the leaf's recv verb.
+    defp dispatch(leaf, who, line) do
+      f = Path.join(System.tmp_dir!(), "beamactor_msg_#{:erlang.unique_integer([:positive])}")
+      File.write!(f, line <> "\n")
+      {out, _rc} = System.cmd("sh", ["-c", "cat " <> f <> " | " <> leaf <> " " <> who <> ".recv"],
+        env: leaf_env(), stderr_to_stdout: true)
+      File.rm(f)
+      IO.write(out)
+    end
+
+    defp leaf_env do
+      [{"CMK_SUPERVISOR", "0"}, {"CMK_INTERNAL", "1"}, {"CMK_DISABLE_HOOKS", "1"},
+       {"NO_COLOR", "1"}, {"TERM", "dumb"}]
+    end
+  end
+
+  BeamActorNode.main()
+|)
+
+cmk.class BeamActor(bases=Agent)[|
+  '''
+  Agent over a BEAM transport.  deliver connects to the node's TCP port;
+  serve runs the node container detached and blocks until its listener is
+  up; serve.stop sends the in-band sentinel so the queue drains before the
+  node halts, then shows the node log; stop is the idempotent at-exit
+  teardown.  The mailbox file rides into the container by env, so host and
+  node fold into one file.
+  '''
+  self.deliver:
+    '''Wait for the node's readiness cell, then send one envelope (cold nodes compile first)'''
+    msg=`cat`
+    cmk.flux.retry([ -f .tmp.beamactor.${self}.up ], 3000)
+    cmk.flux.retry(printf '%s\n' "$$msg" | socat - TCP:127.0.0.1:${BEAM_ACTOR_PORT} 2>/dev/null)
+
+  self.serve.fg:
+    '''Run the node attached (image ensured on demand); its output streams live'''
+    $(call container.ensure,beam.node) stackf=`printenv "events__${self}.mbox"`; \
+    rm -f .tmp.beamactor.${self}.up; \
+    ${mk.def.to.file}/beam.actor.exs,.tmp.beamactor.${self}.exs; \
+    docker rm -f cmk-beamactor-${self} >/dev/null 2>&1 || true; \
+    docker run --rm --name cmk-beamactor-${self} \
+      -p 127.0.0.1:${BEAM_ACTOR_PORT}:${BEAM_ACTOR_PORT} \
+      -e CMK_ACTOR_PORT=${BEAM_ACTOR_PORT} -e CMK_ACTOR_SELF=${self} \
+      -e CMK_ACTOR_LEAF="$${__file__}" -e CMK_ACTOR_STACK="$$stackf" \
+      -e CMK_PLUGINS_DIR=.cmk \
+      -v "$$(pwd)":/workspace -w /workspace compose.mk:beam.node \
+      elixir .tmp.beamactor.${self}.exs
+
+  self.serve: flux.bg/self.serve.fg
+    '''Serve backgrounded so casters proceed concurrently; fg = serve.fg'''
+
+  self.serve.stop:
+    '''In-band stop: the sentinel lands after every queued cast; the node halts and self-removes'''
+    printf '@@stop\n' | socat - TCP:127.0.0.1:${BEAM_ACTOR_PORT} 2>/dev/null || true
+    cmk.flux.retry(! docker inspect cmk-beamactor-${self} >/dev/null 2>&1, 600)
+
+  self.stop:
+    '''Teardown at exit: reap the node and drop the mailbox (idempotent)'''
+    docker rm -f cmk-beamactor-${self} >/dev/null 2>&1 || true
+    rm -f .tmp.beamactor.${self}.exs .tmp.beamactor.${self}.up $(call flux.bg.pidfile,${self}.serve.fg)
+    ${make} ${self}.mbox.purge
+|]
+
+bob <- BeamActor.new()
+
+ping:
+  log(${green}ping ${sep} ${dim}a target delivered as a message${comma} run node-side${no_ansi})
+
+push/%:
+  jb(name=${*} timestamp=`date +%T`) | bob.cast()
+
+demo.beam: assert.tool.required/socat
+  '''
+  The jqd socket exercise with the transport swapped: concurrent casters
+  push over TCP, one BEAM process mailbox serializes them, recv dispatches
+  inside the node, and the host reads the mailbox back with the stock
+  verbs.  The send is control-plane: ping rides the envelope and runs
+  node-side (visible in the node log at stop).
+  '''
+  bob.log(${POOL} casters over one BEAM mailbox)
+  bob.serve(); \
+  flux.pool(${POOL},push/alice,push/carol,push/dave,push/eve); \
+  bob.send["""ping"""]; \
+  bob.serve.stop()
+  n <- bob.mbox.count()
+  bob.log(holds $${n} events (mailbox on the node${comma} read from the host))
+  bob.mbox.dump()
+
+__main__: demo.beam

@@ -1,0 +1,53 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# machine.cmk:
+#   A machine on its own -- the base run context, with no image, is a host
+#   interpreter (no container, no docker).  Name one with an entrypoint, then run
+#   a block in it with `(| .. |) in <machine>`.
+#
+# USAGE: ./demos/cmk/machine.cmk   # no docker
+
+'''
+A machine is any run context a block can execute in.  Every runnable block is
+dispatched through some machine's run hook.  With no `img` the hook is a host
+command (the entrypoint), so the block runs on the host; give the same machine an
+`img=` and it becomes a container instead (see container.cmk / local-interpreter.cmk).
+This file stays host-only, so it needs no docker.
+
+Each `<machine>/%` dispatch exports __ambient_parent__ -- the ambient that encloses the
+block -- into its environment; `out` is sugar for "run in __ambient_parent__".  A block
+started from a top-level recipe is enclosed by the host, so its parent is host.local.
+'''
+
+# just the one keyword this file uses, rather than `open cmk` (which would bind every
+# declaration keyword); a machine is all we declare here.
+from cmk import machine
+
+# The `machine` kind in general is a Runnable.  These are often containers, 
+# but `machine` can also wrap any tool on the host, or inside a container.
+# Here's an example wrapping the python interpreter:
+machine my_interpreter(entrypoint=python3)(| |)
+
+__main__: demo.builtin_machines demo.custom_machine
+
+demo.custom_machine:
+  '''
+  run code in the machine: ( a multi-line python program, on the host )
+    The program reads __ambient_parent__ 
+  '''
+  (|
+    import os, sys
+    print("hello from a host machine:", sys.version.split()[0])
+    print("  enclosed by:", os.environ.get("__ambient_parent__"))
+  |) in my_interpreter
+
+demo.builtin_machines:
+  '''
+  the built-in machines: ( host interpreters, no declaration needed )
+    Host interpreters are singletons named in full: host.native.sh / .bash / .python;
+    there is no bare `in sh` / `in bash` shorthand.  bash runs below by that name.  The
+    shell expands the `__ambient_parent__` var at run time.  `out` then navigates to that parent:
+    from a top-level recipe it is the host, so the block escapes to the host shell.
+  '''
+  (| echo "ran in host.native.bash, enclosed by $__ambient_parent__" |) in host.native.bash
+  (| echo "ran in out -- navigated to __ambient_parent__ (the host shell)" |) in out

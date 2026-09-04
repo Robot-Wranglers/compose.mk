@@ -1,21 +1,23 @@
 #!/usr/bin/env -S make -f
-# demos/stage-wrapper.mk: 
-#   Demonstrating stages, stacks, and artifact-related features of compose.mk
-#   Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 #
-#   See the docs for more discussion: https://robot-wranglers.github.io/compose.mk/stages
+# stage-wrapper.mk:
+#   Stages, stacks, and artifact-related features of compose.mk
 #
-#   USAGE: ./demos/stages.mk
+#   See the docs for more discussion:
+#   https://robot-wranglers.github.io/compose.mk/stages
+#
+# USAGE: ./demos/stage-wrapper.mk
 
 include compose.mk
 
+# Override the default target used to print the entry-banner
+export CMK_STAGE_BANNER?=io.figlet
+
+__main__: stage.wrap/VALIDATION/project.scan,project.analyze
+
 project.scan:
-	echo '["results"]' | ./compose.mk flux.stage.push/VALIDATION
+	echo '["results"]' | ${stage.push}/VALIDATION
 
 project.analyze:
-	echo '["other results"]' | ./compose.mk flux.stage.push/VALIDATION
+	echo '["other results"]' | ${stage.push}/VALIDATION
 
-# Override the default target used to print the entry-banner
-export banner_target?=io.figlet
-
-__main__: flux.stage.wrap/INIT/project.scan,project.analyze

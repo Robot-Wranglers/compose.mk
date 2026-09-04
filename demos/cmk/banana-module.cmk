@@ -1,0 +1,50 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-module.cmk: two banana-native ways to bring a module's members
+#   into a file with no disk source. An inline module NAME[| .. |] mounts
+#   (nested, reached qualified); a star-bracket *[| .. |] dissolves a
+#   block flat into scope. The dissolve is the explode pattern the hosted
+#   region uses to group its machine and flux families. Host-safe.
+#
+# USAGE: ./demos/cmk/banana-module.cmk
+
+'''
+A module is a namespace with a boundary: a first-class ambient whose
+members you either mount (nested, reached qualified) or dissolve (flat,
+reached bare). Sourced from a file that split is import-as versus open
+(the modules page and its Module Algebra card cover the disk side).
+Constructed inline, the same split is two banana forms, shown here.
+'''
+
+# mount: module tools[| .. |] constructs a module and prefixes its
+# members under tools. -- the boundary stays, so reach them qualified.
+cmk.module tools[|
+  greet:; printf "  tools.greet   hi from a mounted module\n"
+  version:; printf "  tools.version v1\n"
+|]
+
+demo.mount:
+  '''module NAME[| .. |] mounts members under NAME (boundary intact).'''
+  cmk.log(module tools -- mounted, reached qualified:)
+  this.tools.greet
+  this.tools.version
+
+# dissolve: star-bracket holds a block of tab-recipe targets, dedents
+# it, and explodes the members flat into scope (no boundary, no name).
+# This is how the hosted region groups its machine and flux families:
+# author a block once at +2, explode it in place. Recipes ride at +4.
+*[|
+  sweep:
+    cmk.log(exploded flat -- no qualifier needed)
+    printf "  swept\n"
+
+  tally:; printf "  tally exploded member, callable bare\n"
+|]
+
+demo.explode:
+  '''star-bracket dedents a block, explodes its members flat.'''
+  cmk.log(star-bracket -- the hosted explode pattern, flat:)
+  this.sweep
+  this.tally
+
+__main__: demo.mount demo.explode

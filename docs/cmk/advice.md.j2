@@ -1,0 +1,28 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+## Status, Limits, & Advice
+<hr class="section-rule lvl-2">
+
+A short, honest page about where the [CMK compiler]({{_}}/cmk/compiler) stands: how much to trust it, what won't change, and what to do when the frozen defaults don't fit.
+
+### Reporting Bugs
+<hr class="section-rule lvl-3">
+
+The CMK compiler is largely *vibe-coded awk*[^awk], but the test suite is massive, and the specifications, language-semantics, compiler-stages, and the general design is carefully crafted by a real human.  [Please report bugs]({{github.repo_url}}/issues), but not until you've **[confirmed you're using GNU awk!]({{_}}/quickstart/#compatibility-notes)**.
+
+### Stability & Extension
+<hr class="section-rule lvl-3">
+
+Everything that's documented for the compiler is stable and unlikely to change.  Per the rest of the design philosophy, the goal is to [freeze CMK after it's **useful** and **capable of being extended**]({{_}}/but-why#forever-development-considered-harmful) and most future changes are probably optimizations rather than extensions.
+
+If the frozen defaults don't fit your needs, you can [extend a dialect or make it the user-defined default]({{_}}/cmk/metaprogramming/#user-defined-dialects); the [Forks & Versioning]({{_}}/quickstart/#forks-versioning) docs also cover pinning a known-good version.
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Compiler Tutorial]({{_}}/cmk/compiler): the concrete syntax and lowering.
+* [Metaprogramming]({{_}}/cmk/metaprogramming): dialects, sugar, and pragmas.
+* [Style]({{_}}/style): a few thoughts on writing CMK well.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^awk]: {{ tufte.wiki('AWK')|trim }}

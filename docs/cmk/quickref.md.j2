@@ -1,0 +1,185 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/cmk_math.j2' as cmkmath -%}{% import 'macros/tufte.j2' as tufte -%}
+
+## CMK Quick Reference
+<hr class="section-rule lvl-2">
+<a name=quick-reference></a>
+
+A one-page cheat-sheet[^cheatsheet] of cmk-lang syntax, grouped by theme.  Each entry links to
+the full explanation on the [Compiler &amp; Dialects]({{_}}/cmk/compiler) page;
+see also the [CMK Demo Index]({{_}}/cmk/demos).
+
+{%include "cmk/tldr.md.j2"%}
+
+{% include "includes/string-algebra.md" %}
+
+{{ macros.section(3, "Call Forms", id="call-forms") }}
+
+{% include "includes/callform-algebra.md" %}
+
+The unified <a href="{{_}}/cmk/concepts/#callforms">call-form</a> grammar over three
+<b>anchors</b>: <code>this.</code> (a target), <code>cmk.</code> (a macro/function), and the
+anchorless <b>receiver</b> (a <code>declare.*</code> name).  Two flavors, combinable in either order:
+argument-passing <code>(args)</code> and stream-passing <code>[stream]</code>.
+
+<table class=quickref>
+  <thead>
+    <tr>
+      <th>Call Form</th>
+      <th>Syntax / Example</th>
+      <th>Meaning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="{{_}}/cmk/metaprogramming/#dialects">Target &middot; bare</a></td>
+      <td>{{ cmkmath.imath("`this.`@t") }}<br/><code>this.build</code></td>
+      <td>Recursive make: <code>${make} </code><i>t</i>.  New subprocess, inherits the launch environment, triggers a reparse.</td>
+    </tr>
+    <tr>
+      <td><a href="{{_}}/cmk/concepts/#callforms">Target &middot; args</a></td>
+      <td>{{ cmkmath.imath("`this.`@t(@arg)") }}<br/><code>this.build(x)</code></td>
+      <td>Pos-arg becomes the stem: <code>${make} </code><i>t</i><code>/</code><i>arg</i> (the <code>this.</code> anchor takes POS-ARGS only).</td>
+    </tr>
+    <tr>
+      <td><a href="{{_}}/cmk/concepts/#callforms">Target &middot; stream</a></td>
+      <td>{{ cmkmath.imath("`this.`@t[@stream]") }}<br/><code>this.eval[echo hi]</code></td>
+      <td>Pipe stdin in: <i>stream</i><code> | ${make} </code><i>t</i>.  Stream may be a command, a literal, or a block-ref.</td>
+    </tr>
+    <tr>
+      <td><a href="{{_}}/cmk/concepts/#callforms">Target &middot; tagged</a></td>
+      <td><code>this.</code><i>t</i><code>'''…'''</code><br/><code>this.eval'''hi'''</code></td>
+      <td>Tagged-string form: an ADJACENT triple-quote literal IS the <code>[stream]</code> (no brackets).</td>
+    </tr>
+    <tr>
+      <td><a href="{{_}}/cmk/metaprogramming/#dialects">Macro &middot; args</a></td>
+      <td>{{ cmkmath.imath("`cmk.`@fn(@args)") }}<br/><code>cmk.log(hi)</code></td>
+      <td>Call a compose.mk function/macro: <code>$(call </code><i>fn</i><code>,</code><i>args</i><code>)</code>.  Comma-separated pos-args OR <code>key=val</code> kwargs.</td>
+    </tr>
+    <tr>
+      <td><a href="{{_}}/cmk/concepts/#callforms">Macro &middot; stream</a></td>
+      <td>{{ cmkmath.imath("`cmk.`@fn[@stream]") }}<br/><code>cmk.render(k=1)["""$$P"""]</code></td>
+      <td><i>stream</i><code> | $(call </code><i>fn</i><code>,…)</code>.</td>
+    </tr>
+    <tr>
+      <td><a href="{{_}}/cmk/compiler/#receivers">Receiver</a></td>
+      <td>{{ cmkmath.imath("@name.@method(@args)") }} &middot; {{ cmkmath.imath("[@stream]") }}<br/><code>inbox.emit["""hi"""]</code></td>
+      <td>Anchorless send to a <code>declare.*</code> name (channel/module/polyglot/container): auto-<code>${make} </code><i>name</i><code>.</code><i>method</i>, no <code>this.</code> needed.  Fires only for a DECLARED name, at a word boundary, with a call-suffix.</td>
+    </tr>
+    <tr>
+      <td><a href="{{_}}/cmk/metaprogramming/#about-dialects">Self</a></td>
+      <td><code>__target__</code> &middot; <code>__target__[stream]</code><br/><code>__target__[echo hi]</code></td>
+      <td>The running target as a callable (<code>this.__target_name__</code>): a recursive self-send, e.g. <code>… | ${make} ${@}</code>.</td>
+    </tr>
+    <tr>
+      <td><a href="{{_}}/cmk/concepts/#callforms">Combined (args + stream)</a></td>
+      <td>{{ cmkmath.imath("@anchor.@name(@args)[@stream]") }}<br/><code>cmk.render(n=app)["""$$P"""]</code></td>
+      <td>Arguments AND stdin together, for both <code>this.</code> and <code>cmk.</code>; either order (<code>(a)[s]</code> == <code>[s](a)</code>).</td>
+    </tr>
+  </tbody>
+</table>
+
+{{ macros.section(3, "Assignment", id="assignment") }}
+
+{% include "includes/assignment-algebra.md" %}
+
+{{ macros.section(3, "Reflection", id="reflection") }}
+
+<table class=quickref>
+  <thead>
+    <tr>
+      <th>Operator</th>
+      <th>Syntax / Example</th>
+      <th>Meaning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="{{_}}/cmk/metaprogramming/#about-dialects">Target Name</a></td>
+      <td><code>__target_name__</code><br/><code>cmk.log(__target_name__)</code></td>
+      <td>The running target's own name (alias for <code>${@}</code>).</td>
+    </tr>
+    <tr>
+      <td><a href="{{_}}/cmk/pragmas/#pragma-target_locals">Target Locals</a></td>
+      <td><code>__locals__()</code><br/><code>j <- cmk.__locals__()</code></td>
+      <td>JSON object of the vars THIS recipe defined (current shell vars minus a baseline taken at recipe entry; captures <code><-</code> vars and <code>export</code>s alike).  Needs the <code>target_locals</code> compile pragma.  It is a shell snippet, so use it via <code><-</code> or backticks, not as a bare arg.</td>
+    </tr>
+  </tbody>
+</table>
+
+{{ macros.section(3, "JSON", id="json") }}
+
+<table class=quickref>
+  <thead>
+    <tr>
+      <th>Operator</th>
+      <th>Syntax / Example</th>
+      <th>Meaning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="{{_}}/cmk/metaprogramming/#dialects">JSON Emit</a></td>
+      <td><code>🡄</code> <i>k=v…</i><br/><code>🡄 name=$USER n=3</code></td>
+      <td>Emit JSON from key=value pairs (<code>jb</code>).</td>
+    </tr>
+    <tr>
+      <td><a href="{{_}}/cmk/metaprogramming/#dialects">JSON Extract</a></td>
+      <td><code>🡆</code> <i>.key</i><br/><code>🡆 .name</code></td>
+      <td>Extract a field from JSON on stdin (<code>jq -r</code>).</td>
+    </tr>
+  </tbody>
+</table>
+
+{{ macros.section(3, "Literals & Block References", id="literals-block-references") }}
+
+{% include "includes/triple-quote-algebra.md" %}
+
+{% include "includes/blockref-algebra.md" %}
+
+{{ macros.section(3, "Dispatch, Imports & Structure", id="dispatch-imports-structure") }}
+
+{% include "includes/dispatch-algebra.md" %}
+
+{{ macros.section(3, "Embedded Blocks", id="embedded-blocks") }}
+
+<table class=quickref>
+  <thead>
+    <tr>
+      <th>Operator</th>
+      <th>Syntax / Example</th>
+      <th>Meaning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="{{_}}/cmk/compiler/#local-context-embedded-containers">Embed: Script-in-Container</a></td>
+      <td>{{ cmkmath.imath("(|..|) #in @machine") }}<br/><code>(| … |) in box</code></td>
+      <td>Script block dispatched into a container via the <code>in</code> machine-algebra (anonymous <code>container(| … |)</code>, or a named <code>container</code>/<code>Dockerfile</code> instance).</td>
+    </tr>
+    <tr>
+      <td><a href="{{_}}/cmk/metaprogramming/#about-sugar">Embed: Compose</a></td>
+      <td>{{ cmkmath.imath("`compose.import.string` @name (|..|)") }}<br/><code>compose.import.string mylib(| … |)</code></td>
+      <td>Embedded compose file; imports its services (defaults <code>import_to_root=TRUE</code>, so services land at root and are callable bare).</td>
+    </tr>
+    <tr>
+      <td><a href="{{_}}/cmk/banana">Embed: Banana</a></td>
+      <td>{{ cmkmath.imath("@ctor @NAME (|..|)") }}<br/><code>Dockerfile box(| FROM … |)</code></td>
+      <td>The native, generic block-declare: keeps any body (script, Dockerfile, jq, class) in source and hands it to constructor {{ cmkmath.imath("@ctor") }}.  See <a href="#banana-forms">Banana Forms</a> below and the <a href="{{_}}/cmk/banana">Banana Blocks</a> page.</td>
+    </tr>
+  </tbody>
+</table>
+
+{% include "includes/banana-forms.md" %}
+
+For the full walk-through of dialects, sugar, and the rest of the compiler, see
+[Compiler &amp; Dialects]({{_}}/cmk/compiler).
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Compiler Tutorial]({{_}}/cmk/compiler): the concrete syntax and lowering.
+* [Banana Blocks]({{_}}/cmk/banana): the `(| .. |)` block family.
+* [All Demos (Index)]({{_}}/cmk/demos): every featured demo, next to its twin.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^cheatsheet]: {{ tufte.wiki('Reference_card')|trim }}

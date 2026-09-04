@@ -1,0 +1,83 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+## Object-Oriented cmk
+<hr class="section-rule lvl-2">
+
+{{ macros.escape_hatch([
+    '[Metaprogramming](@/cmk/metaprogramming), the deep dive on constructors and reflection.',
+], mkdocs) }}
+
+CMK's [metaprogramming constructors]({{_}}/cmk/metaprogramming) give it genuine
+object-orientation: first-class **classes**, **inheritance** with a linear MRO, and Python-style
+**reflection dunders**: all as ordinary cmk-lang, with no new runtime.  Further down, a lighter
+alternative fakes the same shapes with zero metaprogramming.
+
+### Classes, Inheritance & Reflection
+<hr class="section-rule lvl-3">
+
+This focused demo shows the object-orientation core: a base class with methods, single-inheritance
+override, multiple inheritance with a leftmost-wins MRO, and the reflection dunders each instance
+carries.
+
+<div class="def-cards">
+  <details class="def-card" open>
+    <summary class="def-card-head"><span class="def-card-name"><code>class NAME[| body |]</code></span><span class="def-card-kind">declare</span></summary>
+    <div class="def-card-body">
+      <p>An inline class: methods are recipe targets keyed on <code>${self}</code>, the instance.  Instantiate by callform, or capture with <code>&lt;-</code>.</p>
+    </div>
+  </details>
+  <details class="def-card" open>
+    <summary class="def-card-head"><span class="def-card-name">inheritance</span><span class="def-card-kind">linear MRO</span></summary>
+    <div class="def-card-body">
+      <p>A class declared with a <code>bases</code> keyword <em>is-a</em> each of those bases: it inherits the whole chain, and overrides a method by redefining it.  When two bases define the same method the <strong>leftmost wins</strong>, as in Python's MRO.</p>
+    </div>
+  </details>
+  <details class="def-card" open>
+    <summary class="def-card-head"><span class="def-card-name">reflection dunders</span><span class="def-card-kind">introspection</span></summary>
+    <div class="def-card-body">
+      <p>Every instance carries <code>__class__</code>, <code>__doc__</code>, <code>__im_self__</code>, <code>__dir__</code>, <code>__bases__</code>, and more.</p>
+    </div>
+  </details>
+</div>
+
+{{site.embed_demo('demos/cmk/banana-oop.cmk', type='cmk', github=github)}}
+
+For the wider constructor catalog see the golden [`metaprogramming.cmk`]({{_}}/cmk/metaprogramming)
+omnibus, which proves each constructor in isolation and goes further: `dsl` data-kinds (callable via
+the `__call__` dunder) and `constructor` umbrellas for qualified construction.
+
+### Subcommands as OOP
+<hr class="section-rule lvl-3">
+
+You don't always need real classes.  The [`subcommands` interface]({{_}}/subcommands)
+takes a `namespace` keyword that accepts **several space-separated namespaces, searched in order**;
+that search order behaves exactly like a method-resolution order.  So you can (ab)use it to fake
+OOP with zero metaprogramming[^mro]: treat each namespace as a "class", list them most-derived first,
+and you get **override** and **inheritance** for free.
+
+The `pet` CLI below lists three namespaces, most-derived (puppy) to base (animal).  The puppy
+namespace overrides `speak`, `fetch` is inherited from the dog namespace, and `legs` and `describe`
+are inherited from the base animal namespace.
+
+{{site.embed_mirror('demos/oop-subcommand.mk', 'demos/cmk/oop-subcommand.cmk', github=github, default='left')}}
+
+Overridden, inherited, and inherited-parametric, in that order:
+
+```bash {.cli_example}
+$ ./demos/oop-subcommand.mk pet speak
+yip!
+$ ./demos/oop-subcommand.mk pet fetch
+fetches the ball
+$ ./demos/oop-subcommand.mk pet describe rex
+rex is a kind of animal
+```
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Metaprogramming]({{_}}/cmk/metaprogramming): first-class classes, constructors, and reflection in depth.
+* [Subcommands]({{_}}/subcommands): the namespace-ordering feature the lightweight hack builds on.
+* [Demo Index]({{_}}/cmk/demos): the rest of the demos.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^mro]: {{ tufte.wiki('C3_linearization')|trim }}

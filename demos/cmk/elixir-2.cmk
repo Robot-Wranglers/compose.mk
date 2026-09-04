@@ -1,0 +1,39 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# elixir-2.cmk:
+#   Polyglots using elixir (low-level helpers).  Three equivalent ways to
+#   run inline elixir in a container, from the simplest helper down to
+#   fully-manual temp-file handling.
+#
+# USAGE: ./demos/cmk/elixir-2.cmk
+
+# pick an image + interpreter for the language kernel (iex works too, minor differences)
+elixir.img=elixir:otp-27-alpine
+elixir.interpreter=elixir
+elixir=${elixir.img},${elixir.interpreter}
+
+# the elixir code
+hello_world(|
+import IO, only: [puts: 1]
+puts("elixir World!")
+System.halt(0)
+|)
+
+__main__: alt1 alt2 alt3
+
+alt1:
+  ''' Classic style -- the simplest available helper (docker.run.def). '''
+  img=${elixir.img} entrypoint=${elixir.interpreter} def=hello_world ${make} docker.run.def
+
+alt2:
+  ''' Another way -- piping and streams. '''
+  ${mk.def.read}/hello_world | ${stream.to.docker}/${elixir}
+
+alt3:
+  '''
+  Fully manual -- handle your own temp files, and stick to targets instead of pipes
+  (note this leaves temp files around after errors).
+  '''
+  ${mk.def.to.file}/hello_world,temp-file
+  cmd=temp-file ${make} docker.image.run/${elixir}
+  cmk.io.safe_rm(temp-file)

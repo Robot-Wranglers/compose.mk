@@ -1,23 +1,25 @@
 #!/usr/bin/env -S make -f
-# Shows some of the compose.mk logging capabilities.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+#
+# section-dividers.mk: Some of the compose.mk logging capabilities.
+#
 # USAGE: ./demos/section-dividers.mk clean build test
 
 include compose.mk 
 
 __main__: clean build test
 
-# Use `io.print.banner` implicitly as a prereq => Timestamped divider
 clean: io.print.banner
+	@# Use `io.print.banner` implicitly as a prereq => Timestamped divider
 	echo Cleaning stuff
 
-# Call `io.print.banner` explicitly => Full control over divider label
 build: 
+	@# Call `io.print.banner` explicitly => Full control over divider label
 	label="Build Stage" ${make} io.print.banner
 	echo Building stuff
 
-# Use `io.print.banner` as a macro => Automatically set label as the current target's name
 test:
+	@# Use `io.print.banner` as a macro => Automatically set label as the
+	@# current target's name
 	${io.print.banner}
 	echo Testing stuff
 	label="divider-using-gum" ${make} io.draw.banner

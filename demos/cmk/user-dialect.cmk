@@ -1,15 +1,18 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
-# Demonstrating user-defined extensions for the CMK -> Makefile compiler.
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# user-dialect.cmk:
+#   Define a custom `cmk_dialect` (per-file substitution rules)
+#   via a JSON hint, here remapping the JSON-arrow glyphs.
 #
 # cmk_dialect ::: [ 
 #  ["⏩️", "${stream.stdin} | ${jq} -r"],
 #  ["⏪️", "${jb}"], ["this.", "${make} "] ] :::
 #
 emit: 
-	⏪️ key=val
+    ⏪️ key=val
 
 consume:
-	⏩️ .key
+    ⏩️ .key
 
 __main__:
-	this.emit | this.consume
+    this.emit | this.consume

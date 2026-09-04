@@ -1,0 +1,143 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+'''
+A tiny miniKanren in cmk on one engine: nested s-expression terms, unification
+with logic variables, and a multi-answer search that rides the vm backtracker.
+A term is a paren-tokenized word-list, so lists, dotted pairs, and nested trees
+all use the same car/cdr/unify; membero, appendo, and parento run over them, and
+a typed membero matches a nested type pattern.  The lispy counterpart to
+prolog.cmk, which is ground and has neither variables nor search.
+'''
+
+from virtual-machine import vm.choose, vm.backtrack, vm.goto, vm.replace
+import demos/cmk/lisp.cmk as lisp, flat=1
+open kn
+
+# kn.cond: a lazy multi-branch banana over a table of test and handler name pairs.
+kn.cond = kn.cond.mk($(strip $(or $(patsubst def=%,%,$(filter def=%,m5[1])),m5[1])))
+kn.cond.mk = $(if $(strip m5[1]),$(eval m5[1].__clauses__ := $(subst $(nl),$(space),$(value m5[1])))$(eval m5[1] = $$(call kn.cond.run,m5[1].__clauses__,$$(m5[1]?),$$(m5[2]?),$$(m5[3]?))),)
+kn.cond.run  = $(call kn.cond.walk,$($(m5[1])),m5[2]?,m5[3]?,m5[4]?)
+kn.cond.walk = $(if $(filter else,$(firstword m5[1])),$(call $(word 3,m5[1]),m5[2]?,m5[3]?,m5[4]?),$(if $(call $(firstword m5[1]),m5[2]?,m5[3]?,m5[4]?),$(call $(word 3,m5[1]),m5[2]?,m5[3]?,m5[4]?),$(call kn.cond.walk,cmk.m5.slice(m5[1],4,m5[1].len),m5[2]?,m5[3]?,m5[4]?)))
+
+# kanren: logic variables, unification, and search built on the lisp terms.
+kn.var?   = $(if lisp.single?(m5[1]),$(filter V%,m5[1]),)
+kn.dot      = lisp.wire(m5[1])
+kn.undot    = lisp.unwire(m5[1])
+kn.bound? = $(filter m5[1]@%,m5[2])
+kn.lookup   = kn.undot($(patsubst m5[1]@%,%,$(filter m5[1]@%,m5[2])))
+kn.walk     = $(strip kn.walk1(m5[1],m5[2]))
+kn.walk1    = $(if kn.var?(m5[1]),$(if kn.bound?(m5[1],m5[2]),kn.walk1(kn.lookup(m5[1],m5[2]),m5[2]),m5[1]),m5[1])
+kn.ext      = m5[1] m5[2]@kn.dot(m5[3])
+
+kn.unify = kn.uc(kn.walk(m5[1],m5[3]),kn.walk(m5[2],m5[3]),m5[3])
+kn.cond kn.uc(|
+  kn.varL?     => kn.bindl
+  kn.varR?     => kn.bindr
+  kn.bothnil?  => kn.keep
+  kn.bothatom? => kn.atoms
+  kn.bothpair? => kn.pair
+  else           => kn.fail
+|)
+kn.varL?     = kn.var?(m5[1])
+kn.varR?     = kn.var?(m5[2])
+kn.bothnil?  = $(if lisp.nil?(m5[1]),lisp.nil?(m5[2]),)
+kn.bothatom? = $(if lisp.atom?(m5[1]),lisp.atom?(m5[2]),)
+kn.bothpair? = $(if lisp.pair?(m5[1]),lisp.pair?(m5[2]),)
+kn.bindl = $(if $(filter m5[1],m5[2]),m5[3],kn.ext(m5[3],m5[1],m5[2]))
+kn.bindr = kn.ext(m5[3],m5[2],m5[1])
+kn.keep  = m5[3]
+kn.atoms = $(if $(filter m5[1],m5[2]),m5[3],FAIL)
+kn.pair  = kn.upair(m5[1],m5[2],m5[3])
+kn.fail  = FAIL
+kn.upair  = kn.upair2(kn.unify(lisp.car(m5[1]),lisp.car(m5[2]),m5[3]),m5[1],m5[2])
+kn.upair2 = $(if $(filter FAIL,m5[1]),FAIL,kn.unify(lisp.cdr(m5[2]),lisp.cdr(m5[3]),m5[1]))
+
+# reify: deep-walk a term, splicing proper tails and dotting improper ones.
+kn.reify = kn.rc(kn.walk(m5[1],m5[2]),m5[2])
+kn.cond kn.rc(|
+  kn.var?  => kn.r.var
+  lisp.nil?  => kn.r.nil
+  lisp.atom? => kn.r.atom
+  else       => kn.r.pair
+|)
+kn.r.var  = m5[1]
+kn.r.nil  = $(m5.tok.lparen) $(m5.tok.rparen)
+kn.r.atom = m5[1]
+kn.r.pair = $(m5.tok.lparen) kn.rlist(m5[1],m5[2]) $(m5.tok.rparen)
+kn.rlist  = $(strip kn.reify(lisp.car(m5[1]),m5[2]) kn.rtail(kn.walk(lisp.cdr(m5[1]),m5[2]),m5[2]))
+kn.cond kn.rtail(|
+  lisp.nil?  => kn.rt.end
+  lisp.pair? => kn.rt.more
+  else       => kn.rt.dot
+|)
+kn.rt.end  =
+kn.rt.more = kn.rlist(m5[1],m5[2])
+kn.rt.dot  = . kn.reify(m5[1],m5[2])
+
+# search state: answer / counter / subst / stack, sections joined by / , z empty.
+kn.cn    = $(words $(subst .,$(space),m5[1]))
+kn.fresh = V$(call kn.cn,m5[1])
+kn.bump  = $(if m5[1],m5[1].i,i)
+kn.f     = cmk.m5.at($(subst /,$(space),m5[2]),m5[1])
+kn.sub   = $(if $(filter z,kn.f(3,m5[1])),,$(subst -,$(space),kn.f(3,m5[1])))
+kn.stk   = $(if $(filter z,kn.f(4,m5[1])),,$(subst -,$(space),kn.f(4,m5[1])))
+kn.encs  = $(if $(strip m5[1]),$(subst $(space),-,$(strip m5[1])),z)
+kn.state = m5[1]/m5[2]/kn.encs(m5[3])/kn.encs(m5[4])
+
+# demo: the parento knowledge base, the queries, their banners, and per-query runners.
+demo.facts := tom.bob tom.liz bob.ann bob.pat pat.jim
+
+# one step: empty stack reifies the answer, else the first goal dispatches.
+kn.step  = $(call kn.step2,kn.f(1,m5[1]),kn.f(2,m5[1]),kn.sub(m5[1]),kn.stk(m5[1]))
+kn.step2 = $(if m5[4],$(call kn.disp,m5[1],m5[2],m5[3],m5[4].first,m5[4].rest),printf '  %s\n' '$(call kn.reify,lisp.unwire(m5[1]),m5[3])' ; $(call vm.backtrack))
+kn.disp  = $(call kn.disp2,m5[1],m5[2],m5[3],$(subst +,$(space),m5[4]),m5[5]?)
+kn.disp2 = $(call kn.op.$(firstword m5[4]),m5[1],m5[2],m5[3],m5[4],m5[5]?)
+kn.choose = $(call vm.choose,$(foreach s,m5[1],k/$(s)))
+
+# E: a unify goal, advance on success and backtrack on failure.
+kn.op.E = $(call kn.uni,m5[1],m5[2],m5[3],lisp.unwire(m5[4][2]),lisp.unwire(m5[4][3]),m5[5]?)
+kn.uni  = $(call kn.uni2,kn.unify(m5[4],m5[5],m5[3]),m5[1],m5[2],m5[6]?,m5[3])
+kn.uni2 = $(if $(filter FAIL,m5[1]),$(call vm.backtrack),$(call vm.goto,k/$(call kn.state,m5[2],m5[3],$(if m5[1],m5[1],m5[5]),m5[4])))
+
+# M: membero, the element is the head, or a member of the tail.
+kn.op.M = $(call kn.M2,m5[1],m5[2],m5[3],m5[4][2],m5[4][3],m5[5]?)
+kn.M2   = $(call kn.choose,$(call kn.state,m5[1],$(call kn.bump,$(call kn.bump,m5[2])),m5[3],E+m5[5]+$(call lisp.consw,kn.fresh(m5[2]),kn.fresh($(call kn.bump,m5[2]))) E+m5[4]+kn.fresh(m5[2]) m5[6]?) $(call kn.state,m5[1],$(call kn.bump,$(call kn.bump,m5[2])),m5[3],E+m5[5]+$(call lisp.consw,kn.fresh(m5[2]),kn.fresh($(call kn.bump,m5[2]))) M+m5[4]+kn.fresh($(call kn.bump,m5[2])) m5[6]?))
+
+# A: appendo, a base clause and a recursive clause with three fresh vars.
+kn.op.A = $(call kn.A2,m5[1],m5[2],m5[3],m5[4][2],m5[4][3],m5[4][4],m5[5]?)
+kn.A2   = $(call kn.choose,$(call kn.state,m5[1],m5[2],m5[3],E+m5[4]+$(lisp.nilw) E+m5[5]+m5[6] m5[7]?) $(call kn.state,m5[1],$(call kn.bump,$(call kn.bump,$(call kn.bump,m5[2]))),m5[3],E+m5[4]+$(call lisp.consw,kn.fresh(m5[2]),kn.fresh($(call kn.bump,m5[2]))) E+m5[6]+$(call lisp.consw,kn.fresh(m5[2]),kn.fresh($(call kn.bump,$(call kn.bump,m5[2])))) A+kn.fresh($(call kn.bump,m5[2]))+m5[5]+kn.fresh($(call kn.bump,$(call kn.bump,m5[2]))) m5[7]?))
+
+# P: parento, a disjunction over the facts.
+kn.op.P = $(call kn.choose,$(foreach f,$(demo.facts),$(call kn.state,m5[1],m5[2],m5[3],E+m5[4][2]+$(firstword $(subst .,$(space),$(f))) E+m5[4][3]+cmk.m5.at($(subst .,$(space),$(f)),2) m5[5]?)))
+
+# R: grandparento, two parento steps through one fresh middle person.
+kn.op.R = $(call kn.R2,m5[1],m5[2],m5[3],m5[4][2],m5[4][3],m5[5]?)
+kn.R2   = $(call kn.choose,$(call kn.state,m5[1],$(call kn.bump,m5[2]),m5[3],P+m5[4]+kn.fresh(m5[2]) P+kn.fresh(m5[2])+m5[5] m5[6]?))
+
+k/%:; $(call kn.step,${*})
+
+demo.q.membero    := demo.head.membero    k/$(call kn.state,V0,i,,M+V0+lisp.wire(( 1 2 3 )))
+demo.q.append.fwd := demo.head.append.fwd k/$(call kn.state,V0,i,,A+lisp.wire(( 1 2 ))+lisp.wire(( 3 4 ))+V0)
+demo.q.append.bwd := demo.head.append.bwd k/$(call kn.state,lisp.wire(( V0 V1 )),i.i,,A+V0+V1+lisp.wire(( 1 2 3 )))
+demo.q.parents    := demo.head.parents    k/$(call kn.state,V0,i,,P+V0+bob)
+demo.q.grand      := demo.head.grand      k/$(call kn.state,V0,i,,R+V0+ann)
+demo.q.grandkids  := demo.head.grandkids  k/$(call kn.state,V0,i,,R+tom+V0)
+demo.q.typed      := demo.head.typed      k/$(call kn.state,V0,i,,M+lisp.wire(( arr nat V0 ))+lisp.wire(( ( arr nat nat ) nat ( arr bool nat ) ( arr nat bool ) )))
+
+demo.head.membero:;    cmk.log(membero ${sep} X in ( 1 2 3 ))
+demo.head.append.fwd:; cmk.log(appendo forward ${sep} ( 1 2 ) ++ ( 3 4 ))
+demo.head.append.bwd:; cmk.log(appendo backward ${sep} every split of ( 1 2 3 ))
+demo.head.parents:;    cmk.log(parento ${sep} parents of bob)
+demo.head.grand:;      cmk.log(grandparento ${sep} grandparents of ann)
+demo.head.grandkids:;  cmk.log(grandparento backward ${sep} grandchildren of tom)
+demo.head.typed:;      cmk.log(typed membero ${sep} nested list elements matching ( arr nat V0 ))
+
+demo.membero:;    $(call vm.replace, ${demo.q.membero})
+demo.append.fwd:; $(call vm.replace, ${demo.q.append.fwd})
+demo.append.bwd:; $(call vm.replace, ${demo.q.append.bwd})
+demo.parents:;    $(call vm.replace, ${demo.q.parents})
+demo.grand:;      $(call vm.replace, ${demo.q.grand})
+demo.grandkids:;  $(call vm.replace, ${demo.q.grandkids})
+demo.typed:;      $(call vm.replace, ${demo.q.typed})
+
+__main__:; $(call vm.replace, ${demo.q.membero} ${demo.q.append.fwd} ${demo.q.append.bwd} ${demo.q.parents} ${demo.q.grand} ${demo.q.grandkids} ${demo.q.typed})

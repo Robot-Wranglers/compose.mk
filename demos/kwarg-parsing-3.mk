@@ -1,18 +1,18 @@
 #!/usr/bin/env -S make -f
-# Demonstrating using `mk.unpack.kwargs`. 
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+#
+# kwarg-parsing-3.mk: Using `mk.unpack.kwargs`.
+#
 # USAGE: ./demos/kwarg-parsing-3.mk
 
 include compose.mk
 
 # Define `target_factory`, which builds new targets on demand.
-# Supports keyword-arg style input using `mk.unpack.kwargs`,
-# where `shape` is required, and `color` is optional
+# Supports keyword-arg style input using `mk.unpack.kwargs`, where
+# `shape` is required and `color`/`quoted` are optional.  One batch spec
+# unpacks all three (a single-quoted default keeps the space in `quoted`).
 target_factory=$(eval $(call target_factory.src, ${1}))
 define target_factory.src
-$(call mk.unpack.kwargs, ${1}, shape)
-$(call mk.unpack.kwargs, ${1}, color, default)
-$(call mk.unpack.kwargs, ${1}, quoted, default data)
+$(call mk.unpack.kwargs, ${1}, shape color=default quoted='default data')
 ${kwargs_shape}:
 	echo "A ${kwargs_color} ${kwargs_shape} /${kwargs_quoted}/"
 endef

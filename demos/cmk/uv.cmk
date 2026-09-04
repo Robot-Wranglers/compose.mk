@@ -1,0 +1,38 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# uv.cmk:
+#   Python in a container with PEP-723
+#   inline-script deps (no venv) via uv.  A module-level `container` ambient
+#   supplies the uv runtime; a `code.unbound` object holds the PEP-723 script
+#   (its own `uv run --script` shebang + `# /// script ... ///` dependency
+#   block).  The container dispatches the object's source (`<container>/<object>`).
+#
+# USAGE: ./demos/cmk/uv.cmk
+
+from cmk import container
+
+# uv runtime ambient; the quoted cmd carries its multi-word value.
+container uv(img=ghcr.io/astral-sh/uv:debian entrypoint=uv cmd='run --script')(| |)
+
+# The PEP-723 inline-script as an unbound code-object.  The code carries its own
+# `uv run --script` shebang and dependency block, so uv resolves python + deps
+# just-in-time -- no venv.
+code.unbound hello_world(|
+    #!/usr/bin/env -S uv run --script
+    # /// script
+    # requires-python = ">=3.12"
+    # dependencies = [
+    #     "requests==2.31.0",
+    # ]
+    # ///
+    import requests
+    r = requests.get('https://httpbin.org/basic-auth/user/pass', auth=('user', 'pass'))
+    print(r.status_code)
+|)
+
+__main__:
+  '''
+  Run the code-object's source in the uv container 
+  (lazy: pulls python + deps just-in-time).
+  '''
+  this.uv/hello_world

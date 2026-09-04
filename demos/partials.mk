@@ -1,6 +1,8 @@
 #!/usr/bin/env -S make -f
-# Demonstrates implementing something close to partial functions with compose.mk.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
+#
+# partials.mk:
+#   Implementing something close to partial functions with compose.mk.
+#
 # USAGE: ./demos/partials.mk
 
 include compose.mk

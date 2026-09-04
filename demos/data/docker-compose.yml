@@ -17,7 +17,7 @@ services:
       context: .
       dockerfile_inline: |
         FROM ${IMG_DEBIAN_BASE:-debian:bookworm}
-        RUN apt-get update -qq && apt-get install -qq -y make procps 
+        RUN apt-get update -qq && apt-get install -qq -y make 
 
   ubuntu: 
     <<: *base
@@ -26,7 +26,7 @@ services:
       context: .
       dockerfile_inline: |
         FROM ${IMG_UBUNTU_BASE:-ubuntu:noble}
-        RUN apt-get update -qq && apt-get install -y -qq make procps
+        RUN apt-get update -qq && apt-get install -y -qq make
   
   alpine:
     <<: *base
@@ -35,4 +35,4 @@ services:
       context: .
       dockerfile_inline: |
         FROM ${IMG_ALPINE_BASE:-alpine:3.21.2} 
-        RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
+        RUN apk add -q --update --no-cache coreutils build-base bash

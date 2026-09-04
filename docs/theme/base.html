@@ -22,16 +22,56 @@
   {%- block styles %}
     <link rel="stylesheet" href="{{ 'css/theme.css'|url }}" />
     <link rel="stylesheet" href="{{ 'css/theme_extra.css'|url }}" />
-    <link rel="stylesheet" href="{{ ('css/'+config.site_name+'.css')|url }}" />
-    <link rel="stylesheet" href="{{ 'css/admonitions.css'|url }}" />
-    <link href="{{ 'css/prism.css'|url }}" rel="stylesheet" />
-    <link href="{{ 'css/prism.site.css'|url }}" rel="stylesheet" />
-    {%- if config.theme.highlightjs %}
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/{{ config.theme.hljs_style }}.min.css" />
-    {%- endif %}
+    <link rel="stylesheet" href="{{ ('css/'+config.site_name+'.css')|url }}?v=nav-init-snappy" />
+    <link rel="stylesheet" href="{{ 'css/admonitions.css'|url }}?v=escape-hatch-toggle" />
+    <link rel="stylesheet" href="{{ 'css/cards.css'|url }}" />
+    <link href="{{ 'css/prism.css'|url }}?v=cmk-7d303e6fdd" rel="stylesheet" />
+    <link href="{{ 'css/prism.site.css'|url }}?v=cmk-7d303e6fdd" rel="stylesheet" />
+    {#- shared ACHROMATIC structure for cmk highlighting (weight/size/style/panel shape);
+        the scheme files below are pure color maps layered on top.  Loads before them. #}
+    <link href="{{ 'css/prism-cmk.base.css'|url }}?v=cmk-7d303e6fdd" rel="stylesheet" />
+    {#- cmk syntax color SCHEMES, runtime-switchable via the <select> in the breadcrumbs
+        bar -- the same approach prismjs.com uses for its own theme picker: load them all,
+        toggle which <link> is active (theme_base.js keys off the `cmk-theme-<name>` ids).
+        All enabled here so the LAST one (Nord) wins by default before JS runs. #}
+    <link href="{{ 'css/prism-cmk.okaidia.theme.css'|url }}?v=cmk-7d303e6fdd" rel="stylesheet" id="cmk-theme-okaidia" />
+    <link href="{{ 'css/prism-cmk.base16dark.theme.css'|url }}?v=cmk-7d303e6fdd" rel="stylesheet" id="cmk-theme-base16dark" />
+    <link href="{{ 'css/prism-cmk.base16grayscale.theme.css'|url }}?v=cmk-7d303e6fdd" rel="stylesheet" id="cmk-theme-base16grayscale" />
+    <link href="{{ 'css/prism-cmk.base16ashes.theme.css'|url }}?v=cmk-7d303e6fdd" rel="stylesheet" id="cmk-theme-base16ashes" />
+    <link href="{{ 'css/prism-cmk.base16ocean.theme.css'|url }}?v=cmk-7d303e6fdd" rel="stylesheet" id="cmk-theme-base16ocean" />
+    <link href="{{ 'css/prism-cmk.gruvbox.theme.css'|url }}?v=cmk-7d303e6fdd" rel="stylesheet" id="cmk-theme-gruvbox" />
+    <link href="{{ 'css/prism-cmk.nord.theme.css'|url }}?v=cmk-7d303e6fdd" rel="stylesheet" id="cmk-theme-nord" />
+    <!-- day/night toggle: set data-theme ASAP (before paint) to avoid a flash -->
+    <script>{% include "js/theme-toggle.js" %}</script>
+    {#- Highlighting is Prism-only (loaded below); highlight.js is disabled
+        (`highlightjs:false` in mkdocs.yml) -- no hljs stylesheet. #}
     {%- for path in config.extra_css %}
         <link href="{{ path|url }}" rel="stylesheet" />
     {%- endfor %}
+    {#- No-JS fallback: the chapter collapse/expand, the day-night + color-scheme
+        controls, and the mobile hamburger are all JS-only.  Without JS, reveal the
+        whole nav tree, drop the inert controls, and dock the sidebar in-flow on
+        mobile so it can't strand no-JS / crawler visitors. #}
+    <noscript>
+      <style>
+        /* reveal every collapsed chapter (matches the collapsing selector's
+           specificity; placed later so it wins) */
+        .wy-menu-vertical ul.nav-chapter-items.collapsed { max-height: none; }
+        /* the per-chapter triangle toggle does nothing without JS */
+        .wy-menu-vertical .nav-chapter-toggle { display: none; }
+        /* inert affordances: syntax color-scheme picker + day/night toggle */
+        .cmk-theme-picker, #my-toggle-id { display: none; }
+        /* mobile: hamburger is JS-only -> dock the sidebar in normal flow at the
+           top of the page (content follows below it) and hide the dead toggle bar */
+        @media screen and (max-width: 768px) {
+          .wy-nav-side { position: static; left: 0; width: auto; min-height: 0;
+                         overflow-y: visible; padding-bottom: 1em; }
+          .wy-side-scroll { width: auto; }
+          .wy-nav-content-wrap { margin-left: 0; }
+          .wy-nav-top { display: none; }
+        }
+      </style>
+    </noscript>
   {%- endblock %}
 
   {%- block libs %}
@@ -46,12 +86,6 @@
     <!--[if lt IE 9]>
       <script src="{{ 'js/html5shiv.min.js'|url }}"></script>
     <![endif]-->
-    <!-- {%- if config.theme.highlightjs %}
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-      {%- for lang in config.theme.hljs_languages %}
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/{{lang}}.min.js"></script>
-      {%- endfor %}
-    {%- endif %} -->
   {%- endblock %}
 
   {%- block extrahead %} {% endblock %}
@@ -81,17 +115,38 @@
   {%- endblock %}
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav{% if page and page.url and 'cmk/banana' in page.url %} cmk-banana-page{% endif %}{% if page and page.url and 'cmk/quickref' in page.url %} cmk-quickref-page{% endif %}{% if page and page.url and 'cmk/pragmas' in page.url %} cmk-pragmas-page{% endif %}{% if page and page.url and page.url.rstrip('/') in ['cmk', 'cmk/index'] %} cmk-index-page{% endif %}" role="document">
 
   <div class="wy-grid-for-nav">
 
-    {#- SIDE NAV, TOGGLES ON MOBILE #}
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    {#- SIDE NAV, TOGGLES ON MOBILE.  `nav-init` hard-disables every nav transition
+        for the first paint so the load-time state reconciliation (chapter restore,
+        subtree clamp, deep-link reveal) snaps into place instead of animating --
+        theme_extra.js removes it after the first frame so USER toggles still glide.
+        This is what stops the "rapid rejigger" when a nav click reloads the page. #}
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav nav-init">
     <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
       {%- block site_name %}
         {% include "logo.html" %}
       {%- endblock %}
+      {#- "For / By" audience strip, directly below the logo, full width (breaks out of the
+          search-box padding via negative margins in CSS).  `.nav-audience` is the single
+          container -- fonts/spacing/border live there, labels + links inherit.  Tabler
+          box-check icon defined once as an SVG <symbol>, then re-used. #}
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="ti-box-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3l8 -8"/><path d="M20 12v6a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h9"/></symbol></svg>
+      <div class="nav-audience">
+        <div class="nav-aud-row">
+          <span class="nav-aud-label">For:</span>
+          <a class="nav-aud-link" href="{{ 'but-why/'|url }}#for-humans"><svg class="ti" aria-hidden="true"><use href="#ti-box-check"/></svg>Humans</a>
+          <a class="nav-aud-link" href="{{ 'but-why/'|url }}#for-robots"><svg class="ti" aria-hidden="true"><use href="#ti-box-check"/></svg>Robots</a>
+        </div>
+        <div class="nav-aud-row">
+          <span class="nav-aud-label">By:</span>
+          <a class="nav-aud-link" href="{{ 'but-why/'|url }}#by-humans"><svg class="ti" aria-hidden="true"><use href="#ti-box-check"/></svg>Humans</a>
+          <a class="nav-aud-link" href="{{ 'but-why/'|url }}#by-robots"><svg class="ti" aria-hidden="true"><use href="#ti-box-check"/></svg>Robots</a>
+        </div>
+      </div>
       {%- if config.extra.version %}
         <div class="version">
           {{ config.extra.version }}
@@ -105,18 +160,26 @@
       <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="{% trans %}Navigation menu{% endtrans %}">
         {%- block site_nav %}
           {%- set navlevel = 1 %}
+          {#- All chapters start COLLAPSED except those listed under the parallel
+              `nav_expanded` key (mkdocs.yml); a chapter containing the active page
+              also stays open so the current item is never hidden.  The triangle
+              toggle + live collapse are wired in theme_extra.js, keyed on the shared
+              `data-nav-chapter` index. #}
+          {%- set nav_expanded = config.nav_expanded or [] %}
           {%- for nav_item in nav %}
             {%- if nav_item.is_section %}
+              {%- set chapter_idx = loop.index %}
+              {%- set is_collapsed = (nav_item.title not in nav_expanded) and not nav_item.active %}
               {%- if nav_item.is_page %}
                 <ul><li{% if nav_item == page %} class="current-section"{% endif %}>
                     <a href="{% if nav_item == page %}#{% else %}{{ nav_item.url|url }}{% endif %}" style="padding: 0; font-size: inherit; line-height: inherit">
               {%- endif %}
-              <p class="caption"><span class="caption-text">{{ nav_item.title }}</span></p>
+              <p class="caption nav-chapter{% if is_collapsed %} collapsed{% endif %}" data-nav-chapter="{{ chapter_idx }}"><span class="caption-text">{{ nav_item.title }}</span><span class="nav-chapter-toggle" role="button" tabindex="0" aria-label="Toggle {{ nav_item.title }} section" aria-expanded="{{ 'false' if is_collapsed else 'true' }}">&#9656;</span></p>
               {%- if nav_item.is_page %}
                     </a>
                 </li></ul>
               {%- endif %}
-              <ul{% if nav_item.active %} class="current"{% endif %}>
+              <ul class="nav-chapter-items{% if nav_item.active %} current{% endif %}{% if is_collapsed %} collapsed{% endif %}" data-nav-chapter="{{ chapter_idx }}">
                 {%- for nav_item in nav_item.children %}
                   <li class="toctree-l{{ navlevel }}{% if nav_item.active %} current{% endif %}">
                     {%- include 'nav.html' %}
@@ -148,8 +211,9 @@
 
       {#- PAGE CONTENT #}
       <div class="wy-nav-content">
+        {#- breadcrumbs nav lives outside rst-content so it can span full-width with no top margin #}
+        {%- include "breadcrumbs.html" %}
         <div class="rst-content">
-          {%- include "breadcrumbs.html" %}
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               {% block content %}
@@ -174,22 +238,148 @@
     <script>var base_url = {{ base_url|tojson }};</script>
     {# <script src="{{ 'js/theme_extra.js'|url }}"></script> #}
     <script>{% include "js/theme_base.js" %}</script>
+    <script>{% include "js/sidebar-resize.js" %}</script>
+    {#- the cmk/makefile Prism grammar (self-contained component); theme_extra.js calls
+        its registerCmkGrammar() once Prism has loaded #}
+    <script>{% include "js/prism-cmk.js" %}</script>
     <script>{% include "js/theme_extra.js" %}</script>
+    {#- Sidebar nav controller: the SOLE authority over the tree's open/closed state.
+        Replaces RTD's stock theme.js nav behaviour (no longer loaded) AND the former
+        stateful handlers in theme_extra.js.  Non-nav RTD services it reproduces:
+        dot injection + mobile shift (nav.js), table-wrapping (theme_base.js). #}
+    <script>{% include "js/nav.js" %}</script>
     <script>{% include "js/marked.min.js" %}</script>
-    <script src="{{ 'js/theme.js'|url }}"></script>
     <script>
       window.Prism = window.Prism || {};
       Prism.manual = true; // prevents auto highlighting
     </script>
     <script src="{{ 'js/prism.js'|url }}" data-manual></script>
+    {#- Prism `markdown` grammar (official component, PrismJS 1.30.0) -- registers
+        Prism.languages.markdown so the api-help fences (```markdown```) highlight and the
+        autolinker turns URLs into anchors.  Self-contained: extends `markup`, touches no
+        other grammar, runs once at load. #}
+    <script src="{{ 'js/prism-markdown.js'|url }}" data-manual></script>
+    {#- Permalinkable admonitions: give every TITLED admonition a stable id (slugified from its
+        title, deduped against the page) and a clickable title bar that drops the anchor into the
+        URL, then smooth-scrolls it to center + flashes it (the same `nav-target` highlight the
+        section headers use).  Arriving via a permalink flashes it too.  Skips <details>/<summary>
+        admonitions and their inner links.  Self-contained; runs once on load. #}
+    <script>
+    (function () {
+      function slugify(t){
+        return t.toLowerCase().trim().replace(/[^\w\s-]/g,'').replace(/[\s-]+/g,'-').replace(/^-+|-+$/g,'');
+      }
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      function flash(box){
+        box.scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth', block: 'center' });
+        box.classList.remove('nav-target');
+        void box.offsetWidth;                                          // restart the flash on a repeat hit
+        box.classList.add('nav-target');
+      }
+      function init(){
+        document.querySelectorAll('.rst-content .admonition').forEach(function(box){
+          var title = box.querySelector(':scope > .admonition-title');
+          if(!title || title.tagName === 'SUMMARY') return;            // skip untitled + <details>
+          if(title.classList.contains('admonition-clickable')) return; // already wired
+          var id = box.id;
+          if(!id){
+            var base = slugify(Array.prototype.filter.call(title.childNodes, function(n){
+              return !(n.nodeType === 1 && n.tagName === 'A');         // exclude inner links (e.g. the doclink)
+            }).map(function(n){ return n.textContent; }).join('')) || 'note';
+            id = base; var i = 2;
+            while(document.getElementById(id)){ id = base + '-' + (i++); }
+            box.id = id;
+          }
+          title.classList.add('admonition-clickable');
+          title.addEventListener('click', function(e){
+            if(e.target.closest('a')) return;                          // let real links act
+            if(history.pushState) history.pushState(null, '', '#' + id);
+            flash(box);
+          });
+        });
+        function flashFromHash(){
+          if(!location.hash) return;
+          var el = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+          if(el && el.classList.contains('admonition')) flash(el);
+        }
+        flashFromHash();
+        window.addEventListener('hashchange', flashFromHash);
+      }
+      if(document.readyState !== 'loading') init();
+      else document.addEventListener('DOMContentLoaded', init);
+    })();
+    </script>
+    {#- Footnotes: clicking a reference marker (the superscript [^n] link) smooth-scrolls its
+        matching entry in the References list to center and flashes it with the same `nav-target`
+        highlight the section headers and admonitions use, so the eye finds the right one among
+        many.  python-markdown owns the markup (sup > a.footnote-ref -> li#fn:<id> inside
+        div.footnote); we only own the click.  Arriving via a #fn: hash flashes it too.
+        Self-contained; runs once on load. #}
+    <script>
+    (function () {
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      function flash(li){
+        li.scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth', block: 'center' });
+        li.classList.remove('nav-target');
+        void li.offsetWidth;                                         // restart the flash on a repeat click
+        li.classList.add('nav-target');
+      }
+      function init(){
+        document.querySelectorAll('.rst-content a.footnote-ref').forEach(function(a){
+          a.addEventListener('click', function(e){
+            var hash = a.getAttribute('href') || '';
+            if(hash.charAt(0) !== '#') return;                       // only in-page refs
+            var li = document.getElementById(decodeURIComponent(hash.slice(1)));
+            if(!li) return;                                          // unknown id -> let the browser handle it
+            e.preventDefault();
+            if(history.pushState) history.pushState(null, '', hash);
+            flash(li);
+          });
+        });
+        function flashFromHash(){
+          if(!location.hash) return;
+          var el = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+          if(el && el.closest('div.footnote')) flash(el);
+        }
+        flashFromHash();
+        window.addEventListener('hashchange', flashFromHash);
+      }
+      if(document.readyState !== 'loading') init();
+      else document.addEventListener('DOMContentLoaded', init);
+    })();
+    </script>
+    {#- Deep-linkable <details>: when the URL hash targets a <details> (or any element nested in
+        one), force the enclosing <details> open so a fragment link never lands on collapsed
+        content -- e.g. the summary-table keys that deep-link into the collapsed pragma reference
+        cards.  Runs on load and on every hashchange.  Self-contained. #}
+    <script>
+    (function () {
+      function openFromHash(){
+        if(!location.hash) return;
+        var el = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+        if(!el) return;
+        var d = el.closest('details');
+        if(d && !d.open){
+          d.open = true;
+          el.scrollIntoView({ block: 'start' });   // realign now that the body has expanded
+        }
+      }
+      if(document.readyState !== 'loading') openFromHash();
+      else document.addEventListener('DOMContentLoaded', openFromHash);
+      window.addEventListener('hashchange', openFromHash);
+    })();
+    </script>
+    {#- Permalinkable prose cards (`.cmk-card` blockquotes): clickable bold lead-in that drops the
+        anchor, scrolls to center, and flashes the `nav-target` highlight (mirrors admonitions). #}
+    <script>{% include "js/card.js" %}</script>
     {%- for script in config.extra_javascript %}
       {{ script|script_tag }}
     {%- endfor %}
-    <script>
-        jQuery(function () {
-            SphinxRtdTheme.Navigation.enable({{ 'true' if config.theme.sticky_navigation else 'false' }});
-        });
-    </script>
+    {#- (removed) MathJax was retired here: cmk notation now renders as native MathML at
+        build time via docs/macros/cmk_math.j2 + the inlined driver in .cmk/docs.cmk --
+        selectable, copyable, no CDN, no client JS.  See the .cmk-algebra / .cmk-imath styles. #}
+    {#- (removed) the SphinxRtdTheme bootstrap: RTD's stock theme.js is no longer loaded.
+        nav.js is the sole nav authority and reproduces the non-nav services RTD provided. #}
   {%- endblock %}
 
 </body>

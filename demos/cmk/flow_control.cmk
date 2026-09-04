@@ -1,0 +1,160 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# flow_control.cmk:
+#   Exotic flow control in CMK-lang, built on a local trampoline.
+#
+# The standard library's `mk.yield` is a one-shot escape continuation: it
+# runs a goal, signals the top supervisor, then kills itself -- control
+# never returns, it can't nest, and it ends the whole supervised run.
+# Perfect for `mk.interpret`/subcommands, too weak for coroutines or
+# call/cc.  So this demo builds a generalized yield/supervisor in
+# user-space: a trampoline (`fc.*`) where each "fiber" keeps its
+# continuation (the next step) in a file and a driver loop resumes it.
+# That makes it resumable, multi-shot, nestable, and schedulable; native
+# `mk.yield` is just the degenerate case (one frame, no resume).  Every
+# construct below is a small client of this one runtime.
+#
+# USAGE: ./demos/cmk/flow_control.cmk        # runs the guided tour
+
+# fc.*  --  the trampoline: a generalized, resumable yield +
+# mini-supervisor.
+#
+# A fiber F's continuation (the next step-goal to run) lives in
+# `.tmp.fc.F.k`; empty means the fiber has finished.  A step does some
+# work, declares its next continuation with `fc.next` (and optionally emits
+# a value with `fc.emit`), then returns to the driver -- so the driver loop
+# (not make recursion) advances it.  `${FC_FIBER}` tells a running step
+# which fiber it belongs to.
+
+# Set the current fiber's resume point (its continuation) to make-goal
+# $(1).
+fc.next=printf '%s' "$(strip $(1))" > .tmp.fc.$${FC_FIBER}.k
+# Append a value to the current fiber's output channel.
+fc.emit=printf '%s\n' "$(strip $(1))" >> .tmp.fc.$${FC_FIBER}.out
+
+fc.spawn/%:
+    '''
+    Start fiber <fiber> at <entry-step> (resets its control + channel).
+    USAGE: fc.spawn/<fiber>,<entry>
+    '''
+    f=`echo '${*}'|cut -d, -f1` && e=`echo '${*}'|cut -d, -f2` \
+    && printf '%s' "$${e}" > .tmp.fc.$${f}.k && : > .tmp.fc.$${f}.out
+
+fc.run/%:
+    '''Trampoline: drive fiber <fiber>'s continuation-chain to completion.'''
+    f='${*}' \
+    && while k=`cat .tmp.fc.$${f}.k 2>/dev/null` && [ -n "$${k}" ]; do \
+        : > .tmp.fc.$${f}.k ; \
+        FC_FIBER=$${f} ${make} "$${k}" </dev/null || exit $$? ; \
+    done
+
+fc.sched/%:
+    '''Cooperative scheduler: round-robin the fibers <f1>,<f2>,... (coroutines).'''
+    fs=`echo '${*}' | tr , ' '` \
+    && while :; do \
+        live=0 ; \
+        for f in $${fs}; do \
+            k=`cat .tmp.fc.$${f}.k 2>/dev/null` ; [ -n "$${k}" ] || continue ; \
+            live=1 ; : > .tmp.fc.$${f}.k ; FC_FIBER=$${f} ${make} "$${k}" </dev/null || exit $$? ; \
+        done ; \
+        [ "$${live}" = 1 ] || break ; \
+    done
+
+fc.selftest:
+    '''
+    ── self-test: a fiber that emits step-1..step-3 over three resumes, then
+    halts ──
+    '''
+    cmk.log.io(${bold}== fc trampoline self-test ==) \
+    && ${make} fc.spawn/count,count.step/1 fc.run/count \
+    && cmk.log.io(channel: `cat .tmp.fc.count.out | tr '\n' ' '`)
+
+count.step/%:
+    n='${*}' \
+    && if [ "$${n}" -gt 3 ]; then true ; \
+       else cmk.fc.emit(step-$${n}) && cmk.fc.next(count.step/$$(( n + 1 ))) ; fi
+
+# 1. goto / computed-goto.  The trampoline is a goto machine: a step's
+#    continuation is the program counter.  `goto.loop` jumps backward to
+#    itself (an unstructured loop); the jump-table dispatches a target
+#    computed at runtime via `flux.apply` (a switch).
+fc.goto:
+    @# ─────────────────────────────────────────────────────────────────────────
+    cmk.log.io(${bold}== goto / computed-goto ==) \
+    && printf 3 > .tmp.fc.goto.n \
+    && ${make} fc.spawn/goto,goto.loop fc.run/goto \
+    && ${make} goto.jumptable
+
+goto.loop:
+    n=`cat .tmp.fc.goto.n` && cmk.fc.emit(tick-$${n}) \
+    && n=$$(( n - 1 )) && printf '%s' "$${n}" > .tmp.fc.goto.n \
+    && if [ "$${n}" -gt 0 ]; then cmk.fc.next(goto.loop) ; else cmk.fc.next(goto.done) ; fi
+goto.done:; cmk.log.io(goto: backward-jump loop -> `cat .tmp.fc.goto.out|tr '\n' ' '`)
+
+goto.jumptable:
+    for sel in 1 2 9; do ${make} flux.apply/goto.case,$${sel} </dev/null ; done
+goto.case/%:
+    case '${*}' in \
+        1) cmk.log.io(computed-goto: sel=1 -> case-ONE) ;; \
+        2) cmk.log.io(computed-goto: sel=2 -> case-TWO) ;; \
+        *) cmk.log.io(computed-goto: sel=${*} -> case-DEFAULT) ;; \
+    esac
+
+# 2. Coroutines (trampolined).  Two fibers share a channel (the io.stack);
+#    the scheduler round-robins them, so producer and consumer interleave
+#    cooperatively.  This is the honest "CMK coroutine": make has no
+#    resumable stack, so each fiber's resume point lives in a file and the
+#    scheduler re-enters it (no native suspend).
+fc.coro:
+    @# ─────────────────────────────────────────────────────────────────────────
+    cmk.log.io(${bold}== coroutines: producer/consumer (cooperative) ==) \
+    && ${make} io.stack.reset && printf 1 > .tmp.fc.prod.n \
+    && ${make} fc.spawn/prod,prod.gen fc.spawn/cons,cons.take \
+    && ${make} fc.sched/prod,cons
+
+prod.gen:
+    n=`cat .tmp.fc.prod.n` \
+    && if [ "$${n}" -le 3 ]; then \
+        printf '%s' "$${n}" | ${io.stack.push_word} && cmk.log.io(prod: produced $${n}) \
+        && printf '%s' "$$(( n + 1 ))" > .tmp.fc.prod.n && cmk.fc.next(prod.gen) ; \
+       else cmk.log.io(prod: done) ; fi
+cons.take:
+    v=`${io.stack.pop_word}` \
+    && if [ -n "$${v}" ] && [ "$${v}" != null ]; then \
+        cmk.log.io(cons: consumed $${v}) && cmk.fc.next(cons.take) ; \
+       else cmk.log.io(cons: drained) ; fi
+
+# 3. call/cc (escape continuation, call/ec).  `fc.callcc` runs a body that
+#    may escape with a value; that value becomes the call/cc result and the
+#    rest of the body is skipped.  (Escape = write the result + halt the
+#    fiber.)  Native `mk.yield` is the one-shot, non-reusable cousin of
+#    this; a reusable continuation would snapshot the fiber's control files
+#    and re-enter them.
+fc.callcc:
+    @# ─────────────────────────────────────────────────────────────────────────
+    cmk.log.io(${bold}== call/cc: escape with first > 5 in [2 4 9 1] ==) \
+    && printf '2 4 9 1' > .tmp.fc.cc.data && printf 0 > .tmp.fc.cc.i && : > .tmp.fc.cc.result \
+    && ${make} fc.spawn/cc,cc.search fc.run/cc \
+    && cmk.log.io(${green}call/ec returned: `cat .tmp.fc.cc.result`)
+
+cc.search:
+    data=`cat .tmp.fc.cc.data` && i=`cat .tmp.fc.cc.i` && n=`echo $${data}|wc -w` \
+    && if [ "$${i}" -ge "$${n}" ]; then printf -- -1 > .tmp.fc.cc.result ; \
+       else item=`echo $${data}|cut -d' ' -f$$(( i + 1 ))` ; \
+        if [ "$${item}" -gt 5 ]; then printf '%s' "$${item}" > .tmp.fc.cc.result ; \
+        else printf '%s' "$$(( i + 1 ))" > .tmp.fc.cc.i && cmk.fc.next(cc.search) ; fi ; \
+       fi
+
+# Two constructs once demoed here have moved to their own demos -- both now
+# built on the stdlib's event channel (the channel construct) rather than this
+# trampoline:
+#   - Zahn's construct (a structured loop with named exits) -> `zahn.cmk`.
+#   - Typed exceptions (raise / dispatch by type, with re-throw) ->
+#     `exceptions.cmk`.
+
+fc.clean:; rm -f -- .tmp.fc.*
+
+# The guided tour: each section is a self-contained flow-control construct
+# on the trampoline, with deterministic output (narration via log.io, on
+# stderr).
+__main__: fc.selftest fc.goto fc.coro fc.callcc fc.clean

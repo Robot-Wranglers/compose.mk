@@ -1,0 +1,319 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}{% import 'macros/cmk_math.j2' as cmkmath -%}
+
+{{ macros.section(2, "Banana Blocks", id="banana-blocks") }}
+
+{{ macros.escape_hatch([
+    'The [compiler tutorial](@/cmk/compiler/#banana-forms) introduces the block in context, next to the other [call-forms](@/cmk/concepts/#callforms) and [block-references](@/cmk/compiler/#block-references) it composes with.',
+    ['Quick Reference', '@/cmk/quickref/#banana-forms', 'terse cheat-sheet of every form'],
+    'Runnable examples: the `banana-*.cmk` set in ' ~ macros.repo_link('demos/cmk', github=github),
+], mkdocs) }}
+
+**Banana-blocks** are also known as banana-brackets, B-brackets, or just "a banana".  This lisp'y little construct is the most important primitive in the CMK language.  It comes in different forms, but before we get deep into the grammar, here's a simple example.
+
+You can put any kind of text inside, but here's what a banana emoji inside a banana block would look like:
+
+{{ cmkmath.display("(| .. 🍌 🍌 🍌 .. |)", class="centered") }}
+
+This page builds from the simple variations into more complicated use gradually, but let's get the rough definitions out of the way.  Banana-block syntax *generalizes quotes*[^qq] by adding pre/post processors and constructors into the mix.  Additionally, they are deeply connected with the CMK compiler / interpreter / runtime in various ways, which makes them a useful handle on CMK's facilities for [extensibility and metaprogramming]({{_}}/cmk/metaprogramming).
+
+{{ macros.section(3, "Quoted Bananas", id="banana-quoted") }}
+
+A banana-block is usually spanning many lines. That's part of the point, but we'll write them as one line just to keep it simple.  Since they hold anything you can just embed data or code like this:
+
+{{ cmkmath.algebra([
+  ["@json_data",     "(|.. many lines of JSON ..|)"],
+  ["@polyglot_code", "(|.. many lines of foreign language ..|)"],
+], arrow="=") }}
+
+There's an equivalent, more declarative version of simple assignment as well: just leave out the equals sign:
+
+{{ cmkmath.display("@json_data (|.. many lines of JSON ..|)") }}
+
+{# ########################################################## #}
+
+{{ macros.section(3, "Quasi Quoted Bananas", id="banana-quasiquote") }}
+
+A quasi-quote is "data with holes in it": what you might otherwise call a template, or a macro.  Since a banana is completely lazy about its interior, that's fair game too; a block can carry holes and fill them in later.
+
+The holes are ordinary `${..}` references.  A banana freezes its body *verbatim*, so while the block just sits there quoted the holes stay literal, part of the inert source: <!-- docs-code-ok -->
+
+{{ cmkmath.display("@greeting = (| Hello, ${who}! |)") }}
+
+Nothing is expanded yet: `@greeting`'s stored value is the exact text `Hello, ${who}!`, hole and all.  The hole is filled later, when the block is *used*: referencing `@greeting` in a scope that binds `who` interpolates it in place, so a single template yields a different result per scope. <!-- docs-code-ok -->
+
+{{ cmkmath.algebra([
+  ["@who = alice", "@greeting is `Hello, alice!`"],
+  ["@who = bob",   "@greeting is `Hello, bob!`"],
+]) }}
+
+That gap, between a block that carries `${who}` verbatim and a scope that fills it, is the whole point of a quasi-quote.  Filling a bare hole like this is just the surrounding language's ordinary expansion.  The *deeper* unquote is **cooking**: a second compiler pass that additionally wakes up the block's cmk-lang interior (the [callforms](#banana-channels), target-anchored dispatches, and nested bananas that plain expansion leaves untouched) and lowers them in place.  That *quote vs cook* distinction is what the [squashed](#banana-squashed) and [cooked](#banana-cooked) forms below are built on (more on this later). <!-- docs-code-ok -->
+
+The choice of *treatment* is spelled by the **assignment operator**.  Same body, three fates, decided at compile time:
+
+{{ cmkmath.algebra([
+  ["@block =  (| .. |)", "quoted: kept verbatim"],
+  ["@block := (| .. |)", "cooked: interior lowered"],
+  ["@block <- (| .. |)", "run once, result captured"],
+]) }}
+
+{{ site.embed_demo('demos/cmk/banana-assign.cmk', github=github) }}
+
+Filling the holes is its own operator, too.  Because a quoted banana is *just a string*, it carries a small **string algebra**: the `%` operator fills a block's `@@holes@@` from a second (kwargs) banana, and since every result is another banana, `%` chains left-to-right.  This is the explicit, banana-level twin of the ambient `${..}` expansion above, a template-fill you can drive by hand: <!-- docs-code-ok -->
+
+{{ site.embed_demo('demos/cmk/banana-templates.cmk', github=github) }}
+
+So far, if you're thinking *only* about multiline data, then bananas might appear similar to the [triple-quoted forms]({{_}}/cmk/compiler/#triple-quote-literals) or [block-reference syntax]({{_}}/cmk/compiler/#block-references).
+
+Those are useful primitives too, but no comparison!  Because of *construction, composition, and the [callform algebra]({{_}}/cmk/concepts/#callforms)* they can use.. we'll see that bananas are on a completely different level.
+
+{# ########################################################## #}
+
+{{ macros.section(3, "Squashed Bananas", id="banana-squashed") }}
+
+Squashed bananas are like banana-blocks, but the interior is **compiled**.  A mnemonic for the syntax is that square-bracket brutalism has squashed the elegant curve out of the parens in the last section.
+
+{{ cmkmath.display("@program = [|.. many lines of CMK-Lang ..|]") }}
+
+If you started with an *unsquashed* banana, you can get the reduction from walrus-assignment.
+
+{{ cmkmath.display("@squashed := @unsquashed (|..|)") }}
+
+By default squashing is a **deep cooker** that accomodates nested bananas and nested versions of the other [basic forms]({{_}}/cmk/quickref/#banana-forms).  This is really an instance of a more general pattern we'll come around to, but this form comes up so often that it gets special syntax.  As an aside: terms like "squashed", "cooked", and "reduced" refer to *lowering* in the context of the compiler, but [details about that]({{_}}/cmk/compiler/#multistage) aren't needed for the high-level operations we'll discuss here.
+
+Anyway, you might look at this and think, **why bother?**  Unlike a multiline [polyglot]({{_}}/demos/polyglots), a *cmk program* would be legal syntax *outside* the wrapper, right?  So maybe you'd only wrap it to transport code you don't want to execute?  
+
+That's not too far from the truth. Getting sneaky with closures[^closure] *is* fundamentally why banana-blocks can bootstrap into [object-oriented programming](#banana-cooked) and [actors]({{_}}/stages/#channels-agents).  But it's also the basis of the [module system]({{_}}/cmk/modules), and why you can [run CMK *from* the ur-language underneath it]({{_}}/cmk/paradigm/#interpreters-transpilation), and how CMK [is moving towards self-hosted]({{_}}/cmk/compiler/#multistage).
+
+{# ########################################################## #}
+
+{{ macros.section(3, "Peeled Bananas", id="banana-peeled") }}
+
+Peeled bananas look like squashed ones, but they don't appear at module level, and they are **actually executed** at runtime.  Thus they appear inside a target/function body:
+
+```Makefile
+target:
+    [| .. many lines of CMK-Lang .. |]
+```
+
+The demo below builds callable objects from banana-forms and invokes them from inside recipe bodies, where they run at runtime:
+
+{{ site.embed_demo('demos/cmk/banana-recipes.cmk', github=github) }}
+
+
+{# `NAME(| body |)`: a native, generic *declare*.  It keeps a body (a script, a Dockerfile, a jq program, a class body) in source, then hands it to a **constructor** that acts on it.  That makes the banana the block-structured sibling of the [triple-quoted forms]({{_}}/cmk/compiler/#triple-quote-literals) and [block-references]({{_}}/cmk/compiler/#block-references); a way to name a snippet and then *do something* with it. #}
+
+{# {{ macros.section(3, "Quote, Compile, Eval", id="banana-basics") }}
+
+Before the full family, three **degenerate cases** carry most of the intuition; they line up with a trio you already know, **quote** / **compile** / **eval**:
+
+* **Quote**: `x = (| body |)` captures the block as *data*.  `x` names the raw body, inert and exactly as written; like quoting code instead of running it.
+* **Compile**: `x := (| body |)` (equivalently `x = [| body |]`) *cooks* the block: the cmk-lang inside it (`this.X(..)`, the [call-forms](#banana-channels), `${..}`) wakes up and is compiled, and `x` names the result.
+* **Eval**: inside a recipe, a bare `[| body |]` cooks the block **and runs it, right there**.
+
+It is the same `[| .. |]` bracket in the last two: *assigned* at module level it yields a compiled value; *bare* in a recipe it runs.  The only thing that varies across all three is **when the body wakes up**: never, at compile time, or on the spot.
+
+Everything below generalizes these: other constructors, extra bodies, the `[stream]` / `(args)` / `{env}` callform-channels, and the postfix treatments that decide cooking.  Those callform-channels share the grammar documented under [Call Forms]({{_}}/cmk/concepts/#callforms); here we cover what is banana-specific and link out for the rest. #}
+
+{% include "includes/banana-forms.md" %}
+
+The sections below walk each form in turn.
+
+{# BONEYARD -- "The Block" section: low-value / misplaced, parked here.  The
+   leading-path constructor mechanics it covered are better served by the
+   Constructors section (#banana-declare); the banana-blocks.cmk demo is unused
+   for now.  Re-inline if a better home appears.
+
+{{ macros.section(3, "The Block", id="banana-block") }}
+
+`NAME(| body |)` names a block, then hands it to a **constructor** named by a **leading path**:
+
+| form | constructor |
+|---|---|
+| leading dotpath `code.unbound X(| .. |)` | `code.unbound` |
+| leading words `code unbound X(| .. |)` | same, spelled as words |
+| reader-intent alias `code.config X(| .. |)` | `code.config` (== `code.unbound`, for data/config blobs) |
+| `using k=v` | order-free kwargs passed to the constructor |
+
+The delimiter is **Idris idiom-safe**: a bare `(| .. |)` *inside* a body passes through untouched, and the multi-line close is `|)` **alone on its line**.  Like every CMK construct, the block is inert inside `define`-blocks and comments.
+
+{{ site.embed_demo('demos/cmk/banana-blocks.cmk', github=github) }}
+#}
+
+{{ macros.section(3, "As Callables", id="banana-channels") }}
+
+A banana is also a **callable**: its three **callform-channels** (the block-trailers; distinct from the event-bus `channel` feature) turn a block into something you apply, filter, or configure.  A block takes at most **one** *block-trailer* (they are alternatives, not a stack).  These are exactly the same channels that ride any name, the [callform algebra](#banana-channels):
+
+{% include "includes/callform-algebra.md" %}
+
+The env, args, and stream brackets are lexically distinct from one another (and from an ordinary variable reference), so all three can ride the same block at once without ambiguity.  A block can likewise be captured into a variable while still carrying a stream or args channel.  (For how each channel is compiled, see the compiler's [Call Forms]({{_}}/cmk/concepts/#callforms).)
+
+{{ macros.section(4, "Stream", id="banana-stream") }}
+
+Run the body as a shell filter *during compilation* (`[]` = a producer, no input):
+
+{{ site.embed_demo('demos/cmk/banana-callforms.cmk', github=github) }}
+
+{{ macros.section(4, "Args", id="banana-args") }}
+
+Apply the block as a callable with positional arguments:
+
+{{ site.embed_demo('demos/cmk/banana-args.cmk', github=github) }}
+
+{{ macros.section(4, "Env", id="banana-env") }}
+
+Prefix the resulting command with environment bindings:
+
+{{ site.embed_demo('demos/cmk/banana-env.cmk', github=github) }}
+
+{{ macros.section(3, "Turbo Banana", id="banana-multibody") }}
+
+The **turbo banana** is **multi-body currying**: {{ cmkmath.imath("[@ctor] @NAME (|@A|)(|@B|)..") }} hands **N block bodies** to a single constructor; the first body is the primary, and each extra is an additional body the constructor can pick up.  `(|` vs `(` is what tells a second block from an `(args)` trailer, so the two never collide.  This needs a constructor that understands multiple bodies (see [Constructors](#banana-declare)).
+
+{{ site.embed_demo('demos/cmk/banana-composition.cmk', github=github) }}
+
+{{ macros.section(3, "Lambda-lift", id="banana-lambda") }}
+
+An **anonymous** block in a recipe is the one **recipe**-level banana (every other form is module-level).  With no name to bind, it runs right where it sits: the block is lifted[^lambdalift] to a hidden module define and dispatched into an **ambient** by the `in` trailer: `(| body |) in <ambient>` runs it on a host runner, inside a container, or in a service, with env and args riding the `{}`/`()` [callform-channels](#banana-channels) above.  A **typed machine constructor** gives the same, more explicitly: `host.native.sh(| body |){WHO=world}` runs a shell snippet with the env forwarded (the demo below uses exactly this, so it needs no docker).  A *bare* anonymous `(| body |){env}(args)` with no `in` and no constructor is deliberately **reserved**: an anonymous banana has only a string algebra, so a `{env}`/`(args)` trailer needs a typed machine to give it a call-form.
+
+{{ site.embed_demo('demos/cmk/banana-lambda.cmk', github=github) }}
+
+{{ macros.section(3, "Fluent Bananas", id="banana-fluent") }}
+
+An **operator between two banana constructions**, {{ cmkmath.imath("@foo (|@a|) . @bar (|@b|)") }}, is a **binary operator** over blocks: the sibling of the `__call__` invoke.  At a recipe each operand is constructed as a throwaway instance (lifted to module scope like a [lambda](#banana-lambda)), then folded left-to-right through each operand's **dunder** for that operator, with the final result invoked inline.  So a longer chain constructs each block, folds them pairwise through the operator's dunder, and runs once at the end.
+
+The operator character picks the dunder from a small **catalog**, and a kind implements only the ones it wants:
+
+{{ cmkmath.algebra([
+  ["`.`", "`__dot__`"],
+  ["`/`", "`__div__`"],
+  ["`|`", "`__pipe__`"],
+]) }}
+
+Because the meaning lives in that dunder, the **same chain syntax composes differently per kind**.  In the demo, the `seq` kind implements the whole catalog (`.` sequences, `/` and-thens, `|` pipes), while its `pipe` kind overrides only the dot so that `.` *means* pipe.  Each operator handler folds the right-hand block into an accumulator and returns itself so the chain continues, and the final invoke runs the accumulated command.  Operands may be single-line (lifted by [lambda-lift](#banana-lambda)) or multiline (opened at end of line, closed by a leading `|)`), and this same operator is what the bash control-flow demos (`if` / `then` / `else`, and the loops) are built from.
+
+{{ site.embed_demo('demos/cmk/banana-fluent.cmk', github=github) }}
+
+{{ macros.section(3, "Squashed Bananas", id="banana-cooked") }}
+
+A block body is itself cmk-lang, but by default a **raw** block is kept *verbatim*, as inert data; the language constructs inside it are not active.  **Cooking** turns them back on, so the same body's interior evaluates in place.  A raw block is data; a cooked block is code:
+
+{% set cook_raw %}
+# kept verbatim: the callform and ${..} are just text
+(| greet:; cmk.log(hi ${who}) |)
+{% endset %}
+{% set cook_cooked %}
+# interior woken up, lowered in place: cmk.log(..)
+# fires, and this.X(..) / ${..} are all live
+[| greet:; cmk.log(hi ${who}) |]
+{% endset %}
+{{ site.inline_mirror('mirror_banana_cook', cook_raw, cook_cooked,
+    label_left='Raw (| .. |)', type_left='cmk', lang_left='cmk',
+    label_right='Cooked [| .. |]', default='left') }}
+
+Cooking is the most common member of a broader mechanism: **postfix treatments**.  After the close `|)` a block takes a comma-separated *list* of treatments, applied left-to-right at compile time (the trailer grammar lives on the [Quick Reference]({{_}}/cmk/quickref/#banana-forms)).  Two are **builtin**: `cooked` (lower the interior) and `cooked_deeply` (also cook any *nested* banana); any *other* word is a **stdlib target** the body is piped through at compile time, so the set is open and extensible (a missing/failing target is a compile error).
+
+You rarely write the words.  A bracket family stands in for the common treatments, and the assignment operator picks raw or cooked implicitly:
+
+{{ cmkmath.algebra([
+  ["(| .. |)", "raw: kept verbatim, inert data"],
+  ["[| .. |]", "the common `cooked_deeply` case, usable everywhere `(| .. |)` is"],
+  ["{| .. |}", "whatever treatment the `block_brackets` pragma assigns"],
+  [":= vs = / <-", "`:=` cooks; `=` and `<-` stay raw"],
+]) }}
+
+The demo below puts that open slot to work: its `block_brackets` pragma teaches the `{| .. |}` bracket the `stream.strip` treatment, so each brace-bracket body is normalized to one clean line at compile time, while a raw `(| .. |)` keeps its spacing verbatim.  Any stdlib target that reads stdin and writes stdout can serve as the treatment.
+
+{{ site.embed_demo('demos/cmk/banana-user-defined.cmk', github=github) }}
+
+Cooking is one instance of CMK's broader **staging** story (turning a block back from data into code), and it composes with the run-time re-compilation primitives (`lang.transpile`, `native_target`) behind hosted and vanilla-makefile builds.  For that whole picture, see the compiler's [Multistage]({{_}}/cmk/compiler/#multistage) appendix.
+
+The `banana-oop` demo builds a small object system from **cooked class bodies**: each `class NAME[| .. |]` body is cooked (the `[|` bracket is `cooked_deeply`), so its instance-keyed method targets and their target-anchored and expansion interiors are live.  Calling `Class` with a name binds the instance handle and stamps the class's members onto that instance.  A subclass names its parent among its bases to inherit the whole chain (`Dog is-a Animal`) and overrides a method just by redefining it; when two bases define the same method the **leftmost wins**, exactly like Python's MRO.
+
+{{ site.embed_demo('demos/cmk/banana-oop.cmk', github=github) }}
+
+{{ macros.section(3, "Constructors", id="banana-declare") }}
+
+The constructor a block is handed to is an ordinary [`declare.*`]({{_}}/macros/#declare-namespace) macro, so you can define your own.  The constructor is named by the block's **leading path**: `declare docker lambda NAME(| .. |)` hands the block to `declare.docker.lambda`.  The demo below defines `declare.docker.lambda` (scaffold a build+run target from an inlined Dockerfile body) and drives it with a banana.
+
+{{ site.embed_demo('demos/cmk/banana-callables.cmk', github=github) }}
+
+{{ macros.section(3, "As Namespaces", id="banana-namespace") }}
+
+The built-in **`namespace`** constructor is the banana form of [a namespace]({{_}}/cmk/concepts/#namespaces): a squashed banana whose every declared target and variable is prefixed with the namespace's name.  (`namespace` is a [`cmk` prelude]({{_}}/cmk/compiler/#prelude) keyword: bare after `from cmk import *`, else `cmk.namespace`.)
+
+{{ cmkmath.algebra([
+  ["#namespace @tier1 [|foo:; echo hi|]", "a target `tier1.foo`"],
+]) }}
+
+Nesting **composes** the names, so the bodies stay flat and readable while the targets come out fully-qualified:
+
+{{ cmkmath.algebra([
+  ["#namespace @tier1 [|#namespace @tier2 [|foo:; echo hi|]|]", "`tier1.tier2.foo`"],
+]) }}
+
+Each level threads its name through the `__name__` variable and the inner banana closes over it (the same closure trick squashing is built on), and every instance records its own path as a fully-qualified `tier1.tier2.__name__`.
+
+{{ site.embed_demo('demos/cmk/ambients-open.cmk', github=github) }}
+
+{{ macros.section(3, "As Modules", id="banana-module") }}
+
+Where a namespace just prefixes an inline body, a **module** is a namespace with a *boundary*: a first-class ambient you either **mount** (nested, reached qualified) or **dissolve** (flat, reached bare).  Sourced from a file the split is `import M as ns` versus `open M`, both mounting through `import.module` -- the [modules page]({{_}}/cmk/modules) and its [Module Algebra]({{_}}/cmk/modules/#module-algebra) card carry every disk-side keyword.  Constructed *inline*, the same split is two banana forms:
+
+{{ cmkmath.algebra([
+  ["#module @tools [| .. |]", "mount an inline module under `tools.*`"],
+  ["*[| .. |]",               "dissolve a block flat into scope"],
+]) }}
+
+The dissolve form is the **ambient-explode** technique compose.mk uses in its own [`__hosted__`]({{_}}/cmk/compiler/#multistage) region: author a whole family of targets in one block at a shallow indent, then explode them flat in place.  The demo mounts an inline module and explodes a block side by side:
+
+{{ site.embed_demo('demos/cmk/banana-module.cmk', github=github) }}
+
+{{ macros.section(3, "As Machine", id="banana-machine") }}
+
+Every "As X" above is one KIND: a [**machine**]({{_}}/cmk/concepts/#machines), any run context a banana can execute in.  The built-in machines need no declaration -- the host interpreters `sh`, `bash`, `python`, plus `out` -- and a `container` is just a machine created with `using bases=cmk.machine` that dispatches into docker.  In banana form:
+
+{{ cmkmath.algebra([
+  ["(|pip list|) #in #bash",    "a built-in host machine (no docker)"],
+  ["(|..|) #in #sh",            "the same shape, run by the #sh interpreter"],
+  ["#container @box (|img=..|)", "a machine backed by an image"],
+]) }}
+
+Every machine grows a per-instance dispatch target that routes a block through its `.run` hook (a host command dispatch by default), so `in <machine>` and the bare `NAME[block]` callform reach the same dispatch.  New subkinds are created exactly the way `container` is: a [`cmk.class`](#banana-declare) `using bases=cmk.machine` that overrides `.entrypoint` / `.run`.  The operator grid for all of these run-side forms is on the [quickref]({{_}}/cmk/quickref/#banana-forms).
+
+{{ macros.section(3, "As Ambient", id="banana-ambient") }}
+
+A recipe-level banana {{ cmkmath.imath("(| .. |)") }} is a raw string until an *ambient* operator (`in` / `out` / `open`) attaches it to a **machine**; those operators move it between execution contexts under a *mobile-ambient calculus*[^ambient] over `make` (concatenation and the typed pipe are composition operators, not ambient moves; both are covered by the [banana algebra](#banana-algebra) card above).  The [operator algebra and register model]({{_}}/cmk/concepts/#ambients) live on the concepts page; here it is in running code.  Two banana-specific niceties worth flagging: `out` from inside a container escapes to the host daemon over the mounted socket (the calculus's *unforgeable exit capability*), and under [`<-`]({{_}}/cmk/compiler/#capture-operator) the pipeline's final stdout is captured.
+
+{{ site.embed_demo('demos/cmk/ambients.cmk', github=github) }}
+
+<!--
+### Known Limits
+<hr class="section-rule lvl-3">
+
+!!! warning "Sharp edges"
+    * A one-liner `|)` **inside a body string** closes the block early; use the multi-line form (`|)` alone on its line).  This is inherent to the delimiter.
+    * "Turbo" mixing of *block-trailers* (`(|..|)[..]{..}(|..|)`) is silently dropped: the block-trailers are alternatives, not a stack (the *callform-channels* above DO stack).
+    * Inside a **cooked** body only target-anchored paren-callforms are active; a stream trailer stays literal (write a literal `| pipe`), and a `<-` capture picks the *module* form (broken in a recipe arm).
+-->
+
+<!--
+DEV-TRACKING (not shipped as prose) -- banana-forms follow-ups:
+  * turbo/leftover trailer on a block -> ERROR instead of silent drop (guard t_rest)
+  * lambda-lift `{env}` is NOT quote-aware yet (only the callform env_prefix is)
+  * multi-body: extra-body channel naming (def2=) + anonymous multi-body unscoped
+  * cooked blocks are COMPILE-TIME (⟅..⟆ sentinels -> lowering stages -> define);
+    a stream trailer does not lower inside a cooked body, only target-anchored paren-forms
+-->
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Quickref: Banana Forms]({{_}}/cmk/quickref/#banana-forms): the whole family on one page, split module- vs recipe-scoped, plus the operator grid.
+* [Compiler Tutorial]({{_}}/cmk/compiler): the concrete syntax and lowering.
+* [Metaprogramming]({{_}}/cmk/metaprogramming): dialects, sugar, and pragmas.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^qq]: {{ tufte.wiki('Quasi-quotation')|trim }}
+[^closure]: {{ tufte.wiki('Closure_(computer_programming)')|trim }}
+[^lambdalift]: {{ tufte.wiki('Lambda_lifting')|trim }}
+[^ambient]: [Cardelli & Gordon, *Mobile Ambients* (ETAPS/FoSSaCS 1998)](http://lucacardelli.name/Papers/MobileAmbientsETAPS98.A4.pdf)

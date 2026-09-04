@@ -1,0 +1,156 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+# beam-portal.cmk: one portal per run; an actor is a registration, not a container.
+
+'''
+The worked example for the beam.portal module: instances, the mode hooks,
+and the exercises.  One resident portal carries every actor as a process;
+messages are envelope v2 (JSON-RPC 2.0 with flat addressing extensions);
+lifecycle and scaling are control envelopes to actor zero, never sentinels.
+The same substrate answers as a place (demo.place) and the same ask verb
+round-trips on the socket and portal transports (demo.ask).
+'''
+import log
+import jb, flux
+from cmk import container
+from agents import Agent, jqd, Askable, Jsonrpc
+from beam.portal import Portal, PortalActor, PortalAsk, PortalJqd
+
+# the same image the portal runs on, minted twice as a place: elixir and shell faces.
+container beamx(img=compose.mk:beam.node entrypoint=elixir)(| |)
+container beamsh(img=compose.mk:beam.node entrypoint=bash)(| |)
+
+portal0 <- Portal.new()
+
+# the mode: the run's portal is up before the first target, reaped at run exit.
+export CMK_PRE := portal0.ensure
+export CMK_POST := portal0.reap
+
+class SockAsk(bases=Askable,Jsonrpc,jqd)[|
+  '''The socketed agent speaking envelope v2, with the ask verb mixed in'''
+|]
+
+# the user surface below is the point: identical verbs to the jqd demo,
+PortalActor alice(portal=portal0)(| |)
+PortalActor bea(portal=portal0)(| |)
+PortalAsk remote(portal=portal0)(| |)
+
+# folder: a shaped portal actor; its body travels with the program and folds portal-side.
+PortalJqd folder(portal=portal0)(|
+  {who: (.name | ascii_upcase), at: .stamp, seq}
+|)
+
+# replies: the reply address, its mailbox file source-pinned so every side agrees.
+export events__replies.mbox := .tmp.events__replies.mbox.rpc
+replies <- Agent.new()
+
+SockAsk sock(| . |)
+
+greet:
+  '''Control-plane handler: runs portal-side when a goals envelope names it'''
+  log(${green}greet ${sep} ${dim}delivered as a message${comma} run in the portal${no_ansi})
+
+put/%:
+  jb(name=${*} stamp=`date +%T`) | alice.cast()
+
+put2/%:
+  jb(name=${*} stamp=`date +%T`) | bea.cast()
+
+demo.actors:
+  '''
+  The pair demo without the VM boots: two registrations in one portal take
+  interleaved casts from one pool and read back separately with stock verbs.
+  Marginal cost per actor is a registration, never a VM boot.
+  '''
+  alice.serve(); \
+  bea.serve(); \
+  flux.pool(4,put/ivan,put2/judy,put/kate,put2/liam); \
+  alice.send["""greet"""]; \
+  alice.serve.stop(); \
+  bea.serve.stop()
+  n <- alice.mbox.count()
+  m <- bea.mbox.count()
+  alice.log(holds $${n} events)
+  bea.log(holds $${m} events)
+  alice.mbox.dump()
+  bea.mbox.dump()
+
+demo.control:
+  '''
+  Lifecycle as messages: ask actor zero for status over the same wire the
+  actors use.  Pool scaling exists as a control envelope; the pool itself is
+  deferred to the flux-pushdown round.
+  '''
+  portal0.status()
+
+hop.probe:
+  '''A target run at the place, by either spelling'''
+  log(${green}probe ${sep} ${dim}at `hostname` ambient=$${__ambient__:-none}${no_ansi})
+
+demo.place:
+  '''
+  The sync face of the same substrate: no actor, no queue, no identity.  An
+  inline elixir block runs at the place, then a cmk target hops in by the
+  ambient spelling and by the direct dispatch verb.
+  '''
+  (| IO.puts("6 * 7 = " <> Integer.to_string(6 * 7)) |) in beamx
+  (| CMK_SUPERVISOR=0 CMK_PLUGINS_DIR=.cmk ${__cmk__} hop.probe |) in beamsh
+  CMK_PLUGINS_DIR=.cmk env=CMK_PLUGINS_DIR ${make} beamsh.dispatch/hop.probe
+
+feed/%:
+  jb(name=${*} stamp=`date +%T`) | folder.cast()
+
+demo.shape:
+  '''
+  Install-time mobility on the portal: the jq fold moved once, at compile,
+  and resides portal-side; every cast is transformed before it lands.
+  '''
+  folder.log(casting through a resident shape)
+  folder.serve(); \
+  flux.pool(2,feed/grace,feed/heidi); \
+  folder.serve.stop()
+  folder.mbox.dump()
+
+text.upper:
+  '''Receiver-side handler: uppercase the argument, answer with a Response'''
+  req="$${CMK_EVENT}"
+  corr=`"""$$req""" | ${jq.run} -r .id`
+  who=`"""$$req""" | ${jq.run} -r .reply_to`
+  ans=`"""$$req""" | ${jq.run} -r '.params.arg | ascii_upcase'`
+  ${jq.run} -cn --arg c "$$corr" --arg r "$$ans" '{jsonrpc:"2.0",id:$$c,result:$$r}' | ${make} $$who.cast
+
+demo.ask:
+  '''
+  The reply plane, one verb, two transports: the same ask round-trips over
+  the unix-socket agent and then over the portal.  The responder runs
+  text.upper receiver-side and answers with a Response object cast to the
+  replies actor; the asker polls that mailbox by id.
+  '''
+  sock.log(ask over the socket transport)
+  sock.serve()
+  r=`printf '%s' "hello socket" | ${make} sock.ask/text.upper`
+  sock.log(reply ${sep} $$r)
+  sock.serve.stop()
+  remote.log(ask over the portal transport)
+  remote.serve()
+  r=`printf '%s' "hello portal" | ${make} remote.ask/text.upper`
+  remote.log(reply ${sep} $$r)
+  remote.serve.stop()
+
+svc.hello:
+  '''Sent into the running service; runs portal-side off the queue'''
+  log(hi from inside the service ${sep} `hostname`)
+
+demo.svc:
+  '''
+  The banana-svc handle shape on the portal transport: the same lifecycle
+  vocabulary (start / send / status / stop), with start now a registration
+  rather than a boot.  send is a goals-plane message and rides the queue.
+  '''
+  this.alice.svc.start
+  this.alice.svc.send/svc.hello
+  this.alice.svc.status
+  this.alice.svc.stop
+  this.alice.svc.status
+
+__main__: demo.actors demo.place demo.shape demo.ask demo.svc demo.control

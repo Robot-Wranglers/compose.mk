@@ -1,0 +1,29 @@
+# See also: https://docs.github.com/en/actions
+# Headless embedded-TUI suite (via tox): drives loadf / tux.open / tux.dispatch
+# against the compose.mk:tux container without a tty, asserting on the tmuxp load
+# markers. Very heavy -- it builds compose.mk:tux (compiles tmux from source,
+# pulls lazydocker + tpm) -- so this is ON-DEMAND ONLY (manual from the Actions
+# tab, or invoked by another workflow), never on push/PR.
+name: TUI Tests
+on:
+  workflow_dispatch: {}
+  workflow_call: {}
+permissions:
+  contents: read
+jobs:
+  tui:
+    name: Headless TUI (pytest via tox)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Initialize
+        run: make clean init
+      - name: Run tui-tests
+        run: make tui-test

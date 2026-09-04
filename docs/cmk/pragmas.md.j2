@@ -1,0 +1,188 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+## Compiler Pragmas
+<hr class="section-rule lvl-2">
+
+<style>.rst-content table { width: 100%; }</style>
+
+!!! terminology "Pragma"
+    A pragma[^pragma] (from *pragmatic*) is typically a directive embedded in source that conveys information to the compiler or interpreter without belonging to the language's own semantics: a way to configure the toolchain from inside the program it is building.  Familiar examples are C's `#pragma once` or a Python source-encoding declaration.
+
+In CMK, pragma is the third member of a family that also includes [dialects]({{_}}/cmk/metaprogramming/#about-dialects) and [sugar]({{_}}/cmk/metaprogramming/#about-sugar).  Like other members of that family, pragma allows a `.cmk` file to *extend the syntax that it's written in.*  It covers simpler use-cases are well like setting overridable per-program settings in source, and without piling environment variables onto the shebang.
+
+!!! contract "Pragma Marker Contract"
+    The pragma marker is a block like `cmk_pragma ::: .. :::` with JSON in the middle, where `cmk_pragma` is not case sensitive.  The JSON isn't strict, and is actually a version of JSON5; anything malformed **fails the compile loudly**.
+
+    * **JSON5-lite**: trailing commas and `//` comments are tolerated.
+    * **no clobbering**: each key is normalized and exposed as a compiler-only variable, so a pragma can never clobber an internal control variable.
+    * **resolution**: **pragma > environment > default**, where a scalar replaces (with a warning) and an array accumulates.
+    * **not boot-reaching**: resolution cannot reach the early [supervisor / bootloader]({{_}}/runtime/#lifecycle-boot-settings), so settings like (`CMK_SUPERVISOR`, `CMK_DISABLE_HOOKS`) must stay on the shebang or in the environment.
+
+<br/>
+
+{{ macros.section(3, "Example: Target Locals", id="example-target-locals") }}
+
+The `pragma.cmk` demo below sets two pragmas: `compiler_verbose` to compile quietly, and [`target_locals`](#pragma-target_locals) so a recipe can read back its own shell vars as JSON via `cmk.__locals__()`.
+
+{{site.embed_demo('demos/cmk/pragma.cmk', github=github)}}
+
+<br/>
+
+{{ macros.section(3, "Example: User-Defined Block Treatments", id="example-block-brackets") }}
+
+This pragma extends the syntax, assigning a *treatment* to the otherwise-meaningless brace bracket so its body is piped through a chosen stdlib target at compile time.  The demo assigns it a whitespace-normalizer.
+
+{{site.embed_demo('demos/cmk/banana-user-defined.cmk', github=github)}}
+
+<br/>
+
+{{ macros.section(3, "Pragma Protocol", id="pragma-protocol") }}
+
+{{ macros.protocol('__pragma__',
+    capability='Resolved pragma settings; a type of program-manifest.',
+    surface='Read a setting via `__pragma__.get` / `.append` / `.sh`. `${__pragma__}` is the whole JSON manifest and a same-name observer target.',
+    notes='The compile-time twin of the `CMK_PRAGMA_*` env namespace, and the pragma member of the program self-model triad (`__plugins__` / `__modules__` / `__pragma__`).',
+    mkdocs=mkdocs) }}
+
+Nothing outside the compiler touches the `CMK_PRAGMA_*` wire-format directly; consumers read settings through the `__pragma__` resolvers instead:
+
+| resolver | reads | semantics |
+| --- | --- | --- |
+| `__pragma__.get(<name>, <default>)` | one scalar key | *replace* (pragma > env > default, warns on override) |
+| `__pragma__.append(<name>, <default>)` | one list key | *accumulate* (env and pragma both contribute, like `+=`) |
+| `__pragma__.sh(<KEY>)` | shell-time reader | a `sed` filter over the compiled `export CMK_PRAGMA_*` lines, for boot/compile stages where make is not yet up |
+| `${__pragma__}` | the whole manifest | one compact JSON object (e.g. `{"recipe_join":";","vm_trace":"1"}`); lazy `$(shell …)`, degrades to `{}` when empty |
+
+The `__pragma__` self-model is also an observer target that prints the manifest.  Like the rest of the [program self-model triad]({{_}}/plugins/overview#program-self-models), it is queryable as both a variable and a same-name target.
+
+<br/>
+
+{{ macros.section(3, "Catalog", id="catalog") }}
+
+Every shipped pragma at a glance; click a key for the full description [below](#reference).  The *(boot)* pragmas configure a program's lifecycle rather than its compilation; they take effect only via `cmk run` and are detailed with the [supervisor machinery]({{_}}/runtime/#lifecycle-boot-settings).
+
+| Pragma | Syntax | What it does | Used by |
+| --- | --- | --- | --- |
+| [`recipe_join`](#pragma-recipe_join) | `"recipe_join": "&&"` \| `";"` \| `"none"` | Connector joining recipe-body lines: fail-fast / run-all / classic per-line. | - |
+| [`plugin_pragma_allowed`](#pragma-plugin_pragma_allowed) | `"plugin_pragma_allowed": true` | Two-pass compile: let imported plugins' pragma alter the importer. | - |
+| [`compiler_pre`](#pragma-compiler_pre_post) / [`compiler_post`](#pragma-compiler_pre_post) | `"compiler_pre": ["stage"]` | Splice extra preprocessor stages before / after the core chain. | {{macros.repo_link('demos/cmk/vm-coroutines.cmk', name='vm-coroutines.cmk', github=github)}} |
+| [`vm_hydrate`](#pragma-compiler_pre_post) | `"vm_hydrate": true` | Alias for `compiler_pre += vm_hydrate` (auto-load the VM stage). | [`virtual-machine`]({{_}}/modules/virtual-machine) |
+| [`target_locals`](#pragma-target_locals) | `"target_locals": true` | Enable per-recipe `__locals__()` capture (the vars a recipe defined). | {{macros.repo_link('demos/cmk/jqd.cmk', name='jqd.cmk', github=github)}} |
+| [`bootloaders`](#pragma-lifecycle) | `"bootloaders": ["name"]` | *(boot)* Bash `define`s sourced in the supervisor before make. | {{macros.repo_link('demos/cmk/pragma-boot.cmk', name='pragma-boot.cmk', github=github)}} |
+| [`cmk_pre`](#pragma-lifecycle) / [`cmk_post`](#pragma-lifecycle) | `"cmk_pre": ["target"]` | *(boot)* Make targets run before / after the main pipeline. | {{macros.repo_link('demos/cmk/pragma-boot.cmk', name='pragma-boot.cmk', github=github)}} |
+| [`hooks`](#pragma-lifecycle) | `"hooks": "off"` | *(boot)* Disable `<target>.pre` / `.post` target-rewriting. | - |
+| [`bootloader_disabled`](#pragma-lifecycle) | `"bootloader_disabled": true` | *(boot)* Skip the bootloader entirely. | - |
+
+The interactive [`repl`](#repl) pragma (how a program *runs*, rather than how it compiles or boots) has its own [section below](#repl).
+
+<br/>
+
+{{ macros.section(3, "Reference", id="reference") }}
+
+<div class="def-cards">
+  <details class="def-card" id="pragma-recipe_join">
+    <summary class="def-card-head"><span class="def-card-name"><code>recipe_join</code></span><span class="def-card-kind">compile</span></summary>
+    <div class="def-card-body">
+      <p>Selects the <a href="{{_}}/cmk/compiler#recipe-body-joining">recipe-body joining</a> connector: how the newline-separated lines of one recipe body are combined into a single shell.</p>
+      <ul>
+        <li><code>&amp;&amp;</code>: <em>(default)</em> fail-fast; the body shares one shell and stops on the first error.</li>
+        <li><code>;</code>: run-all; the body still shares one shell but does not stop on failure.</li>
+        <li><code>none</code>: no join: each line becomes its own recipe-line (classic <code>make</code>), with <strong>no shared shell state</strong>.</li>
+      </ul>
+      <p><strong>Caution with <code>none</code>:</strong> with no shared shell across lines, anything that relies on it stops working: <code>cd</code> between lines, the <a href="{{_}}/cmk/compiler#capture-operator"><code>&lt;-</code> operator</a>, and the <code>&amp;&amp;</code>-chained decorator forms.  Use it only when you specifically want classic per-line <code>make</code> semantics.</p>
+      <p class="def-card-see"><a href="{{_}}/cmk/compiler#recipe-body-joining">Recipe-Body Joining</a></p>
+    </div>
+  </details>
+
+  <details class="def-card" id="pragma-plugin_pragma_allowed">
+    <summary class="def-card-head"><span class="def-card-name"><code>plugin_pragma_allowed</code></span><span class="def-card-kind">compile</span></summary>
+    <div class="def-card-body">
+      <p>By default an imported plugin has <strong>zero</strong> influence on how its importer compiles, since pragma is strictly a property of the entry program.  This gate opts the entry into a <strong>two-pass</strong> compile where its imported plugins' pragma can alter the importer's own compilation.</p>
+      <p>With the gate set, <code>mk.compile</code> runs a discover+merge phase (the <code>__pragma__.resolve</code> target) before the real compile:</p>
+      <ol>
+        <li><strong>Discover:</strong> compile the entry once in register-only discovery mode (populates the import list but skips code-gen), then re-parse so the <em>real</em> imports populate <code>${__plugins__.paths}</code> (computed / conditional / <code>foreach</code> imports resolve for real, no shadow parser).</li>
+        <li><strong>Merge:</strong> read each discovered plugin's pragma and merge it, <strong>strictly additive</strong>: a key that appears in more than one candidate is a <strong>hard error</strong>, so stacking can only <em>add</em> settings, never quietly override one.</li>
+        <li><strong>Recompile</strong> with the merged manifest.</li>
+      </ol>
+      <p>The proven example: a plugin whose <code>recipe_join: ";"</code> flips the <em>importer's</em> joiner from the <code>&amp;&amp;</code> default to run-all.  Without the gate that plugin pragma is inert.</p>
+      <p class="def-card-see"><a href="{{_}}/plugins/overview#program-self-models">Program Self-Models</a></p>
+    </div>
+  </details>
+
+  <details class="def-card" id="pragma-compiler_pre_post">
+    <summary class="def-card-head"><span class="def-card-name"><code>compiler_pre</code> / <code>compiler_post</code></span><span class="def-card-kind">compile</span></summary>
+    <div class="def-card-body">
+      <p>The preprocessor runs a fixed chain of stages (<code>minify decorators dialect cmkanchor dedent moduledoc sugar &hellip; unsentinel</code>).  These two <strong>list</strong> settings splice extra stages around it: <code>compiler_pre</code> prepends, <code>compiler_post</code> appends.</p>
+      <pre><code># cmk_pragma ::: { "compiler_pre": ["mystage"], "compiler_post": ["cleanup"] } :::</code></pre>
+      <p>Both <strong>accumulate</strong> (read via <code>__pragma__.append</code>): the pragma <strong>and</strong> the matching env var (<code>CMK_COMPILER_PRE</code> / <code>CMK_COMPILER_POST</code>) both contribute, like <code>+=</code>.  With neither set the effective chain is byte-identical to the core one, so it costs nothing by default.</p>
+      <p>An injected name resolves one of two ways:</p>
+      <ul>
+        <li>a <strong>core</strong> <code>.cmk.&lt;name&gt;</code> stage macro (plus an <code>lang.comp.pipeline.&lt;name&gt;</code> target on the stepwise debug path), or</li>
+        <li>a <strong>plugin-provided</strong> stage: a <code>_cmk_blk_&lt;name&gt;</code> awk <code>define</code> shipped by a <code>.cmk</code> on <code>CMK_PLUGINS_DIR</code>.  Since plugins are not loaded during compilation, the block is <strong>lifted</strong> out of the file (extracted to a temp and run as <code>awk -f</code>).  A name resolving to neither is skipped with a warning.</li>
+      </ul>
+      <p><strong><code>vm_hydrate: true</code></strong> is a back-compat alias for <code>compiler_pre += vm_hydrate</code>, whose stage body is <code>_cmk_blk_vm_hydrate</code> lifted from <code>virtual-machine.cmk</code>, so the core compiler no longer hard-codes any VM concept.</p>
+      <p class="def-card-see"><a href="{{_}}/cmk/metaprogramming#about-sugar">Sugar &amp; Stages</a></p>
+    </div>
+  </details>
+
+  <details class="def-card" id="pragma-target_locals">
+    <summary class="def-card-head"><span class="def-card-name"><code>target_locals</code></span><span class="def-card-kind">compile</span></summary>
+    <div class="def-card-body">
+      <p>When truthy, recipes that reference <code>__locals__</code> (or a <code>*.locals</code> convenience wrapper) get a <strong>baseline-capture preamble</strong> injected as their first recipe line: a snapshot of the shell environment at recipe entry.  It costs nothing for recipes that never reference it.</p>
+      <p><code>${cmk.__locals__()}</code> then yields a JSON object of the vars <em>this</em> recipe defined: current shell vars minus that baseline (so it captures <code>&lt;-</code> vars and <code>export</code>s alike).  It expands to a shell snippet, so use it via <code>&lt;-</code> or backticks, not as a bare arg.  Without the pragma, <code>__locals__</code> prints <code>{}</code> and a warning.</p>
+      <p class="def-card-see"><a href="{{_}}/cmk/quickref#reflection">Reflection</a></p>
+    </div>
+  </details>
+
+  <details class="def-card" id="pragma-lifecycle">
+    <summary class="def-card-head"><span class="def-card-name">Boot lifecycle</span><span class="def-card-kind">boot</span></summary>
+    <div class="def-card-body">
+      <p>Five pragmas configure a program's boot <strong>lifecycle</strong> (before -&gt; main -&gt; after) rather than its compilation:</p>
+      <ul>
+        <li><code>bootloaders</code>: inline bash <code>define</code>s <code>source</code>d in the supervisor's shell before make (single <code>$</code>; can register an <code>EXIT</code> trap).</li>
+        <li><code>cmk_pre</code> / <code>cmk_post</code>: make targets run before / after the main pipeline (a failing <code>cmk_pre</code> aborts before main; <code>cmk_post</code> still runs).  Three accumulating surfaces each: pragma, env (<code>CMK_PRE</code>/<code>CMK_POST</code>), and the <code>__cmk_pre__</code>/<code>__cmk_post__</code> parse-time handle.</li>
+        <li><code>hooks: off</code>: disables the <code>&lt;target&gt;.pre</code>/<code>.post</code> target-rewriting.</li>
+        <li><code>bootloader_disabled</code>: skips the bootloader entirely.</li>
+      </ul>
+      <p>These take effect only via <code>cmk run</code> (the path that owns the re-exec) and thread into the canonical <code>CMK_DISABLE_HOOKS</code>/<code>CMK_BOOTLOADER*</code> env, not the <code>CMK_PRAGMA_*</code> namespace, because the bash header reads them before make exists.  The one boot setting a pragma can <em>never</em> set is the supervisor (<code>CMK_SUPERVISOR</code>).</p>
+      <p class="def-card-see"><a href="{{_}}/runtime/#lifecycle-boot-settings">Lifecycle &amp; Boot Settings</a> (Runtime)</p>
+    </div>
+  </details>
+</div>
+
+<br/>
+
+{{ macros.section(3, "Example: REPL Mode", id="repl") }}
+<a id="pragma-repl"></a>
+
+Where the compile pragmas shape how a program *compiles* and the boot settings how it *boots*, `repl` declares how it *runs*: the program's **default action** becomes an interactive REPL over its own target namespace, rather than a single pass of `__main__`.  Turn `repl` on and `cmk run` launches the harness; typing a target name runs it (think of `python`'s interactive mode, or `irb`, for a `.cmk`).  It needs no import or launcher, since the REPL harness is built into the core dispatcher.
+
+The object form wires the harness's three regions (a scrolling **print** stream, the **eval** input sink, and a one-line **read** mode-line) to the program's own targets:
+
+```yaml
+repl: { read: <t>, eval: <t>, print: <t>, exit_after: 1 }
+```
+
+The reflective overlay in {{ macros.repo_link('demos/cmk/overlay.cmk', name='overlay.cmk', github=github) }} wires exactly this.  Naming a target explicitly **bypasses** the mode; the `repl` subcommand **forces** it on any program.  Either way only the runtime applies it, since it owns the harness.  See also the [Virtual Machine]({{_}}/modules/virtual-machine).
+
+The REPL harness in action, a program whose only pragma flips it into an interactive shell over its own targets:
+
+{{site.embed_demo('demos/cmk/repl.cmk', github=github)}}
+
+This completes the **dialect + sugar + pragma** triad.  A natural next step (not yet implemented) is bundling all three under one named language, selectable in a single line (the way Racket's `#lang` names a whole language) so a project-specific DSL can be reused across files without repeating its hints.
+
+<br/>
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Compiler Tutorial]({{_}}/cmk/compiler): the concrete syntax and lowering the pragmas configure ([recipe-body joining]({{_}}/cmk/compiler#recipe-body-joining), the [`<-` operator]({{_}}/cmk/compiler#capture-operator)).
+* [Metaprogramming]({{_}}/cmk/metaprogramming): dialects and sugar, the other two members of the family.
+* [Runtime]({{_}}/runtime/#lifecycle-boot-settings): the boot-lifecycle pragmas in depth, with the supervisor.
+
+<br/>
+
+{{ macros.section(3, "References", id="references") }}
+
+[^pragma]: {{ tufte.wiki('Directive_(programming)')|trim }}
+
+<br/>

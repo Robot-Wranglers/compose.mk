@@ -1,22 +1,22 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 
 ## Makeception 
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-2">
 
-This is a pretty extreme example of the capabilities of `compose.mk` to communicate [across matrioshka layers]({{mkdocs.site_relative_url}}/matrioshka/#advanced-matrioshka-idioms).  Consider the following code, which we might call "makeception".  It's well-commented, but it takes a minute to wrap your head around, so let's prime the intuition.
+This is a pretty extreme example of the capabilities of `compose.mk` to communicate [across matrioshka layers]({{_}}/matrioshka/#advanced-matrioshka-idioms).[^recursion]  Consider the following code, which we might call "makeception".  It's well-commented, but it takes a minute to wrap your head around, so let's prime the intuition.
 
 !!! tip "Road Map"
-    In this example, we'll use `compose.mk` to embed 2 container definitions and to build and steer them.  What's unusual about this example is that even *the build process* itself is encapsulated inside the same file! Rather than jamming bash in the Dockerfile, provisioning happens as part of a normal target.  We'll also see some practical examples of how to communicate across matrioshka layers, using the [stage stacks]({{mkdocs.site_relative_url}}/stages).
+    In this example, we'll use `compose.mk` to embed 2 container definitions and to build and steer them.  What's unusual about this example is that even *the build process* itself is encapsulated inside the same file! Rather than jamming bash in the Dockerfile, provisioning happens as part of a normal target.  We'll also see some practical examples of how to communicate across matrioshka layers, using the [stage stacks]({{_}}/stages).
 
-### The Code 
-<hr style="width:100%;border-bottom:3px solid black;">
+### Code 
+<hr class="section-rule lvl-3">
 
 It's harder to explain what it does than to actually build it. 😵‍💫 Jump to the [discussion at the end](#discussion) for a mission debrief.
 
-{{site.embed_demo('demos/matrioshka.mk', github=github)}}
+{{site.embed_twin('demos/matrioshka.mk', 'demos/cmk/matrioshka.cmk', github=github)}}
 
-### The Output
-<hr style="width:100%;border-bottom:3px solid black;">
+### Output
+<hr class="section-rule lvl-3">
 
 Abbreviated output looks something like this:
 
@@ -43,7 +43,7 @@ Pushing bob event to RUN stage
 ```
 
 ### Discussion
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 The "makeception" demo above is mainly just to demonstrate control, but since we're here.. **is this actually *practical***?  Well, maybe.  
 
@@ -51,17 +51,29 @@ To put this in perspective: It's pretty normal to have a Dockerfile with 100-300
 
 Looked at this way-- maybe the "really extreme" example of the matrioshka approach here actually isn't that bad?  It's also worth pointing out that this is structured enough to be easily extended, like adding tests for the container that's produced or adding repository-push tasks if and only if tests have finished successfully, and so on.
 
-The main trouble with this example is that layer-caching does makes it impractical for component-oriented usage (like say, [as a widget in the TUI]({{mkdocs.site_relative_url}}/advanced-tuis/#understanding-widgets)).  But this isn't necessarily a problem if you're using it for automating container *build/test/push* work flows.
+!!! warning "Layer-caching caveat"
+    The main trouble with this example is that layer-caching does make it impractical for component-oriented usage (like say, [as a widget in the TUI]({{_}}/advanced-tuis/#understanding-widgets)).  But this isn't necessarily a problem if you're using it for automating container *build/test/push* work flows.
 
 !!! closer_look "Closer Look"
-    The eagle-eyed reader will also notice that this uses `docker:dind` as a base image, which is ultimately how JSON can move via `flux.stage.push`, even though tools like `jq` and `jb` are not actually installed.  (See [the JSON I/O docs]({{mkdocs.site_relative_url}}/standard-lib#json-io) for more details.)  If you can't use a base with docker in it, then you'd have to explicitly install `jq` and `jb` to use the stack.
+    The eagle-eyed reader will also notice that this uses `docker:dind` as a base image, which is ultimately how JSON can move via `stage.push`, even though tools like `jq` and `jb` are not actually installed.  (See [the JSON I/O docs]({{_}}/standard-lib#json-io) for more details.)  If you can't use a base with docker in it, then you'd have to explicitly install `jq` and `jb` to use the stack.
 
 Going further, one might also wonder whether the stage-stack could be used for **bidirectional communication during the build-phase** as well.  This is *also* actually possible, but left as an exercise for the reader.  (As a hint, this does require being "outside" of the finished build-phase currently, and then faking it with a `docker copy` call to concatenate  internal / external stacks.  There's an [open issue](https://github.com/docker/buildx/issues/1991) about allowing bind-mounts during build though, which would remove the special case and give stack access to *both* the build/run stages for the container.
 
+### See Also
+<hr class="section-rule lvl-3">
+
+* [Matrioshka]({{_}}/matrioshka/#advanced-matrioshka-idioms): the nested-layer idioms this demo pushes to an extreme.
+* [Stages]({{_}}/stages): the stage-stacks used to communicate across layers.
+* [Standard Library]({{_}}/standard-lib#json-io): the JSON I/O that moves data over `stage.push`.
+
+### References
+<hr class="section-rule lvl-3">
+
+[^recursion]: {{ tufte.wiki('Recursion')|trim }}
 
 {#
 <hr style="width:100%;border-bottom:3px solid black;">
-^[1]: If you want more long-format discussion around this sort of thing, [there is lots in the design docs]({{mkdocs.site_relative_url}}/but-why)
+^[1]: If you want more long-format discussion around this sort of thing, [there is lots in the design docs]({{_}}/but-why)
 #}
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

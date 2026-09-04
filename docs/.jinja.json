@@ -1,0 +1,14 @@
+{
+  "github": {
+    "org_name": "robot-wranglers",
+    "repo_name": "compose.mk",
+    "repo_url": "https://github.com/robot-wranglers/compose.mk"
+  },
+  "vars": {
+    "cmk_plugins_repo_url": "https://github.com/Robot-Wranglers/.cmk",
+    "k8stools_repo_url": "https://github.com/Robot-Wranglers/k8s-tools",
+    "k8stools_docs_url": "https://robot-wranglers.github.io/k8s-tools",
+    "pynchon_repo_url": "https://github.com/Robot-Wranglers/pynchon",
+    "mkparse_repo_url": "https://github.com/mattvonrocketstein/mk.parse"
+  }
+}

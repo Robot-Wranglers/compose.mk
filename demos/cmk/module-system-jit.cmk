@@ -1,0 +1,64 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# module-system-jit.cmk: recipe-time JIT of a define (cook + freeze variants).
+#
+# USAGE:
+#   ./demos/cmk/module-system-jit.cmk              all demos (default)
+#   ./demos/cmk/module-system-jit.cmk demo.target  just native_target
+#   ./demos/cmk/module-system-jit.cmk demo.module  just cmk.cook
+
+'''
+native_target and cmk.cook
+JIT-compile a CMK-lang define on first call and content-cache it -- recipes
+expand lazily, so a run that never reaches them compiles nothing.  This is
+the recipe-time JIT of a define (cf. the parse-time module system in
+module-system.cmk).
+
+demo.target:
+  native_target -- lower once, then freeze the fully-expanded recipe to a
+  shell script; the warm path is bash-only (one side-effecting target).
+demo.module:
+  cmk.cook -- cook a module define (lower) + re-exec its entry in a
+  child make; carries multiple targets/vars (two modules cooked here).
+'''
+
+# greet_impl: a single-target fragment for native_target (freeze to shell).
+define greet_impl
+greet.entry:
+  cmk.log(hello from a native_target)
+  items="alpha beta gamma"
+  for it in $${items}; do cmk.log(ensuring $${it} is ready); done
+  cmk.log(all ready)
+endef
+
+# DynModule1 / DynModule2: two multi-target fragments for cmk.cook.
+# Each is cooked (JIT-compiled) on first call and re-exec'd in a child --
+# unlike a parse-time import.module they don't exist in this make process
+# until demo.module runs.  Each carries its own __main__ to dispatch.
+define DynModule1
+d1.hello:; cmk.log(hello from dynamically-lifted DynModule1)
+d1.__main__: d1.hello
+endef
+define DynModule2
+d2.ping:; cmk.log(ping from dynamically-lifted DynModule2)
+d2.pong:; cmk.log(pong from dynamically-lifted DynModule2)
+d2.__main__: d2.ping d2.pong
+endef
+
+__main__: demo.target demo.module
+
+demo.target:
+  '''
+  native_target: JIT-compile a define, freeze the fully-expanded recipe
+  to a shell script, then bash it (the warm path never touches make).
+  '''
+  $(call native_target, greet_impl, greet.entry)
+
+demo.module: demo.module.1 demo.module.2
+  '''
+  cmk.cook: cook two module defines dynamically -- each is
+  JIT-compiled on first call; its __main__ runs in a child make.
+  '''
+
+demo.module.1:; $(call cmk.cook, DynModule1, d1.__main__)
+demo.module.2:; $(call cmk.cook, DynModule2, d2.__main__)

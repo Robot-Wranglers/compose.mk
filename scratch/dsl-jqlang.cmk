@@ -1,0 +1,91 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# cmk_pragma ::: { "target_locals": true } :::
+#
+# dsl-jqlang.cmk:
+#   A tiny JSON-building DSL over jq, aimed at the jq -n --arg.. --argjson.. '..'
+#   boilerplate in .cmk/gitops.cmk.
+#
+#   The whole facade is one object: jqlang NAME(| shape |) declares a jq program over
+#   ., and NAME.locals() renders it from whatever vars the calling recipe defined --
+#   no --arg list, no var name repeated, and jq (not shell) does the coercion.
+#   Composition is the same call: a parent shape fromjsons a sub-object string captured
+#   from another render (as gitops.stat does by hand with --argjson).
+#
+#   jqlang is a core dsl kind (dsl.jqlang, in compose.mk's __hosted__ partition), so
+#   this demo just declares instances of it -- the point is the usage, and a drop-in
+#   for the verbose jq in gitops.stat.branch / gitops.stat.
+#
+#   Docker-free (needs git + jq).
+#
+# USAGE: ./demos/cmk/dsl-jqlang.cmk
+
+import log
+# jqlang is a dsl.* core-module kind; from dsl import jqlang binds it bare (else dsl.jqlang).
+from dsl import jqlang
+
+# the facade: ( jqlang NAME(| shape |) is a callable JSON object )
+#   Core dsl (a constructor for DSL objects) gives each instance .shape (the body
+#   copied aside), .fd/.file (the shape as a process-sub fd or a tmpfile), and .stream
+#   (a stdin stream through the base call).  The jqlang kind adds only the jq base call
+#   (the shape as a stdin filter, with jq CLI args) and .locals.  Three usage forms:
+#     NAME(<jq flags>)  filter a JSON stream on stdin, with jq flags
+#     NAME.stream()     the same, no flags
+#     NAME.locals()     feed this recipe's own vars, via __locals__
+#   The shape reads its inputs from ., so declaring one just names the output.
+
+# a git-status object: ( the gitops.stat.branch analog )
+#   The shape names each field once and lets jq coerce: __locals__ strings become
+#   numbers (tonumber) or a derived bool.  The recipe just captures the raw git facts
+#   and calls .locals().  NB a <- capture wants a plain pipeline: no &&/||/sh -c/nested
+#   $(..), since the capture splits on &&/|| even inside quotes.
+jqlang git_status(|
+  { branch:  .branch,
+    head:    .head,
+    changes: { staged: (.staged | tonumber), unstaged: (.unstaged | tonumber) },
+    dirty:   (((.staged | tonumber) + (.unstaged | tonumber)) > 0) }
+|)
+
+demo.git:
+  @# Compute the raw git facts, then render the shape from them.
+  log.target(git status ${sep} rendered from a jqlang shape)
+  branch <- git rev-parse --abbrev-ref HEAD ${stderr_devnull}
+  head <- git rev-parse --short HEAD ${stderr_devnull}
+  staged <- git diff --cached --name-only ${stderr_devnull} | ${stream.count.lines}
+  unstaged <- git diff --name-only ${stderr_devnull} | ${stream.count.lines}
+  git_status.locals()
+
+# composition: ( the gitops.stat analog )
+#   Merge JSON from other renders with the same call: capture a sub-object as a string,
+#   then the parent shape fromjsons it back into place.
+jqlang git_report(|
+  { status: (.status | fromjson),
+    repo:   .repo }
+|)
+
+demo.report:
+  @# status is another render (a JSON string); the shape parses it back.
+  log.target(git report ${sep} composing a sub-object)
+  status <- ${make} demo.git
+  repo <- git rev-parse --show-toplevel ${stderr_devnull} | xargs basename
+  git_report.locals()
+
+# streaming + jq flags: ( filter a JSON stream on stdin )
+#   NAME.stream() applies the shape; the bare NAME(<flags>) does the same with extra jq
+#   flags (here -c, for compact output).
+jqlang summary(| { keys: (keys), count: (length) } |)
+
+demo.stream:
+  log.target(stream ${sep} shape over stdin, then with jq flags)
+  echo '{"a":1,"b":2,"c":3}' | summary.stream()
+  echo '{"a":1,"b":2,"c":3}' | summary(-c)
+
+# anonymous, one-off: ( no declaration for a single use )
+#   jqlang(| shape |).locals() builds the object and renders it in one expression -- the
+#   anon-immediate lift keys on the trailing .locals() method.
+demo.oneoff:
+  log.target(one-off ${sep} anonymous inline shape)
+  commit <- git rev-parse --short HEAD ${stderr_devnull}
+  jqlang(| { commit: .commit } |).locals()
+
+__main__: demo.git demo.report demo.stream demo.oneoff

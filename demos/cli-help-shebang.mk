@@ -1,10 +1,10 @@
 #!/usr/bin/env -S ./compose.mk mk.interpret
-# demos/cli-help-shebang.mk: 
-#   Demonstrates compose.mk usage as an interpreter, 
+#
+# cli-help-shebang.mk:
+#   Using compose.mk as an interpreter,
 #   which amongst other things enables full support for online help.
 #
 # See the docs: https://robot-wranglers.github.io/compose.mk/cli-help/  
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.  
 #
 # USAGE:  
 #   ./demos/cli-help-shebang.mk help my-target

@@ -1,0 +1,37 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# banana-asm.cmk: characterizing nested bananas.
+'''
+Nests a named banana inner directly inside a named banana outer, to
+characterize named-in-named nesting (the corpus only has anonymous
+nested cases).  USAGE: ./demos/cmk/banana-asm.cmk
+'''
+
+import log
+from cmk import class
+from cmk import module
+# __main__: demo.lang.tree
+# lang.tree extends cmklang + namespace like module: callable + nested.
+cmk.class lang.tree(bases=dsl.cmklang,cmk.namespace)(||)
+
+lang.tree Zone1[|
+  lang.tree A[|
+    val = 1
+    label = alpha
+  |]
+  module B[|
+    val = 2
+    __main__:; log(module B main ran; B.val=${Zone1.B.val})
+  |]
+  summary = A=${Zone1.A.val} B=${Zone1.B.val}
+  __main__:; log(Zone1.__main__ ran; summary=${Zone1.summary})
+|]
+
+__main__:
+  ''' the lang.tree clone nests structures and is callable via __main__/__call__. '''
+  log(Zone1.A.val = ${Zone1.A.val})
+  log(Zone1.A.label = ${Zone1.A.label})
+  log(Zone1.B.val = ${Zone1.B.val})
+  log(Zone1.summary = ${Zone1.summary})
+  log(Zone1.__all__ = ${Zone1.__all__})
+  Zone1()
+  # this.Zone1.B.__main__

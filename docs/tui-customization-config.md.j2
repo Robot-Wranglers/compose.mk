@@ -2,13 +2,13 @@
 
 ## TUI Implementation Details
 
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-2">
 
 {{macros.img_link("tui-5.gif", mkdocs)}}
 
-How does this work?  The behaviour above relies on a few things.  First, the `compose.mk:tux` container supports docker-in-docker style host-socket sharing with zero configuration.  This means that the TUI can generally do all the same container orchestration tasks as the docker host.  
+How does this work?  The behaviour above relies on a few things.  First, the `compose.mk:tux` container supports docker-in-docker[^dind] style host-socket sharing with zero configuration.  This means that the TUI can generally do all the same container orchestration tasks as the docker host.  
 
-Without actually writing any custom code, there are many ways to customize the way that the TUI starts and the stuff that's running inside it.  By combining the TUI with the [`loadf` target,]({{mkdocs.site_relative_url}}/compose.mk#loading-compose-files) you can leverage existing compose files but skip [the usual integration with a project Makefile]({{mkdocs.site_relative_url}}/quickstart).
+Without actually writing any custom code, there are many ways to customize the way that the TUI starts and the stuff that's running inside it.  By combining the TUI with the [`loadf` target,]({{_}}/compose.mk#loading-compose-files) you can leverage existing compose files but skip [the usual integration with a project Makefile]({{_}}/quickstart).
 
 {{macros.img_link("tui-1.gif", mkdocs)}}
 
@@ -18,7 +18,19 @@ As mentioned in the section above, at the most basic level the TUI just maps mak
 
 ### TUI Customization
 
-Beyond the simple examples of customization mentioned in the last section, more advanced use-cases are also supported.  In general, this is usually accomplished by creating custom targets for different parts of the TUI's bootstrap process, then [overriding an appropriate environment variable]({{mkdocs.site_relative_url}}/config#tui-environment-variables) to use the new target.
+Beyond the simple examples of customization mentioned in the last section, more advanced use-cases are also supported.  In general, this is usually accomplished by creating custom targets for different parts of the TUI's bootstrap process, then [overriding an appropriate environment variable]({{_}}/config#tui-environment-variables) to use the new target.
 
-Documentation for this process isn't great right now, but for a start, have a look at the differences between targets like [docker.commander]({{mkdocs.site_relative_url}}/api#dockercommander) vs the similar-but-different [k3d.commander]({{mkdocs.site_relative_url}}/api#k3dcommander).
+Documentation for this process isn't great right now, but for a start, have a look at the bootstrap targets behind [docker.commander]({{_}}/api#dockercommander).
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+For the customization workflow itself, these pages carry more concrete examples:
+
+* [Advanced TUIs]({{_}}/advanced-tuis): extending the bootstrap process with custom targets.
+* [Embedded TUI]({{_}}/embedded-tui): the layout basics referenced above.
+* [Config]({{_}}/config#tui-environment-variables): the environment variables you override here.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^dind]: [Docker-in-Docker](https://hub.docker.com/_/docker)
 

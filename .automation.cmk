@@ -1,0 +1,439 @@
+#!/usr/bin/env -S ./compose.mk cmk compile
+#
+# cmk_pragma ::: { "compiler_verbose": 0 } :::
+#
+# .automation.cmk: project metrics for compose.mk (a pure-CMK plugin / module).
+#
+#   Promotes the stats surface that docs/stats.md.j2 used to inline (an awk pass, a
+#   couple of greps, a python one-liner) into first-class targets whose output is
+#   assembled with `jb` + a `jqlang` shape -- one machine-readable JSON document.
+#
+#   Members (each independently runnable, JSON or a scalar on stdout):
+#     * `stats`          -- the full report: compiler partition + counts + coverage,
+#                           one JSON object (jb-built, jqlang-reshaped).
+#     * `stats.compiler` -- size/partition metrics (delegates to core `lang.comp.stats`).
+#     * `stats.tests`    -- `def test_*` count across the suite (grep).
+#     * `stats.tests_sloc` -- non-blank / non-comment SLOC across the suite (grep).
+#     * `stats.suites`   -- the pytest suite markers, csv (conftest `_SUITE_MARKERS`).
+#     * `stats.targets`  -- public-target count via a one-pass awk (inlines `_targets.public_targets`).
+#     * `stats.coverage` -- {covered, denominator, percent} from the suite's coverage json.
+#     * `lint.demos`      -- demo comment/docstring house-style check; errors (nonzero exit) on
+#                           over-75-col, two-column padded label lists, a # prose block glued above
+#                           a target (should be its docstring), a multiline target docstring whose
+#                           opening/closing ''' is not alone, a misplaced cmk_dialect header
+#                           declaration, and a module docstring not directly below the header;
+#                           warns on comment backticks.
+#     * `lint.callforms`  -- flag legacy make-call syntax in demos that a cmk callform replaces
+#                           (convertible shape only); delegates to the callform fixer in lint mode.
+#     * `lint.self`       -- framework self-audit of compose.mk core (ported out of core): macro/target
+#                           twin collisions (`lint.self.collisions`) + `.awk.*` phase markers
+#                           (`lint.self.phase`).  Audits `CMK_SRC`, not user programs.
+#
+#   A library (no __main__): import it to use it --
+#       $(call include.plugins, prefix=. .automation.cmk)
+#
+# CONFIG (override from the client project):
+#   stats.src            file the size/target metrics measure          (default: ${CMK_SRC})
+#   stats.tests_glob     glob of test modules the def-count scans       (default: tests/test_*.py)
+#   stats.conftest       conftest holding the `_SUITE_MARKERS` tuple     (default: tests/conftest.py)
+#   stats.coverage.file  the suite's target-coverage summary json        (default: tests/.coverage.json)
+#   lint.demos.glob      the demo files `lint.demos` checks               (default: demos/cmk/*.cmk demos/*.mk)
+#   callform.fixer       path to the callform lint/fix script             (default: .claude/skills/project.callform.fix/callform_one.py)
+
+# `dsl.jqlang` (the reshape) and `dsl.awklang` (the target-count pass) are sub-language kinds used
+# qualified; `dsl` itself comes from the `cmk` prelude (it is not an openable module).
+from cmk import dsl
+docs.plugins.sync.allow ?= overview faults
+stats.src ?= ${CMK_SRC}
+stats.tests_glob ?= tests/test_*.py
+stats.conftest ?= tests/conftest.py
+stats.coverage.file ?= tests/.coverage.json
+lint.demos.glob ?= $(wildcard demos/cmk/*.cmk demos/*.mk)
+callform.fixer ?= .claude/skills/project.callform.fix/callform_one.py
+docstring.fixer ?= .claude/skills/project.docstring.fix/reflow_one.py
+
+# The public-target counter -- a one-pass awk that mirrors tests/_targets.public_targets:
+# count DISTINCT public base names of real target-definition lines, skipping `define` bodies
+# (their Dockerfile/awk/heredoc text), recipe / blank lines, and dotted / dashed / pattern
+# names.  `define __hosted__` is real targets, so it is scanned, not skipped.  Minted via
+# `dsl.awklang`, which exports the body as `_awklang_stats_targets_prog`, so awk `$0`
+# survives untouched (no `$(call)` frame to collide with).
+dsl.awklang stats.targets.prog(|
+  /^define[ \t]+__hosted__([ \t]|$)/ { next }
+  /^define[ \t]/ { ind=1; next }
+  /^endef/       { ind=0; next }
+  ind            { next }
+  /^[ \t]/       { next }
+  /^[ \t]*$/     { next }
+  {
+    if (!match($0, /^[A-Za-z0-9._%\/!-]+([ \t]+[A-Za-z0-9._%\/!-]+)*:/)) next
+    head=substr($0,1,RLENGTH); after=substr($0,RLENGTH+1,1)
+    if (after=="=" || after==":") next
+    sub(/:$/,"",head)
+    n=split(head,toks,/[ \t]+/)
+    for (i=1;i<=n;i++) { b=toks[i]; sub(/\/.*$/,"",b)
+      if (b=="") continue
+      if (b ~ /^[.-]/) continue
+      if (b ~ /%/) continue
+      seen[b]=1 }
+  }
+  END { c=0; for (k in seen) c++; print c }
+|)
+
+# The report shape: splice the compiler partition to the top level, keep the scalar counts,
+# and nest the coverage summary under `target_coverage`.  It reads a single object from stdin
+# (jb-built below) -- `.compiler` / `.coverage` arrive as raw JSON via jb's `:raw`, so no
+# `fromjson` is needed.
+dsl.jqlang stats.shape(|
+  .compiler + {
+    test_count:      .test_count,
+    tests_sloc:      .tests_sloc,
+    target_count:    .target_count,
+    suite_list:      .suite_list,
+    target_coverage: .coverage
+  }
+|)
+
+stats:
+	@# The full project stats report as one pretty-printed JSON object on stdout: the compiler
+	@# size/partition metrics, the test / target / suite counts, and the target-coverage summary.
+	@# Gathers each half from the members below, builds a typed object with `jb` (`:raw` splices
+	@# the JSON docs, `:number` keeps the counts unstringified), then reshapes via the `jqlang`
+	@# shape.  The status banner goes to stderr; stdout is machine-readable.
+	@#
+	@# USAGE:  make stats
+	cmk.log(${dim}project stats ${sep}${no_ansi_dim} compiler / counts / coverage ${dim_ital}(composed json))
+	compiler   <- ${make} stats.compiler
+	coverage   <- ${make} stats.coverage
+	tests      <- ${make} stats.tests
+	tests_sloc <- ${make} stats.tests_sloc
+	targets    <- ${make} stats.targets
+	suites     <- ${make} stats.suites
+	${jb} compiler:raw="$${compiler}" coverage:raw="$${coverage}" \
+	  test_count:number="$${tests}" tests_sloc:number="$${tests_sloc}" \
+	  target_count:number="$${targets}" suite_list="$${suites}" \
+	  | stats.shape()
+
+stats.compiler: lang.comp.stats
+	@# The size/partition metrics for `stats.src` as JSON -- delegates to core `lang.comp.stats`
+	@# (one shared awk, no third divergent copy).  USAGE:  make stats.compiler
+
+stats.tests:
+	@# Count of `def test_*` functions across the suite (`stats.tests_glob`), on stdout.
+	@# USAGE:  make stats.tests
+	grep -rhE '^[[:space:]]*def test_' ${stats.tests_glob} | ${stream.count.lines}
+
+stats.tests_sloc:
+	@# Source lines of code across the suite (`stats.tests_glob`) -- non-blank / non-comment
+	@# lines, matching the SLOC convention of the compiler metrics -- on stdout.
+	@# USAGE:  make stats.tests_sloc
+	grep -rhvE '^[[:space:]]*(#.*)?$$' ${stats.tests_glob} | ${stream.count.lines}
+
+stats.suites:
+	@# The pytest suite markers as a csv, read from conftest's `_SUITE_MARKERS` tuple (the whole
+	@# tuple body, not just its opening line).  USAGE:  make stats.suites
+	sed -n '/^_SUITE_MARKERS = (/,/^)/p' ${stats.conftest} | grep -oE '"[a-z]+"' | tr -d '"' | paste -sd,
+
+stats.targets:
+	@# Public-target count of `stats.src` via the `stats.targets.prog` awk pass (inlines the
+	@# python `_targets.public_targets`), on stdout.  USAGE:  make stats.targets
+	awk "$${_awklang_stats_targets_prog}" ${stats.src}
+
+stats.coverage:
+	@# The target-coverage summary ({covered, denominator, percent}) from `stats.coverage.file`
+	@# as JSON (`null` when the file is absent -- coverage is opt-in).  USAGE:  make stats.coverage
+	if [ -f ${stats.coverage.file} ]; then ${jq} '{covered, denominator, percent}' ${stats.coverage.file}; else echo null; fi
+
+# The demo source-style checker -- one awk pass over comment and docstring lines flagging the
+# mechanical house-style violations, two-tier.  ERROR (nonzero exit, gates CI/hook): a comment
+# or docstring line wider than 75 columns, a two-column padded label list inside a '''
+# docstring (the house form is <label>: then the description indented beneath, never
+# label<pad>descr alignment), a col-0 # prose block glued directly above a target line (that
+# documents the target and should be its docstring; section headers # x: ( .. ) are exempt),
+# a multiline target docstring whose opening/closing ''' is not alone on its line, a
+# cmk_dialect header declaration outside its slot (it belongs below the executive summary and
+# above the '''-docstring), and a module docstring not directly below the # block header.
+# WARNING (advisory, no exit effect): a backtick code-quote inside a
+# # / @# comment -- soft because the rule is "only when strictly necessary", a judgment call.
+# define/endef bodies and recipe code are skipped so embedded foreign source is never touched.
+# Minted via awklang (exported _awklang_lint_demos) so awk $0 rides $(value) untouched.
+dsl.awklang lint_demos(|
+  BEGIN { bt=sprintf("%c",96) }
+  FNR==1 { indef=0; indoc=0; cblk=0; seen_sum=0; hdr_done=0; mdoc_seen=0; code_seen=0 }
+  /^define[ \t]/  { indef=1; next }
+  /^endef[ \t]*$/ { indef=0; next }
+  indef           { next }
+  {
+    s=$0; nq=gsub(/'''/,"&",s)
+    preindoc=indoc
+    isdoc=(indoc || nq>0)
+    if (nq%2==1) indoc=!indoc
+    iscomment=($0 ~ /^[ \t]*@?#/)
+    if ((iscomment||isdoc) && length($0)>75) {
+      longest=0; nt=split($0,toks,/[ \t]+/); for(k=1;k<=nt;k++) if(length(toks[k])>longest) longest=length(toks[k])
+      if (longest<=60) {   # exempt a line whose overflow is one unbreakable token (a URL)
+        printf "%s:%d: error: over 75 columns (%d)\n", FILENAME, FNR, length($0); fail=1 } }
+    if (isdoc && $0 ~ /[A-Za-z0-9)]   +[^ ]/) {
+      printf "%s:%d: error: two-column padding (use <label>: then indented descr)\n", FILENAME, FNR; fail=1 }
+    if (iscomment && index($0,bt)) {
+      printf "%s:%d: warning: backtick code-quote in comment\n", FILENAME, FNR }
+    # a MULTILINE target docstring (indented ''') must have its opening and closing
+    # ''' each alone on its line -- flag content glued to the opener or the closer.
+    if (nq==1 && $0 ~ /^[ \t]/) {
+      if (!preindoc) { after=$0; sub(/^.*'''/,"",after)
+        if (after ~ /[^ \t]/) {
+          printf "%s:%d: error: multiline docstring delimiter must be on its own line\n", FILENAME, FNR; fail=1 } }
+      else { before=$0; sub(/'''.*$/,"",before)
+        if (before ~ /[^ \t]/) {
+          printf "%s:%d: error: multiline docstring delimiter must be on its own line\n", FILENAME, FNR; fail=1 } } }
+    # a cmk_dialect declaration belongs in the header: below the executive summary,
+    # above the '''-docstring expanded explanation (same slot as cmk_pragma).
+    if ($0 ~ /^#[ ]*cmk_dialect([ \t]|$)/) {
+      if (hdr_done) {
+        printf "%s:%d: error: cmk_dialect below the expanded explanation (move into the header, below the summary)\n", FILENAME, FNR; fail=1 }
+      else if (!seen_sum) {
+        printf "%s:%d: error: cmk_dialect above the executive summary (move below it)\n", FILENAME, FNR; fail=1 } }
+    else if ($0 ~ /^#/ && $0 !~ /^#!/ && $0 !~ /^#[ ]*cmk_(pragma|sugar|dialect)/ && $0 ~ /[^# \t]/) { seen_sum=1 }
+    if ($0 ~ /^'''/) hdr_done=1
+    else if ($0 !~ /^#/ && $0 !~ /^[ \t]*$/) hdr_done=1
+    # the module docstring (first col-0 ''') must sit directly below the # block
+    # header -- only blank lines between; flag it if col-0 code precedes it.
+    if (!mdoc_seen && $0 ~ /^'''/) {
+      mdoc_seen=1
+      if (code_seen) {
+        printf "%s:%d: error: module docstring not directly below the block header (move it up)\n", FILENAME, FNR; fail=1 } }
+    else if ($0 !~ /^#/ && $0 !~ /^[ \t]*$/ && $0 !~ /^'''/) { code_seen=1 }
+    # a col-0 `#` block glued (no blank line) above a target line documents that
+    # target and should be its docstring -- INCLUDING a `# title: ( brief )` line
+    # (a region header that must NOT convert should be blank-separated from the target).
+    if (!indoc && $0 ~ /^#([ ]|$)/ && $0 !~ /^#!/) {
+      if (!cblk) { cblk=1; cstart=FNR }
+      cend=FNR
+    } else if ($0 ~ /^[ \t]*$/) { cblk=0 }
+    else {
+      if (cblk && cend==FNR-1 && FILENAME !~ /\.mk$/ && $0 ~ /^[A-Za-z0-9_][A-Za-z0-9._%\/-]*[ \t]*:([^=]|$)/) {
+        # only .cmk: converting a plain-make col-0 # comment to a recipe docstring
+        # is unsafe -- make expands $(..)/${..} in a @# recipe line but not in a comment.
+        tname=$0; sub(/[ \t]*:.*/,"",tname)
+        printf "%s:%d: error: comment block should be a target docstring (%s)\n", FILENAME, cstart, tname; fail=1 }
+      cblk=0
+    }
+  }
+  END { exit (fail?1:0) }
+|)
+
+lint.demos:
+	@# Lint every demo source (demos/cmk/*.cmk + demos/*.mk) for comment/docstring house-style
+	@# violations via the `lint_demos` awk pass.  Prints `file:line: severity: issue` findings on
+	@# stdout; exits nonzero on any `error` (75-col / two-column padding), not on `warning`
+	@# (backtick).  With `fix=1`, mechanically fixes the first offender instead of reporting.
+	@# USAGE:  make lint.demos  //  make lint.demos fix=1
+	cmk.log(${dim}lint demos ${sep}${no_ansi_dim} comment / docstring house style)
+	if [ "${fix}" = 1 ]; then python3 ${docstring.fixer}; else awk "$${_awklang_lint_demos}" ${lint.demos.glob}; fi
+
+lint.demos/%:
+	@# Lint a single demo source (the stem) with the same checks as `lint.demos`; `fix=1`
+	@# fixes the first offender in that file.  USAGE:  make lint.demos/demos/cmk/foo.cmk [fix=1]
+	if [ "${fix}" = 1 ]; then python3 ${docstring.fixer} --file ${*}; else awk "$${_awklang_lint_demos}" ${*}; fi
+
+lint.demo/%:
+	@# Singular alias for `lint.demos/<path>` (fix= is inherited by the sub-make).
+	@# USAGE:  make lint.demo/demos/cmk/foo.cmk [fix=1]
+	${make} lint.demos/${*}
+
+lint.callforms:
+	@# Flag legacy make-call syntax in demos that a cmk callform replaces (the
+	@# mechanically-convertible shape only -- no nested parens, not itself an arg to
+	@# another make function).  With `fix=1`, converts the first offender instead of
+	@# reporting.  USAGE:  make lint.callforms  //  make lint.callforms fix=1
+	cmk.log(${dim}lint callforms ${sep}${no_ansi_dim} legacy make-calls -> callforms)
+	if [ "${fix}" = 1 ]; then python3 ${callform.fixer}; else python3 ${callform.fixer} --lint ${lint.demos.glob}; fi
+
+# The framework self-audit -- compose.mk core auditing its own source (`CMK_SRC`), ported out of core
+# as project dev-tooling.  `lint.self.phase` checks the compiler's `.awk.*` phase markers via the awk
+# pass below; `lint.self.collisions` checks macro/target name twins + their smart-route safety class.
+# `pin_scan` marks a block pinned (must be a seed block) when the source references it at parse time;
+# it recognizes the current `lang.awk.export`/`stage.frag`/`export.frag` registration idiom.
+dsl.awklang lint_self_phase(|
+    '''
+    The maintainer self-audit of the compiler's own embedded-awk phase markers.  One pass over the
+    source; the verdict fails on a missing or inconsistent marker, a supervisor block that holds a
+    placeholder or sits in the hosted partition, or a parse-time reference to a hosted or undefined
+    block.  A block is marked pinned (must be seed) when it is referenced at parse time.
+    '''
+    function pin_scan(s,   rest,nm) {
+      rest=s
+      while (match(rest, /\$\(value \.awk\.[A-Za-z0-9._]+\)/)) {
+        nm=substr(rest,RSTART,RLENGTH); sub(/^\$\(value \.awk\./,"",nm); sub(/\)$/,"",nm)
+        pinned[nm]=1; rest=substr(rest,RSTART+RLENGTH) }
+      rest=s
+      while (match(rest, /def=\.awk\.[A-Za-z0-9._]+/)) {
+        nm=substr(rest,RSTART,RLENGTH); sub(/^def=\.awk\./,"",nm)
+        pinned[nm]=1; rest=substr(rest,RSTART+RLENGTH) }
+      rest=s
+      while (match(rest, /\/\^define \.awk\.[A-Za-z0-9._]+\//)) {
+        nm=substr(rest,RSTART,RLENGTH); sub(/^\/\^define \.awk\./,"",nm); sub(/\/$/,"",nm)
+        pinned[nm]=1; rest=substr(rest,RSTART+RLENGTH) }
+      rest=s
+      while (match(rest, /_cmk_(awk|load) +\.awk\.[A-Za-z0-9._]+/)) {
+        nm=substr(rest,RSTART,RLENGTH); sub(/^_cmk_(awk|load) +\.awk\./,"",nm)
+        pinned[nm]=1; rest=substr(rest,RSTART+RLENGTH) }
+      if (s ~ /\$\(call (lang\.awk\.[A-Za-z.]+|awk(comp|export|stage)),/) {
+        rest=s; sub(/^.*\$\(call [A-Za-z0-9._]+,/, "", rest)
+        while (match(rest, /\.awk\.[A-Za-z0-9._]+/)) {
+          nm=substr(rest,RSTART,RLENGTH); sub(/^\.awk\./,"",nm)
+          pinned[nm]=1; rest=substr(rest,RSTART+RLENGTH) } }
+    }
+    {
+      line=$0
+      if (line ~ /^#:phase /) {
+        n=split(line,F,/[ \t]+/); p_phase=F[2]; p_seed=""; p_awk=""; p_forbid=0
+        for(i=3;i<=n;i++){ if(F[i]~/^seed=/)p_seed=substr(F[i],6);
+          else if(F[i]~/^awklang=/)p_awk=substr(F[i],9);
+          else if(F[i]=="placeholder=forbidden")p_forbid=1 }
+        pending=1; next
+      }
+      if (line ~ /^define \.awk\./) {
+        name=line; sub(/^define \.awk\./,"",name); sub(/[ \t]+$/,"",name)
+        nblk++; seen[name]=1
+        inhosted[name]=in_hosted
+        if (pending){has_m[name]=1; m_phase[name]=p_phase; m_seed[name]=p_seed; m_awk[name]=p_awk; m_forbid[name]=p_forbid}
+        pending=0; inb=1; cur=name; at[name]=0
+        depth++; if(in_hosted) h_depth++
+        next
+      }
+      if (line ~ /^define /) {
+        if (line ~ /^define __hosted__/){in_hosted=1; h_depth=0}
+        else if (in_hosted) h_depth++
+        depth++; pending=0; next
+      }
+      if (line ~ /^endef/) {
+        if (inb && depth==1) inb=0
+        if (in_hosted){ if(h_depth==0) in_hosted=0; else h_depth-- }
+        if (depth>0) depth--
+        pending=0; next
+      }
+      pending=0
+      if (inb && line ~ /@@/) at[cur]=1
+      if (depth==0) pin_scan(line)
+    }
+    END {
+      fail=0; nfree=0; npin=0
+      for (nm in pinned) npin++
+      for (nm in seen) {
+        if (!has_m[nm]) { printf "  FAIL [D] %-24s missing #:phase marker\n", nm; fail++; continue }
+        exp_seed = (nm in pinned) ? 1 : 0
+        exp_awk  = (exp_seed==0) ? "yes" : "no"
+        if (m_seed[nm]+0 != exp_seed)
+          { printf "  FAIL [D] %-24s seed=%s but block is %s (pin=%d)\n", nm, m_seed[nm], (exp_seed?"pinned":"free"), (nm in pinned); fail++ }
+        if (m_awk[nm] != (m_seed[nm]+0==0?"yes":"no"))
+          { printf "  FAIL [D] %-24s awklang=%s inconsistent with seed=%s\n", nm, m_awk[nm], m_seed[nm]; fail++ }
+        if (m_phase[nm]=="SUPERVISOR" && at[nm])
+          { printf "  FAIL [A] %-24s SUPERVISOR block contains @@ placeholder\n", nm; fail++ }
+        if (m_phase[nm]=="SUPERVISOR" && !m_forbid[nm])
+          { printf "  FAIL [A] %-24s SUPERVISOR marker missing placeholder=forbidden\n", nm; fail++ }
+        if (m_phase[nm]=="SUPERVISOR" && inhosted[nm])
+          { printf "  FAIL [B] %-24s SUPERVISOR block sits inside __hosted__\n", nm; fail++ }
+        if (exp_seed==0) nfree++
+      }
+      for (nm in pinned) {
+        if (!(nm in seen)) { printf "  FAIL [C] %-24s parse/compile ref to undefined .awk block\n", nm; fail++ }
+        else if (inhosted[nm]) { printf "  FAIL [C] %-24s pinned-at-parse but sits inside __hosted__\n", nm; fail++ }
+      }
+      printf "lint.self.phase: %d blocks, %d pinned(seed), %d awklang-eligible(free), %d failure(s)\n", nblk, npin, nfree, fail
+      exit (fail?48:0)
+    }
+  |)
+
+lint.self.macros=$(sort $(foreach v,$(.VARIABLES),$(if $(filter file,$(origin ${v})),${v})))
+# The self-delegation gate strips dotted sub-target delegations before testing for a self-trampoline,
+# so a macro that pipes to its own sibling stages is not mistaken for one delegating to its bare twin.
+lint.self.selftramp=$(sort $(foreach v,$(.VARIABLES),$(if $(filter file,$(origin ${v})),$(if $(findstring make} ${v},$(subst make} ${v}.,,$(value ${v}))),${v}))))
+lint.self.selftramp.fwd=$(sort $(foreach v,$(.VARIABLES),$(if $(filter file,$(origin ${v})),$(if $(findstring make} ${v},$(subst make} ${v}.,,$(value ${v}))),$(if $(or $(findstring _mk.forward.args,$(value ${v})),$(findstring mk.unpack,$(value ${v})),$(findstring {*},$(value ${v})),$(findstring (1),$(value ${v})),$(findstring {1},$(value ${v}))),${v})))))
+
+lint.self: lint.self.collisions lint.self.phase
+	@# Self-audit of compose.mk core (`CMK_SRC`): macro/target twin collisions + `.awk.*` phase
+	@# markers.  Project dev-tooling -- audits the framework, not user programs.  Run standalone or
+	@# from CI.  USAGE:  make lint.self
+
+lint.self.collisions:
+	@# Reports macro/target collisions ("twins") + their smart-route safety class.  FAILS only on an
+	@# arg-dropping trampoline over a parametric target (the one mechanically-provable hazard).
+	@# USAGE:  make lint.self.collisions
+	macros="${lint.self.macros}" && delegating=" ${lint.self.selftramp} " \
+	&& forwarding=" ${lint.self.selftramp.fwd} " && allow=" ${lang.lint.divergent} " \
+	&& targets=`awk '{ci=index($$0,":"); if(ci<2)next; if(substr($$0,ci+1,1)=="=")next; if(substr($$0,ci,3)=="::=")next; ei=index($$0,"="); if(ei>0&&ei<ci)next; h=substr($$0,1,ci-1); if(h ~ /[?+!]$$/)next; if(h !~ /^[A-Za-z0-9._%\/ -]+$$/)next; n=split(h,t," "); for(i=1;i<=n;i++){g=t[i]; sub(/\/%$$/,"",g); if(g!="")print g}}' ${CMK_SRC} | sort -u` \
+	&& parametric=" `awk '{ci=index($$0,":"); if(ci<2)next; h=substr($$0,1,ci-1); if(h !~ /^[A-Za-z0-9._%\/ -]+$$/)next; n=split(h,t," "); for(i=1;i<=n;i++){g=t[i]; if(g ~ /\/%$$/){sub(/\/%$$/,\"\",g); printf \"%s \",g}}}' ${CMK_SRC} | sort -u | tr '\n' ' '` " \
+	&& collisions=`printf '%s\n' $${targets} | awk -v M="$${macros}" 'BEGIN{n=split(M,a," ");for(i=1;i<=n;i++)m[a[i]]=1} ($$0 in m)' | sort -u` \
+	&& $(call log.compiler, lint.self.collisions ${sep}${dim} `printf '%s' "$${collisions}" | grep -c .` macro/target twins${no_ansi}) \
+	&& fail=0 \
+	&& for c in $${collisions}; do \
+		if case "$${delegating}" in *" $${c} "*) true;; *) false;; esac; then \
+			if case "$${parametric}" in *" $${c} "*) true;; *) false;; esac && ! case "$${forwarding}" in *" $${c} "*) true;; *) false;; esac; then \
+				cls="${red}trampoline DROPS ARGS (parametric target, no forward)${no_ansi}"; mk="${red}!!${no_ansi}"; fail=1; \
+			else cls="${dim}delegates (arg-safe)${no_ansi}"; mk="${green}ok${no_ansi}"; fi; \
+		elif case "$${allow}" in *" $${c} "*) true;; *) false;; esac; then cls="${yellow}inline/divergent (documented)${no_ansi}"; mk="${green}ok${no_ansi}"; \
+		else cls="${dim}inline (pure by convention)${no_ansi}"; mk="${green}ok${no_ansi}"; fi \
+		&& printf '  %b  %-30s %b\n' "$${mk}" "$${c}" "$${cls}"; \
+	done \
+	&& { [ $${fail} -eq 0 ] || { $(call log.compiler, ${red}lint.self.collisions ${sep}${no_ansi} arg-dropping trampoline(s) over a parametric target -- append the ${bold}_mk.forward.args${no_ansi_dim} suffix); exit 47; }; }
+
+lint.self.phase:
+	@# Self-audit of compose.mk core's `.awk.*` phase markers.  One awk pass over `CMK_SRC`; fails
+	@# (exit 48) on a missing/inconsistent marker, a SUPERVISOR block holding a `@@` placeholder or
+	@# inside `__hosted__`, or a parse-time reference to a hosted/undefined block.
+	@# USAGE:  make lint.self.phase
+	$(call log.compiler, ${@} ${sep}${dim} auditing .awk.* phase markers in ${no_ansi}${CMK_SRC})
+	cat ${CMK_SRC} | awk "$${_awklang_lint_self_phase}"
+
+docs.plugins.sync:
+	@# Surface plugin/module docs shipped in the `.cmk` submodule as site pages.
+	@# FORWARD: for each `.cmk/docs/<name>.md`, (re)generate a thin `docs/plugins/<name>.md.j2`
+	@# wrapper over the `submodule_doc` macro (idempotent; a hand-written wrapper lacking the
+	@# AUTO-GENERATED marker is skipped, never clobbered), AND ensure a `mkdocs.yml` nav entry
+	@# exists for it -- inserted under the `Modules`/`Plugins` subsection picked from the plugin's
+	@# `cmk_pragma` kind, but only when absent (a hand-set nav title is never clobbered).  REVERSE
+	@# (autoclean): an AUTO-GENERATED wrapper whose `.cmk/docs/<name>.md` source is gone is removed
+	@# along with its rendered page and nav entry; a hand-written wrapper whose plugin is gone is
+	@# only warned about (never deleted).  The allow-list (docs.plugins.sync.allow) is a project
+	@# binding set in the root Makefile.  A `docs` build prereq; also standalone.
+	shopt -s nullglob \
+	&& mkdir -p docs/plugins \
+	&& for src in .cmk/docs/*.md; do \
+		name="$$(basename "$${src}" .md)"; \
+		wrap="docs/plugins/$${name}.md.j2"; \
+		if ! grep -qF "plugins/$${name}.md" mkdocs.yml; then \
+			pf=".cmk/$${name}.cmk"; [ -f "$$pf" ] || pf=".cmk/$${name}.mk"; \
+			kind="$$(grep -m1 cmk_pragma "$$pf" 2>/dev/null | grep -oE 'plugin|module' | head -1)"; \
+			[ -n "$$kind" ] || { case "$$pf" in *.mk) kind=plugin;; *) kind=module;; esac; }; \
+			[ "$$kind" = plugin ] && sub=Plugins || sub=Modules; \
+			title="$$(grep -m1 '^# ' "$${src}" | sed 's/^#* *//')"; [ -n "$$title" ] || title="$${name}"; \
+			awk -v s="- $${sub}:" -v e="      - '$${title}': plugins/$${name}.md" 'index($$0,s)&&!d{print;print e;d=1;next}{print}' mkdocs.yml > mkdocs.yml.tmp && mv mkdocs.yml.tmp mkdocs.yml; \
+			$(call log.io, ${green}nav+${no_ansi} ${sep} ${no_ansi}plugins/$${name}.md ${dim}(-> $${sub})${no_ansi}); \
+		fi; \
+		if [ -f "$${wrap}" ] && ! grep -q 'AUTO-GENERATED by' "$${wrap}"; then \
+			$(call log.io, ${yellow}docs.plugins.sync${no_ansi} ${sep} skip ${no_ansi}$${wrap}${no_ansi_dim} (hand-written, no marker)); \
+			continue; \
+		fi; \
+		printf '%s\n' \
+			"{# AUTO-GENERATED by 'make docs.plugins.sync' from $${src} -- do not edit; edit the submodule doc #}" \
+			"{% import 'macros/plugins.j2' as plugins -%}" \
+			"{{ plugins.submodule_doc('$${name}', mkdocs=mkdocs) }}" > "$${wrap}"; \
+		$(call log.io, ${green}synced${no_ansi} ${sep} ${no_ansi}$${wrap} ${dim}(<- $${src})${no_ansi}); \
+	done \
+	&& for wrap in docs/plugins/*.md.j2; do \
+		name="$$(basename "$${wrap}" .md.j2)"; \
+		case " ${docs.plugins.sync.allow} " in *" $${name} "*) continue;; esac; \
+		if grep -q 'AUTO-GENERATED by' "$${wrap}"; then \
+			if [ ! -f ".cmk/docs/$${name}.md" ]; then \
+				rm -f "$${wrap}" "docs/plugins/$${name}.md"; \
+				grep -vF "plugins/$${name}.md" mkdocs.yml > mkdocs.yml.tmp && mv mkdocs.yml.tmp mkdocs.yml; \
+				$(call log.io, ${red}docs.plugins.sync${no_ansi} ${sep} autocleaned orphan ${no_ansi}$${wrap}${no_ansi_dim} (+ rendered page + nav entry; source .cmk/docs/$${name}.md is gone)); \
+			fi; \
+		elif [ ! -f ".cmk/$${name}.cmk" ] && [ ! -f ".cmk/$${name}.mk" ]; then \
+			$(call log.io, ${yellow}docs.plugins.sync ORPHAN${no_ansi} ${sep} ${no_ansi}$${wrap}${no_ansi_dim} (hand-written) has no plugin in .cmk -- left in place; remove it or fix the name); \
+		fi; \
+	done
+	
+csop:; set -x; pushd .claude/csop; git pull; popd; make -C .claude/csop install
+

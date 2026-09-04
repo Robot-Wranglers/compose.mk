@@ -1,0 +1,91 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# matrioshka.cmk: idiomatic cmk twin of demos/matrioshka.mk.
+# USAGE: ./demos/cmk/matrioshka.cmk
+
+'''
+Embed a compose service that embeds a container description, where the
+build and run stages both defer back to this same file.  The two services
+(alice, bob) build by deferring to a different provisioning target each, so
+they end up with different tools while sharing one tiny generic Dockerfile.
+Data crosses the nested layers over stage-stacks.  Ported from the plain
+Makefile twin.  Docs: robot-wranglers.github.io/compose.mk/matrioshka
+'''
+
+import io, stage
+
+export BUILD_TARGET ?= flux.noop
+
+compose.import.string inlined.services(|
+services:
+  alice: &base
+    hostname: alice
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM docker:dind
+        RUN apk add -q --update --no-cache \
+          coreutils build-base bash make git
+        COPY . /app
+        RUN cd /app && ./compose.mk cmk run ${__interpreting__} ${BUILD_TARGET}
+    working_dir: /workspace
+    # Run as host uid:gid so mounted-workspace files stay host-owned across layers (gid is the docker group, keeping the socket reachable).
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    environment:
+      DOCKER_HOST_WORKSPACE: ${DOCKER_HOST_WORKSPACE:-${PWD}}
+      DOCKER_UID: ${DOCKER_UID:-1000}
+      DOCKER_GID: ${DOCKER_GID:-1000}
+    volumes:
+      - ${PWD}:/workspace
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+  bob:
+    <<: *base
+    hostname: bob
+|)
+
+__main__: demo.build demo.dispatch demo.summary
+
+demo.build: stage.enter/BUILD
+  '''
+  Provisioning entrypoint: build each service, deferring its setup back
+  here just-in-time.  The scaffolded per-service build targets come from
+  the inline compose import above.
+  '''
+  BUILD_TARGET=alice.provision ${make} alice.build
+  BUILD_TARGET=bob.provision ${make} bob.build
+
+alice.provision:
+  '''
+  Runs during alice's build, inside the container (not on the host).
+  Deferring setup to a target keeps the inline Dockerfile small and lets
+  provisioning use normal scripting instead of RUN-prefixed lines.
+  '''
+  apk add -q figlet
+
+bob.provision:
+  ''' Runs during bob's build, inside the container. '''
+  apk add -q ack
+
+demo.dispatch:
+  '''
+  Run the same generic task inside each differentiated container, via the
+  scaffolded per-service dispatch call-form.  Unlike provisioning, this
+  runs after build completes.  Each dispatch carries the provisioning
+  target its service was built with, since that value is part of the
+  service spec and dispatch checks the spec before it runs.
+  '''
+  stage.enter(RUN)
+  BUILD_TARGET=alice.provision ${make} alice.dispatch/internal_task
+  BUILD_TARGET=bob.provision ${make} bob.dispatch/internal_task
+  
+internal_task:
+  '''
+  The dispatched task.  Runs inside alice or bob, generic enough for
+  either, and proves the provisioning steps differentiated them.
+  '''
+  cmk.log(Running inside `hostname`)
+  cmk.log(Special tools available: `which figlet || which ack`)
+  cmk.log(Pushing `hostname` event to RUN stage)
+  io.json_builder(host=`hostname` timestamp="`date`") | ${make} stage.push/RUN
+
+demo.summary: stage.exit/BUILD stage.exit/RUN
+  ''' Exit the BUILD/RUN stages opened above, showing the stack. '''

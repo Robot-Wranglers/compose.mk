@@ -1,0 +1,109 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# strat.cmk: a walkthrough of the strategy plugin (.cmk/strategy.cmk).
+#
+#   The plugin provides the machinery: the strategy kind, the
+#   __strategies__ registry, the __strategy__ selection, and four
+#   disciplines (step, portfolio, best_first, posix).  This demo supplies
+#   a problem instance (a flat frontier of jobs plus a tiny prereq DAG
+#   with per-goal costs) and exercises the disciplines over it: the
+#   default linear walk, two reorderings (portfolio by SEED, best_first
+#   by cost), and make's own posix DFS over the DAG.
+#
+#   The "make = strategy on an edgeless frontier" identity: a flat
+#   frontier is the DAG with no edges, so every discipline runs the same
+#   driver, with push and admit inert there.
+#
+# USAGE:
+#   ./demos/cmk/strat.cmk
+#     slots, linear default, reorderings, and the DAG
+#   ./demos/cmk/strat.cmk run.active
+#     run the flat frontier under the default (step)
+#   ./demos/cmk/strat.cmk run.active __strategy__=strategy.best_first
+#     select another discipline
+
+'''
+Exercise the strategy plugin's disciplines over a flat frontier plus a
+tiny prereq DAG.
+'''
+
+# the strategy machinery: the kind, the __strategies__ registry, the
+# __strategy__ selection, and the disciplines
+$(call include.plugins, strategy.cmk)
+
+import io
+
+job/%:; printf '  · ran %s\n' '${*}'
+
+# the frontier plus the prereq DAG.  a flat frontier of runnable probes
+# (each announces itself), plus a prereq DAG for posix: app needs lib and
+# util, both need core, so core is shared (build-once is structural).
+# core is also up-to-date, so posix's admit prunes it while an admit=all
+# walk keeps it.  costs feed best_first; SEED feeds portfolio.
+frontier    := job/a job/b job/c job/d
+cost.job/a  := 7
+cost.job/b  := 2
+cost.job/c  := 9
+cost.job/d  := 4
+SEED        ?= 2
+prereq.app  := lib util
+prereq.lib  := core
+prereq.util := core
+up_to_date  := core
+
+demo.roster:
+  # constructing a strategy enrolled it (no declare.strategy); the active
+  # selection reflects its own docstring.  __strategies__ is a genuine
+  # registry-protocol carrier whose members are encapsulated in one class
+  # object: .__class__ names it, .__dir__ lists them.
+  cmk.__strategies__.log(${__strategies__})
+  cmk.log(object ${sep} ${__strategies__.__class__} ${sep} ${__strategies__.__dir__})
+  cmk.log(active __strategy__ ${sep} ${__strategies__.active} ${sep} ${__strategies__.active.doc})
+  conforms="cmk.Registry.provided_by(__strategies__)"
+  [ "$$conforms" = 1 ] && cmk.log(protocol registry ${sep} __strategies__ conforms ${sep} 5th carrier) || cmk.log.error(protocol registry ${sep} __strategies__ does not conform)
+  member="cmk.__strategies__.has(${__strategies__.active})"
+  [ -n "$$member" ] && cmk.log(selection ${sep} ${__strategies__.active} is a registered discipline) || cmk.log.error(selection ${sep} ${__strategies__.active} is not registered)
+
+demo.slots:
+  '''
+  reflect each discipline's five slots as one JSON array: a jb object
+  per discipline, slurped by jq (the select slot is a macro body, so it
+  is elided).
+  '''
+  { $(foreach s,${__strategies__},io.json_builder(name=$(s) owner=$($(s).owner) kind=$($(s).kind) push=$($(s).push) admit=$($(s).admit));) } | ${jq.run} -s . | ${stream.as.log}
+
+demo.linear:
+  # the headline: the default discipline reproduces pure make's linear
+  # order.  the walk under step equals the frontier as written; the
+  # strategy layer is inert by default.
+  order="cmk.strategy.step.eval(${frontier})"
+  [ "$$order" = "${frontier}" ] && cmk.strategy.step.log($$order ${sep} ≡ pure make linear) || cmk.strategy.step.log.error(diverged from declaration order)
+
+demo.reorder:
+  # selecting a richer discipline reorders the same flat frontier;
+  # selection is the only knob.  portfolio diversifies by SEED (the swarm
+  # ordering); best_first sorts by cost.
+  p="cmk.strategy.portfolio.eval(${frontier})"
+  cmk.strategy.portfolio.log(SEED=${SEED} ${sep} $$p)
+  b="cmk.strategy.best_first.eval(${frontier})"
+  cmk.strategy.best_first.log($$b ${sep} costs 7 2 9 4)
+
+demo.make:
+  # make's default (posix) over the prereq DAG: DFS (push=prepend) plus
+  # prune up-to-date (admit).  core is fresh, so posix skips it; step
+  # (admit=all) keeps it.  the flat frontier above is this same DAG with
+  # no edges, so one driver serves both, with push and admit inert.
+  cmk.log(dag ${sep} app needs ${prereq.app} ${sep} lib+util need core ${sep} up_to_date=${up_to_date})
+  m="cmk.strategy.posix.eval(app)"
+  cmk.strategy.posix.log($$m ${sep} DFS ${sep} core pruned as up-to-date)
+  s="cmk.strategy.step.eval(app)"
+  cmk.strategy.step.log($$s ${sep} append ${sep} core kept (admit=all))
+
+run.active:
+  # run the flat frontier in the active strategy's order (the driver
+  # dispatches the walk as a sub-make).  the default selects strategy.step
+  # (linear); pass __strategy__=strategy.best_first to pick another.
+  cmk.log(${bold}running frontier under ${sep} ${__strategies__.active})
+  ${make} cmk.__strategies__.eval.active(${frontier})
+
+__main__: demo.roster demo.slots demo.linear demo.reorder demo.make run.active

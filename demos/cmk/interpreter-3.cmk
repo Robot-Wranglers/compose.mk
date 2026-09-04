@@ -1,0 +1,52 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# interpreter-3.cmk: an alternate make interpreter that inherits signals/supervisors.
+#
+# USAGE:
+#   ./demos/cmk/interpreter-3.cmk
+
+'''
+Runs an embedded python script (with real
+optparse option-parsing) inside a container, using compose.mk as the interpreter so
+the program inherits signals/supervisors.  Main docs:
+https://robot-wranglers.github.io/compose.mk/signals/
+'''
+
+python.img=python:3.11-slim-bookworm
+python.interpreter=python
+
+python_script(|
+from optparse import OptionParser
+def main():
+    parser = OptionParser(usage="usage: %prog [options] filename",version="%prog 1.0")
+    parser.add_option("-f", "--foo", dest="foo", default='foo', help="set foo option")
+    parser.add_option("-b", "--bar",
+        action="store_true", dest="bar", default=False, help="set bar option")
+    (options, args) = parser.parse_args()
+    if options.bar:
+        print("bar is set")
+    if options.foo:
+        print(f"foo is {options.foo}")
+    if len(args) > 0:
+        print("Additional arguments:", args)
+if __name__ == "__main__":
+    print("hello python opt parse")
+    main()
+|)
+
+script.run:
+    '''
+    Runs the script in a container, passing extra arguments in.  Dense, idiomatic
+    shorthand -- the container-dispatch is not the main point of this demo.
+    '''
+    ${mk.def.to.file}/python_script \
+    && cmd="python_script ${MAKE_CLI_EXTRA}" \
+        ${docker.image.run}/${python.img},${python.interpreter} \
+    && $(call mk.yield)
+
+# A macro using ' -- ' abstracts away the weird invocation (and the container).
+script=${make} script.run --
+
+__main__:; ${script} --foo my.foo --bar
+
+my-normal-target:; echo hello normal make target

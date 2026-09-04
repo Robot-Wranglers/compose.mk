@@ -1,12 +1,12 @@
 {% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ### Logging Facilities
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 One goal for `compose.mk` is to enable program output that is clean, curated, and human-friendly on stderr, and machine-friendly on stdout.  There are a few features available in support of this.  In general `compose.mk` prefers make-targets over make-functions and macros, because targets are more reusable.[^2]  Logging is a special case though, and might use all 3.
 
 #### Logging Basics
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 1. **Logging always goes to stderr so that targets remain pipe-safe**, including the `log.json` output.
 2. **Log-messages have a prefix which is based on the call-depth**, which can help visually parse complex traces.
@@ -14,37 +14,37 @@ One goal for `compose.mk` is to enable program output that is clean, curated, an
 See the `compose.mk` source for other information about formatting colors and glyphs.  Tools for working with JSON are also discussed in more detail in the section on [Structured IO](#structured-io-basics).
 
 #### Log Functions 
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 Lets look at the **`log.*` functions** that are suitable for use from your project Makefile.  
 
-The following examples demonstrate basic logging, logging with formatting, and trace-logging.
+The following examples demonstrate basic logging, logging with formatting, and trace-logging (toggle the tabs for the plain `Makefile` or the [cmk-lang]({{_}}/cmk/compiler) twin):
 
-{{site.embed_demo('demos/logging.mk', github=github)}}
+{{site.embed_mirror('demos/logging.mk', 'demos/cmk/logging.cmk', github=github, default='left')}}
 
 #### File and Stream Previews
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 Whether you're working on build processes, data-pipelines, or infrastructure deployments, it's convenient to have the ability to "preview" things like files, streams, or intermediate representations.  The previous section covers some simple cases.  
 
-The [docs for compose.mk's built-in tool wrappers]({{mkdocs.site_relative_url}}/tool-overview/#other-wrappers) are also related here, so here's a look at some of the tests that are exercising that code:
+The [docs for compose.mk's built-in tool wrappers]({{_}}/tool-overview/#other-wrappers) are also related here, so here's a look at some of the tests that are exercising that code:
 
 {{site.embed_demo(
-    'tests/tool-wrappers.sh', 
+    'tests/scripts/tool-wrappers.sh',
     github=github, type="bash", 
     class="language-makefile language-bash")}}
 
 #### Visual Dividers
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 !!! info "Note"
-    If you want to make extensive use of these kinds of banners, you can organize around [stages]({{mkdocs.site_relative_url}}/stages) to get them implicitly.  
+    If you want to make extensive use of these kinds of banners, you can organize around [stages]({{_}}/stages) to get them implicitly.  
 
 **Visually separating stages with some kind of output divider** is something that is nice to have for otherwise messy output.  Here's an example of several different ways of using `io.print.banner` to get labeled or timestamped dividers that are shown between clean/build/test stages.  
 
-{{site.embed_demo('demos/section-dividers.mk', github=github)}}
+{{site.embed_mirror('demos/section-dividers.mk', 'demos/cmk/section-dividers.cmk', github=github, default='left')}}
 
-In the `build` task above, you can see one way to call `io.print.banner` explicitly, which uses `${make}` as shorthand for "*the right way to call `make` recursively*".  As an equivalent, you can always use an invocation like `./compose.mk io.print.banner` instead, and this works from anywhere.
+In the `build` task above, you can see one way to call `io.print.banner` explicitly, which uses the recursion helper as shorthand for "*the right way to call `make` recursively*".  As an equivalent, you can always use an invocation like `./compose.mk io.print.banner` instead, and this works from anywhere.
 
 {{macros.img_link("demo-io.gif", mkdocs, "90%")}}
 
@@ -83,7 +83,7 @@ To add color, you can use a context manager and any of the colors that `compose.
 ./compose.mk io.with.color/red,io.figlet/banner
 ```
 
-For other TUI-components like this that fall short of a full-blown interface,  see [these docs for stand-alone mode]({{mkdocs.site_relative_url}}/tool-overview). See also the [full documentation for all `io.*` targets]({{mkdocs.site_relative_url}}/api/#api-io)
+For other TUI-components like this that fall short of a full-blown interface,  see [these docs for stand-alone mode]({{_}}/tool-overview). See also the [full documentation for all `io.*` targets]({{_}}/api/#api-io)
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

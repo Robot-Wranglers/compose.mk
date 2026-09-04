@@ -1,0 +1,23 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# ambient-ladder-qemu.cmk: 
+#  one block, three ambients, three kernels (needs docker).
+#
+# USAGE: ./demos/cmk/ambient-ladder-qemu.cmk
+
+from cmk import container
+from qemu import runner, guest
+
+runner qemu_ladder(| |)
+container box(img=alpine:3.21 entrypoint=sh)(| |)
+guest vm(img=${qemu_ladder.img} entrypoint=/usr/local/bin/vmexec)(| |)
+
+
+__main__: 
+  '''
+  depth zero: ( the host itself )
+  depth one: ( a container shares the docker daemon's kernel )
+  depth two: ( a qemu guest boots a kernel of its own )
+  '''
+  (| uname -sr |) in host.local
+  (| uname -sr |) in box
+  (| uname -sr |) in vm

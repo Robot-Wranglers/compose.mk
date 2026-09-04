@@ -1,18 +1,18 @@
-{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
 
 ## Import Services from Compose
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-2">
 
-One of the main features for `compose.mk` is a method for "importing" one [or more]({{mkdocs.site_relative_url}}/bridge/#other-import-statements) docker compose files into your project Makefile, using the `compose.import` macro to automatically generate related make-targets for each docker-compose service.  
+One of the main features for `compose.mk` is a method for "importing" one [or more]({{_}}/bridge/#other-import-statements) docker compose files into your project Makefile, using the `compose.import` macro to automatically generate related make-targets for each docker-compose service.  
 
-Sometimes this "importing" process is referred to as *automation scaffolding*, or we might refer to it as *the make/compose bridge*, or simply.. *the bridge*.
+Sometimes this "importing" process is referred to as *automation scaffolding*[^scaffold], or we might refer to it as *the make/compose bridge*, or simply.. *the bridge*.
 
-For reference material, you can jump to details about the available [Service Scaffolding](#target-scaffolding), or skip over to details for [Container Dispatch]({{mkdocs.site_relative_url}}/container-dispatch).
+For reference material, you can jump to details about the available [Service Scaffolding](#target-scaffolding), or skip over to details for [Container Dispatch]({{_}}/container-dispatch).
 
-For project-automation, it's usually best to separate the details of automation / execution environment, as seen in the first example.  If you are interested in **prototyping systems** or **building self-contained tools/apps,** you can skip the external compose file, and [embed compose service definitions]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) to generate scaffolding from that directly.
+{{ macros.admonition("tip", "Project automation vs. prototyping", "For project-automation, it's usually best to separate the details of automation / execution environment, as seen in the first example.  If you are interested in **prototyping systems** or **building self-contained tools/apps**, you can skip the external compose file and [embed compose service definitions](" ~ _ ~ "/demos/matrioshka/#inlined-compose-files) to generate scaffolding from that directly.") }}
 
 ### Basic Example 
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-3">
 
 Let's walk through a minimal example, starting with a sample compose file.  
 
@@ -46,42 +46,44 @@ That's it for the boilerplate, but we already have lots of interoperability for 
 * And crucially, *capabilities for command-pipes and dispatch*.
 
 ### Target Scaffolding
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 Targets created as part of the automation scaffolding are can be [top-level names](#top-level-container-handles), [canonical names](#canonical-names), or [manually namespaced](#multiple-compose-files) depending on exactly how you want to setup container import-statements and how verbose you want to be.  Below you can see summaries for each type of scaffolding.
 
 #### Top-level Container Handles
---------------------
+<hr class="section-rule lvl-4">
 
 Top level container handles are targets that are created in the root namespace, basically mirroring the familiar verbs for docker compose ( *up/down/build/stop/ps/logs* ), plus adding conveniences for things like piping , dispatch, and shells.
 
-| Target | Description |
-|--------|-------------|
-| [**`<svc_name>`**](#svc_name) |  Runs the container with default entrypoint |
-| [**`<svc_name>`.shell**](#svc_nameshell) | Drops into an interactive shell for this container |
-| [**`<svc_name>`.shell.pipe**](#svc_nameshellpipe) |  Pipe data into the container shell |
-| [**`<svc_name>`.exec.shell**](#svc_nameexec) | Roughly `docker compose -f .. exec ..` |
-| [**`<svc_name>`.get_shell**](#svc_namespecial) |  Try to detect a usable shell for the container |
-| [**`<svc_name>`.pipe**](#svc_nameshellpipe) |  Pipe data to default entrypoint (may not be a shell!) |
-| [**`<svc_name>`.get_config**](#svc_namespecial) |  Return service configuration details |
-| [**`<svc_name>`.dispatch/`<target>`**](#svc_namedispatch) |  Runs the given target inside the given container |
-| [**`<svc_name>`.exec/`<target>`**](#svc_nameexec) | Runs the given target inside the *already running|  container |
-| [**`<svc_name>`.build**](#svc_namebuild) |  Roughly `docker compose -f .. build` |
-| [**`<svc_name>`.up**](#svc_nameup) | Roughly `docker compose -f .. up` |
-| [**`<svc_name>`.up.detach**](#svc_nameup) | Roughly `docker compose -f .. up -d` | 
-| [**`<svc_name>`.build**](#svc_namebuild) |  Roughly `docker compose -f .. build` |
-| [**`<svc_name>`.logs**](#svc_namelogs)  | Roughly `docker compose -f .. logs` |
-| [**`<svc_name>`.ps**](#svc_nameps) | Roughly `docker compose -f .. ps` |
-| [**`<svc_name>`.stop**](#svc_namestop) | Roughly `docker compose -f .. stop` |
+<table class="docutils">
+<thead><tr><th>Target</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><a href="#svc_name"><strong><code>&lt;svc_name&gt;</code></strong></a></td><td>Runs the container with default entrypoint</td></tr>
+<tr><td><a href="#svc_nameshell"><strong><code>&lt;svc_name&gt;</code>.shell</strong></a></td><td>Drops into an interactive shell for this container</td></tr>
+<tr><td><a href="#svc_nameshellpipe"><strong><code>&lt;svc_name&gt;</code>.shell.pipe</strong></a></td><td>Pipe data into the container shell</td></tr>
+<tr><td><a href="#svc_nameexec"><strong><code>&lt;svc_name&gt;</code>.exec.shell</strong></a></td><td>Roughly <code>docker compose -f .. exec ..</code></td></tr>
+<tr><td><a href="#svc_namespecial"><strong><code>&lt;svc_name&gt;</code>.get_shell</strong></a></td><td>Try to detect a usable shell for the container</td></tr>
+<tr><td><a href="#svc_nameshellpipe"><strong><code>&lt;svc_name&gt;</code>.pipe</strong></a></td><td>Pipe data to default entrypoint (may not be a shell!)</td></tr>
+<tr><td><a href="#svc_namespecial"><strong><code>&lt;svc_name&gt;</code>.get_config</strong></a></td><td>Return service configuration details</td></tr>
+<tr><td><a href="#svc_namedispatch"><strong><code>&lt;svc_name&gt;</code>.dispatch/<code>&lt;target&gt;</code></strong></a></td><td>Runs the given target inside the given container</td></tr>
+<tr><td><a href="#svc_nameexec"><strong><code>&lt;svc_name&gt;</code>.exec/<code>&lt;target&gt;</code></strong></a></td><td>Runs the given target inside the <em>already running</em> container</td></tr>
+<tr><td><a href="#svc_namebuild"><strong><code>&lt;svc_name&gt;</code>.build</strong></a></td><td>Roughly <code>docker compose -f .. build</code></td></tr>
+<tr><td><a href="#svc_nameup"><strong><code>&lt;svc_name&gt;</code>.up</strong></a></td><td>Roughly <code>docker compose -f .. up</code></td></tr>
+<tr><td><a href="#svc_nameup"><strong><code>&lt;svc_name&gt;</code>.up.detach</strong></a></td><td>Roughly <code>docker compose -f .. up -d</code></td></tr>
+<tr><td><a href="#svc_namelogs"><strong><code>&lt;svc_name&gt;</code>.logs</strong></a></td><td>Roughly <code>docker compose -f .. logs</code></td></tr>
+<tr><td><a href="#svc_nameps"><strong><code>&lt;svc_name&gt;</code>.ps</strong></a></td><td>Roughly <code>docker compose -f .. ps</code></td></tr>
+<tr><td><a href="#svc_namestop"><strong><code>&lt;svc_name&gt;</code>.stop</strong></a></td><td>Roughly <code>docker compose -f .. stop</code></td></tr>
+</tbody>
+</table>
 
 So for our simple example so far, `svc_name` would be either `debian` or `alpine`.
 
 Note that using `compose.import` creates top-level handles automatically, but there are other [ways to handle namespacing](#other-import-statements) if you need to avoid name collisions.  
 
-Also note that while the list above is *mostly* complete, variants are available for things like quiet dispatch, quiet build, etc.  Use [the online help]({{mkdocs.site_relative_url}}/cli-help) or see the source for complete details.
+Also note that while the list above is *mostly* complete, variants are available for things like quiet dispatch, quiet build, etc.  Use [the online help]({{_}}/cli-help) or see the source for complete details.
 
 #### Canonical Names
-------------------------
+<hr class="section-rule lvl-4">
  
 Canonical scaffolding is sort of like an "absolute path" to the ones mentioned above, plus additional "group" targets that work with several (or all) of the tool container services at the same time.  
 
@@ -95,17 +97,17 @@ Canonical names are always created unconditionally with `compose.import` or [any
 | [**`<compose_stem>`.build/`<svc_name>`**](#compose_stemspecial) |  Build just one service |
 | [**`<compose_stem>`.clean/`<svc_name>`**](#compose_stemspecial) |  Clean just one service |
 | [**`<compose_stem>`.restart/`<svc_name>`**](#compose_stemspecial) |  Stop, then up-detach for one service |
-| [**`<compose_stem>`.with_profile/`<args>`**]({{mkdocs.site_relative_url}}/api/#composewith_profilearg) |  Helper for`COMPOSE_PROFILES`; See [compose.with_profile docs]({{mkdocs.site_relative_url}}/api/#composewith_profilearg) |
+| [**`<compose_stem>`.with_profile/`<args>`**]({{_}}/api/#composewith_profilearg) |  Helper for`COMPOSE_PROFILES`; See [compose.with_profile docs]({{_}}/api/#composewith_profilearg) |
 
 So for our example thus far, `compose_stem` for `docker-compose.yml`would be `docker-compose` and `svc_name` is still either `debian` or `alpine`.
 
-There are several other scaffolded entrypoints! Most will follow patterns like **`<compose_stem>`/`<svc_name>`.`<verb>`**, i.e. basically the same as the corresponding top-level container handles we saw in the last section.  For complete details, see [more examples here]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files), or use [the online help]({{mkdocs.site_relative_url}}/cli-help), or see the source.
+There are several other scaffolded entrypoints! Most will follow patterns like **`<compose_stem>`/`<svc_name>`.`<verb>`**, i.e. basically the same as the corresponding top-level container handles we saw in the last section.  For complete details, see [more examples here]({{_}}/demos/matrioshka/#inlined-compose-files), or use [the online help]({{_}}/cli-help), or see the source.
 
 #### Dispatch Namespaces
---------------------------
+<hr class="section-rule lvl-4">
 <a name=dispatch-namespace></a>
 
-User-provided dispatch-namespaces are optional, but often a good idea.  In addition to the "group" targets available as canonical names, you'll get [syntactic sugar for target dispatch]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch).
+User-provided dispatch-namespaces are optional, but often a good idea.  In addition to the "group" targets available as canonical names, you'll get [syntactic sugar for target dispatch]({{_}}/container-dispatch/#namespace-style-dispatch).
 
 
 | Target | Description |
@@ -113,13 +115,13 @@ User-provided dispatch-namespaces are optional, but often a good idea.  In addit
 | `<namespace>/<svc>/<target>` | Sugar for `<svc_name>.dispatch/<target>` |
 
 
-See the [full docs for compose.import](#other-import-statements) and the [main container dispatch docs]({{mkdocs.site_relative_url}}/container-dispatch#toolboxes-multiple-compose-files) for detailed information.
+See the [full docs for compose.import](#other-import-statements) and the [main container dispatch docs]({{_}}/container-dispatch#toolboxes-multiple-compose-files) for detailed information.
 
 ### Bridge API
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 #### **[❡](#svc_nameshell) `<svc_name>`.shell**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 The ***svc_name*.shell** target drops to a containter shell for the named service, and is usually interactive.
 
@@ -136,7 +138,7 @@ $ make alpine.shell
 
 
 #### **[❡](#svc_namebuild) `<svc_name>`.build**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 The ***svc_name*.build** target explicitly builds containers.  This is for convenience, but usually it's fine to let this happen implicitly or just in time.
 
@@ -150,7 +152,7 @@ $ force=1 make debian.build
 
 
 #### **[❡](#svc_nameps) `<svc_name>`.ps**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 The ***svc_name*.ps** target is roughly `docker compose -f .. ps <svc> `.
 
@@ -163,7 +165,7 @@ $ strict=1 make debian.ps
 ```
 
 #### **[❡](#svc_nameup) `<svc_name>`.up**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 The ***svc_name*.up** and ***svc_name*.up.detach** targets are roughly `docker compose -f .. up <svc>` and `docker compose -f .. up -d <svc>` respectively, using the default entrypoints as usual.
 
@@ -176,7 +178,7 @@ $ make debian.up.detach
 ```
 
 #### **[❡](#svc_namestop) `<svc_name>`.stop**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 The ***svc_name*.stop** target is roughly `docker compose -f .. stop -t 1 <svc>`.  This does nothing if (`up`) has never been used.
 
@@ -186,7 +188,7 @@ $ make debian.stop
 ```
 
 #### **[❡](#svc_namelogs) `<svc_name>`.logs**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 The ***svc_name*.logs** target is roughly `docker compose -f .. logs <svc> `.  
 
@@ -202,9 +204,9 @@ $ strict=1 make debian.ps
 
 
 #### **[❡](#svc_namedispatch) `<svc_name>`.dispatch**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
-The ***svc_name*.dispatch/** target is unary rather than nullary like our other examples. It accepts as an argument *another target* which will then be run in the given container.  See the [container dispatch docs](#) for more details, but in this example we'll just pass in the trivial target {{site.api_link('flux.ok',mkdocs)}}.
+The ***svc_name*.dispatch/** target is unary rather than nullary like our other examples. It accepts as an argument *another target* which will then be run in the given container.  See the [container dispatch docs]({{_}}/container-dispatch) for more details, but in this example we'll just pass in the trivial target {{site.api_link('flux.ok',mkdocs)}}.
 
 ```bash {.cli_example}
 # Run the trivial `flux.ok` target inside the debian container
@@ -212,7 +214,7 @@ $ make debian.dispatch/flux.ok
 ```
 
 #### **[❡](#svc_nameexec) `<svc_name>`.exec**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 The ***svc_name*.exec/** target is almost exactly the same as dispatch, except that it can only be used after ***svc_name*.up** or ***svc_name*.up.detach** has already run.
  
@@ -225,7 +227,7 @@ $ make some_daemonized_container.up.detach some_daemonized_container.exec/flux.o
 The ***svc_name*.exec.shell** target takes no arguments, also similarly requires that `up` already happened, and is still running.  This opens an interactive shell.
 
 #### **[❡](#svc_nameshellpipe) `<svc_name>`.shell.pipe**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 The ***svc_name*.shell.pipe** target allows streaming data:
 
@@ -242,7 +244,7 @@ echo echo echo hello-world | make alpine.pipe | make debian.pipe
 {{macros.img_link("demo-bridge-stream.gif", mkdocs,class="cli_output")}}
 
 #### **[❡](#svc_name) `<svc_name>`**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 The top-level **svc_name** targets are more generic and can be used without arguments, or with optional explicit overrides for the compose-service defaults.  Usually this isn't used directly, but it's sometimes useful to call from automation. Indirectly, most other targets are implemented using this target.
 
@@ -256,7 +258,7 @@ $ echo hello world | pipe=yes entrypoint=cat cmd='/dev/stdin' make alpine
 ```
 
 #### **[❡](#svc_namespecial) `<svc_name>`/`<special>`**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 Besides targets for working *with* services there are targets for answering questions *about* services.
 
@@ -287,7 +289,7 @@ $ make alpine.get_config
 {
   "build": {
     "context": ".",
-    "dockerfile_inline": "FROM ${IMG_ALPINE_BASE:-alpine:3.21.2} \nRUN apk add -q --update --no-cache coreutils build-base bash procps-ng"
+    "dockerfile_inline": "FROM ${IMG_ALPINE_BASE:-alpine:3.21.2} \nRUN apk add -q --update --no-cache coreutils build-base bash"
   },
   "entrypoint": "bash",
   "hostname": "alpine",
@@ -313,7 +315,7 @@ $ make alpine.get_config
 ```
 
 #### **[❡](#svc_compose_stemsvc) `<compose_stem>/<svc>`**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 Namespaced aliases are also available, so that you can reference compose services by something like an "absolute path".  Due to the file-stem of the compose file we imported, all of the stuff above will work on targets like you see below. 
 
@@ -323,7 +325,7 @@ $ make docker-compose/debian.shell
 ```
 
 #### **[❡](#svc_compose_stemcmd) `<compose_stem>`.`<cmd>`**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 Besides targets for working with compose-services, some targets work on the compose file itself.  Assuming your compose file is named `docker-compose.yml`, the special targets work like this:
 
@@ -360,44 +362,52 @@ ubuntu
 ```
 
 ### Other Import Statements
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 So far we've used the simplest syntax for `compose.import`, but there's a few ways to do this.
 
 
 #### **Root + Namespace**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 
-Here's a variation that configures [syntactic sugar for dispatch namespaces]({{mkdocs.site_relative_url}}/container-dispatch/#namespace-style-dispatch), by providing a 2nd argument to `compose.import`.
+Here's a variation that configures [syntactic sugar for dispatch namespaces]({{_}}/container-dispatch/#namespace-style-dispatch), by providing a 2nd argument to `compose.import`.
 
-```Makefile {.snippet}
+{% set root_ns_mk %}
 include compose.mk
 $(call compose.import, \
   file=path/to/docker-compose.yml namespace=my_namespace)
-```
+{% endset %}
+{% set root_ns_cmk %}
+compose.import(file=path/to/docker-compose.yml namespace=my_namespace)
+{% endset %}
+{{site.inline_mirror('mirror_root_namespace', root_ns_mk, root_ns_cmk, default='left')}}
 
 #### **Namespace Only**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 Recall that `compose.import` as used above defaults to creating top level targets.  
 
 To configure a user-provided dispatch-namespace and **not** import targets to the root.. use `compose.import.as`
 
-```Makefile {.snippet}
+{% set ns_only_mk %}
 include compose.mk
 $(call compose.import.as, \
   file=path/to/docker-compose.yml namespace=my_namespace)
-```
+{% endset %}
+{% set ns_only_cmk %}
+compose.import.as(file=path/to/docker-compose.yml namespace=my_namespace)
+{% endset %}
+{{site.inline_mirror('mirror_namespace_only', ns_only_mk, ns_only_cmk, default='left')}}
 
-See also [the platform demo]({{mkdocs.site_relative_url}}/demos/platform).
+See also [the platform demo]({{_}}/demos/platform).
 
 #### **Multiple Compose Files**
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
 The namespace-only style is perhaps the most useful for working with multiple compose files, and is an effective way to organize your tool containers into different "tool boxes" at the docker-compose level.  Here's an example of how you could separate code-tools vs infracode-tools:
 
-```Makefile {.snippet}
+{% set multi_mk %}
 include compose.mk
 
 # Load 1st compose file under paralleogram namespace,
@@ -412,21 +422,37 @@ $(call compose.import.as, \
 # "build-code" and "build-cluster" on different containers
 build: ▰/maven/build.code ▲/kubectl/build.cluster
 build.cluster:
-  kubectl .. 
+  kubectl ..
 build.code:
   maven ...
-```
+{% endset %}
+{% set multi_cmk %}
+# Load 1st compose file under paralleogram namespace,
+compose.import.as(namespace=▰ file=my-compose-files/build-tools.yml)
+
+# Load 2nd compose file under triangle namespace
+compose.import.as(namespace=▲ file=my-compose-files/cluster-tools.yml)
+
+# Top-level "build" target that dispatches subtargets
+# "build-code" and "build-cluster" on different containers
+build: ▰/maven/build.code ▲/kubectl/build.cluster
+build.cluster:
+  kubectl ..
+build.code:
+  maven ...
+{% endset %}
+{{site.inline_mirror('mirror_multi_compose', multi_mk, multi_cmk, default='left')}}
 
 There's lots of ways to use this, and if your service-names across several files do not collide, you are free to put everything under exactly the same namespace.  It's only syntax, but if you choose the conventions wisely then it will probably help you to think and to read whatever you're writing.
 
-See the [container dispatch docs]({{mkdocs.site_relative_url}}/container-dispatch/#toolboxes-multiple-compose-files) for a concrete demo.
+See the [container dispatch docs]({{_}}/container-dispatch/#toolboxes-multiple-compose-files) for a concrete demo.
 
 #### **Inlined / Embedded / From-String** 
-<hr style="width:95%;border-bottom:1px dashed black;">
+<hr class="section-rule lvl-4">
 
-So far, we've been working with files, but generating target-scaffolding can also work on strings, i.e. with [embedded compose files]({{mkdocs.site_relative_url}}/demos/matrioshka).  See that documentation for examples, but below you can find the basic usage.  Note that "namespace" is implied, because it always the same as the define-block's name.
+So far, we've been working with files, but generating target-scaffolding can also work on strings, i.e. with [embedded compose files]({{_}}/demos/matrioshka).  See that documentation for examples, but below you can find the basic usage.  Note that "namespace" is implied, because it always the same as the define-block's name.
 
-```Makefile {.snippet}
+{% set embed_str_mk %}
 include compose.mk
 
 define embedded_services
@@ -434,29 +460,48 @@ define embedded_services
 endef
 
 $(call compose.import.string, def=embedded_services)
-```
+{% endset %}
+{% set embed_str_cmk %}
+compose.import.string embedded_services(|
+...
+|)
+{% endset %}
+{{site.inline_mirror('mirror_embed_string', embed_str_mk, embed_str_cmk, default='left')}}
 
-See the [matrioshka demos]({{mkdocs.site_relative_url}}/demos/matrioshka/#inlined-compose-files) for a concrete demo.
+See the [matrioshka demos]({{_}}/demos/matrioshka/#inlined-compose-files) for a concrete demo.
 
 To avoid cluttering the root namespace, pass `import_to_root=FALSE`, and only the [canonical names](#canonical-names) will be available.
 
-```Makefile {.snippet}
+{% set embed_noroot_mk %}
 $(call compose.import.string, \
   def=embedded_compose.yml import_to_root=FALSE)
-```
+{% endset %}
+{% set embed_noroot_cmk %}
+compose.import.string(def=embedded_compose.yml import_to_root=FALSE)
+{% endset %}
+{{site.inline_mirror('mirror_embed_noroot', embed_noroot_mk, embed_noroot_cmk, default='left')}}
+
+### Services as Machines
+<hr class="section-rule lvl-3">
+
+Dynamically scaffolding targets that wrap container lifecycle and dispatch stuff is a fancy abstraction from the perspective of classic Makefiles.  But this is also *low-level support* for a much more interesting abstraction in [the CMK language]({{_}}/cmk/intro).
+
+Compose services are a kind of [machine]({{_}}/cmk/concepts/#machines), and machines are [ambients]({{_}}/cmk/concepts/#ambients). Ambients are a kind of "place" that computation can happen, and by adding the concept of space we can generalize callable/runnable, and have thus introduced the concept of *code mobility*.  
+
+{{site.embed_twin('demos/compose-machines.mk', 'demos/cmk/machine-compose.cmk', github=github, default='cmk', see_also=_+'/cmk/concepts/#machines', see_also_text='Concepts: machines')}}
 
 ### But Why? 🤔
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-At first glance, maybe you're thinking this looks like lots of magic to save a little bit of typing and simply using `docker compose -f ..` from your Makefiles.  Well, it's true that this method of "importing" compose services as `make` targets is often just paving the way for [container dispatch]({{mkdocs.site_relative_url}}) later.
+The teaser in the last section goes to show that this definitely isn't just about cleaning up the `docker compose -f ..` from your Makefiles.. but it does that too.  
 
-Even without dispatch though, native support for containers as primitives is useful, especially when you start to use **actions on those containers as prerequisite tasks**.  So far we've seen that scaffolded targets effectively create an API over tool containers, but what's not emphasized yet is just how composable that API really is.
+Scaffolded targets pave the way for [container dispatch]({{_}}), but even without that, native support for containers as primitives is especially useful when you start to use **actions on those containers as prerequisite tasks**.  So far we've seen that scaffolded targets effectively create an API over tool containers, but what's not emphasized yet is just how composable that API really is.
 
-If you're unconvinced on this point, you might like to skip ahead to some more advanced stuff that is digging into this topic, like [the TUI docs]({{mkdocs.site_relative_url}}/embedded-tui) or [the notebooking demo]({{mkdocs.site_relative_url}}/demos/notebooking).
+If you're unconvinced on this point, you might like to skip ahead to some more advanced stuff that is digging into this topic, like [the TUI docs]({{_}}/embedded-tui) or [the notebooking demo]({{_}}/demos/notebooking).
 
 {#
 ### Import Macro Implementation
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
 For the curious who are unfamiliar with esoteric `make`, let's unpack the incantation: 
 
@@ -464,16 +509,22 @@ For the curious who are unfamiliar with esoteric `make`, let's unpack the incant
 $(eval $(call compose.import.generic, ▰, TRUE, docker-compose.yml))
 ```
 
-The `eval`[^1] / `call`[^2] combination is how you can give `make` dynamic targets.  This is basically a code-generation step, where `compose.import.generic` is basically a templated string, and then using `call` binds the values `( ▰, TRUE, docker-compose.yml)` as template parameters.  *Since the templated string happens to render to legal Makefile syntax*, the call to `eval` results in the declaration of new concrete targets.
+The `eval` / `call` combination is how you can give `make` dynamic targets.  This is basically a code-generation step, where `compose.import.generic` is basically a templated string, and then using `call` binds the values `( ▰, TRUE, docker-compose.yml)` as template parameters.  *Since the templated string happens to render to legal Makefile syntax*, the call to `eval` results in the declaration of new concrete targets.
 
-Understanding the implementation isn't required to *use* it.. and metaprogramming in `make` like this is something that's always guaranteed to inspire strong feelings of horror or of delight.  If you're *that* type of weirdo, you might like to read more about the technique here[^3].
-
-### References
-<hr style="width:100%;border-bottom:3px solid black;">
-[^1]: Make's [eval function docs](https://www.gnu.org/software/make/manual/html_node/Eval-Function.html)
-[^2]: Make's [call function docs](https://www.gnu.org/software/make/manual/html_node/Call-Function.html)
-[^3]: [https://make.mad-scientist.net/the-eval-function/](https://make.mad-scientist.net/the-eval-function/)
+Understanding the implementation isn't required to *use* it.. and metaprogramming in `make` like this is something that's always guaranteed to inspire strong feelings of horror or of delight.
 #}
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+Once services are imported, the natural next step is running tasks inside them.
+
+* [Container Dispatch]({{_}}/container-dispatch): bind tasks/scripts to the containers you just imported.
+* [Multiple Compose Files]({{_}}/multiple-compose-files): organize tool containers into namespaced toolboxes.
+* [Matrioshka Automata]({{_}}/matrioshka): inline compose specs directly for self-contained tools.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^scaffold]: {{ tufte.wiki('Scaffold_(programming)')|trim }}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

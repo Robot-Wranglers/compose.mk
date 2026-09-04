@@ -1,0 +1,88 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+# dockerfs.cmk: files bound to an image build, and the folded build that lands them (needs docker)
+
+'''
+A `dockerfs` is a file bound to an image build: `path=` is where it lands,
+`mode=` is its chmod, and the body is captured verbatim, so dollars survive
+where a Dockerfile heredoc would mangle them.  Two spellings say which image:
+
+  dockerfs NAME(bind=IMAGE path=.. mode=..)(| .. |)
+  Dockerfile IMAGE(| .. |).dockerfs(path=.. mode=..)(| .. |)
+
+The chain suits an image declared right there, since the receiver implies the
+binding.  The named form binds to anything declared elsewhere, including a
+class, which a chain cannot reach.  Both are below.  Either way `.build` folds
+the bound files in, injecting a copy and a chmod after the base line without
+touching the working tree, and `.render` shows that fold without building.
+
+  usage: ./demos/cmk/dockerfs.cmk
+'''
+
+from cmk import container, dockerfs, Dockerfile
+import log
+
+# Intent only: the greeter script and its config arrive from the bound files below.
+Dockerfile greeter_img(|
+  FROM alpine:3.21
+  RUN apk add --no-cache jq
+  ENTRYPOINT ["/usr/local/bin/greet"]
+|)
+
+# An executable: mode=+x, and the shell dollars reach the image unmangled.
+dockerfs greet(bind=greeter_img path=/usr/local/bin/greet mode=+x)(|
+  #!/bin/sh
+  who=$(jq -r .who /etc/greeter.json)
+  punct=$(jq -r .punct /etc/greeter.json)
+  echo "hello, ${who}${punct} (from $(uname -s), pid $$)"
+|)
+
+# Data alongside it: same binding, different mode.
+dockerfs greet_conf(bind=greeter_img path=/etc/greeter.json mode=0644)(|
+  {"who": "dockerfs", "punct": "!"}
+|)
+
+# The chain form: the receiver is right there, so no image name is repeated and no file is named.
+Dockerfile motd_img(|
+  FROM alpine:3.21
+  ENTRYPOINT ["/usr/local/bin/motd"]
+|).dockerfs(path=/usr/local/bin/motd mode=+x)(|
+  #!/bin/sh
+  cat /etc/motd.txt
+|).dockerfs(path=/etc/motd.txt mode=0644)(|
+  bound by a chain, landed by the same fold
+|)
+
+# The machine that runs the built image, so a call reaches the bound entrypoint.
+container greeter(img=compose.mk:greeter_img)(| |)
+
+# The same image with the entrypoint overridden, for looking at what landed.
+container greeter_cat(img=compose.mk:greeter_img entrypoint=cat)(| |)
+
+# The chain-built image, to show both spellings land the same way.
+container motd(img=${motd_img.img})(| |)
+
+demo.render:
+  '''Show the folded recipe without building: base line first, then the injected copy and chmod pairs.'''
+  log(${bold}rendered Dockerfile${no_ansi} (bound files folded in):)
+  greeter_img.render()
+
+demo.build:
+  '''Build the image, which materializes both bound files into a private context.'''
+  log(${bold}building${no_ansi} compose.mk:greeter_img)
+  greeter_img.build()
+
+demo.run:
+  '''Run the entrypoint the bound files supplied, then read the bound config back out.'''
+  log(${bold}entrypoint${no_ansi} (the +x bound file):)
+  greeter()
+  log(${bold}config${no_ansi} (the 0644 bound file, as it landed):)
+  greeter_cat(/etc/greeter.json)
+
+demo.chained:
+  '''Build and run the chain-declared image, whose two files were bound with no names at all.'''
+  log(${bold}chain form${no_ansi} (same fold, no names):)
+  motd_img.build()
+  motd()
+
+__main__: demo.render demo.build demo.run demo.chained

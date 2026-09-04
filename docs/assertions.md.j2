@@ -1,27 +1,17 @@
 {% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
 ### Assertion Support
-<hr style="width:100%;border-bottom:3px solid black;">
+<hr class="section-rule lvl-3">
 
-Without real typing or great tools for static-analysis, `make` can benefit from a few ways to write more defensive code.  Nothing here is very fancy, but it might save you from reimplementing stuff.  
+Without real typing or great static-analysis, `make` benefits from a few ways to write defensive code.  The precondition checks all live under the **`assert.*`** namespace and share one contract: they **pass quietly** when the condition holds and **fail loudly** (nonzero exit + a red log line) when it doesn't, so they compose naturally as recipe guards or target prerequisites.
 
-{#Unlike most of the standard library, this section is heavy on macros and light on targets, because re-using it outside of `make` isn't necessarily more readable than the shell equivalent would be.#}
+The twin demos below exercise the passing path of each kind, **environment**, **tool**, and **stream** assertions, as [twins]({{_}}/cmk/compiler) (a plain `Makefile` and its [cmk-lang]({{_}}/cmk/compiler) equivalent; toggle the tabs).  The comments cover the macro-vs-target forms and what each guards against.
 
-#### Environment Assertions
-<hr style="width:95%;border-bottom:1px dashed black;">
+{{site.embed_mirror('demos/assertions.mk', 'demos/cmk/assertions.cmk', github=github, default='left')}}
 
-We've already met one method for asserting environment variables are set as part of the [argument-parsing support](#bind-from-environment), because anything that's mentioned without a default is considered required.  
+Environment assertions also underpin the [argument-parsing support](#bind-from-environment): a kwarg mentioned without a default is implicitly required.
 
-See also:
-
-* {{site.api_link('mk.assert.env',mkdocs,arg='v1,v2..')}}, available as a target or a macro.
-
-#### Filesystem Assertions
-<hr style="width:95%;border-bottom:1px dashed black;">
-
-See also:
-
-* {{site.api_link('mk.require.tool',mkdocs,arg='tool-name')}}, basically a wrapper on `which`, and available as a target or a macro.
+{{site.api_link_many(['assert'], mkdocs)}}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {

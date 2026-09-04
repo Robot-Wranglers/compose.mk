@@ -1,0 +1,4 @@
+# Carry the build-time-materialized stdlib plugins (see setup.py `_materialize`)
+# into the sdist, so an sdist built where the `.cmk` submodule is present stays
+# self-contained when later installed somewhere it is not.
+recursive-include _plugins *.mk *.cmk

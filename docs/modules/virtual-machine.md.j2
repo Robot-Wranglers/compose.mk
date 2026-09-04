@@ -1,0 +1,199 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+{{ macros.section(3, "CMK Virtual Machine", id="cmk-virtual-machine") }}
+
+
+{{ macros.non_core('virtual-machine.cmk', kind='module', detail='It runs supervised, so it needs a `cmk run` / `mk.interpret` invocation, and it builds on the core [runtime](@/runtime) continuation/trampoline substrate.', mkdocs=mkdocs) }}
+
+The goals **after** the current target on the command line are the *continuation* (what is left to do).
+The `virtual-machine.cmk` module exposes that continuation[^cont] as a small **CEK machine** bound to the live make
+process:
+
+* **C**: the current goal (the pending goals, read from the command line),
+* **E**: an environment of bindings,
+* **K**: a tree of saved `{continuation, environment}` frames.
+
+{% include "includes/cek-anim.md" %}
+
+
+Every transfer re-dispatches **flat** through the supervisor's trampoline, so even an unbounded
+`goto`-loop runs at constant process depth (no nesting).
+
+```make
+$(call include.plugins, virtual-machine.cmk)
+```
+
+#### Operators
+<hr class="section-rule lvl-4">
+
+Use these **inline in a recipe**, where the current target is the goal:
+
+<table class="docutils">
+<thead><tr><th>operator</th><th>C/E/K</th><th>effect</th></tr></thead>
+<tbody>
+<tr><td><code>${__vm__.peek}</code> / <code>.rest</code> / <code>.depth</code></td><td>C read</td><td>inspect pending goals (top / below-top / count)</td></tr>
+<tr><td><code>$(call vm.push, &lt;g&gt;)</code></td><td>C xfer</td><td>run <code>&lt;g&gt;</code> next, then resume (subroutine, implicit return)</td></tr>
+<tr><td><code>$(call vm.drop)</code></td><td>C xfer</td><td>skip the next pending goal</td></tr>
+<tr><td><code>$(call vm.goto, &lt;g&gt;)</code></td><td>C xfer</td><td>tail-jump to <code>&lt;g&gt;</code>, keeping the goals after it</td></tr>
+<tr><td><code>$(call vm.replace, &lt;gs&gt;)</code></td><td>C xfer</td><td>replace the whole continuation</td></tr>
+<tr><td><code>$(call __vm__.getenv, &lt;k&gt;)</code> / <code>$(call __vm__.setenv, &lt;k&gt;, &lt;v&gt;)</code></td><td>E</td><td>read / bind one env key</td></tr>
+<tr><td><code>$(call vm.call, &lt;g&gt;)</code> / <code>$(call vm.return)</code></td><td>K xfer</td><td>call saves <code>{goal,cont,env}</code> + jumps; return pops + resumes</td></tr>
+<tr><td><code>$(call vm.yield, &lt;v&gt;)</code> (= <code>vm.ctx.send</code>)</td><td>K xfer</td><td>generator yield: bind <code>&lt;v&gt;</code> as <code>yielded</code> in the caller env, then return</td></tr>
+<tr><td><code>$(call vm.fork, "&lt;a b&gt;")</code></td><td>K</td><td>record a branching frame and run the branches via <code>flux.pipeline</code></td></tr>
+<tr><td><code>${make} __vm__.backtrace</code></td><td>K read</td><td>print the full control tree (K frames + live continuation)</td></tr>
+<tr><td><code>${__vm__}</code> (= <code>.snapshot</code> / <code>.snap</code>)</td><td>C/E/K read</td><td>the live machine IS its snapshot: the whole self-model as one JSON <code>{chain,ip,k,e,lvl,levels,step,posix_code,exit_code}</code></td></tr>
+<tr><td><code>${__vm__.stack}</code> (= <code>.kontinuation</code>) / <code>${__vm__.ip}</code> (= <code>.instruction_pointer</code> / <code>.control</code>)</td><td>K / C read</td><td>the saved frames (K) / the innermost goal (C), projected from <code>${__vm__}</code></td></tr>
+<tr><td><code>${__vm__.frontier}</code></td><td>K read</td><td>the untried alternatives of the nearest choice frame, as a goal-list (the homoiconic backtracking frontier)</td></tr>
+<tr><td><code>$(__ip__)</code> / <code>$(__step__)</code> / <code>$(__posix_code__)</code> / …</td><td>C read</td><td>the scheduler's seven registers: the cheap always-on reflection layer the snapshot reads from</td></tr>
+</tbody>
+</table>
+
+So the machine is both **reflective** (read its own state) and **steerable** (rewrite its own future):
+the `xfer` operators above don't just inspect the continuation, they *change* it and re-dispatch.
+
+#### Reflective environment
+<hr class="section-rule lvl-4">
+
+By default E is explicit (`setenv`/`getenv`).  A **reflective** environment makes E reflect the
+live shell env instead, so a goal uses plain `export <var>` and reads it first-class.
+
+With reflection enabled, **context receive** re-hydrates E at a goal's entry (the dual of the automatic
+**context send** on every transfer), so the body never calls `setenv`/`getenv`.  Three ways to receive,
+same single source (`vm.ctx.receive`):
+
+* the **`vm_hydrate` pragma** (`# cmk_pragma ::: { "vm_hydrate": true } :::`) makes the compiler
+  auto-receive at *every* recipe entry, no annotation (the stage lives in this plugin; core lifts it
+  when the pragma is set).  This is the recommended form;
+* the **`@vm.ctx.hydrate` decorator**: per-goal opt-in (the eval-wrapping manual form);
+* the bare `vm.ctx.hydrate` macro: for plain Makefiles (no compiler).
+
+Receive is idempotent and `[ -s ]`-guarded (a no-op, no `jq`, when there is no context), and logs
+`receiving context from <caller>` when it actually injects bindings.  Reflection is **dormant** (zero
+cost, nothing created) unless declared.
+
+#### Coroutines
+<hr class="section-rule lvl-4">
+
+The `vm-coroutines.cmk` demo packages the common pattern (a self-re-entering goal that advances
+a `phase` through the reflective env until done) as a reusable, importable coroutine.  It lives under
+`demos/` (not a library: no demos in libraries), so another demo imports it FROM there:
+
+```make
+$(call include.plugins, vm-coroutines.cmk prefix=demos/cmk)
+__main__: coroutines.demo
+```
+
+Two knobs let a consumer tune it (e.g. an overlay/TUI): `coroutines.wait` (per-phase `io.wait` pacing)
+and `coroutines.dump_env` (print the persisted reflective env when finished).
+
+```bash {.cli_example}
+$ ./demos/cmk/vm-coroutines.cmk
+```
+
+{{site.embed_demo('demos/cmk/vm-coroutines.cmk', type='cmk', github=github)}}
+
+For coroutines in context alongside the other flow-control idioms (events, channels, typed exceptions),
+see the [Flow Control]({{_}}/demos/flow-control/#coroutines) walkthrough.
+
+The pending goals *are* the control stack, and a `goto`-loop runs **flat**; `MAKELEVEL` stays
+constant, so the loop never nests processes:
+
+```bash {.cli_example}
+# the pending goals A,B after `peek` ARE the control stack:
+$ ./demos/call_stack.mk peek A B
+top=A rest=[B] depth=2
+
+# a goto-loop that runs FLAT -- MAKELEVEL is constant, the loop does not nest processes:
+$ ./demos/vm.mk count/3
+count 3 (MAKELEVEL=3)
+count 2 (MAKELEVEL=3)
+count 1 (MAKELEVEL=3)
+count 0 (MAKELEVEL=3)
+done
+```
+
+#### Self-model & steering
+<hr class="section-rule lvl-4">
+
+{{ macros.protocol('__vm__',
+    capability='The CEK virtual machine as a reflective, steerable self-model.',
+    surface='`${make} __vm__.snapshot` emits the whole model as JSON; each name (`.stack` / `.ip` / `.backtrace` / ...) is both a macro (embed) and a same-name target (display).',
+    notes='It can read its own state (chain, ip, stack depth, env, scheduler registers) and rewrite its own future (the goal frontier).',
+    mkdocs=mkdocs) }}
+
+The `__vm__.snapshot` target emits the **whole self-model** as one JSON object: `chain` (the K-frame
+goals plus the top frame's pending continuation), `ip` (the innermost goal, the instruction pointer),
+`k` (stack depth), `e` (the env), `lvl`/`levels` (the live make-level callstack), and
+`step`/`posix_code`/`exit_code` (the scheduler registers, below).  Every observer reads it; the REPL
+mode-line and the `overlay.mk` panel both render it.  It always emits **legal JSON**: when no machine
+is live it degrades to `{}`, never an empty string.
+
+The scheduler's seven registers are the **cheap always-on** layer of the same self-model: `__ip__`
+(C), `__step__`/`__step_budget__`, `__alt__`/`__yielded__`, and `__posix_code__` vs
+`__exit_code__` (raw wait status vs resolved code).  They are exported on every dispatch hop and
+read with a bare make-var reference (no `jq`), defaulted empty so an unsupervised read is safe; the
+snapshot single-sources `ip`/`step`/the codes from them and is the structured, opt-in view.  See the
+[scheduler registers]({{_}}/runtime#flat-dispatch) on the Runtime page.
+
+Each self-model name is both a **macro** and a **target** (no `.show` suffix): the `__vm__.stack` macro *embeds*
+the value inside a recipe, while the `__vm__.stack` target *displays* it; the same var/target duality the
+[program self-models]({{_}}/plugins/overview#program-self-models) share.  The JSON
+observers (`.snapshot`, `.stack`, `.kontinuation`, `.frames`) emit legal JSON (`{}` / `[]` when idle);
+the scalar projections (`.ip` / `.control`) are raw (the bare goal name, or nothing), and `.backtrace`
+prints a human-readable tree.
+
+#### Real frames &amp; the `vm_trace` pragma
+<hr class="section-rule lvl-4">
+
+Beyond the explicit K-stack, the `__vm__.frame.enter` macro turns a recipe's **shell** into a live frame:
+prepended to a recipe it records the goal (the current target), a monotonic step, and make-level, installs a DEBUG trap
+capturing the frame's most-recent shell command, and an EXIT trap recording the exit code + the
+`__locals__` delta before popping.  Because a plain recursive sub-target nests a real child process, the set of
+live frame files **is** the genuine deep call stack (the `__vm__.frames` target reads it), including
+recursive `make` the K-stack can't see.
+
+You rarely write `frame.enter` by hand: the **`vm_trace`** compile pragma makes the compiler's
+[recipe-body joiner]({{_}}/cmk/compiler/#recipe-body-joining) **inject** it as the
+first line of every eligible recipe (the same mechanism as the `target_locals` baseline).  It skips
+infra/observer + private targets (`CMK_VM_TRACE_SKIP`) and recipes that *read* the VM, so the tracer
+never traces itself.  `demos/cmk/debugger-example.cmk` enables it with one pragma key and ships zero
+hand-placed calls; the whole program's call stack becomes the live frame-tree REPL.
+
+```
+# cmk_pragma ::: { "repl": { ... }, "vm_trace": true } :::
+```
+
+Because the transfer operators **steer** the running machine, a machine that *blocks for input* can be
+driven from outside: `demos/cmk/vm-steer.cmk` is a REPL whose mode-line is the live dashboard and whose
+prompt is the driver's seat: type a goal and the paused machine `vm.goto`s to it, runs it, and
+re-blocks (the race-free `__vm__.steer.wait`/`__vm__.steer.post` command channel).
+
+```bash {.cli_example}
+$ ./demos/cmk/vm-steer.cmk            # then type a goal at the prompt, e.g. `vm-steer.alt`
+```
+
+{{site.embed_demo('demos/cmk/vm-steer.cmk', type='cmk', github=github)}}
+
+#### Worked examples
+<hr class="section-rule lvl-4">
+
+The source tree ships several demos:
+
+| Demo | What it demonstrates |
+| --- | --- |
+| {{ macros.repo_link('demos/call_stack.mk', github=github) }} | push / goto / call / return |
+| {{ macros.repo_link('demos/vm.mk', github=github) }} | call/return, ping-pong, generators, fork + backtrace |
+| {{ macros.repo_link('demos/cmk/vm-coroutines.cmk', github=github) }} | a reflective coroutine |
+| {{ macros.repo_link('demos/cmk/overlay.cmk', github=github) }} | the same coroutine as a live REPL overlay |
+| {{ macros.repo_link('demos/cmk/vm-steer.cmk', github=github) }} | the live dashboard + steerable driver's seat |
+| {{ macros.repo_link('demos/cmk/unicon-queens.cmk', github=github) }} | Icon-style backtracking (`vm.choose` / `vm.backtrack`); the alternation frontier is expressed as lifted `goal` values (`goal Q = q`, so `$(Q)/<cols>` reifies to `q/<cols>`), and the choice frame's `alts` are first-class, inspectable via `${__vm__.frontier}` |
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Runtime]({{_}}/runtime): the continuation/trampoline substrate the machine runs on.
+* [Signals]({{_}}/signals): the supervisor every transfer re-dispatches through.
+* [REPL]({{_}}/plugins/tux.repl): the debugger front-end over the frame machinery.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^cont]: {{ tufte.wiki('Continuation')|trim }}

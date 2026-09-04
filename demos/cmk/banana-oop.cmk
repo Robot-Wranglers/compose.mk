@@ -1,0 +1,69 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# banana-oop.cmk: classes, inheritance, and override in cmk.
+
+'''
+Ordinary object-orientation.  A class declares methods as recipe targets
+keyed on `self`, the instance.  A subclass names its parent in its bases
+to inherit the whole chain, and overrides a method just by redefining it.
+With more than one base, resolution follows Python's order: the leftmost
+base wins.  Classes are capitalized, instances lowercase.
+
+USAGE: ./demos/cmk/banana-oop.cmk
+'''
+
+import log
+from cmk import class
+
+class Polygon[|
+  '''Polygon: the base -- every polygon can describe itself, if only generically.'''
+  self.describe:
+    log(self.__im_self__ is some polygon)
+|]
+
+class Rectangle(bases=Polygon)[|
+  '''Rectangle is-a Polygon that overrides describe and adds right_angles.'''
+  self.describe:
+    log(self.__im_self__ is a rectangle)
+  self.right_angles:
+    log(self.__im_self__ has four right angles)
+|]
+
+class Rhombus(bases=Polygon)[|
+  '''Rhombus is-a Polygon that overrides describe.'''
+  self.describe:
+    log(self.__im_self__ is a rhombus)
+|]
+
+# A Square is-a Rectangle and a Rhombus (equal angles and equal sides); both
+# define describe, so the leftmost base wins.
+class Square(bases=Rectangle,Rhombus)(||)
+
+poly <- Polygon.new()
+rect <- Rectangle.new()
+rhomb <- Rhombus.new()
+sq <- Square.new()
+
+demo.base:
+  ''' poly is-a Polygon: describe gives the generic answer. '''
+  this.poly.describe
+
+demo.override:
+  ''' Rectangle and Rhombus each override describe; Rectangle also adds right_angles. '''
+  this.rect.describe
+  this.rect.right_angles
+  this.rhomb.describe
+
+demo.mro:
+  ''' sq is-a Rectangle and Rhombus: both define describe, so leftmost Rectangle wins. '''
+  log(bases=${Square.__bases__})
+  this.sq.describe
+
+demo.reflection:
+  ''' Each instance carries Python-style reflection dunders. '''
+  log(class=${rect.__class__})
+  log(bases=${Rectangle.__bases__})
+  log(self=${rect.__im_self__})
+  log(dir=${rect.__dir__})
+
+__main__: demo.base demo.override demo.mro demo.reflection

@@ -1,22 +1,30 @@
 #!/usr/bin/env -S make -f
-# Demos make-targets in foreign languages, without a container.
-# Part of the `compose.mk` repo. This file runs as part of the test-suite.
-# See also: http://robot-wranglers.github.io/compose.mk/demos/polyglots
+#
+# local-interpreter.mk:
+#   The plain-Makefile twin of demos/cmk/local-interpreter.cmk: run a
+#   foreign-language program on the host's own python, no container.  Here
+#   the mechanism is explicit (a script lives in a define block, dispatched
+#   onto a named host interpreter) where the .cmk hides it behind the
+#   (| body |) in host.native.python; there is no container, so the
+#   interpreter must actually be present on the host.
+#
 # USAGE: ./demos/local-interpreter.mk
 
 include compose.mk
 
-# Look, here's a simple python script 
-define script.py
-import sys
+# hello: two lines of python on the host interpreter.  A make define keeps
+# its body verbatim, so the dollar survives, same as a raw .cmk banana.
+define hello.py
 print('python world')
-print('dollar signs are safe: $')
+print('dollars are safe: $')
 endef
 
-# Minimal boilerplate to run the script, using a specific interpreter (python3).
-# No container here, so this requires that the interpreter is actually available.
-__main__: polyglot.dispatch/python3,script.py
+# version: the same idiom, reporting the host python it landed on.
+define version.py
+import sys
+print('running on', sys.version.split()[0])
+endef
 
-# Multiple mappings for script/interprreter can co-exist,
-# and using a more specific interpreter is just mentioning it.
-demo.python39: polyglot.dispatch/python3.9,script.py
+__main__: hello version
+hello: host.dispatch/python3,hello.py
+version: host.dispatch/python3,version.py

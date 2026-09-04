@@ -1,0 +1,42 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# container-eval.cmk:
+#   Multi-line foreign code that runs in a container, invoked with a bare NAME() call.
+#   A recipe banana (| .. |) in X cannot span lines, so a multi-line program lives at
+#   module level as a named banana instead.  A dsl kind binds the code to a container
+#   ambient and every instance gets the .__call__ dunder for free, so NAME() from a
+#   recipe dispatches the whole shape into the image.
+#
+#   Contrast local-interpreter.cmk (single-line bodies via in) and code-objects.cmk
+#   (the embed surface).
+#
+# USAGE: ./demos/cmk/container-eval.cmk   # needs docker
+
+# a python ambient: ( pin an image and its runner to a name )
+#   container creates an ambient carrying img and runner, and declaring it registers the
+#   ambient, so a later dispatch resolves py312 by name with no config at the call site.
+from cmk import container, dsl
+container py312(img=python:3.12-slim entrypoint=python3)(| |)
+
+# pyc: ( a dsl kind whose instances are python programs run in py312 )
+#   machine=py312 backs the kind with the container, so instance()
+#   runs the program in the image: the invoke delegates to the
+#   machine, only the machine differs from a host dsl.
+dsl pyc(machine=py312)(| |)
+
+# a multi-line program: ( ordinary python, as many lines as the task wants )
+pyc report(|
+  import sys, platform
+  print("python", sys.version.split()[0], "on", platform.machine())
+  total = sum(n * n for n in range(1, 11))
+  print("sum of squares 1..10 =", total)
+|)
+
+__main__: run
+
+run:
+  '''
+  invoke the instance: report() routes through .__call__, running the
+  shape in py312 -- the object is callable again, a reusable code object.
+  '''
+  report()

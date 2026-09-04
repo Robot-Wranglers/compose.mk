@@ -1,0 +1,36 @@
+# Release gate: on a `v*` tag, run the focused test suites (via workflow_call) so a
+# release is verified end-to-end.  This is what makes `make release` (gitops.release)
+# track the test-suite: the project Makefile lists this workflow in `gitops.watch`, and
+# the release poller streams this run -- keyed on the tag -- to completion (non-zero if
+# any suite fails).  The same suites also run on branch push/PR (see each *-tests.yml);
+# this is the release-tag re-run + single watchable run for `make release`.
+name: Release Checks
+on:
+  workflow_dispatch: {}
+  push:
+    tags: [ "v*" ]
+permissions:
+  contents: read
+  packages: read
+jobs:
+  unit:
+    uses: ./.github/workflows/unit-tests.yml
+  compiler:
+    uses: ./.github/workflows/compiler-tests.yml
+  plugin:
+    uses: ./.github/workflows/plugin-tests.yml
+  docker:
+    uses: ./.github/workflows/docker-tests.yml
+  integration:
+    uses: ./.github/workflows/integration-tests.yml
+  # Docs build/deploy as part of a release -- left wired but COMMENTED OUT for now:
+  # docs.yml deploys to the single GitHub Pages site, and whether a release tag
+  # (vs. main / the active version branch) should publish docs is still TBD.  Once
+  # decided, uncomment -- `make release` already watches this workflow, so docs
+  # would then be part of the gated, watched release.
+  # docs:
+  #   uses: ./.github/workflows/docs.yml
+  #   permissions:
+  #     contents: read
+  #     pages: write
+  #     id-token: write

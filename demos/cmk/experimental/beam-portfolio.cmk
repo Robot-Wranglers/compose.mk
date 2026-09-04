@@ -1,0 +1,28 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# beam-portfolio.cmk: parallel vm.choose portfolio (beam-tramp).
+
+'''
+An unguarded-failure vm.choose search under beam-tramp: a miss exits nonzero so the
+resume safety-net backtracks. Under CMK_TRAMP_CHOOSE=parallel the whole frontier runs
+concurrently on the BEAM node and the first hit wins. Needs docker.
+'''
+
+from platform.beam import beam.tramp
+from virtual-machine import vm.choose
+
+SPACE  ?= 8
+TARGET ?= 5
+
+find/%:
+  '''vm.choose over 0..SPACE-1 (each candidate a try/ goal).'''
+  t="${*}"; alts=""; k=0; \
+  while [ "$$k" -lt "${SPACE}" ]; do alts="$$alts try/$$t.$$k"; k=$$((k+1)); done; \
+  vm.choose($$alts)
+
+try/%:
+  '''hit -> print and stop; miss -> unguarded fail (exit 1) so the trampoline backtracks.'''
+  t=`printf '%s' "${*}" | cut -d. -f1`; c=`printf '%s' "${*}" | cut -d. -f2`; \
+  if [ "$$c" = "$$t" ]; then printf 'FOUND %s\n' "$$c"; else exit 1; fi
+
+__main__:
+  goals="cmk run demos/cmk/beam-portfolio.cmk find/${TARGET}" CMK_TRAMP_CHOOSE=parallel ${make} beam.tramp

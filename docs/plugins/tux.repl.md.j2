@@ -1,0 +1,135 @@
+{% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}{% import 'macros/tufte.j2' as tufte -%}
+
+{{ macros.non_core('tux.repl.cmk', detail='It needs a terminal (TTY) and a docker daemon: the Bubbletea harness is cross-built in a container on first use and cached per-host; nothing is installed on the host.', mkdocs=mkdocs) }}
+
+{{ macros.section(3, "REPL", id="repl-tux-repl") }}
+
+
+{{ macros.img_link("repl-debugger.gif", mkdocs, "520px") }}
+
+`tux.repl.cmk` provides a reusable, multi-region terminal **REPL**[^repl] over a program's make-targets: a
+scrolling output **panel**, a **text-area** prompt, a one-line **mode-line**, and optional right-hand
+**minimaps**.  Type a target name and it runs; its output streams into the panel.  More broadly it is a
+metadata-driven TUI host, reusable for non-debugger clients (see *Beyond a make-REPL* below).
+
+It's the engine behind the [zero-config REPL]({{_}}/zero-config-tuis/#interactive-repl)
+you get from `cmk repl` or the `repl` pragma, and it is also directly reusable to build a *custom* REPL
+wired to your own read / eval / print targets.
+
+{{ macros.terminology("A **read-eval-print loop** is an interactive prompt that **read**s an input, **eval**uates it, **print**s the result, and **loop**s.  Here the three verbs are ordinary make-targets: the prompt's input is fed to your `eval` target, whose output (and the `print` target's) streams into the panel, so the loop is wired from your own program's targets rather than a fixed interpreter.", title="**Definition: REPL**") }}
+
+#### Three ways to get a REPL
+<hr class="section-rule lvl-4">
+
+**1. `cmk repl` (no wiring).**  Open a shell over any program's target namespace; or the core
+namespace with no file:
+
+```bash {.cli_example}
+$ ./compose.mk cmk repl                         # a shell over the core namespace
+$ ./compose.mk cmk repl demos/cmk/overlay.cmk   # a shell over a program's targets
+```
+
+**2. The `repl` pragma (default to a REPL).**  A program can make the REPL its *default* action, so a
+bare `cmk run <file>` launches it.  The pragma is the **whole** wiring: no import, no `tux.repl`
+boilerplate (the runtime owns the harness; the file owns only its targets):
+
+{{site.embed_demo('demos/cmk/repl.cmk', type='cmk', github=github)}}
+
+**3. The plugin building blocks (custom REPL).**  Import the plugin and `tux.repl.declare` to bind
+three of *your own* targets to the three regions:
+
+```cmk {.language-cmk}
+$(call __plugins__.require, tux.repl.cmk)
+$(call tux.repl.declare, namespace=ui read=my.read eval=my.eval print=my.print)
+```
+
+...which wires a `ui` target whose recipe launches the REPL.  (The underlying callable is the
+`tux.repl` macro, usable directly as `cmk.tux.repl(..)` on a recipe line if you prefer.)
+
+#### Three regions
+<hr class="section-rule lvl-4">
+
+| Region | Target | Behavior |
+| --- | --- | --- |
+| **panel** (top, scrolling) | `print` | called with no args; its stdout/stderr stream onto the panel |
+| **prompt** (text-area) | `eval` | a stdin sink: each submission is written to its stdin; eval's own stdout/stderr also stream to the panel: the read-eval-**print** loop |
+| **mode-line** (bottom) | `read` | long-lived; emits line-oriented output (plain text, or the JSON **metadata channel** below) |
+| **minimap** (right, optional) | `minimap` | long-lived; output streams into a right-hand pane (a scrolling buffer or an auto-detected JSON tree) |
+| **events** (optional) | `events` | the **event channel** (UI -> client): the wrapper *writes* one JSON UI-event per line (key/submit/resize/focus/scroll) to this target's stdin |
+
+For a `repl`-pragma / `cmk repl` session these default to the generic core dispatcher
+(`tux.repl.kernel`); the pragma accepts an object with `read` / `eval` / `print` / `exit_after` /
+`minimap` / `events` / `complete` keys to override them.
+
+#### Beyond a make-REPL: general TUI clients
+<hr class="section-rule lvl-4">
+
+The wrapper is a metadata-driven **TUI host**, not just a make debugger.  A `read` target emits one JSON
+object per line whose keys are routed to UI sections, so a client can drive a form, wizard, dashboard, or
+custom-language REPL without touching the Go wrapper:
+
+* **Chrome / layout**: `prompt` (custom input prompt), `input` / `modeline` / `panel` (tri-state bools;
+  omit = visible), `split` (minimap width), `title` (window title).
+* **Widgets**: `progress` `{pct,label,color,show}` (a determinate bar beside the spinner) and `toast`
+  `{text,level,ttl}` (a transient top-right notification).
+* **Minimaps**: `mm_config` `{pos:mode}` over positions `top|middle|bottom`, each mode `tree`
+  (a lipgloss tree), `buffer` (a scrolling log), or `mode` (an overwrite snapshot), fed by
+  `[<pos>_]mm_{tree|buffer|top|bottom}`.
+* **Event channel**: wire an `events` target to *react* to the UI (the inverse of `read`).
+* **Pluggable completion**: a `complete` target overrides the built-in `cmk cli complete` (any language).
+* **Rich output**: target ANSI color is preserved in the panel, so a client renders markdown/syntax
+  itself (e.g. piping through `glow`) and the wrapper passes it through.
+
+See {{macros.repo_link('demos/cmk/repl-form.cmk', name='demos/cmk/repl-form.cmk', github=github)}} for a
+non-debugger client exercising the chrome keys, the progress bar, and the event channel end-to-end.
+
+A custom **minimap** feeder is another worked client:
+{{macros.repo_link('demos/cmk/stack-of-stacks.cmk', name='demos/cmk/stack-of-stacks.cmk', github=github)}}
+wires a `minimap` target that reads each branch's control-stack and emits tree nodes, so the right-hand
+pane renders a live `fork` as sibling stacks under one root, a running / done marker per branch:
+
+{{macros.img_link("stack-of-stacks.gif", mkdocs, "90%", class="cli_output")}}
+
+#### VM debugger (a worked client)
+<hr class="section-rule lvl-4">
+
+A live **VM debugger** is a worked `read` client: the `tux.repl.debugger.feed` read-target translates the
+VM's `__vm__.frames` into four regions: a mode-line (instruction pointer + clock), a last-command buffer,
+a live call-stack **tree**, and an env buffer.  The frame machinery lives in the
+[VM module]({{_}}/modules/virtual-machine).
+
+{{macros.img_link("repl-debugger.gif", mkdocs, "90%", class="cli_output")}}
+
+The demo wires that feed against a nested build pipeline as the debuggee:
+
+{{site.embed_demo('demos/cmk/debugger-example.cmk', type='cmk', github=github)}}
+
+#### Notes
+<hr class="section-rule lvl-4">
+
+* **Import with `require`.**  The harness's children re-parse the importing file, so import the plugin
+  by calling the `__plugins__.require` macro on `tux.repl.cmk` (idempotent and child-safe) rather than a bare
+  include; the children inherit the registry and skip the re-import.
+* **Plain Makefiles** can use the `tux.repl/<comma,separated,target,list>` helper target directly (no
+  cmk-lang required); the `.cmk` paths use the `repl` pragma / `cmk repl`.
+* **Build-on-first-use.**  The Go wrapper is materialized from inline block-refs and cross-built on
+  first launch, via the [Golang Polyglot plugin]({{_}}/plugins/code.golang)'s
+  build-if-needed pipeline; then cached per-host; later launches just exec the cached binary.
+
+{{ macros.section(3, "See Also", id="see-also") }}
+
+* [Interactive REPL]({{_}}/zero-config-tuis/#interactive-repl): the user-facing `cmk repl` walkthrough.
+* [Compiler &amp; Dialects]({{_}}/cmk/compiler): the `repl` pragma and other per-program knobs.
+* [Golang Polyglot]({{_}}/plugins/code.golang): the build-if-needed pipeline `tux.repl` is a client of.
+* [Virtual Machine]({{_}}/modules/virtual-machine): the frame machinery behind the debugger client.
+* [Plugin Overview]({{_}}/plugins/overview/#plugin-api-usage): how plugins load and bind.
+
+{{ macros.section(3, "References", id="references") }}
+
+[^repl]: {{ tufte.wiki('Read%E2%80%93eval%E2%80%93print_loop')|trim }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {setTimeout(function() {
+    addImageToHeader('repl-tux-repl','/{{mkdocs.config.site_name}}/img/workflow.svg')
+}, 100);});
+</script>

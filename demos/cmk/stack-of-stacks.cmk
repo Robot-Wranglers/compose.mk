@@ -1,0 +1,249 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# stack-of-stacks.cmk:
+#   A spike for fork: run a nondeterministic handler so each branch gets its own
+#   control-stack (K) and environment (E), join at the end, and return one record
+#   per branch -- its stack plus how it ended -- a stack of stacks.
+#
+# USAGE:
+#   ./demos/cmk/stack-of-stacks.cmk                     # independent + seeded fork
+#   ./demos/cmk/stack-of-stacks.cmk fork/handler/a,handler/b
+#   seed=1 ./demos/cmk/stack-of-stacks.cmk fork/handler/a,handler/b,handler/c
+#   on_error=strict ./demos/cmk/stack-of-stacks.cmk fork/handler/a,handler/c  # propagate a fault
+#
+#   # watch the forest live in the REPL tree-minimap (fork.minimap feeder):
+#   # FORK_DELAY keeps each branch live long enough for the ~1s minimap
+#   # poll to sample it, so the pink IP shows on a live branch tip.
+#   FORK_DELAY=2 CMK_PRAGMA_VM_TRACE=1 CMK_REPL_MINIMAP=fork.minimap ./compose.mk cmk repl demos/cmk/stack-of-stacks.cmk
+
+'''
+The supervisor trampoline is a single scheduler with a single control stack (K),
+keyed -- like E and the yield channels -- by one run-id (MAKE_SUPER).  Everything
+inherits the process tree, so there is no way to launch a second live stack inside
+one supervisor.  But the run-id is just an env-var, and the whole VM state keys off
+it, so fork does not need a second supervisor at all: it launches each branch as an
+ordinary sub-make with the run-id overridden, so that branch reads and writes its
+own private K + E files.
+
+The three overrides per branch:
+
+  MAKE_SUPER=<key>:
+    re-keys E (.tmp.cmk.vmenv.<key>) and the run-id
+  CONTROL_STACK_FRAMES=<kfile>:
+    re-keys K explicitly (io.stack! keeps an env-supplied value; io.stack.push
+    writes there)
+  CMK_SUPERVISOR=0:
+    no trampoline: MAKE_SUPER is not recomputed, and the supervisor teardown does
+    not delete the K file, so it survives the join for harvesting
+
+Branch execution is shell-level parallel/join (& then wait), which stays inside
+this hop, so the child K files are all present when we collect.  Collection reads
+each branch's K file (its stack) beside two error channels harvested the same way:
+the cheap tier is the OS exit code (from waiting on the branch pid); the rich tier
+is a semantic verdict a branch deposits on its value channel (.tmp.mk.super.<key>),
+which -- lacking a trampoline to consume it -- survives the join like the K file.
+The two can differ: a healthy process (OS 0) can still report a dead-end verdict,
+the case only the rich tier expresses.  seed=1 first copies the parent K into each
+branch, so a branch continues from fork's own continuation (the shared prefix of
+the trace) rather than an empty stack.
+
+This is the sequential dual of vm.choose: choice explores alternatives depth-first
+in one stack (collapsing on backtrack); fork explores them all at once, one stack
+each, and keeps every one.
+'''
+
+# Loaded for its macros only (control_stack.frame.push, __vm__.setenv),
+# referenced directly, never smart-sent; plugin=1 registers it in
+# __plugins__ so the runtime VM-ledger gates see it (a plain flat
+# import would not).
+import virtual-machine.cmk as vm, plugin=1
+from cmk import class
+from cmk import Actor
+
+class SubmakeActor(bases=Actor)[|
+  '''
+  Submake-spawn transport (the fork branch): a one-shot sub-make keyed off
+  the run key (ACTOR_KEY overrides, else derived from the actor name).
+  Isolation is _vm.ambient (the shared unsupervised-spawn primitive), which
+  re-keys K/E/stack onto that key with no trampoline, so the files survive
+  the branch exit.  Runs ACTOR_GOAL, seeds the branch K from ACTOR_SEED_FROM
+  when seed is set.
+  Emits a {os_rc,verdict,frames} record.  deliver and serve are the same
+  spawn.  Mailbox-less.  Branch files survive the branch exit for harvest,
+  so the actor owns their teardown: it just overrides stop (the base
+  registers it at exit) to sweep this run's branch footprint.
+  '''
+  ${self}.spawner.__call__ = \
+    run="$${MAKE_SUPER:-$$$$}"; \
+    key="$${ACTOR_KEY:-$${run}.spawn.${self}}"; \
+    kfile=".tmp.CONTROL_STACK_FRAMES.$${key}"; \
+    cmk.io.safe_rm($$kfile); cmk.io.safe_rm(.tmp.cmk.vmenv.$$key); cmk.io.safe_rm(.tmp.mk.super.$$key); \
+    if [ -n "$${seed:-}" ]; then src="$${ACTOR_SEED_FROM:-.tmp.CONTROL_STACK_FRAMES.$$run}"; [ -s "$$src" ] && cp "$$src" "$$kfile"; fi; \
+    $(call _vm.ambient,$$key) ${make} $${ACTOR_GOAL:-__main__} 2>/dev/null; \
+    rc=$$?; verdict=`{ [ -s ".tmp.mk.super.$$key" ] && cat ".tmp.mk.super.$$key"; } 2>/dev/null`; \
+    st=`{ [ -s "$$kfile" ] && cat "$$kfile"; } 2>/dev/null || echo '[]'`; \
+    ${jq.run} -nc --argjson os "$$rc" --arg v "$$verdict" --argjson st "$$st" \
+      '{os_rc:$$os,verdict:(if $$v=="" then null else ($$v|tonumber?) end),frames:$$st}'
+
+  self.deliver:
+    ${self}.spawner()
+
+  self.serve:
+    ${self}.spawner()
+
+  self.stop:
+    '''Teardown at exit: sweep this run's branch ambient footprint (the VM
+    leaf set _vm.ambient re-keys, via its _vm.ambient.sweep companion)'''
+    run="$${MAKE_SUPER:-$$$$}"; $(call _vm.ambient.sweep,$$run.fork.*)
+|]
+branch <- SubmakeActor.new()
+
+# Optional per-push delay (seconds): pause between frames so a REPL minimap feeder has
+# time to sample a branch mid-build.  Zero by default (full speed).
+FORK_DELAY ?= 0
+
+# forklog: the collector mailbox.  The join loop delivers each branch's
+# record here; the channel accumulates them, so the report is a dump
+# rather than a hand-rolled JSON-array fold.  A bare channel is the minimal
+# mailbox (pure collection, no messaging envelope).  Concurrent producers
+# would need a serialized consumer -- exactly what the sequential join is.
+channel forklog(| |)
+
+fork/%: forklog.purge
+  '''
+  fork/<g1,g2,..>: each comma-listed goal in its own stack, join, report.
+
+  Policy only.  The fork.scatter supervisor owns the fan-out/join and
+  delivers each branch record into forklog; fork resets the mailbox, dumps
+  it as the report, then applies the fault policy.  A blocking call (not a
+  trampoline transfer), so the result is usable inline.  on_error=strict
+  makes a faulted branch propagate: fork exits nonzero.
+  '''
+  this.fork.scatter/${*}
+  this.forklog.dump
+  case "$${on_error:-ignore}" in strict) cmk.io.stack($(forklog.__stack__)) \
+    | ${jq.run} -e 'all(.[];.os_rc==0)' >/dev/null || exit 1;; esac
+
+fork.scatter/%:
+  '''
+  The supervisor half of fork: fan a branch out per goal, join, and collect
+  each record into forklog.  It owns the parallel launch, the wait, and the
+  pid ledger, so fork is left with policy.  Runs as its own sub-make, safe
+  now that _vm.ambient makes each branch key portable across the boundary.
+  The per-branch records live in one io.mktempd scratch dir (freed at exit);
+  the caller (SubmakeActor) sweeps the VM ambient footprint at exit.  The
+  launch loop is the reusable core; swarm shares it, diverging at the join.
+  '''
+  cmk.io.mktempd(); \
+  run="$${MAKE_SUPER:-$$$$}"; \
+  i=0; jobs=""; \
+  for b in `printf '%s' "${*}" | ${stream.comma.to.nl}`; do \
+    i=$$((i+1)); key="$${run}.fork.$${i}"; rec="$${tmpd}/branch.$${i}"; \
+    branch.serve{ \
+      seed=$${seed:-} \
+      ACTOR_KEY=$${key} \
+      ACTOR_GOAL=$${b} \
+      ACTOR_SEED_FROM=.tmp.CONTROL_STACK_FRAMES.$${run} } \
+        > "$${rec}" 2>/dev/null & \
+    jobs="$${jobs} $$!:$${key}"; \
+  done; \
+  for j in $${jobs}; do \
+    p="$${j%%:*}"; key="$${j#*:}"; idx="$${key##*.fork.}"; rec="$${tmpd}/branch.$${idx}"; \
+    wait "$$p" || true; \
+    entry=`{ [ -s "$${rec}" ] && tail -n1 "$${rec}"; } 2>/dev/null`; \
+    printf '%s' "$$entry" | ${jq.run} -e . >/dev/null 2>&1 || entry='{}'; \
+    printf '%s' "$$entry" | ${jq.run} -c --arg b "branch $$idx" '{branch:$$b} + .' \
+      | $(forklog.push); \
+  done
+
+handler/%:
+  '''
+  handler/<label>: one resolution of the nondeterministic handler.
+
+  Builds a distinct control-stack (an enter frame plus a label-specific number of
+  work frames) and a distinct env binding, then reports an outcome: a is a solution
+  (exit 0, verdict 0), b a dead-end (exit 0 but verdict 1 -- a healthy process with a
+  prune signal), c a fault (nonzero exit, no verdict).  Runs under an overridden
+  run-id, so every write lands in this branch's private files, never the parent's.
+  '''
+  label="${*}"; pidf=".tmp.fork.pid.$${MAKE_SUPER}"; \
+  case "$$label" in a) w=1;; b) w=2;; c) w=3;; *) w=2;; esac; \
+  printf '%s' "$$$$" > "$$pidf"; trap 'rm -f -- "$$pidf"' EXIT; \
+  """{"goal":"handler/$$label","kind":"enter","step":0}""" | ${control_stack.frame.push}; \
+  s=0; while [ "$$s" -lt "$$w" ]; do s=$$((s+1)); sleep ${FORK_DELAY}; \
+    """{"goal":"work/$$label","kind":"step","step":$$s}""" | ${control_stack.frame.push}; \
+  done
+  $(call __vm__.setenv, chosen, ${*})
+  case "${*}" in \
+    a) $(call mk.super.status,0) ;; \
+    b) echo 1 > ".tmp.mk.super.$${MAKE_SUPER}" ;; \
+    c) exit 3 ;; \
+    *) $(call mk.super.status,0) ;; \
+  esac
+
+fork.env.dump:
+  '''
+  fork.env.dump: show that E diverged per branch -- verify, don't assert.
+
+  One env file per branch, each with its own chosen, proving the branches did
+  not share an environment.
+  '''
+  run="$${MAKE_SUPER:-$$$$}"; \
+  for f in .tmp.cmk.vmenv.$${run}.fork.*; do \
+    [ -e "$$f" ] || continue; printf '  %s => %s\n' "$$f" "`cat $$f`"; \
+  done
+
+# fork.minimap.tree: shape one branch's K file into a {label,children} minimap node.
+fork.minimap.tree=${jq.run} -c --arg l "$$lbl" --arg live "$$live" '($$live=="1") as $$on | {label:($$l + (if $$on then " ⟳" else " ✓" end)),children:([.[]|{label:.goal,note:((.kind//"")+"·"+((.step//0)|tostring))}]|if ($$on and length>0) then .[-1].active=true else . end)}'
+fork.minimap:
+  '''
+  fork.minimap: a tux.repl minimap feeder for the forest.
+
+  The core __vm__.minimap renders the live call stack + choice frontier as a single
+  spine -- it reads recipe-shell frames, not the persisted per-branch K files, and
+  folds concurrent branches linearly, so it cannot show a fork.  This feeder reads
+  the stack-of-stacks directly: each .fork.<i> K file becomes one child tree, so the
+  forest renders as sibling stacks under a common root.  Same {label,children}
+  contract the REPL minimap region consumes as __vm__.minimap, glob-based so it can
+  observe branches running in another supervisor.
+
+  A branch is live while its handler is still pushing frames (its pid file is present
+  and the recorded pid is alive), else done.  A live branch marks its tip frame -- the
+  top of its K stack -- as the active instruction pointer; a done branch marks none.
+  So the forest shows one active IP per live branch (the generalization of the core
+  view's single active innermost frame), and a ⟳/✓ status on each branch label.
+
+  Launch: FORK_DELAY=2 CMK_PRAGMA_VM_TRACE=1 CMK_REPL_MINIMAP=fork.minimap \
+    ./compose.mk cmk repl demos/cmk/stack-of-stacks.cmk
+  '''
+  @last='' ; while true ; do \
+  trees='[]' ; \
+  for f in .tmp.CONTROL_STACK_FRAMES.*.fork.* ; do \
+    [ -s "$$f" ] || continue ; \
+    suf=`printf '%s' "$$f" | sed 's/.*[.]fork[.]//'` ; \
+    case "$$suf" in ''|*[!0-9]*) continue ;; esac ; \
+    lbl="branch $$suf" ; \
+    pidf=`printf '%s' "$$f" | sed 's#[.]tmp[.]CONTROL_STACK_FRAMES[.]#.tmp.fork.pid.#'` ; \
+    pid=`cat "$$pidf" 2>/dev/null` ; \
+    live=0 ; { [ -n "$$pid" ] && kill -0 "$$pid" 2>/dev/null ; } && live=1 ; \
+    t=`${fork.minimap.tree} "$$f" 2>/dev/null` ; \
+    [ -n "$$t" ] && trees=`printf '%s' "$$trees" | ${jq.run} -c --argjson t "$$t" '. + [$$t]'` ; \
+  done ; \
+  line=`printf '%s' "$$trees" | ${jq.run} -c '{label:"fork⋔",children:.}' 2>/dev/null` ; \
+  { [ -n "$$line" ] && [ "$$line" != "$$last" ] ; } && { printf '%s\n' "$$line" ; last="$$line" ; } ; \
+  sleep $${CMK_MINIMAP_WAIT:-1} ; \
+done
+
+__main__:
+  # clear a prior crashed run's leftover ambient files (a clean run self-sweeps
+  # at exit) so the live minimap shows only this run
+  $(call _vm.ambient.sweep,*.fork.*)
+  cmk.log(${bold}stack of stacks ${sep} ${dim}fork = one K per branch${comma} joined)
+  # seed a parent frame so the seeded fork below has a continuation to inherit
+  """{"goal":"__main__","kind":"enter","step":0}""" | ${control_stack.frame.push}
+  cmk.log(${bold}independent fork ${sep} ${dim}three branches${comma} empty prefix)
+  ${make} fork/handler/a,handler/b,handler/c
+  cmk.log(${bold}seeded fork ${sep} ${dim}branches inherit __main__'s stack)
+  seed=1 ${make} fork/handler/a,handler/b,handler/c
+  cmk.log(${bold}environments (E) diverged per branch)
+  ${make} fork.env.dump

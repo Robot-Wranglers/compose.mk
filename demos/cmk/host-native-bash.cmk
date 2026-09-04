@@ -1,0 +1,19 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# host-native-bash.cmk:
+#   Dispatch a shell script on the host (no container) -- a code-object bound to the core
+#   `host.native.bash` machine (a host bash runner).
+#
+# USAGE: ./demos/cmk/host-native-bash.cmk
+
+# host.native is a module; import bash binds the bare host bash runner
+from host.native import bash
+bash.polyglot script.sh(|
+  set -x
+  printf "multiline stuff\n"
+  for i in $(seq 2); do
+      echo "Iteration $i"
+  done
+|)
+
+__main__: script.sh

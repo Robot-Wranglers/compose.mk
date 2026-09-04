@@ -1,0 +1,28 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# beam-tramp.cmk: vm.choose search under the beam-tramp backend.
+
+'''
+A vm.choose/backtrack search run under beam-tramp (the BEAM trampoline backend,
+platform.beam's beam.tramp target). __main__ hands find/TARGET to beam.tramp, which
+drives the whole VM loop on a BEAM node instead of the bash supervisor. Needs docker.
+'''
+
+from platform.beam import beam.tramp
+from virtual-machine import vm.choose, vm.backtrack
+
+SPACE  ?= 8
+TARGET ?= 5
+
+find/%:
+  '''vm.choose over 0..SPACE-1 (each candidate a try/ goal).'''
+  t="${*}"; alts=""; k=0; \
+  while [ "$$k" -lt "${SPACE}" ]; do alts="$$alts try/$$t.$$k"; k=$$((k+1)); done; \
+  vm.choose($$alts)
+
+try/%:
+  '''hit -> print and stop; miss -> vm.backtrack to the next alternative.'''
+  t=`printf '%s' "${*}" | cut -d. -f1`; c=`printf '%s' "${*}" | cut -d. -f2`; \
+  if [ "$$c" = "$$t" ]; then printf 'FOUND %s\n' "$$c"; else vm.backtrack(); fi
+
+__main__:
+  goals="cmk run demos/cmk/beam-tramp.cmk find/${TARGET}" ${make} beam.tramp

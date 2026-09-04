@@ -1,0 +1,70 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# repl-minimap.cmk: demonstrates the tux.repl minimap -- an optional 4th region (a small, buffered,
+# dim pane on the right of the panel) that streams a looping target's output [1].
+#
+#   print   = minimap.start    -- a call graph (demo, compile, link, workers) looped via __vm__
+#                                 goto, fanning out via flux.pipeline + paced with io.wait.
+#   minimap = minimap.vmstack  -- tails a live execution trace that reads like a tree: each goal emits
+#                                 one line of MAKELEVEL indent, italic target, and env keys, so as
+#                                 the call graph descends (a make level deeper each hop) + unwinds, the
+#                                 trace nests + de-nests like a tree.
+#   eval    = mk.repl.kernel   -- a normal REPL: type a target at the prompt to run it.
+#
+#   Omit `minimap` and the pane simply doesn't show (graceful degradation to the 3-region REPL).
+#   The minimap target is assumed to loop; if it exits, the pane shows "error with minimap".
+#
+#   USAGE:  ./demos/cmk/repl-minimap.cmk             # the REPL+minimap (needs a tty)
+#           ./demos/cmk/repl-minimap.cmk minimap.start  # run the call-graph loop inline (no REPL)
+#   Bounded by CMK_MINIMAP_MAX hops so a headless run terminates.
+#
+# cmk_pragma ::: { "repl": { "print": "minimap.start", "minimap": "minimap.vmstack", "eval": "mk.repl.kernel" } } :::
+#
+# REFS:
+#   [1]: https://robot-wranglers.github.io/compose.mk/modules/virtual-machine
+import virtual-machine.cmk as vm, __vm__, flat=1
+
+# minimap.trace: append one trace line for the current goal to the trace file, formatted
+# a MAKELEVEL indent, the italic target, then the stack env keys.  Indent makes the stream read as a
+# tree (each nested make descent runs a make-level deeper).  Each goal calls it; the minimap tails
+# it.  Fixed filename (one shared file) so the whole call graph stays in real order.
+minimap.trace.file=.tmp.cmk.vmtrace
+minimap.hops.file=.tmp.cmk.mm.hops
+minimap.max.file=.tmp.cmk.mm.max
+minimap.trace=printf '%b\n' "${GLYPH_MAKELEVEL_INDENT}${ital}${@}${no_ansi}${dim} { $$( [ -s ${__vm__.env.file} ] && ${jq.run} -r '[keys[]|select((startswith("GLYPH_") or startswith("MK_"))|not)]|join(",")' < ${__vm__.env.file} 2>/dev/null )${no_ansi}${dim} }${no_ansi}" >> ${minimap.trace.file}
+
+# print region: a recursive call graph (clean make-level nesting) looped via a vm goto
+# The outer loop is a flat vm goto (constant depth); each iteration sets GLYPH_INDENT_BASE to the
+# loop's own level (so the tree starts flush-left) then descends a real nested make call graph
+# demo, compile, link, then w1/w2/w3 via flux.pipeline, each nested make a level deeper, so
+# the emitted trace indents on descent + de-indents as it unwinds -- a live tree.  io.wait paces it.
+@vm.ctx.hydrate
+# minimap.start: the run-once entry -- reset the run scratch (trace + file-tracked hop/bound counters),
+# then enter the goto loop.  goto re-entries land on minimap.demo (never back here), so reset is exactly once.
+minimap.start:
+    : > ${minimap.trace.file} ; echo 0 > ${minimap.hops.file} ; echo "$${CMK_MINIMAP_MAX:-100000}" > ${minimap.max.file}
+    cmk.vm.goto(minimap.demo)
+minimap.demo:
+    n=$$(( $$(cat ${minimap.hops.file} 2>/dev/null || echo 0) + 1 )) ; echo "$$n" > ${minimap.hops.file} ; mx=$$(cat ${minimap.max.file} 2>/dev/null || echo 100000)
+    export GLYPH_INDENT_BASE=$${MAKELEVEL:-0} ; export tick=$$n
+    cmk.log([demo] hop=$$n/$$mx) && ${minimap.trace}
+    ${make} minimap.compile
+    @# bound check re-reads the files (each recipe line is its own shell; a stale shell var would break it) and
+    @# never deletes them, so overlapping goto re-dispatches all see n>=mx and stop instead of resetting to 0.
+    if [ "$$(cat ${minimap.hops.file} 2>/dev/null || echo 0)" -ge "$$(cat ${minimap.max.file} 2>/dev/null || echo 100000)" ]; then cmk.log([demo] reached bound -- exit) ; else cmk.vm.goto(minimap.demo) ; fi
+
+minimap.compile:
+    cmk.log([compile] -> link) && ${minimap.trace}
+    ${make} minimap.link
+minimap.link:
+    cmk.log([link] flux.pipeline -> w1,w2,w3) && ${minimap.trace}
+    ${make} flux.pipeline/minimap.w1,minimap.w2,minimap.w3
+minimap.w1:; cmk.log([worker] w1) && ${minimap.trace} && ${make} io.wait/$${CMK_MINIMAP_WAIT:-1}
+minimap.w2:; cmk.log([worker] w2) && ${minimap.trace} && ${make} io.wait/$${CMK_MINIMAP_WAIT:-1}
+minimap.w3:; cmk.log([worker] w3) && ${minimap.trace} && ${make} io.wait/$${CMK_MINIMAP_WAIT:-1}
+
+# minimap region: tail the execution-trace tree (RHS pane)
+# Poll-tail the shared trace file, printing only new lines so the pane scrolls the live trace (reset on
+# truncate -- the demo clears the file on its first hop).  Loops forever (the minimap contract).
+minimap.vmstack:; last=0 ; f=${minimap.trace.file} ; while true; do if [ -s "$$f" ]; then n=`wc -l < "$$f" 2>/dev/null || echo 0` ; [ "$${n:-0}" -lt "$${last:-0}" ] && last=0 || true ; if [ "$${n:-0}" -gt "$${last:-0}" ]; then tail -n +$$(( last + 1 )) "$$f" 2>/dev/null ; last=$$n ; fi ; fi ; sleep $${CMK_MINIMAP_WAIT:-1} ; done
+
+__main__: minimap.start

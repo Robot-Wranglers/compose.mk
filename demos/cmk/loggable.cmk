@@ -1,0 +1,33 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# loggable.cmk: the Loggable protocol -- instance-bound logging.
+
+'''
+Loggable is a concretized mixin on Named: a class that carries bases=Loggable
+gives every instance a name-bound .log, plus a .log.warn / .log.error / .log.debug
+severity ladder.  Each level bakes the instance identity at construction and
+delegates to the themed core loggers, so every line names who logged it.
+
+USAGE: ./demos/cmk/loggable.cmk
+'''
+
+# widget is a plain conformer: bases=Loggable, empty body.  Instances gain the
+# logger by inheritance (and are is-a Named transitively).
+
+cmk.class widget(bases=Loggable)[|
+  '''widget: a plain Loggable conformer -- instances log under their own name.'''
+|]
+
+gadget <- widget.new()
+
+demo.levels:
+  ''' gadget logs at each severity: .log is info, then warn (yellow) and error (red). '''
+  gadget.log(info line)
+  gadget.log.warn(warning line)
+  gadget.log.error(error line)
+
+demo.debug:
+  ''' .log.debug delegates to the TRACE-gated core logger: silent unless TRACE=1. '''
+  gadget.log.debug(a debug detail, shown only under TRACE=1)
+
+__main__: demo.levels demo.debug

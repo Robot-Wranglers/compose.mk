@@ -1,0 +1,58 @@
+# Config reference: https://github.com/gitleaks/gitleaks#configuration
+# Annotated default config: https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml
+title = "gitleaks config"
+
+[extend]
+useDefault = true
+
+# A custom rule shows up in output under its own `RuleID` / description, so it
+# doubles as a demo of how findings are labelled.  This one flags an explicit
+# "do not commit" marker left in a staged change.
+[[rules]]
+id = "do-not-commit-marker"
+description = "Explicit do-not-commit marker left in staged changes"
+regex = '''(?i)DO[\s_-]?NOT[\s_-]?COMMIT'''
+keywords = ["donotcommit", "do not commit", "do_not_commit", "do-not-commit"]
+
+# ░░ More handy examples ░░░░ (all commented; uncomment + adapt as needed)
+#
+# A custom rule with an entropy floor -- only flags high-randomness matches,
+# cutting false positives on placeholder values.  `keywords` are lowercase
+# substrings gitleaks pre-filters on before the (more expensive) regex runs.
+# [[rules]]
+# id = "acme-internal-token"
+# description = "ACME internal service token"
+# regex = '''(?i)acme_(?:token|secret)\s*[:=]\s*['"]?([a-z0-9]{32,})['"]?'''
+# keywords = ["acme_token", "acme_secret"]
+# entropy = 3.5
+#
+# Per-rule allowlist -- narrow suppression scoped to one rule only.  `regexes`
+# match the captured secret; `paths` match the file path; `regexTarget` picks
+# what the regex is tested against ("secret" | "match" | "line").
+# [[rules.allowlists]]
+# description = "ignore obvious placeholders for this rule"
+# regexTarget = "secret"
+# regexes = ['''^(?:REPLACE_ME|CHANGEME|xxx+)$''']
+#
+# Global allowlist -- applies across every rule.  `condition` = "OR" (default,
+# any match allowlists) or "AND" (all listed conditions must match).
+# [[allowlists]]
+# description = "ignore fixtures, vendored deps, and lockfiles"
+# condition = "OR"
+# paths = [
+#   '''(^|/)testdata/''',
+#   '''(^|/)vendor/''',
+#   '''(^|/).*\.lock$''',
+# ]
+#
+# Allowlist specific literal secrets (e.g. well-known public sample keys) and
+# stopwords -- if a finding contains any stopword it is ignored.
+# [[allowlists]]
+# description = "known-safe sample values"
+# regexes = ['''EXAMPLE_KEY_0000000000000000''']
+# stopwords = ["example", "sample", "dummy", "test"]
+#
+# Allowlist by commit -- skip secrets already rotated/known in history.
+# [[allowlists]]
+# description = "already-rotated credentials"
+# commits = ["0000000000000000000000000000000000000000"]

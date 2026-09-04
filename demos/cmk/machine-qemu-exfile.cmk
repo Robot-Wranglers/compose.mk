@@ -1,0 +1,49 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+# machine-qemu-exfile.cmk: 
+#  a virtual machine as a machine, helper scripts as bound file-bananas
+#
+# USAGE: ./demos/cmk/machine-qemu-exfile.cmk 
+'''
+A virtual machine as a machine: the runner image boots a tiny guest under qemu,
+runs the fed program there, and prints the guest's stdout, so `in vm` means "in
+a real kernel", not just "in a container".  The guest's exit status is the
+block's.
+
+The nesting is the whole idea, one hop deeper than a container machine:
+  vm machine:  program -> [ image running qemu ] -> guest kernel -> sh
+
+A `dsl` bound to that machine carries multi-line guest programs a single recipe
+line cannot hold.  Both kinds come from the qemu module, which owns the image
+recipe and its bound helper scripts; see demos/cmk/dockerfs.cmk for the binding
+technique itself.
+
+'''
+
+from cmk import dsl
+from qemu import runner, guest
+
+runner qemu_runner(| |)
+
+# vm: a guest whose entrypoint is vmexec, 
+# so a block in vm is a shell program the guest runs.
+guest vm(img=${qemu_runner.img} entrypoint=/usr/local/bin/vmexec)(| |)
+
+# vmsh: a dsl backed by the vm machine, 
+# for multi-line guest programs a single recipe line cannot hold.
+dsl vmsh(machine=vm)(| |)
+
+vmsh probe(|
+  echo "guest kernel:"
+  uname -sr
+  echo "guest sees these cpus:"
+  grep -c ^processor /proc/cpuinfo
+  echo "guest uptime seconds:"
+  cut -d. -f1 /proc/uptime
+|)
+
+__main__: 
+  @# a single-line block, run inside the guest via in 
+  (| echo "hello from inside a qemu guest"; uname -a |) in vm
+  @# invoke the named instance: probe() routes through the vm machine, 
+  @# boots the guest, runs the whole shape in it, and returns the guest's stdout
+  probe()

@@ -1,0 +1,65 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# tier-1.cmk:
+#   A flexible daily driver for the boring automation.
+#
+# USAGE: ./demos/cmk/tier-1.cmk
+
+'''
+Look! It's a docstring.
+
+CMK-Lang is a superset of Makefile, 
+but also supports python-style module-docstrings.
+'''
+
+# Look!  The __main__ below works the way you'd expect.
+# Just a default entrypoint using pre-requisite tasks, and also
+# a preview of this scripts CLI and the internal program API.
+__main__: clean init build
+
+clean:
+    ''' 
+    Look! Targets / goals / tasks also support docstrings.
+    Like a Makefile, you can put random shell in the body.
+    Unlike a Makefile-- 
+        * Supports smart-indention / sane semantic whitespace
+        * Defaults to fail-fast ( shell joins with `&&` )
+    '''
+    ls; pwd; cd .
+    who=people
+    echo $${people} rejoice
+
+init:
+    '''
+    Look!  Target bodies can mix shell and code
+    from the standard library.  Many possibilities..
+    let's start with some easy access to loggers.
+    '''
+    echo initializing..
+    cmk.log(hello logging)
+
+
+# Look! Structured access to modules too, 
+# so that you can bring in pieces of the library 
+# and stop messing with the fully-qualified names.
+import io, log, flux
+
+# Look! Targets can support python-style decorators.  
+# This one pretty-prints a visual label / divider for the target.
+@io.banner
+build:
+    '''
+    Let's use the imported modules:
+    A quick demo of "target algebra" via flux.
+    '''
+    flux.parallel(build.part_one, build.part_two)
+
+build.part_one:
+    log.warn(pretending to do stuff)
+
+build.part_two:
+    log.warn(pretending to do other stuff)
+    
+# Look!  You can use target-algebra as a prerequisite too
+build.all: flux.parallel/build.part_one,build.part_two
+

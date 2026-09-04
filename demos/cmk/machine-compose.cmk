@@ -1,0 +1,79 @@
+#!/usr/bin/env -S ./compose.mk cmk run
+
+'''
+machine-compose.cmk: compose services as machines.  A compose.service body is
+one service body, no services: key and the name written once; the kind wraps it
+into a one-service compose file and mints a machine, usable as an ambient for in
+and as machine= backing for a dsl.  A compose.group does the same for a whole
+file, one machine per service.  Both also scaffold the classical compose targets
+that compose.import gives.  Run __main__ (needs docker), or render.
+'''
+
+from cmk import dsl
+import log
+
+# One service, so the body is just the service body.
+compose.service alpha(|
+  image: alpine:3.21.2
+  entrypoint: sh
+  volumes:
+    - /tmp:/host-tmp
+|)
+
+# A verbatim compose file: each service mints a machine, and spells out its own workspace.
+compose.group pair(|
+  services:
+    left:
+      image: alpine:3.21.2
+      entrypoint: sh
+      working_dir: /workspace
+      volumes:
+        - ${PWD}:/workspace
+    right:
+      image: debian:bookworm-slim
+      entrypoint: sh
+      working_dir: /workspace
+      volumes:
+        - ${PWD}:/workspace
+    daemon:
+      image: alpine:3.21.2
+      entrypoint: ["sleep", "infinity"]
+|)
+
+# The minted machine backs a dsl, exactly like a container does.
+dsl alpha_sh(machine=alpha)(| |)
+
+alpha_sh release(| cat /etc/alpine-release |)
+
+__main__: demo.in demo.dsl demo.group demo.classic
+
+demo.in:
+  '''A block runs inside the service, not on the host'''
+  log(compose.service ${sep} a block in alpha)
+  (| cat /etc/alpine-release; test -d /workspace && echo defaults merged; test -d /host-tmp && echo body volumes merged |) in alpha
+
+demo.dsl:
+  '''The same machine backing a dsl, so its instances run in the service'''
+  log(compose.service ${sep} alpha backing a dsl)
+  release()
+
+demo.group:
+  '''Each service in the group is a machine of its own'''
+  log(compose.group ${sep} one machine per service)
+  (| cat /etc/alpine-release |) in left
+  (| cat /etc/debian_version |) in right
+
+demo.classic:
+  '''Both kinds scaffold the classical compose targets, as compose.import does'''
+  log(classic ${sep} file verbs answer to the kind name)
+  this.alpha.services
+  this.pair.images
+  log(classic ${sep} service verbs answer under the kind name)
+  this.pair.daemon.up.detach
+  this.pair.daemon.ps
+  this.pair.daemon.clean
+
+render:
+  '''Shows the generated compose files, no docker needed'''
+  this.alpha.render
+  this.pair.render

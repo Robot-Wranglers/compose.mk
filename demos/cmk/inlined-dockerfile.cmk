@@ -1,28 +1,34 @@
-#!/usr/bin/env -S ./compose.mk mk.interpret!
-# CMK-lang translation of demos/inlined-dockerfile.mk
+#!/usr/bin/env -S ./compose.mk cmk run
+#
+# inlined-dockerfile.cmk:
+#   Embed a Dockerfile inline; build/run targets are
+#   scaffolded for it.  Ported from demos/inlined-dockerfile.mk.
+#
 # USAGE: ./demos/cmk/inlined-dockerfile.cmk
 
-⫻ Dockerfile.my_container
-FROM alpine:3.21.2
-RUN apk add -q --update --no-cache coreutils build-base bash procps-ng
-⫻
+import log, docker 
+from cmk import Dockerfile
+
+Dockerfile my_container(|
+  FROM alpine:3.21.2
+  RUN apk add -q --update --no-cache coreutils build-base bash
+|)
 
 __main__: test.scaffold test.runner test.raw
 
 test.scaffold: \
-	my_container.build \
-	my_container.dispatch(self.dispatch_test)
+    my_container.build \
+    my_container.dispatch(self.dispatch_test)
 self.dispatch_test:
-	cmk.log(Testing target from inside the inlined-container)
-	cmk.log(host details: `uname -a`)
+    log(Testing target from inside the inlined-container)
+    log(host details: `uname -a`)
 
 test.runner:
-	cmk.log.test_case(Low level access to run commands)
-	entrypoint=sh cmd='-c "pwd"' this.my_container
+    log(Low level access to run commands)
+    docker.run.sh{entrypoint=sh cmd='-c "pwd"' img=${my_container.img}}
 
 test.raw:
-	cmk.log.test_case(Low-level unmediated access to image)
-	docker image inspect ${my_container.img} > /dev/null
-	docker run --entrypoint sh ${my_container.img} \
-		-x -c "true" > /dev/null
-
+    cmk.log(Low-level unmediated access to image)
+    docker image inspect ${my_container.img} > /dev/null
+    docker run --entrypoint sh ${my_container.img} \
+        -x -c "true" > /dev/null

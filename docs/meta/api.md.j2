@@ -1,20 +1,40 @@
 {% import 'macros/base.j2' as macros -%}{% import 'macros/site.j2' as site -%}
 
-Using `site.parse_module_help`:
+### API Links
+<hr class="section-rule lvl-3">
 
-{{site.parse_module_help('compose.mk', 'flux')}}
+#### `site.api_link`
+<hr class="section-rule lvl-4">
 
----------------------
+Render individual api-links with some options for customizing appearance:
 
-Using `site.api_link_many`:
+These polyglots are supported by {{site.api_link('io.awk',mkdocs,'def_name')}} and {{site.api_link('io.shell',mkdocs,'def_name,optional_args')}}
 
-{{site.api_link_many(['io.awk','io.shell'], mkdocs)}}
+#### `site.api_link_many`
+<hr class="section-rule lvl-4">
 
----------------------
+Render groups or namespaces of api-links in a table.
+
+2 targets using `site.api_link_many(['io.awk','io.shell'], mkdocs,arg='defname')`
+
+{{site.api_link_many(['io.awk','io.shell'], mkdocs,arg='defname')}}
+
+2 namespaces using `site.api_link_many(['flux.stage','io.stack'], mkdocs)`
+
+{{site.api_link_many(['flux.stage','io.stack'], mkdocs)}}
+
+<hr style="width:95%;border-bottom:1px dashed black;">
 
 Using `site.api_link_many` with args:
 
 {{site.api_link_many(['io.awk'], mkdocs)}}
+
+#### `site.parse_module_help`
+<hr class="section-rule lvl-4">
+
+Using `site.parse_module_help`:
+
+{{site.parse_module_help('compose.mk', 'flux')}}
 
 {# 
 <hr style="width:95%;border-bottom:1px dashed black;">
